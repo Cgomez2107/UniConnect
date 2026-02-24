@@ -1,15 +1,17 @@
 /**
  * app/(tabs)/_layout.tsx
- * Tab bar con las 3 pestañas principales: Feed, Solicitudes recibidas, Perfil
+ * Tab bar corregida — respeta el home indicator de Android e iOS
  */
 
 import { Colors } from "@/constants/Colors";
 import { Tabs } from "expo-router";
 import { Text, useColorScheme } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
+  const insets = useSafeAreaInsets(); // ✅ altura real del home indicator
 
   return (
     <Tabs
@@ -21,12 +23,15 @@ export default function TabLayout() {
           backgroundColor: C.surface,
           borderTopColor: C.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          // ✅ altura que suma el home indicator del teléfono
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
+          marginBottom: 2,
         },
       }}
     >
@@ -58,7 +63,8 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Ocultar login/register del tab bar si están en (tabs) */}
+      {/* Ocultar del tab bar */}
+      <Tabs.Screen name="feed" options={{ href: null }} />
       <Tabs.Screen name="login" options={{ href: null }} />
       <Tabs.Screen name="register" options={{ href: null }} />
     </Tabs>

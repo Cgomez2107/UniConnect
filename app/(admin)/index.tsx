@@ -11,21 +11,21 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useColorScheme,
+  View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ── Mock data (reemplazar con Supabase) ───────────────────────────────────────
 const INITIAL_FACULTIES: Faculty[] = [
@@ -65,6 +65,7 @@ export default function AdminPanelScreen() {
   const C = Colors[scheme];
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("facultades");
 
@@ -298,7 +299,7 @@ export default function AdminPanelScreen() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
+    <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
 
       {/* ── Header del panel ────────────────────────────────────────────── */}
@@ -382,7 +383,7 @@ export default function AdminPanelScreen() {
         <FlatList
           data={filteredFaculties}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
           showsVerticalScrollIndicator={false}
           renderItem={({ item, index }) => (
             <FacultyRow
@@ -400,7 +401,7 @@ export default function AdminPanelScreen() {
         <FlatList
           data={filteredSubjects}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <SubjectRow
@@ -494,7 +495,7 @@ export default function AdminPanelScreen() {
           ))}
         </ScrollView>
       </CrudModal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -688,7 +689,7 @@ const styles = StyleSheet.create({
   addBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 
   // Lista
-  listContent: { padding: 16, paddingBottom: 40, gap: 10 },
+  listContent: { padding: 16, paddingBottom: 80, gap: 10 },
 
   // Row
   row: {
