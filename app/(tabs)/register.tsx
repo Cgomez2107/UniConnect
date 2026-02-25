@@ -134,7 +134,7 @@ export default function RegisterScreen() {
       if (signInError) throw signInError;
 
       // Redirigir al home
-      router.replace("/(tabs)/");
+      router.replace("/(tabs)");
     } catch (error: any) {
       console.error("Registration error:", error);
       const msg: string = error?.message ?? "";
