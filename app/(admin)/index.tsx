@@ -1,14 +1,23 @@
 /**
  * app/(admin)/index.tsx
  * Panel de administración — US-002 y US-003
- * 3 tabs: Facultades → Programas → Materias (jerarquía académica completa)
+ * 3 tabs: Facultades → Programas → Materias
+ * Conectado a Supabase real via facultyService
  */
 
 import { Colors } from "@/constants/Colors";
+import {
+  createFaculty, createProgram, createSubject,
+  getFaculties, getPrograms, getSubjects,
+  deleteFaculty as sbDeleteFaculty,
+  deleteProgram as sbDeleteProgram,
+  deleteSubject as sbDeleteSubject,
+  updateFaculty, updateProgram, updateSubject,
+} from "@/lib/services/facultyService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator, Alert, FlatList, KeyboardAvoidingView,
   Modal, Platform, ScrollView, StyleSheet, Text, TextInput,
@@ -16,77 +25,52 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+// ── Tipos locales ─────────────────────────────────────────────────────────────
 interface Faculty  { id: string; name: string; }
 interface Program  { id: string; name: string; faculty_id: string; faculty_name?: string; }
-interface Subject  { id: string; name: string; is_active?: boolean; }
-// Tabla intermedia program_subjects (N:N)
-interface ProgramSubject { program_id: string; subject_id: string; }
+interface Subject  { id: string; name: string; is_active?: boolean; programs?: Program[]; }
 
 type ActiveTab = "facultades" | "programas" | "materias";
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_FACULTIES: Faculty[] = [
-  { id: "f1", name: "Ingeniería" },
-  { id: "f2", name: "Ciencias Exactas y Naturales" },
-  { id: "f3", name: "Ciencias Jurídicas y Sociales" },
-  { id: "f4", name: "Artes y Humanidades" },
-  { id: "f5", name: "Ciencias Agropecuarias" },
-  { id: "f6", name: "Ciencias para la Salud" },
-];
-
-const MOCK_PROGRAMS: Program[] = [
-  { id: "p1", name: "Ingeniería de Sistemas", faculty_id: "f1" },
-  { id: "p2", name: "Ingeniería Industrial",  faculty_id: "f1" },
-  { id: "p3", name: "Ingeniería Electrónica", faculty_id: "f1" },
-  { id: "p4", name: "Matemáticas",            faculty_id: "f2" },
-  { id: "p5", name: "Física",                 faculty_id: "f2" },
-  { id: "p6", name: "Derecho",                faculty_id: "f3" },
-];
-
-const MOCK_SUBJECTS: Subject[] = [
-  { id: "s1", name: "Cálculo Diferencial",             is_active: true },
-  { id: "s2", name: "Álgebra Lineal",                  is_active: true },
-  { id: "s3", name: "Programación Orientada a Objetos",is_active: true },
-  { id: "s4", name: "Estructuras de Datos",            is_active: true },
-  { id: "s5", name: "Física Mecánica",                 is_active: true },
-  { id: "s6", name: "Estadística",                     is_active: true },
-  { id: "s7", name: "Derecho Constitucional",          is_active: true },
-];
-
-// N:N: qué materias pertenecen a qué programas
-const MOCK_PROGRAM_SUBJECTS: ProgramSubject[] = [
-  { program_id: "p1", subject_id: "s1" },
-  { program_id: "p1", subject_id: "s2" },
-  { program_id: "p1", subject_id: "s3" },
-  { program_id: "p1", subject_id: "s4" },
-  { program_id: "p2", subject_id: "s1" }, // Cálculo también en Industrial
-  { program_id: "p2", subject_id: "s2" }, // Álgebra también en Industrial
-  { program_id: "p2", subject_id: "s6" },
-  { program_id: "p4", subject_id: "s1" },
-  { program_id: "p4", subject_id: "s2" },
-  { program_id: "p5", subject_id: "s5" },
-  { program_id: "p5", subject_id: "s1" },
-  { program_id: "p6", subject_id: "s7" },
-];
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function AdminPanelScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
-  const user = useAuthStore((s) => s.user);
+  const user    = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
-  const insets = useSafeAreaInsets();
+  const insets  = useSafeAreaInsets();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("facultades");
-  const [search, setSearch] = useState("");
+  const [activeTab,    setActiveTab]    = useState<ActiveTab>("facultades");
+  const [search,       setSearch]       = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading,    setIsLoading]    = useState(true);
 
-  // ── Datos ──────────────────────────────────────────────────────────────────
-  const [faculties, setFaculties]           = useState<Faculty[]>(MOCK_FACULTIES);
-  const [programs, setPrograms]             = useState<Program[]>(MOCK_PROGRAMS);
-  const [subjects, setSubjects]             = useState<Subject[]>(MOCK_SUBJECTS);
-  const [programSubjects, setProgramSubjects] = useState<ProgramSubject[]>(MOCK_PROGRAM_SUBJECTS);
+  // ── Datos desde Supabase ───────────────────────────────────────────────────
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [programs,  setPrograms]  = useState<Program[]>([]);
+  const [subjects,  setSubjects]  = useState<Subject[]>([]);
+
+  // Carga inicial de todas las tablas en paralelo
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const [facs, progs, subs] = await Promise.all([
+          getFaculties(),
+          getPrograms(),
+          getSubjects(),
+        ]);
+        setFaculties(facs);
+        setPrograms(progs as Program[]);
+        setSubjects(subs as Subject[]);
+      } catch (e: any) {
+        Alert.alert("Error", "No se pudieron cargar los datos: " + e.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   // ── Modales ────────────────────────────────────────────────────────────────
   const [facultyModal, setFacultyModal] = useState<{
@@ -111,24 +95,25 @@ export default function AdminPanelScreen() {
 
   const filteredPrograms = useMemo(() => {
     const q = search.toLowerCase();
-    return programs.map(p => ({
-      ...p,
-      faculty_name: faculties.find(f => f.id === p.faculty_id)?.name ?? "",
-    })).filter(p => p.name.toLowerCase().includes(q) || p.faculty_name.toLowerCase().includes(q));
-  }, [programs, faculties, search]);
+    return programs.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.faculty_name ?? "").toLowerCase().includes(q)
+    );
+  }, [programs, search]);
 
-  const filteredSubjects = useMemo(() => {
-    const q = search.toLowerCase();
-    return subjects.filter(s => s.name.toLowerCase().includes(q));
-  }, [subjects, search]);
+  const filteredSubjects = useMemo(() =>
+    subjects.filter(s => s.name.toLowerCase().includes(search.toLowerCase())),
+    [subjects, search]);
 
-  // Helpers de conteo
-  const programsCountForFaculty = (fid: string) => programs.filter(p => p.faculty_id === fid).length;
-  const subjectsCountForProgram  = (pid: string) => programSubjects.filter(ps => ps.program_id === pid).length;
-  const programsForSubject       = (sid: string) => {
-    const pids = programSubjects.filter(ps => ps.subject_id === sid).map(ps => ps.program_id);
-    return programs.filter(p => pids.includes(p.id));
-  };
+  // Helpers de conteo (derivados del estado, sin tabla intermedia local)
+  const programsCountForFaculty = (fid: string) =>
+    programs.filter(p => p.faculty_id === fid).length;
+
+  const subjectsCountForProgram = (pid: string) =>
+    subjects.filter(s => s.programs?.some(p => p.id === pid)).length;
+
+  const programsForSubject = (sid: string) =>
+    subjects.find(s => s.id === sid)?.programs ?? [];
 
   // ── CRUD Facultades ────────────────────────────────────────────────────────
   const saveFaculty = async () => {
@@ -136,16 +121,26 @@ export default function AdminPanelScreen() {
     if (!name) return setFacultyModal(p => ({ ...p, error: "El nombre no puede estar vacío." }));
     if (faculties.find(f => f.name.toLowerCase() === name.toLowerCase() && f.id !== facultyModal.item?.id))
       return setFacultyModal(p => ({ ...p, error: "Ya existe una facultad con ese nombre." }));
+
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 500));
-    // TODO: supabase.from("faculties").insert/update
-    if (facultyModal.mode === "create") {
-      setFaculties(p => [...p, { id: `f${Date.now()}`, name }]);
-    } else {
-      setFaculties(p => p.map(f => f.id === facultyModal.item!.id ? { ...f, name } : f));
+    try {
+      if (facultyModal.mode === "create") {
+        const nueva = await createFaculty(name);
+        setFaculties(p => [...p, nueva]);
+      } else {
+        const actualizada = await updateFaculty(facultyModal.item!.id, { name });
+        setFaculties(p => p.map(f => f.id === actualizada.id ? actualizada : f));
+        // Actualizar nombre en programas (solo local, ya viene del join en próxima carga)
+        setPrograms(p => p.map(pr =>
+          pr.faculty_id === facultyModal.item!.id ? { ...pr, faculty_name: name } : pr
+        ));
+      }
+      setFacultyModal(p => ({ ...p, visible: false }));
+    } catch (e: any) {
+      setFacultyModal(p => ({ ...p, error: e.message }));
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
-    setFacultyModal(p => ({ ...p, visible: false }));
   };
 
   const deleteFaculty = (item: Faculty) => {
@@ -156,12 +151,20 @@ export default function AdminPanelScreen() {
         ? `"${item.name}" tiene ${count} programa(s) vinculado(s). Al eliminarla también se eliminarán sus programas.`
         : `¿Eliminar "${item.name}"? Esta acción no se puede deshacer.`,
       [{ text: "Cancelar", style: "cancel" },
-       { text: "Eliminar", style: "destructive", onPress: () => {
-          // TODO: supabase.from("faculties").delete()
-          setFaculties(p => p.filter(f => f.id !== item.id));
-          const progIds = programs.filter(p => p.faculty_id === item.id).map(p => p.id);
-          setPrograms(p => p.filter(p => p.faculty_id !== item.id));
-          setProgramSubjects(p => p.filter(ps => !progIds.includes(ps.program_id)));
+       { text: "Eliminar", style: "destructive", onPress: async () => {
+          try {
+            await sbDeleteFaculty(item.id);
+            const progIds = programs.filter(p => p.faculty_id === item.id).map(p => p.id);
+            setFaculties(p => p.filter(f => f.id !== item.id));
+            setPrograms(p => p.filter(p => p.faculty_id !== item.id));
+            // Limpiar programas de las materias que pertenecían a esos programas
+            setSubjects(p => p.map(s => ({
+              ...s,
+              programs: s.programs?.filter(pr => !progIds.includes(pr.id))
+            })));
+          } catch (e: any) {
+            Alert.alert("Error", e.message);
+          }
        }}]
     );
   };
@@ -175,30 +178,46 @@ export default function AdminPanelScreen() {
     if (programs.find(p => p.name.toLowerCase() === name.toLowerCase()
         && p.faculty_id === faculty_id && p.id !== programModal.item?.id))
       return setProgramModal(p => ({ ...p, error: "Ya existe ese programa en esa facultad." }));
+
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 500));
-    // TODO: supabase.from("programs").insert/update
-    if (programModal.mode === "create") {
-      setPrograms(p => [...p, { id: `p${Date.now()}`, name, faculty_id }]);
-    } else {
-      setPrograms(p => p.map(pr => pr.id === programModal.item!.id ? { ...pr, name, faculty_id } : pr));
+    try {
+      const faculty_name = faculties.find(f => f.id === faculty_id)?.name ?? "";
+      if (programModal.mode === "create") {
+        const nuevo = await createProgram(name, faculty_id);
+        setPrograms(p => [...p, { ...nuevo, faculty_name }]);
+      } else {
+        const actualizado = await updateProgram(programModal.item!.id, { name, faculty_id });
+        setPrograms(p => p.map(pr =>
+          pr.id === actualizado.id ? { ...actualizado, faculty_name } : pr
+        ));
+      }
+      setProgramModal(p => ({ ...p, visible: false }));
+    } catch (e: any) {
+      setProgramModal(p => ({ ...p, error: e.message }));
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
-    setProgramModal(p => ({ ...p, visible: false }));
   };
 
   const deleteProgram = (item: Program) => {
-    const count = programSubjects.filter(ps => ps.program_id === item.id).length;
+    const count = subjectsCountForProgram(item.id);
     Alert.alert(
       "Eliminar programa",
       count > 0
         ? `"${item.name}" tiene ${count} materia(s) vinculada(s). Se eliminarán los vínculos.`
         : `¿Eliminar "${item.name}"?`,
       [{ text: "Cancelar", style: "cancel" },
-       { text: "Eliminar", style: "destructive", onPress: () => {
-          // TODO: supabase.from("programs").delete()
-          setPrograms(p => p.filter(p => p.id !== item.id));
-          setProgramSubjects(p => p.filter(ps => ps.program_id !== item.id));
+       { text: "Eliminar", style: "destructive", onPress: async () => {
+          try {
+            await sbDeleteProgram(item.id);
+            setPrograms(p => p.filter(p => p.id !== item.id));
+            setSubjects(p => p.map(s => ({
+              ...s,
+              programs: s.programs?.filter(pr => pr.id !== item.id)
+            })));
+          } catch (e: any) {
+            Alert.alert("Error", e.message);
+          }
        }}]
     );
   };
@@ -212,21 +231,27 @@ export default function AdminPanelScreen() {
       return setSubjectModal(p => ({ ...p, error: "Vincula al menos un programa." }));
     if (subjects.find(s => s.name.toLowerCase() === name.toLowerCase() && s.id !== subjectModal.item?.id))
       return setSubjectModal(p => ({ ...p, error: "Ya existe una materia con ese nombre." }));
+
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 500));
-    // TODO: supabase.from("subjects").insert/update + program_subjects
-    let subjectId: string;
-    if (subjectModal.mode === "create") {
-      subjectId = `s${Date.now()}`;
-      setSubjects(p => [...p, { id: subjectId, name, is_active: true }]);
-    } else {
-      subjectId = subjectModal.item!.id;
-      setSubjects(p => p.map(s => s.id === subjectId ? { ...s, name } : s));
-      setProgramSubjects(p => p.filter(ps => ps.subject_id !== subjectId));
+    try {
+      const linkedPrograms = programs.filter(p => program_ids.includes(p.id));
+      if (subjectModal.mode === "create") {
+        const nueva = await createSubject(name, program_ids);
+        setSubjects(p => [...p, { ...nueva, programs: linkedPrograms }]);
+      } else {
+        const actualizada = await updateSubject(
+          subjectModal.item!.id, { name }, program_ids
+        );
+        setSubjects(p => p.map(s =>
+          s.id === actualizada.id ? { ...actualizada, programs: linkedPrograms } : s
+        ));
+      }
+      setSubjectModal(p => ({ ...p, visible: false }));
+    } catch (e: any) {
+      setSubjectModal(p => ({ ...p, error: e.message }));
+    } finally {
+      setIsSubmitting(false);
     }
-    setProgramSubjects(p => [...p, ...program_ids.map(pid => ({ program_id: pid, subject_id: subjectId }))]);
-    setIsSubmitting(false);
-    setSubjectModal(p => ({ ...p, visible: false }));
   };
 
   const deleteSubject = (item: Subject) => {
@@ -234,10 +259,13 @@ export default function AdminPanelScreen() {
       "Eliminar materia",
       `¿Eliminar "${item.name}"?\n\nLas solicitudes de estudio vinculadas también se verán afectadas.`,
       [{ text: "Cancelar", style: "cancel" },
-       { text: "Eliminar", style: "destructive", onPress: () => {
-          // TODO: supabase.from("subjects").delete()
-          setSubjects(p => p.filter(s => s.id !== item.id));
-          setProgramSubjects(p => p.filter(ps => ps.subject_id !== item.id));
+       { text: "Eliminar", style: "destructive", onPress: async () => {
+          try {
+            await sbDeleteSubject(item.id);
+            setSubjects(p => p.filter(s => s.id !== item.id));
+          } catch (e: any) {
+            Alert.alert("Error", e.message);
+          }
        }}]
     );
   };
@@ -319,60 +347,79 @@ export default function AdminPanelScreen() {
             if (activeTab === "facultades") {
               setFacultyModal({ visible: true, mode: "create", item: null, form: { name: "" }, error: "" });
             } else if (activeTab === "programas") {
-              setProgramModal({ visible: true, mode: "create", item: null, form: { name: "", faculty_id: faculties[0]?.id ?? "" }, error: "" });
+              setProgramModal({ visible: true, mode: "create", item: null,
+                form: { name: "", faculty_id: faculties[0]?.id ?? "" }, error: "" });
             } else {
-              setSubjectModal({ visible: true, mode: "create", item: null, form: { name: "", program_ids: [] }, error: "" });
+              setSubjectModal({ visible: true, mode: "create", item: null,
+                form: { name: "", program_ids: [] }, error: "" });
             }
           }} activeOpacity={0.85}>
           <Text style={styles.addBtnText}>+ Nuevo</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Lista */}
-      {activeTab === "facultades" && (
-        <FlatList
-          data={filteredFaculties} keyExtractor={i => i.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
-            <FacultyRow item={item} index={index}
-              programsCount={programsCountForFaculty(item.id)}
-              onEdit={() => setFacultyModal({ visible: true, mode: "edit", item, form: { name: item.name }, error: "" })}
-              onDelete={() => deleteFaculty(item)} C={C} />
+      {/* Loading */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={[styles.loadingText, { color: C.textSecondary }]}>Cargando datos...</Text>
+        </View>
+      ) : (
+        <>
+          {/* Lista Facultades */}
+          {activeTab === "facultades" && (
+            <FlatList
+              data={filteredFaculties} keyExtractor={i => i.id}
+              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item, index }) => (
+                <FacultyRow item={item} index={index}
+                  programsCount={programsCountForFaculty(item.id)}
+                  onEdit={() => setFacultyModal({ visible: true, mode: "edit", item,
+                    form: { name: item.name }, error: "" })}
+                  onDelete={() => deleteFaculty(item)} C={C} />
+              )}
+              ListEmptyComponent={<EmptyState label="No hay facultades" C={C} />}
+            />
           )}
-          ListEmptyComponent={<EmptyState label="No hay facultades" C={C} />}
-        />
-      )}
-      {activeTab === "programas" && (
-        <FlatList
-          data={filteredPrograms} keyExtractor={i => i.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
-            <ProgramRow item={item} index={index}
-              subjectsCount={subjectsCountForProgram(item.id)}
-              onEdit={() => setProgramModal({ visible: true, mode: "edit", item, form: { name: item.name, faculty_id: item.faculty_id }, error: "" })}
-              onDelete={() => deleteProgram(item)} C={C} />
+
+          {/* Lista Programas */}
+          {activeTab === "programas" && (
+            <FlatList
+              data={filteredPrograms} keyExtractor={i => i.id}
+              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item, index }) => (
+                <ProgramRow item={item} index={index}
+                  subjectsCount={subjectsCountForProgram(item.id)}
+                  onEdit={() => setProgramModal({ visible: true, mode: "edit", item,
+                    form: { name: item.name, faculty_id: item.faculty_id }, error: "" })}
+                  onDelete={() => deleteProgram(item)} C={C} />
+              )}
+              ListEmptyComponent={<EmptyState label="No hay programas" C={C} />}
+            />
           )}
-          ListEmptyComponent={<EmptyState label="No hay programas" C={C} />}
-        />
-      )}
-      {activeTab === "materias" && (
-        <FlatList
-          data={filteredSubjects} keyExtractor={i => i.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <SubjectRow item={item}
-              programs={programsForSubject(item.id)}
-              onEdit={() => {
-                const currentProgIds = programSubjects.filter(ps => ps.subject_id === item.id).map(ps => ps.program_id);
-                setSubjectModal({ visible: true, mode: "edit", item, form: { name: item.name, program_ids: currentProgIds }, error: "" });
-              }}
-              onDelete={() => deleteSubject(item)} C={C} />
+
+          {/* Lista Materias */}
+          {activeTab === "materias" && (
+            <FlatList
+              data={filteredSubjects} keyExtractor={i => i.id}
+              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <SubjectRow item={item}
+                  programs={programsForSubject(item.id)}
+                  onEdit={() => {
+                    const currentProgIds = (item.programs ?? []).map(p => p.id);
+                    setSubjectModal({ visible: true, mode: "edit", item,
+                      form: { name: item.name, program_ids: currentProgIds }, error: "" });
+                  }}
+                  onDelete={() => deleteSubject(item)} C={C} />
+              )}
+              ListEmptyComponent={<EmptyState label="No hay materias" C={C} />}
+            />
           )}
-          ListEmptyComponent={<EmptyState label="No hay materias" C={C} />}
-        />
+        </>
       )}
 
       {/* Modal Facultad */}
@@ -437,8 +484,8 @@ export default function AdminPanelScreen() {
         <FieldLabel text="Programas vinculados * (selección múltiple)" C={C} style={{ marginTop: 14 }} />
         <View style={styles.chipsWrap}>
           {programs.map(prog => {
-            const selected = subjectModal.form.program_ids.includes(prog.id);
-            const facName  = faculties.find(f => f.id === prog.faculty_id)?.name ?? "";
+            const selected  = subjectModal.form.program_ids.includes(prog.id);
+            const facName   = prog.faculty_name ?? "";
             return (
               <TouchableOpacity key={prog.id}
                 style={[styles.chip, {
@@ -474,7 +521,7 @@ export default function AdminPanelScreen() {
   );
 }
 
-// ── Subcomponentes ────────────────────────────────────────────────────────────
+// ── Subcomponentes — sin cambios vs versión anterior ──────────────────────────
 function FacultyRow({ item, index, programsCount, onEdit, onDelete, C }: {
   item: Faculty; index: number; programsCount: number;
   onEdit: () => void; onDelete: () => void; C: typeof Colors["light"];
@@ -618,7 +665,7 @@ function EmptyState({ label, C }: { label: string; C: typeof Colors["light"] }) 
   );
 }
 
-// ── Estilos ───────────────────────────────────────────────────────────────────
+// ── Estilos — sin cambios ─────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between",
@@ -643,8 +690,10 @@ const styles = StyleSheet.create({
   addBtn:  { paddingHorizontal: 16, height: 40, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   addBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 
-  listContent: { padding: 16, gap: 10 },
+  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  loadingText: { fontSize: 14 },
 
+  listContent: { padding: 16, gap: 10 },
   row: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 10, padding: 12, gap: 12 },
   rowIndex: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   rowIndexText: { fontSize: 13, fontWeight: "700" },
@@ -666,8 +715,7 @@ const styles = StyleSheet.create({
   modalError:   { borderWidth: 1, borderRadius: 8, padding: 10, marginBottom: 12 },
   fieldInput:   { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, height: 48, fontSize: 15 },
 
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1,
-    marginRight: 8, marginBottom: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, marginRight: 8, marginBottom: 8 },
   chipText:    { fontSize: 13, fontWeight: "500" },
   chipSubText: { fontSize: 10, marginTop: 2 },
   chipsWrap:   { flexDirection: "row", flexWrap: "wrap", marginTop: 2 },
@@ -676,8 +724,7 @@ const styles = StyleSheet.create({
   selectionInfoText: { fontSize: 13, fontWeight: "600" },
 
   modalActions:    { flexDirection: "row", gap: 12, marginTop: 20 },
-  modalCancelBtn:  { flex: 1, height: 48, borderRadius: 8, borderWidth: 1,
-    alignItems: "center", justifyContent: "center" },
+  modalCancelBtn:  { flex: 1, height: 48, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   modalCancelText: { fontSize: 14, fontWeight: "600" },
   modalSaveBtn:    { flex: 2, height: 48, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   modalSaveText:   { color: "#fff", fontSize: 14, fontWeight: "700" },
