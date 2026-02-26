@@ -5,7 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "uniconnet",
+    "scheme": [
+  "com.juanse108.uniconnet",
+  "com.googleusercontent.apps.662681556100-fljgftmr9roum0nhr2a5ehg7v1jrlof0.apps.googleusercontent.com"
+], 
+
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -35,7 +39,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
@@ -46,7 +51,7 @@
         "projectId": "806681e7-b2dc-444c-862e-1dbb77929149"
       }
     },
-    "owner": "uniconnect",
+    "owner": "juanse108",
     "updates": {
       "url": "https://u.expo.dev/806681e7-b2dc-444c-862e-1dbb77929149"
     },

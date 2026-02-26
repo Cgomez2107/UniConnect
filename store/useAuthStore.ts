@@ -2,6 +2,7 @@
  * store/useAuthStore.ts
  * Estado global de autenticación con Zustand
  * Conectado a Supabase real via authService
+ * Soporta login con email/password y Google OAuth
  */
 
 import {
@@ -35,7 +36,7 @@ interface AuthState {
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   setUser: (user: UserSession | null) => void;
-  initialize: () => () => void; // retorna el unsubscribe para usarlo en el layout
+  initialize: () => () => void;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -47,29 +48,45 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user, isAuthenticated: !!user }),
 
   // ── Inicializar: escucha cambios de sesión de Supabase ─────────────────────
-  // Llamar esto en el layout raíz una sola vez al arrancar la app
   initialize: () => {
     const { data: { subscription } } = onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         try {
-          // Buscar el perfil completo en la tabla profiles
+          // Intentar obtener perfil completo de la tabla profiles
           const profile = await getMyProfile();
-          if (profile) {
-            set({
-              user: {
-                id: profile.id,
-                email: session.user.email!,
-                fullName: profile.full_name,
-                avatarUrl: profile.avatar_url,
-                role: profile.role as UserRole,
-                semester: profile.semester,
-                bio: profile.bio,
-              },
-              isAuthenticated: true,
-            });
-          }
+          set({
+            user: {
+              id: session.user.id,
+              email: session.user.email!,
+              // Si hay perfil en DB úsalo, si no usa los datos de Google
+              fullName: profile?.full_name
+                ?? session.user.user_metadata?.full_name
+                ?? "Estudiante",
+              avatarUrl: profile?.avatar_url
+                ?? session.user.user_metadata?.avatar_url
+                ?? null,
+              role: (profile?.role as UserRole) ?? "estudiante",
+              semester: profile?.semester ?? null,
+              bio: profile?.bio ?? null,
+            },
+            isAuthenticated: true,
+          });
         } catch (error) {
-          console.error("Error cargando perfil:", error);
+          // Fallback: si no hay perfil todavía (usuario nuevo con Google)
+          // guardamos los datos básicos del token de Google
+          console.warn("Perfil no encontrado, usando datos de sesión:", error);
+          set({
+            user: {
+              id: session.user.id,
+              email: session.user.email!,
+              fullName: session.user.user_metadata?.full_name ?? "Estudiante",
+              avatarUrl: session.user.user_metadata?.avatar_url ?? null,
+              role: "estudiante",
+              semester: null,
+              bio: null,
+            },
+            isAuthenticated: true,
+          });
         }
       }
 
@@ -78,23 +95,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     });
 
-    // Retornar la función de limpieza para usarla en useEffect
     return () => subscription.unsubscribe();
   },
 
-  // ── Sign In ────────────────────────────────────────────────────────────────
+  // ── Sign In email/password ─────────────────────────────────────────────────
   signIn: async (email, password) => {
     set({ isLoading: true });
     try {
-      // 1. Autenticar con Supabase
       const { user } = await sbSignIn({ email, password });
       if (!user) throw new Error("No se pudo iniciar sesión");
 
-      // 2. Obtener el perfil completo de la tabla profiles
       const profile = await getMyProfile();
       if (!profile) throw new Error("No se encontró el perfil del usuario");
 
-      // 3. Guardar en el store
       set({
         user: {
           id: profile.id,
@@ -113,14 +126,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   // ── Sign Up ────────────────────────────────────────────────────────────────
-  // El trigger handle_new_user en Supabase crea el perfil automáticamente
   signUp: async (email, password, fullName) => {
     set({ isLoading: true });
     try {
       await sbSignUp({ email, password, fullName });
-      // No autenticamos aquí — el usuario debe confirmar su correo
-      // Si tienes la confirmación desactivada en Supabase,
-      // puedes llamar signIn() directamente después
     } finally {
       set({ isLoading: false });
     }
