@@ -1,12 +1,14 @@
 /**
  * app/login.tsx
  * Login con splash diferenciado por rol y redirección robusta
+ * Incluye autenticación con Google (@ucaldas.edu.co)
  */
 
 import { Link, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,10 +20,11 @@ import {
 } from "react-native";
 
 import { AuthInput } from "@/components/ui/AuthInput";
-import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { ErrorBanner } from "@/components/ui/Errorbanner";
+import { PrimaryButton } from "@/components/ui/Primarybutton";
 import { SplashLoader } from "@/components/ui/SplashLoader";
 import { Colors } from "@/constants/Colors";
+import { useGoogleAuth } from "@/lib/services/googleAuthService";
 import type { UserRole } from "@/store/useAuthStore";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -38,10 +41,17 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [formError, setFormError] = useState("");
-
-  // Para el splash: guardamos el rol antes de navegar
   const [splashRole, setSplashRole] = useState<UserRole | null>(null);
 
+  // ── Google Auth ─────────────────────────────────────────────────────────────
+  const {
+    request: googleRequest,
+    loading: googleLoading,
+    error: googleError,
+    signInWithGoogle,
+  } = useGoogleAuth();
+
+  // ── Login con email/password ────────────────────────────────────────────────
   const handleEmailChange = (value: string) => {
     setEmail(value);
     setEmailError(
@@ -65,11 +75,9 @@ export default function LoginScreen() {
     try {
       await signIn(email, password);
 
-      // Leer el rol directamente del store (fuera de hook, siempre actualizado)
       const role = useAuthStore.getState().user?.role ?? "estudiante";
       setSplashRole(role);
 
-      // Esperar que el splash se vea y luego navegar a la app
       setTimeout(() => {
         if (role === "admin") {
           router.replace("/(admin)" as any);
@@ -119,7 +127,7 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo */}
+        {/* ── Logo ── */}
         <View style={styles.header}>
           <View style={[styles.logoBox, { borderColor: C.primary }]}>
             <Text style={[styles.logoText, { color: C.primary }]}>UC</Text>
@@ -131,7 +139,7 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        {/* Card */}
+        {/* ── Card ── */}
         <View style={[styles.card, { backgroundColor: C.surface }]}>
           <Text style={[styles.cardTitle, { color: C.textPrimary }]}>
             Inicia sesión
@@ -170,13 +178,51 @@ export default function LoginScreen() {
             style={styles.submitBtn}
           />
 
+          {/* ── Divider ── */}
           <View style={styles.divider}>
             <View style={[styles.dividerLine, { backgroundColor: C.border }]} />
-            <Text style={[styles.dividerText, { color: C.textPlaceholder }]}>o</Text>
+            <Text style={[styles.dividerText, { color: C.textPlaceholder }]}>
+              o continúa con
+            </Text>
             <View style={[styles.dividerLine, { backgroundColor: C.border }]} />
           </View>
 
-          <View style={styles.registerRow}>
+          {/* ── Botón Google ── */}
+          {googleError ? (
+            <Text style={[styles.googleError, { color: C.error }]}>
+              {googleError}
+            </Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={[
+              styles.googleBtn,
+              { borderColor: C.border, backgroundColor: C.surface },
+              (!googleRequest || googleLoading) && styles.googleBtnDisabled,
+            ]}
+            onPress={signInWithGoogle}
+            disabled={!googleRequest || googleLoading}
+            activeOpacity={0.85}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color={C.primary} />
+            ) : (
+              <View style={styles.googleBtnInner}>
+                <Text style={styles.googleIcon}>G</Text>
+                <View>
+                  <Text style={[styles.googleBtnText, { color: C.textPrimary }]}>
+                    Iniciar sesión con Google
+                  </Text>
+                  <Text style={[styles.googleDomain, { color: C.textSecondary }]}>
+                    @ucaldas.edu.co
+                  </Text>
+                </View>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* ── Registro ── */}
+          <View style={[styles.registerRow, { marginTop: 20 }]}>
             <Text style={[styles.registerText, { color: C.textSecondary }]}>
               ¿No tienes cuenta?{" "}
             </Text>
@@ -232,6 +278,24 @@ const styles = StyleSheet.create({
   divider: { flexDirection: "row", alignItems: "center", marginVertical: 20 },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { marginHorizontal: 12, fontSize: 13 },
+
+  // Google button
+  googleBtn: {
+    borderWidth: 1, borderRadius: 10,
+    paddingVertical: 14, paddingHorizontal: 16,
+    alignItems: "center", justifyContent: "center",
+    minHeight: 52,
+  },
+  googleBtnDisabled: { opacity: 0.5 },
+  googleBtnInner: { flexDirection: "row", alignItems: "center", gap: 12 },
+  googleIcon: {
+    fontSize: 20, fontWeight: "800", color: "#4285F4",
+    width: 24, textAlign: "center",
+  },
+  googleBtnText: { fontSize: 15, fontWeight: "600" },
+  googleDomain: { fontSize: 11, marginTop: 1 },
+  googleError: { fontSize: 13, textAlign: "center", marginBottom: 10 },
+
   registerRow: { flexDirection: "row", justifyContent: "center" },
   registerText: { fontSize: 14 },
   registerLink: { fontSize: 14, fontWeight: "600" },

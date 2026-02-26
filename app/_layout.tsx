@@ -1,79 +1,33 @@
 /**
- * app/_layout.tsx  ← este archivo va en la raíz de /app
- * Layout raíz — gestiona el flujo de navegación completo
- *
- * Rutas:
- *   /login, /register, /onboarding          → auth
- *   /(tabs)                                  → estudiante
- *   /(admin)                                 → administrador
- *   /nueva-solicitud, /editar-perfil, etc.   → modales
+ * app/_layout.tsx
+ * Layout raíz — solo declara rutas que existen como archivos en /app
  */
 
-import { Colors } from "@/constants/Colors";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Stack } from "expo-router";
-import { useColorScheme } from "react-native";
+import { useEffect } from "react";
 
 export default function RootLayout() {
-  const scheme = useColorScheme() ?? "light";
-  const C = Colors[scheme];
+  const initialize = useAuthStore((s) => s.initialize);
+
+  useEffect(() => {
+    const unsubscribe = initialize();
+    return unsubscribe;
+  }, []);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {/* ── Punto de entrada ──────────────────────────────────── */}
       <Stack.Screen name="index" />
-
-      {/* ── Auth ──────────────────────────────────────────────── */}
       <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
       <Stack.Screen name="onboarding" />
-
-      {/* ── App estudiante ────────────────────────────────────── */}
       <Stack.Screen name="(tabs)" />
-
-      {/* ── App administrador ─────────────────────────────────── */}
       <Stack.Screen name="(admin)" />
-
-      {/* ── Pantallas tipo modal ──────────────────────────────── */}
-      <Stack.Screen
-        name="nueva-solicitud"
-        options={{
-          presentation: "modal",
-          headerShown: true,
-          title: "Nueva solicitud",
-          headerStyle: { backgroundColor: scheme === "dark" ? "#0a0a0a" : "#fff" },
-          headerTintColor: C.primary,
-        }}
-      />
-      <Stack.Screen
-        name="editar-perfil"
-        options={{
-          presentation: "modal",
-          headerShown: true,
-          title: "Editar perfil",
-          headerStyle: { backgroundColor: scheme === "dark" ? "#0a0a0a" : "#fff" },
-          headerTintColor: C.primary,
-        }}
-      />
-      <Stack.Screen
-        name="solicitud/[id]"
-        options={{
-          headerShown: true,
-          title: "Detalle",
-          headerTintColor: C.primary,
-        }}
-      />
-      <Stack.Screen
-        name="postular/[id]"
-        options={{
-          presentation: "modal",
-          headerShown: true,
-          title: "Postularme",
-          headerTintColor: C.primary,
-        }}
-      />
-
-      {/* ── 404 ───────────────────────────────────────────────── */}
-      <Stack.Screen name="+not-found" />
+      {/* Modales — agregar cuando se creen los archivos físicos */}
+      {/* <Stack.Screen name="register"         options={{ presentation: "modal" }} /> */}
+      {/* <Stack.Screen name="nueva-solicitud"  options={{ presentation: "modal" }} /> */}
+      {/* <Stack.Screen name="editar-perfil"    options={{ presentation: "modal" }} /> */}
+      {/* <Stack.Screen name="solicitud/[id]"   options={{ presentation: "modal" }} /> */}
+      {/* <Stack.Screen name="postular/[id]"    options={{ presentation: "modal" }} /> */}
     </Stack>
   );
 }

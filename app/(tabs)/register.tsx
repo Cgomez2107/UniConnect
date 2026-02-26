@@ -20,9 +20,10 @@ import {
 } from "react-native";
 
 import { AuthInput } from "@/components/ui/AuthInput";
-import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { ErrorBanner } from "@/components/ui/Errorbanner";
+import { PrimaryButton } from "@/components/ui/Primarybutton";
 import { Colors } from "@/constants/Colors";
+import { supabase } from "@/lib/supabase";
 
 // ── Validación ────────────────────────────────────────────────────────────────
 const UCALDAS_REGEX = /^[a-zA-Z0-9._%+-]+@ucaldas\.edu\.co$/;
@@ -118,21 +119,29 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
     try {
-      // TODO: const { error } = await supabase.auth.signUp({
-      //   email, password,
-      //   options: { data: { full_name: fullName } },
-      // });
-      // if (error) throw error;
-      // setRegistered(true);
+      // Registrar usuario
+      const { error: signUpError } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { full_name: fullName } },
+      });
+      if (signUpError) throw signUpError;
 
-      await new Promise((r) => setTimeout(r, 1400)); // ← simulación temporal
-      setRegistered(true);
+      // Auto-login inmediatamente después del registro
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
+
+      // Redirigir al home
+      router.replace("/(tabs)");
     } catch (error: any) {
+      console.error("Registration error:", error);
       const msg: string = error?.message ?? "";
-      if (msg.includes("already registered")) {
+      if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("user already registered")) {
         setErrors((p) => ({ ...p, email: "Este correo ya está registrado" }));
       } else {
-        setFormError("Ocurrió un error al registrarte. Intenta de nuevo.");
+        setFormError(`Error: ${msg || "Ocurrió un error al registrarte. Intenta de nuevo."}`);
       }
     } finally {
       setIsLoading(false);

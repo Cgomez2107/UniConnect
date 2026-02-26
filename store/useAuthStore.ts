@@ -1,9 +1,17 @@
 /**
  * store/useAuthStore.ts
  * Estado global de autenticación con Zustand
- * Soporta roles: "estudiante" | "admin"
+ * Conectado a Supabase real via authService
+ * Soporta login con email/password y Google OAuth
  */
 
+import {
+  getMyProfile,
+  onAuthStateChange,
+  signIn as sbSignIn,
+  signOut as sbSignOut,
+  signUp as sbSignUp,
+} from "@/lib/services/authService";
 import { create } from "zustand";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -13,8 +21,10 @@ export interface UserSession {
   id: string;
   email: string;
   fullName: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   role: UserRole;
+  semester?: number | null;
+  bio?: string | null;
 }
 
 interface AuthState {
@@ -26,28 +36,8 @@ interface AuthState {
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   setUser: (user: UserSession | null) => void;
+  initialize: () => () => void;
 }
-
-// ── Mock credentials ──────────────────────────────────────────────────────────
-// Eliminar este bloque cuando Supabase esté listo
-const IS_MOCK_MODE = true; // ← cambiar a false cuando Supabase esté listo
-
-const MOCK_USERS: Record<string, UserSession & { password: string }> = {
-  "estudiante.prueba@ucaldas.edu.co": {
-    id: "mock-001",
-    email: "estudiante.prueba@ucaldas.edu.co",
-    fullName: "Estudiante Prueba",
-    role: "estudiante",
-    password: "Test1234",
-  },
-  "admin@ucaldas.edu.co": {
-    id: "mock-admin-001",
-    email: "admin@ucaldas.edu.co",
-    fullName: "Administrador UniConnect",
-    role: "admin",
-    password: "Admin1234",
-  },
-};
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 export const useAuthStore = create<AuthState>((set) => ({
@@ -57,38 +47,79 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
 
-  // ── Sign In ────────────────────────────────────────────────────────────────
+  // ── Inicializar: escucha cambios de sesión de Supabase ─────────────────────
+  initialize: () => {
+    const { data: { subscription } } = onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        try {
+          // Intentar obtener perfil completo de la tabla profiles
+          const profile = await getMyProfile();
+          set({
+            user: {
+              id: session.user.id,
+              email: session.user.email!,
+              // Si hay perfil en DB úsalo, si no usa los datos de Google
+              fullName: profile?.full_name
+                ?? session.user.user_metadata?.full_name
+                ?? "Estudiante",
+              avatarUrl: profile?.avatar_url
+                ?? session.user.user_metadata?.avatar_url
+                ?? null,
+              role: (profile?.role as UserRole) ?? "estudiante",
+              semester: profile?.semester ?? null,
+              bio: profile?.bio ?? null,
+            },
+            isAuthenticated: true,
+          });
+        } catch (error) {
+          // Fallback: si no hay perfil todavía (usuario nuevo con Google)
+          // guardamos los datos básicos del token de Google
+          console.warn("Perfil no encontrado, usando datos de sesión:", error);
+          set({
+            user: {
+              id: session.user.id,
+              email: session.user.email!,
+              fullName: session.user.user_metadata?.full_name ?? "Estudiante",
+              avatarUrl: session.user.user_metadata?.avatar_url ?? null,
+              role: "estudiante",
+              semester: null,
+              bio: null,
+            },
+            isAuthenticated: true,
+          });
+        }
+      }
+
+      if (event === "SIGNED_OUT") {
+        set({ user: null, isAuthenticated: false });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  },
+
+  // ── Sign In email/password ─────────────────────────────────────────────────
   signIn: async (email, password) => {
     set({ isLoading: true });
     try {
-      if (IS_MOCK_MODE) {
-        await new Promise((r) => setTimeout(r, 900));
-        const found = MOCK_USERS[email];
-        if (!found || found.password !== password) {
-          throw new Error("Invalid login credentials");
-        }
-        const { password: _, ...session } = found;
-        set({ user: session, isAuthenticated: true });
-        return;
-      }
+      const { user } = await sbSignIn({ email, password });
+      if (!user) throw new Error("No se pudo iniciar sesión");
 
-      // ── Producción ────────────────────────────────────────────────────────
-      // const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      // if (error) throw error;
-      //
-      // // Obtener el rol desde user_metadata o tabla profiles
-      // const role = data.user.user_metadata?.role ?? "estudiante";
-      //
-      // set({
-      //   user: {
-      //     id: data.user.id,
-      //     email: data.user.email!,
-      //     fullName: data.user.user_metadata?.full_name ?? "",
-      //     avatarUrl: data.user.user_metadata?.avatar_url,
-      //     role,
-      //   },
-      //   isAuthenticated: true,
-      // });
+      const profile = await getMyProfile();
+      if (!profile) throw new Error("No se encontró el perfil del usuario");
+
+      set({
+        user: {
+          id: profile.id,
+          email: user.email!,
+          fullName: profile.full_name,
+          avatarUrl: profile.avatar_url,
+          role: profile.role as UserRole,
+          semester: profile.semester,
+          bio: profile.bio,
+        },
+        isAuthenticated: true,
+      });
     } finally {
       set({ isLoading: false });
     }
@@ -98,24 +129,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUp: async (email, password, fullName) => {
     set({ isLoading: true });
     try {
-      if (IS_MOCK_MODE) {
-        await new Promise((r) => setTimeout(r, 1000));
-        // Simula registro exitoso sin autenticar (debe confirmar correo)
-        return;
-      }
-
-      // ── Producción ────────────────────────────────────────────────────────
-      // const { error } = await supabase.auth.signUp({
-      //   email,
-      //   password,
-      //   options: {
-      //     data: {
-      //       full_name: fullName,
-      //       role: "estudiante", // todos los registros nuevos son estudiantes
-      //     },
-      //   },
-      // });
-      // if (error) throw error;
+      await sbSignUp({ email, password, fullName });
     } finally {
       set({ isLoading: false });
     }
@@ -125,13 +139,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     set({ isLoading: true });
     try {
-      if (IS_MOCK_MODE) {
-        await new Promise((r) => setTimeout(r, 300));
-        set({ user: null, isAuthenticated: false });
-        return;
-      }
-      // await supabase.auth.signOut();
-      // set({ user: null, isAuthenticated: false });
+      await sbSignOut();
+      set({ user: null, isAuthenticated: false });
     } finally {
       set({ isLoading: false });
     }
