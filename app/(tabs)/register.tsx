@@ -20,8 +20,8 @@ import {
 } from "react-native";
 
 import { AuthInput } from "@/components/ui/AuthInput";
-import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { ErrorBanner } from "@/components/ui/Errorbanner";
+import { PrimaryButton } from "@/components/ui/Primarybutton";
 import { Colors } from "@/constants/Colors";
 import { supabase } from "@/lib/supabase";
 
