@@ -1,69 +1,152 @@
 /**
  * app/nueva-solicitud.tsx
  * Modal para crear una solicitud de estudio — US-005
+ * Selector de materia: carrusel horizontal de chips
  */
 
 import { Colors } from "@/constants/Colors";
-import { MOCK_SUBJECTS } from "@/utils/mockData";
-import { router } from "expo-router";
-import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  createStudyRequest,
+  getEnrolledSubjectsForUser,
+  type Modality,
+  type Subject,
+} from "@/lib/services/studyRequestsService";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useColorScheme,
+  View,
 } from "react-native";
 
-const MODALITIES = ["presencial", "virtual", "híbrido"] as const;
+const MODALITIES: Modality[] = ["presencial", "virtual", "híbrido"];
+const MODALITY_LABELS: Record<Modality, string> = {
+  presencial: "🏫 Presencial",
+  virtual: "💻 Virtual",
+  híbrido: "🔀 Híbrido",
+};
 
 export default function NuevaSolicitudScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
 
+  // ── Formulario ────────────────────────────────────────────────────────────
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [modality, setModality] = useState<"presencial" | "virtual" | "híbrido">("presencial");
+  const [modality, setModality] = useState<Modality>("presencial");
   const [maxMembers, setMaxMembers] = useState("4");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const isValid = title.trim().length >= 5 && description.trim().length >= 10 && selectedSubject;
+  // ── Estado remoto ─────────────────────────────────────────────────────────
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const handleCreate = async () => {
-    if (!isValid) return;
-
-    setIsLoading(true);
+  // ── Carga inicial ─────────────────────────────────────────────────────────
+  const loadData = async () => {
+    setLoadingData(true);
+    setFetchError(null);
     try {
-      // TODO: insertar en tabla study_requests de Supabase
-      // await supabase.from("study_requests").insert({
-      //   author_id: user.id,
-      //   subject_id: selectedSubject,
-      //   title: title.trim(),
-      //   description: description.trim(),
-      //   modality,
-      //   max_members: parseInt(maxMembers),
-      //   status: "abierta",
-      // });
-
-      await new Promise((r) => setTimeout(r, 900));
-      Alert.alert(
-        "¡Solicitud creada!",
-        "Tu grupo de estudio ya está visible en el feed.",
-        [{ text: "OK", onPress: () => router.back() }]
-      );
-    } catch {
-      Alert.alert("Error", "No se pudo crear la solicitud.");
+      const subs = await getEnrolledSubjectsForUser();
+      setSubjects(subs);
+    } catch (e: any) {
+      setFetchError(e?.message ?? "No se pudieron cargar tus materias.");
     } finally {
-      setIsLoading(false);
+      setLoadingData(false);
     }
   };
 
+  useEffect(() => { loadData(); }, []);
+
+  // ── Validación ────────────────────────────────────────────────────────────
+  const isValid =
+    title.trim().length >= 5 &&
+    description.trim().length >= 10 &&
+    !!selectedSubject;
+
+  // ── Envío ─────────────────────────────────────────────────────────────────
+  const handleCreate = async () => {
+    if (!isValid || !selectedSubject) return;
+    setIsSubmitting(true);
+    try {
+      await createStudyRequest({
+        title: title.trim(),
+        description: description.trim(),
+        subject_id: selectedSubject,
+        modality,
+        max_members: Math.max(2, Math.min(10, parseInt(maxMembers) || 4)),
+      });
+      Alert.alert(
+        "¡Solicitud creada! 🎉",
+        "Tu grupo de estudio ya está visible en el feed.",
+        [{ text: "Ver feed", onPress: () => router.back() }]
+      );
+    } catch (e: any) {
+      // Mensaje amigable para el constraint de solicitud duplicada
+      const msg = e?.message ?? "";
+      const friendlyMsg = msg.includes("unique_open_request_per_subject")
+        ? "Ya tienes una solicitud abierta para esta materia. Ciérrala antes de crear una nueva."
+        : msg || "Intenta de nuevo.";
+      Alert.alert("Error al crear", friendlyMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ── Estados de carga / error / vacío ─────────────────────────────────────
+  if (loadingData) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={[styles.loadingText, { color: C.textSecondary }]}>
+            Cargando tus materias…
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
+        <View style={styles.centered}>
+          <Text style={[styles.errorText, { color: C.error }]}>{fetchError}</Text>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.primary }]} onPress={loadData}>
+            <Text style={styles.actionBtnText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
+        <View style={styles.centered}>
+          <Text style={styles.emptyIcon}>📚</Text>
+          <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>Sin materias inscritas</Text>
+          <Text style={[styles.emptySubtitle, { color: C.textSecondary }]}>
+            Necesitas tener materias inscritas en tu perfil para crear una solicitud.
+          </Text>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.primary }]} onPress={() => router.back()}>
+            <Text style={styles.actionBtnText}>Volver al feed</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Pantalla principal ────────────────────────────────────────────────────
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
       <ScrollView
@@ -71,176 +154,207 @@ export default function NuevaSolicitudScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Materia */}
-        <Text style={[styles.label, { color: C.textSecondary }]}>Materia *</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectsRow}>
-          {MOCK_SUBJECTS.map((s) => (
-            <TouchableOpacity
-              key={s.id}
-              style={[
-                styles.subjectChip,
-                {
-                  backgroundColor: selectedSubject === s.id ? C.primary : C.surface,
-                  borderColor: selectedSubject === s.id ? C.primary : C.border,
-                },
-              ]}
-              onPress={() => setSelectedSubject(s.id)}
-              activeOpacity={0.8}
-            >
-              <Text
+        {/* ── Título ───────────────────────────────────────────────── */}
+        <Text style={[styles.label, { color: C.textSecondary }]}>
+          Título de la solicitud *
+        </Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: C.surface, color: C.textPrimary, borderColor: C.border }]}
+          placeholder="Ej: Preparación parcial de Cálculo II"
+          placeholderTextColor={C.textPlaceholder}
+          value={title}
+          onChangeText={setTitle}
+          maxLength={80}
+        />
+        <Text style={[styles.hint, { color: C.textSecondary }]}>
+          {title.trim().length}/80 · mínimo 5 caracteres
+        </Text>
+
+        {/* ── Descripción ──────────────────────────────────────────── */}
+        <Text style={[styles.label, { color: C.textSecondary }]}>
+          Descripción *
+        </Text>
+        <TextInput
+          style={[styles.input, styles.textarea, { backgroundColor: C.surface, color: C.textPrimary, borderColor: C.border }]}
+          placeholder="¿Qué quieres estudiar? ¿Con qué frecuencia? ¿Qué nivel buscas?"
+          placeholderTextColor={C.textPlaceholder}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+          maxLength={400}
+        />
+        <Text style={[styles.hint, { color: C.textSecondary }]}>
+          {description.trim().length}/400 · mínimo 10 caracteres
+        </Text>
+
+        {/* ── Carrusel de materias ──────────────────────────────────── */}
+        <Text style={[styles.label, { color: C.textSecondary }]}>
+          Materia *{" "}
+          <Text style={{ fontSize: 11, textTransform: "none" }}>
+            ({subjects.length} inscritas)
+          </Text>
+        </Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carouselContent}
+          style={styles.carousel}
+        >
+          {subjects.map((s) => {
+            const active = selectedSubject === s.id;
+            return (
+              <TouchableOpacity
+                key={s.id}
                 style={[
-                  styles.subjectChipText,
-                  { color: selectedSubject === s.id ? C.textOnPrimary : C.textSecondary },
+                  styles.subjectChip,
+                  {
+                    backgroundColor: active ? C.primary : C.surface,
+                    borderColor: active ? C.primary : C.border,
+                  },
                 ]}
+                onPress={() => setSelectedSubject(active ? null : s.id)}
+                activeOpacity={0.75}
               >
-                {s.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                {active && (
+                  <Text style={styles.chipCheck}>✓ </Text>
+                )}
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: active ? C.textOnPrimary : C.textPrimary },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {s.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
-        {/* Título */}
-        <View style={styles.fieldGap}>
-          <Text style={[styles.label, { color: C.textSecondary }]}>Título *</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: C.surface, borderColor: C.border, color: C.textPrimary }]}
-            placeholder="Ej: Grupo para el parcial de Cálculo"
-            placeholderTextColor={C.textPlaceholder}
-            value={title}
-            onChangeText={setTitle}
-          />
-        </View>
+        {!selectedSubject && (
+          <Text style={[styles.hint, { color: C.textSecondary, marginTop: 6 }]}>
+            Desliza y selecciona la materia para tu grupo
+          </Text>
+        )}
 
-        {/* Descripción */}
-        <View style={styles.fieldGap}>
-          <Text style={[styles.label, { color: C.textSecondary }]}>Descripción *</Text>
-          <TextInput
-            style={[styles.textArea, { backgroundColor: C.surface, borderColor: C.border, color: C.textPrimary }]}
-            placeholder="¿Qué temas van a ver? ¿Cuándo se reúnen?..."
-            placeholderTextColor={C.textPlaceholder}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* Modalidad */}
-        <View style={styles.fieldGap}>
-          <Text style={[styles.label, { color: C.textSecondary }]}>Modalidad</Text>
-          <View style={styles.modalityRow}>
-            {MODALITIES.map((m) => (
+        {/* ── Modalidad ────────────────────────────────────────────── */}
+        <Text style={[styles.label, { color: C.textSecondary }]}>Modalidad</Text>
+        <View style={styles.modalityRow}>
+          {MODALITIES.map((m) => {
+            const active = modality === m;
+            return (
               <TouchableOpacity
                 key={m}
                 style={[
                   styles.modalityBtn,
-                  {
-                    backgroundColor: modality === m ? C.primary : C.surface,
-                    borderColor: modality === m ? C.primary : C.border,
-                    flex: 1,
-                  },
+                  { flex: 1, backgroundColor: active ? C.primary : C.surface, borderColor: active ? C.primary : C.border },
                 ]}
                 onPress={() => setModality(m)}
-                activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.modalityText,
-                    { color: modality === m ? C.textOnPrimary : C.textSecondary },
-                  ]}
-                >
-                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                <Text style={[styles.modalityText, { color: active ? C.textOnPrimary : C.textPrimary }]}>
+                  {MODALITY_LABELS[m]}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
+            );
+          })}
         </View>
 
-        {/* Máximo de miembros */}
-        <View style={styles.fieldGap}>
-          <Text style={[styles.label, { color: C.textSecondary }]}>Máximo de miembros</Text>
-          <View style={styles.membersRow}>
-            {["2", "3", "4", "5", "6"].map((n) => (
-              <TouchableOpacity
-                key={n}
-                style={[
-                  styles.memberBtn,
-                  {
-                    backgroundColor: maxMembers === n ? C.primary : C.surface,
-                    borderColor: maxMembers === n ? C.primary : C.border,
-                  },
-                ]}
-                onPress={() => setMaxMembers(n)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.memberBtnText,
-                    { color: maxMembers === n ? C.textOnPrimary : C.textSecondary },
-                  ]}
-                >
-                  {n}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        {/* ── Cupos ────────────────────────────────────────────────── */}
+        <Text style={[styles.label, { color: C.textSecondary }]}>
+          Cupos máximos (2–10)
+        </Text>
+        <View style={styles.counterRow}>
+          <TouchableOpacity
+            style={[styles.counterBtn, { borderColor: C.border, backgroundColor: C.surface }]}
+            onPress={() => setMaxMembers((prev) => String(Math.max(2, parseInt(prev) - 1)))}
+          >
+            <Text style={[styles.counterBtnText, { color: C.textPrimary }]}>−</Text>
+          </TouchableOpacity>
+          <Text style={[styles.counterValue, { color: C.textPrimary }]}>{maxMembers}</Text>
+          <TouchableOpacity
+            style={[styles.counterBtn, { borderColor: C.border, backgroundColor: C.surface }]}
+            onPress={() => setMaxMembers((prev) => String(Math.min(10, parseInt(prev) + 1)))}
+          >
+            <Text style={[styles.counterBtnText, { color: C.textPrimary }]}>+</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Botón */}
+        {/* ── Botón publicar ───────────────────────────────────────── */}
         <TouchableOpacity
-          style={[styles.submitBtn, { backgroundColor: isValid ? C.primary : C.border }]}
+          style={[
+            styles.submitBtn,
+            { backgroundColor: isValid ? C.primary : C.border, opacity: isSubmitting ? 0.7 : 1 },
+          ]}
           onPress={handleCreate}
-          disabled={!isValid || isLoading}
-          activeOpacity={0.85}
+          disabled={!isValid || isSubmitting}
         >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
+          {isSubmitting ? (
+            <ActivityIndicator color={C.textOnPrimary} />
           ) : (
-            <Text style={[styles.submitBtnText, { color: isValid ? C.textOnPrimary : C.textSecondary }]}>
-              Publicar solicitud
+            <Text style={[styles.submitText, { color: isValid ? C.textOnPrimary : C.textSecondary }]}>
+              {isValid ? "Publicar solicitud" : "Completa los campos requeridos"}
             </Text>
           )}
         </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ── Estilos ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scroll: { padding: 20, paddingBottom: 40 },
-  label: { fontSize: 13, fontWeight: "500", marginBottom: 8 },
-  fieldGap: { marginTop: 16 },
+  scroll: { padding: 20, paddingTop: Platform.OS === "android" ? 16 : 12 },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 32 },
 
-  subjectsRow: { marginBottom: 4 },
+  label: { fontSize: 12, fontWeight: "700", marginBottom: 8, marginTop: 20, textTransform: "uppercase", letterSpacing: 0.6 },
+  hint: { fontSize: 11, marginTop: 4 },
+  input: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
+  textarea: { minHeight: 100 },
+
+  // Carrusel
+  carousel: { marginBottom: 4 },
+  carouselContent: { gap: 10, paddingRight: 8, paddingVertical: 4 },
   subjectChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginRight: 8,
-  },
-  subjectChipText: { fontSize: 13, fontWeight: "500" },
-
-  input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, height: 48, fontSize: 15 },
-  textArea: { borderWidth: 1, borderRadius: 8, padding: 14, fontSize: 14, minHeight: 100 },
-
-  modalityRow: { flexDirection: "row", gap: 8 },
-  modalityBtn: { borderWidth: 1, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
-  modalityText: { fontSize: 13, fontWeight: "500" },
-
-  membersRow: { flexDirection: "row", gap: 8 },
-  memberBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    maxWidth: 160,
+    minWidth: 100,
   },
-  memberBtnText: { fontSize: 15, fontWeight: "600" },
+  chipCheck: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  chipText: { fontSize: 13, fontWeight: "500", flexShrink: 1 },
 
-  submitBtn: { borderRadius: 10, paddingVertical: 15, alignItems: "center", marginTop: 24 },
-  submitBtnText: { fontSize: 15, fontWeight: "700" },
+  // Modalidad
+  modalityRow: { flexDirection: "row", gap: 8 },
+  modalityBtn: { paddingVertical: 10, paddingHorizontal: 6, borderRadius: 10, borderWidth: 1, alignItems: "center" },
+  modalityText: { fontSize: 12, fontWeight: "600", textAlign: "center" },
+
+  // Contador
+  counterRow: { flexDirection: "row", alignItems: "center", gap: 20 },
+  counterBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  counterBtnText: { fontSize: 20, lineHeight: 22 },
+  counterValue: { fontSize: 22, fontWeight: "700", minWidth: 30, textAlign: "center" },
+
+  // Submit
+  submitBtn: { marginTop: 32, paddingVertical: 16, borderRadius: 14, alignItems: "center" },
+  submitText: { fontSize: 16, fontWeight: "700" },
+
+  // Vacíos / error
+  loadingText: { marginTop: 12, fontSize: 14 },
+  errorText: { fontSize: 15, textAlign: "center" },
+  emptyIcon: { fontSize: 48, marginBottom: 8 },
+  emptyTitle: { fontSize: 17, fontWeight: "700", textAlign: "center" },
+  emptySubtitle: { fontSize: 14, textAlign: "center", lineHeight: 20, marginTop: 4 },
+  actionBtn: { paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12 },
+  actionBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

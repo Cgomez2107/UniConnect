@@ -28,7 +28,6 @@ import {
   Image,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +36,8 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface UserProgram {
   id: string;

@@ -6,12 +6,13 @@
 
 import { Colors } from "@/constants/Colors";
 import {
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    useColorScheme,
-    View,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
 } from "react-native";
+
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function InvitacionesScreen() {
   const scheme = useColorScheme() ?? "light";
