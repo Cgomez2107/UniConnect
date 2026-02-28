@@ -94,10 +94,6 @@ export function useGoogleAuth() {
       setError("Falta Client ID en .env")
       return
     }
-    
-    // Este log es vital para saber qué URL registrar en Google Cloud Console
-    console.log("🔗 URI de Redirección generada:", REDIRECT_URI);
-    
     setError(null)
     setLoading(true)
     promptAsync({ showInRecents: true })
