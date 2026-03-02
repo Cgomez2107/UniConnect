@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "UniConnect",
+    "slug": "uniconnet",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": [
+  "com.juanse108.uniconnet",
+  "com.googleusercontent.apps.662681556100-fljgftmr9roum0nhr2a5ehg7v1jrlof0.apps.googleusercontent.com"
+], 
+
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.juanse108.uniconnet"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.juanse108.uniconnet"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "806681e7-b2dc-444c-862e-1dbb77929149"
+      }
+    },
+    "owner": "juanse108",
+    "updates": {
+      "url": "https://u.expo.dev/806681e7-b2dc-444c-862e-1dbb77929149"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}
