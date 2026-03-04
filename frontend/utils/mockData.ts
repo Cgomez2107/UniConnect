@@ -1,0 +1,143 @@
+﻿/**
+ * utils/mockData.ts
+ * Datos de prueba para desarrollo sin Supabase
+ * Eliminar o ignorar cuando el backend est conectado
+ */
+
+import { Faculty, Profile, StudyRequest, Subject } from "@/types";
+
+export const MOCK_FACULTIES: Faculty[] = [
+  { id: "f1", name: "Ingenieria", code: "ING", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "f2", name: "Ciencias Exactas y Naturales", code: "CEN", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "f3", name: "Ciencias Juridicas y Sociales", code: "CJS", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "f4", name: "Artes y Humanidades", code: "AH", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "f5", name: "Ciencias Agropecuarias", code: "CA", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+];
+
+export const MOCK_SUBJECTS: Subject[] = [
+  { id: "s1", name: "Calculo Diferencial", code: "MAT101", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "s2", name: "Algebra Lineal", code: "MAT102", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "s3", name: "Programacion Orientada a Objetos", code: "SIS201", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "s4", name: "Estructuras de Datos", code: "SIS202", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "s5", name: "Fisica Mecanica", code: "FIS101", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "s6", name: "Estadistica", code: "MAT103", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+  { id: "s7", name: "Derecho Constitucional", code: "DER101", is_active: true, created_at: "2025-01-01T00:00:00Z" },
+];
+
+export const MOCK_PROFILES: Profile[] = [
+  {
+    id: "mock-001",
+    full_name: "Sebastian Martinez",
+    avatar_url: null,
+    bio: "Estudiante de Ingenieria de Sistemas apasionado por el desarrollo movil.",
+    role: "estudiante",
+    semester: 5,
+    is_active: true,
+    created_at: "2025-01-15T10:00:00Z",
+    updated_at: "2025-01-15T10:00:00Z",
+  },
+  {
+    id: "mock-002",
+    full_name: "Valeria Ospina",
+    avatar_url: null,
+    bio: "Me encanta la matematica y los algoritmos. Busco companeros para estudiar calculo.",
+    role: "estudiante",
+    semester: 3,
+    is_active: true,
+    created_at: "2025-01-20T14:30:00Z",
+    updated_at: "2025-01-20T14:30:00Z",
+  },
+  {
+    id: "mock-003",
+    full_name: "Carlos Gomez",
+    avatar_url: null,
+    bio: "Estudiante de 4to semestre, me gusta compartir apuntes y explicar temas.",
+    role: "estudiante",
+    semester: 4,
+    is_active: true,
+    created_at: "2025-02-01T09:00:00Z",
+    updated_at: "2025-02-01T09:00:00Z",
+  },
+  {
+    id: "mock-004",
+    full_name: "Ana Lucia Rios",
+    avatar_url: null,
+    bio: "Fisica y matematicas son mi pasion. Lista para formar grupos de estudio.",
+    role: "estudiante",
+    semester: 6,
+    is_active: true,
+    created_at: "2025-02-10T16:00:00Z",
+    updated_at: "2025-02-10T16:00:00Z",
+  },
+];
+
+export const MOCK_REQUESTS: StudyRequest[] = [
+  {
+    id: "r1",
+    author_id: "mock-002",
+    subject_id: "s1",
+    subject_name: "Calculo Diferencial",
+    faculty_name: "Ingenieria",
+    title: "Grupo de estudio para parcial de Calculo",
+    description: "Busco 2-3 companeros para repasar limites, derivadas y aplicaciones antes del parcial del viernes.",
+    max_members: 3,
+    modality: "presencial",
+    status: "abierta",
+    is_active: true,
+    created_at: "2026-02-22T08:00:00Z",
+    updated_at: "2026-02-22T08:00:00Z",
+    applications_count: 1,
+    profiles: { full_name: "Valeria Ospina", avatar_url: null },
+  },
+  {
+    id: "r2",
+    author_id: "mock-003",
+    subject_id: "s3",
+    subject_name: "Programacion Orientada a Objetos",
+    faculty_name: "Ingenieria",
+    title: "Proyecto final de POO - necesito equipo",
+    description: "Tenemos que entregar un sistema de gestion en Java. Busco personas que manejen herencia e interfaces.",
+    max_members: 4,
+    modality: "virtual",
+    status: "abierta",
+    is_active: true,
+    created_at: "2026-02-21T20:00:00Z",
+    updated_at: "2026-02-21T20:00:00Z",
+    applications_count: 2,
+    profiles: { full_name: "Carlos Gomez", avatar_url: null },
+  },
+  {
+    id: "r3",
+    author_id: "mock-004",
+    subject_id: "s5",
+    subject_name: "Fisica Mecanica",
+    faculty_name: "Ciencias Exactas y Naturales",
+    title: "Resolucion de talleres de Fisica",
+    description: "Me gustaria hacer los talleres de cinematica y dinamica en grupo. Tengo todos los apuntes de clase.",
+    max_members: 5,
+    modality: "presencial",
+    status: "abierta",
+    is_active: true,
+    created_at: "2026-02-20T15:00:00Z",
+    updated_at: "2026-02-20T15:00:00Z",
+    applications_count: 0,
+    profiles: { full_name: "Ana Lucia Rios", avatar_url: null },
+  },
+  {
+    id: "r4",
+    author_id: "mock-002",
+    subject_id: "s2",
+    subject_name: "Algebra Lineal",
+    faculty_name: "Ingenieria",
+    title: "Repaso de vectores y matrices",
+    description: "Voy a repasar transformaciones lineales y valores propios. Grupo de WhatsApp disponible.",
+    max_members: 6,
+    modality: "virtual",
+    status: "abierta",
+    is_active: true,
+    created_at: "2026-02-19T11:00:00Z",
+    updated_at: "2026-02-19T11:00:00Z",
+    applications_count: 3,
+    profiles: { full_name: "Valeria Ospina", avatar_url: null },
+  },
+];
