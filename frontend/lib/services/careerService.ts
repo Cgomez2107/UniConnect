@@ -127,3 +127,37 @@ export async function reviewApplication(
     (q) => q.eq("id", applicationId)
   )
 }
+
+// ── Postulaciones RECIBIDAS en todas mis solicitudes ──────────────────────────
+// Para el tab "Solicitudes" del autor — US-010
+export async function getReceivedApplications(userId: string): Promise<Application[]> {
+  const { data, error } = await supabase
+    .from("applications")
+    .select(`
+      *,
+      profiles ( full_name, avatar_url ),
+      study_requests!inner ( id, title, author_id, subjects ( name ) )
+    `)
+    .eq("study_requests.author_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Application[];
+}
+
+// ── Verificar si el usuario tiene una postulación aceptada a un request ───────
+// Usado en solicitud/[id].tsx para mostrar u ocultar el botón de chat — US-011
+export async function getMyApplicationStatus(
+  requestId: string,
+  userId: string
+): Promise<"pendiente" | "aceptada" | "rechazada" | null> {
+  const { data, error } = await supabase
+    .from("applications")
+    .select("status")
+    .eq("request_id", requestId)
+    .eq("applicant_id", userId)
+    .maybeSingle();
+
+  if (error) return null;
+  return (data?.status ?? null) as "pendiente" | "aceptada" | "rechazada" | null;
+}

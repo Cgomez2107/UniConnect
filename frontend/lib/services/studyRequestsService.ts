@@ -141,6 +141,7 @@ export async function createStudyRequest(
     max_members: payload.max_members,
     author_id: user.id,
     status: "abierta",
+    is_active: true,
   };
 
   const { error } = await supabase.from("study_requests").insert(insertData);

@@ -12,6 +12,7 @@ import {
   signOut as sbSignOut,
   signUp as sbSignUp,
 } from "@/lib/services/authService";
+import { registerAndSavePushToken } from "@/lib/services/pushService";
 import { create } from "zustand";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -71,6 +72,8 @@ export const useAuthStore = create<AuthState>((set) => ({
             },
             isAuthenticated: true,
           });
+          // Registrar push token tras login exitoso (no bloquea)
+          registerAndSavePushToken(session.user.id).catch(() => {});
         } catch (error) {
           // Fallback: si no hay perfil todavía (usuario nuevo con Google)
           // guardamos los datos básicos del token de Google
@@ -120,6 +123,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         },
         isAuthenticated: true,
       });
+      // Registrar push token tras login exitoso (no bloquea)
+      registerAndSavePushToken(profile.id).catch(() => {});
     } finally {
       set({ isLoading: false });
     }

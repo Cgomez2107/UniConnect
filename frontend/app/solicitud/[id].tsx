@@ -11,6 +11,8 @@
  */
 
 import { Colors } from "@/constants/Colors";
+import { getMyApplicationStatus } from "@/lib/services/careerService";
+import { getOrCreateConversation } from "@/lib/services/messagingService";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router, useLocalSearchParams } from "expo-router";
@@ -18,6 +20,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -81,6 +84,24 @@ export default function SolicitudDetailScreen() {
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState<
+    "pendiente" | "aceptada" | "rechazada" | null
+  >(null);
+
+  const openChat = async () => {
+    if (!user || !request) return;
+    setChatLoading(true);
+    try {
+      const convId = await getOrCreateConversation(user.id, request.author_id);
+      router.push(`/chat/${convId}?otherUserName=${encodeURIComponent(request.author_name)}` as any);
+    } catch (e: any) {
+      console.error("Error abriendo chat:", e.message);
+      Alert.alert("Error", e.message ?? "No se pudo abrir el chat.");
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   // ── Cargar detalle ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -141,6 +162,12 @@ export default function SolicitudDetailScreen() {
           subject_name: r.subjects?.name ?? "Sin materia",
           faculty_name: facultyName,
         });
+
+        // Cargar estado de mi postulación (si no soy el autor)
+        if (user?.id && r.author_id !== user.id) {
+          const status = await getMyApplicationStatus(r.id, user.id);
+          setApplicationStatus(status);
+        }
       } catch (e: any) {
         setError(e.message ?? "Error al cargar la solicitud.");
       } finally {
@@ -315,7 +342,41 @@ export default function SolicitudDetailScreen() {
               ✏️ Esta es tu solicitud
             </Text>
           </View>
+
+        ) : applicationStatus === "aceptada" ? (
+          // ✅ Postulación aceptada → mostrar botón de chat
+          <TouchableOpacity
+            style={[
+              styles.postulateBtn,
+              { backgroundColor: chatLoading ? C.border : C.primary },
+            ]}
+            onPress={openChat}
+            disabled={chatLoading}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.postulateBtnText, { color: C.textOnPrimary }]}>
+              {chatLoading ? "Abriendo chat…" : `💬 Mensaje a ${request.author_name.split(" ")[0]}`}
+            </Text>
+          </TouchableOpacity>
+
+        ) : applicationStatus === "pendiente" ? (
+          // ⏳ En espera de respuesta
+          <View style={[styles.ownPostBanner, { backgroundColor: C.surface, borderColor: C.border }]}>
+            <Text style={[styles.ownPostText, { color: C.textSecondary }]}>
+              ⏳ Tu postulación está en revisión
+            </Text>
+          </View>
+
+        ) : applicationStatus === "rechazada" ? (
+          // ❌ Rechazada
+          <View style={[styles.closedBanner, { backgroundColor: C.surface, borderColor: C.error + "40" }]}>
+            <Text style={[styles.closedText, { color: C.error }]}>
+              ❌ Tu postulación fue rechazada
+            </Text>
+          </View>
+
         ) : request.status === "abierta" ? (
+          // Sin postulación aún → puede postularse
           <TouchableOpacity
             style={[styles.postulateBtn, { backgroundColor: C.primary }]}
             onPress={() => router.push(`/postular/${request.id}` as any)}
@@ -325,7 +386,9 @@ export default function SolicitudDetailScreen() {
               Postularme a este grupo
             </Text>
           </TouchableOpacity>
+
         ) : (
+          // Solicitud cerrada, sin relación
           <View style={[styles.closedBanner, { backgroundColor: C.surface, borderColor: C.border }]}>
             <Text style={[styles.closedText, { color: C.textSecondary }]}>
               🔒 Esta solicitud ya está cerrada

@@ -154,3 +154,38 @@ export interface Application {
   profiles?: { full_name: string; avatar_url: string | null };
   study_requests?: { title: string; status: RequestStatus; subjects?: { name: string } };
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MENSAJERÍA — US-011
+// ══════════════════════════════════════════════════════════════════════════════
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  read_at: string | null;
+  // join
+  sender?: { full_name: string; avatar_url: string | null };
+}
+
+export interface Conversation {
+  id: string;
+  participant_a: string;
+  participant_b: string;
+  created_at: string;
+  updated_at: string;
+  // datos enriquecidos para mostrar en la lista
+  other_user_id: string;
+  other_user_name: string;
+  other_user_avatar: string | null;
+  last_message: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+}
+
+export interface SendMessagePayload {
+  conversation_id: string;
+  content: string;
+}

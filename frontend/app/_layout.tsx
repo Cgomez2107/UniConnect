@@ -22,12 +22,12 @@ export default function RootLayout() {
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(admin)" />
-      {/* Modales — agregar cuando se creen los archivos físicos */}
+      <Stack.Screen name="chat/[conversationId]" />
+      <Stack.Screen name="nueva-solicitud"  options={{ presentation: "modal" }} />
+      <Stack.Screen name="editar-perfil"    options={{ presentation: "modal" }} />
+      <Stack.Screen name="solicitud/[id]" />
+      <Stack.Screen name="postular/[id]" />
       {/* <Stack.Screen name="register"         options={{ presentation: "modal" }} /> */}
-      {/* <Stack.Screen name="nueva-solicitud"  options={{ presentation: "modal" }} /> */}
-      {/* <Stack.Screen name="editar-perfil"    options={{ presentation: "modal" }} /> */}
-      {/* <Stack.Screen name="solicitud/[id]"   options={{ presentation: "modal" }} /> */}
-      {/* <Stack.Screen name="postular/[id]"    options={{ presentation: "modal" }} /> */}
     </Stack>
   );
 }
