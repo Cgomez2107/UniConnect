@@ -1,11 +1,15 @@
 ﻿/**
  * app/(tabs)/feed.tsx
  *
- * Pantalla del feed - US-006.
- * Esta pantalla es un ORQUESTADOR puro: solo conecta el hook useFeed
- * con los componentes visuales. Sin logica de datos, sin estilos masivos.
+ * Pantalla del feed — US-005 + US-006.
+ * ORQUESTADOR puro: conecta los hooks useFeed y useStudentSearch
+ * con los componentes visuales. Sin lógica de datos.
  *
- * Logica de datos  -> hooks/useFeed.ts
+ * Dos modos de búsqueda:
+ *   - "solicitudes": feed normal de solicitudes de estudio
+ *   - "compañeros":  búsqueda de estudiantes por materia (US-005)
+ *
+ * Lógica de datos  -> hooks/useFeed.ts, hooks/useStudentSearch.ts
  * Componentes      -> components/feed/
  * Componentes UI   -> components/shared/
  */
@@ -13,11 +17,15 @@
 import { FeedFilterModal } from "@/components/feed/FeedFilterModal";
 import { FeedHeader } from "@/components/feed/FeedHeader";
 import { SearchBar } from "@/components/feed/SearchBar";
+import { SearchModeToggle, SearchMode } from "@/components/feed/SearchModeToggle";
+import { StudentCard } from "@/components/feed/StudentCard";
+import { SubjectSelector } from "@/components/feed/SubjectSelector";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { CardSolicitud } from "@/components/ui/CardSolicitud";
 import { Colors } from "@/constants/Colors";
 import { useFeed } from "@/hooks/useFeed";
+import { useStudentSearch } from "@/hooks/useStudentSearch";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -31,7 +39,9 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchMode>("solicitudes");
 
+  // Hook de solicitudes (modo por defecto)
   const {
     filtered,
     userSubjects,
@@ -48,81 +58,162 @@ export default function FeedScreen() {
     loadMore,
   } = useFeed();
 
+  // Hook de búsqueda de compañeros (US-005)
+  const studentSearch = useStudentSearch();
+
   return (
     <View style={[styles.container, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
 
       <FeedHeader count={filtered.length} loading={loading} />
 
-      <SearchBar
-        value={search}
-        onChangeText={setSearch}
-        onClear={() => setSearch("")}
-        activeFilters={activeFilters}
-        onOpenFilters={() => setShowFilters(true)}
-      />
+      {/* Toggle de modo de búsqueda */}
+      <SearchModeToggle mode={searchMode} onChangeMode={setSearchMode} />
 
-      {loading && !refreshing ? (
-        <LoadingState message="Cargando solicitudes..." />
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <CardSolicitud
-              item={item as any}
-              isOwnPost={item.author_id === user?.id}
-              onPress={() => router.push(`/solicitud/${item.id}` as any)}
-              onPostulate={() => router.push(`/postular/${item.id}` as any)}
+      {/* ── Modo Solicitudes ─────────────────────────────────────────── */}
+      {searchMode === "solicitudes" && (
+        <>
+          <SearchBar
+            value={search}
+            onChangeText={setSearch}
+            onClear={() => setSearch("")}
+            activeFilters={activeFilters}
+            onOpenFilters={() => setShowFilters(true)}
+          />
+
+          {loading && !refreshing ? (
+            <LoadingState message="Cargando solicitudes..." />
+          ) : (
+            <FlatList
+              data={filtered}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <CardSolicitud
+                  item={item as any}
+                  isOwnPost={item.author_id === user?.id}
+                  onPress={() => router.push(`/solicitud/${item.id}` as any)}
+                  onPostulate={() => router.push(`/postular/${item.id}` as any)}
+                />
+              )}
+              contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 80 }}
+              showsVerticalScrollIndicator={false}
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                loadingMore ? (
+                  <View style={{ paddingVertical: 20 }}>
+                    <ActivityIndicator size="small" color={C.primary} />
+                  </View>
+                ) : null
+              }
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={refresh}
+                  colors={[C.primary]}
+                  tintColor={C.primary}
+                />
+              }
+              ListEmptyComponent={
+                error ? (
+                  <EmptyState
+                    emoji="Warning"
+                    title="Error al cargar"
+                    body={error}
+                    action="Reintentar"
+                    onAction={refresh}
+                  />
+                ) : (
+                  <EmptyState
+                    emoji="Search"
+                    title="Sin resultados"
+                    body="Intenta con otros filtros o crea la primera solicitud."
+                  />
+                )
+              }
             />
           )}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 80 }}
-          showsVerticalScrollIndicator={false}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            loadingMore ? (
-              <View style={{ paddingVertical: 20 }}>
-                <ActivityIndicator size="small" color={C.primary} />
-              </View>
-            ) : null
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={refresh}
-              colors={[C.primary]}
-              tintColor={C.primary}
-            />
-          }
-          ListEmptyComponent={
-            error ? (
-              <EmptyState
-                emoji="Warning"
-                title="Error al cargar"
-                body={error}
-                action="Reintentar"
-                onAction={refresh}
-              />
-            ) : (
-              <EmptyState
-                emoji="Search"
-                title="Sin resultados"
-                body="Intenta con otros filtros o crea la primera solicitud."
-              />
-            )
-          }
-        />
+
+          <FeedFilterModal
+            visible={showFilters}
+            onClose={() => setShowFilters(false)}
+            selectedSubjects={selectedSubjects}
+            onSelectSubjects={setSelectedSubjects}
+            subjects={userSubjects}
+            bottomInset={insets.bottom}
+          />
+        </>
       )}
 
-      <FeedFilterModal
-        visible={showFilters}
-        onClose={() => setShowFilters(false)}
-        selectedSubjects={selectedSubjects}
-        onSelectSubjects={setSelectedSubjects}
-        subjects={userSubjects}
-        bottomInset={insets.bottom}
-      />
+      {/* ── Modo Compañeros (US-005) ─────────────────────────────────── */}
+      {searchMode === "compañeros" && (
+        <>
+          <SubjectSelector
+            subjects={studentSearch.userSubjects}
+            selectedId={studentSearch.selectedSubjectId}
+            onSelect={studentSearch.selectSubject}
+          />
+
+          {!studentSearch.selectedSubjectId ? (
+            <EmptyState
+              emoji="📚"
+              title="Selecciona una materia"
+              body="Elige una materia para buscar compañeros que la estén cursando."
+            />
+          ) : studentSearch.loading ? (
+            <LoadingState message="Buscando compañeros..." />
+          ) : (
+            <FlatList
+              data={studentSearch.students}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <StudentCard
+                  student={item}
+                  onViewProfile={(id) =>
+                    router.push(`/perfil-estudiante/${id}` as any)
+                  }
+                />
+              )}
+              contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 80 }}
+              showsVerticalScrollIndicator={false}
+              onEndReached={studentSearch.loadMore}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                studentSearch.loadingMore ? (
+                  <View style={{ paddingVertical: 20 }}>
+                    <ActivityIndicator size="small" color={C.primary} />
+                  </View>
+                ) : null
+              }
+              refreshControl={
+                <RefreshControl
+                  refreshing={false}
+                  onRefresh={studentSearch.refresh}
+                  colors={[C.primary]}
+                  tintColor={C.primary}
+                />
+              }
+              ListEmptyComponent={
+                studentSearch.error ? (
+                  <EmptyState
+                    emoji="⚠️"
+                    title="Error en la búsqueda"
+                    body={studentSearch.error}
+                    action="Reintentar"
+                    onAction={studentSearch.refresh}
+                  />
+                ) : (
+                  <EmptyState
+                    emoji="🔍"
+                    title="Sin compañeros encontrados"
+                    body="No hay otros estudiantes inscritos en esta materia."
+                  />
+                )
+              }
+            />
+          )}
+        </>
+      )}
     </View>
   );
 }

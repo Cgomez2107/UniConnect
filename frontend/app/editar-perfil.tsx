@@ -3,18 +3,6 @@
  * 
  * Pantalla de edición de perfil — US-004: Completar perfil público
  * 
- * CAMPOS EDITABLES:
- * ✓ Foto de perfil (cambiar/capturar)
- * ✓ Materias (agregar/remover)
- * ✓ Biografía (max 500 caracteres)
- * ✓ Teléfono de contacto (nuevo en Sprint 2)
- * 
- * CAMPOS NO EDITABLES (seguridad/diseño MVP):
- * ✗ Nombre completo (solo en registro)
- * ✗ Programa académico (solo gestor académico)
- * ✗ Correo (solo via verificación)
- * 
- * Foto: galería o cámara en tiempo real
  */
 
 import { Colors } from "@/constants/Colors";

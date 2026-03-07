@@ -220,3 +220,31 @@ export interface CreateStudyResourcePayload {
   description?: string;
   file_uri: string;
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BÚSQUEDA DE COMPAÑEROS — US-005
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** Resultado de la RPC search_students_by_subject */
+export interface StudentSearchResult {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  bio: string | null;
+  semester: number | null;
+  program_name: string | null;
+  faculty_name: string | null;
+}
+
+/** Perfil público de otro estudiante con materias en común */
+export interface StudentPublicProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  bio: string | null;
+  semester: number | null;
+  program_name: string | null;
+  faculty_name: string | null;
+  /** Solo las materias que comparte con el usuario autenticado */
+  shared_subjects: { id: string; name: string }[];
+}

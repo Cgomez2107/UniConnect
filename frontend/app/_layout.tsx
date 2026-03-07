@@ -27,6 +27,7 @@ export default function RootLayout() {
       <Stack.Screen name="editar-perfil"    options={{ presentation: "modal" }} />
       <Stack.Screen name="solicitud/[id]" />
       <Stack.Screen name="postular/[id]" />
+      <Stack.Screen name="perfil-estudiante/[id]" />
       {/* <Stack.Screen name="register"         options={{ presentation: "modal" }} /> */}
     </Stack>
   );
