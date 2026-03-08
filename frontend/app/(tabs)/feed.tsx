@@ -2,20 +2,22 @@
  * app/(tabs)/feed.tsx
  *
  * Pantalla del feed — US-005 + US-006.
- * ORQUESTADOR puro: conecta los hooks useFeed y useStudentSearch
+ * ORQUESTADOR puro: conecta los hooks useFeed, useStudentSearch y useResourceList
  * con los componentes visuales. Sin lógica de datos.
  *
- * Dos modos de búsqueda:
+ * Tres modos de búsqueda:
  *   - "solicitudes": feed normal de solicitudes de estudio
  *   - "compañeros":  búsqueda de estudiantes por materia (US-005)
+ *   - "recursos":    recursos compartidos por materia (US-006)
  *
- * Lógica de datos  -> hooks/useFeed.ts, hooks/useStudentSearch.ts
+ * Lógica de datos  -> hooks/useFeed.ts, hooks/useStudentSearch.ts, hooks/useResources.ts
  * Componentes      -> components/feed/
  * Componentes UI   -> components/shared/
  */
 
 import { FeedFilterModal } from "@/components/feed/FeedFilterModal";
 import { FeedHeader } from "@/components/feed/FeedHeader";
+import { ResourceCard } from "@/components/feed/ResourceCard";
 import { SearchBar } from "@/components/feed/SearchBar";
 import { SearchModeToggle, SearchMode } from "@/components/feed/SearchModeToggle";
 import { StudentCard } from "@/components/feed/StudentCard";
@@ -25,12 +27,13 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { CardSolicitud } from "@/components/ui/CardSolicitud";
 import { Colors } from "@/constants/Colors";
 import { useFeed } from "@/hooks/useFeed";
+import { useResourceList } from "@/hooks/useResources";
 import { useStudentSearch } from "@/hooks/useStudentSearch";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, useColorScheme, View } from "react-native";
+import { useState, useCallback } from "react";
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function FeedScreen() {
@@ -60,6 +63,17 @@ export default function FeedScreen() {
 
   // Hook de búsqueda de compañeros (US-005)
   const studentSearch = useStudentSearch();
+
+  // Hook de recursos por materia (US-006)
+  const [resourceSubjectId, setResourceSubjectId] = useState<string | null>(null);
+  const resourceList = useResourceList(resourceSubjectId);
+
+  const handleOpenResource = useCallback(
+    (item: { id: string }) => {
+      router.push(`/recurso/${item.id}` as any)
+    },
+    []
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: C.background, paddingTop: insets.top }]}>
@@ -214,10 +228,100 @@ export default function FeedScreen() {
           )}
         </>
       )}
+
+      {/* ── Modo Recursos (US-006) ───────────────────────────────────── */}
+      {searchMode === "recursos" && (
+        <>
+          <SubjectSelector
+            subjects={studentSearch.userSubjects}
+            selectedId={resourceSubjectId}
+            onSelect={setResourceSubjectId}
+          />
+
+          {/* Botón para subir recurso */}
+          <TouchableOpacity
+            style={[styles.uploadFab, { backgroundColor: C.primary }]}
+            onPress={() => router.push("/subir-recurso" as any)}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.uploadFabText, { color: C.textOnPrimary }]}>
+              📤 Subir recurso
+            </Text>
+          </TouchableOpacity>
+
+          {!resourceSubjectId ? (
+            <EmptyState
+              emoji="📚"
+              title="Selecciona una materia"
+              body="Elige una materia para ver los recursos compartidos."
+            />
+          ) : resourceList.loading ? (
+            <LoadingState message="Cargando recursos..." />
+          ) : (
+            <FlatList
+              data={resourceList.resources}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <ResourceCard
+                  item={item}
+                  isOwn={item.user_id === user?.id}
+                  onOpen={handleOpenResource}
+                />
+              )}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: insets.bottom + 80 }}
+              showsVerticalScrollIndicator={false}
+              onEndReached={resourceList.loadMore}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                resourceList.loadingMore ? (
+                  <View style={{ paddingVertical: 20 }}>
+                    <ActivityIndicator size="small" color={C.primary} />
+                  </View>
+                ) : null
+              }
+              refreshControl={
+                <RefreshControl
+                  refreshing={resourceList.refreshing}
+                  onRefresh={resourceList.refresh}
+                  colors={[C.primary]}
+                  tintColor={C.primary}
+                />
+              }
+              ListEmptyComponent={
+                resourceList.error ? (
+                  <EmptyState
+                    emoji="⚠️"
+                    title="Error al cargar"
+                    body={resourceList.error}
+                    action="Reintentar"
+                    onAction={resourceList.refresh}
+                  />
+                ) : (
+                  <EmptyState
+                    emoji="📭"
+                    title="Sin recursos"
+                    body="Aún no hay recursos compartidos para esta materia. ¡Sé el primero en compartir!"
+                    action="Subir recurso"
+                    onAction={() => router.push("/subir-recurso" as any)}
+                  />
+                )
+              }
+            />
+          )}
+        </>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  uploadFab: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  uploadFabText: { fontSize: 14, fontWeight: "600" },
 });

@@ -1,16 +1,17 @@
 /**
  * components/feed/SearchModeToggle.tsx
- * Toggle para alternar entre búsqueda de solicitudes y compañeros — US-005
+ * Toggle para alternar entre modos de búsqueda — US-005 + US-006
  *
- * Dos modos:
+ * Tres modos:
  *   - "solicitudes": búsqueda normal del feed (por defecto)
  *   - "compañeros": búsqueda de estudiantes por materia
+ *   - "recursos": recursos de estudio compartidos
  */
 
 import { Colors } from "@/constants/Colors"
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 
-export type SearchMode = "solicitudes" | "compañeros"
+export type SearchMode = "solicitudes" | "compañeros" | "recursos"
 
 interface Props {
   mode: SearchMode
@@ -56,6 +57,24 @@ export function SearchModeToggle({ mode, onChangeMode }: Props) {
           ]}
         >
           👥 Compañeros
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.tab,
+          mode === "recursos" && { backgroundColor: C.primary },
+        ]}
+        onPress={() => onChangeMode("recursos")}
+        activeOpacity={0.8}
+      >
+        <Text
+          style={[
+            styles.tabText,
+            { color: mode === "recursos" ? C.textOnPrimary : C.textSecondary },
+          ]}
+        >
+          📚 Recursos
         </Text>
       </TouchableOpacity>
     </View>
