@@ -44,7 +44,7 @@ export default function PerfilScreen() {
   } = useProfile();
 
   const handleSignOut = () => {
-    Alert.alert("Cerrar sesion", "Estas seguro de que quieres salir?", [
+    Alert.alert("Cerrar sesión", "¿Estás seguro de que quieres salir?", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Salir",
@@ -78,12 +78,11 @@ export default function PerfilScreen() {
           <LoadingState message="Cargando perfil..." />
         ) : (
           <>
-            {/* Informacion academica */}
-            <SectionCard title="Informacion academica">
+            <SectionCard title="Información académica">
               {user?.semester ? (
-                <InfoRow emoji="Calendar" label="Semestre" value={`${user.semester} semestre`} />
+                <InfoRow emoji="📅" label="Semestre" value={`${user.semester}° semestre`} />
               ) : null}
-              <InfoRow emoji="Graduate" label={`Programa${userPrograms.length > 1 ? "s" : ""}`}>
+              <InfoRow emoji="🎓" label={`Programa${userPrograms.length > 1 ? "s" : ""}`}>
                 {userPrograms.length === 0 ? (
                   <Text style={{ fontSize: 14, color: C.textPlaceholder }}>
                     Sin programa registrado
@@ -157,7 +156,7 @@ export default function PerfilScreen() {
               <Text style={{ fontSize: 14, lineHeight: 22, color: C.textSecondary }}>
                 {user?.bio?.trim()
                   ? user.bio
-                  : "Aun no has escrito una biografia. Toca Editar para agregar una."}
+                  : "Aún no has escrito una biografía. Toca Editar para agregar una."}
               </Text>
             </SectionCard>
 
@@ -169,9 +168,9 @@ export default function PerfilScreen() {
             >
               {myRequests.length === 0 ? (
                 <View style={styles.emptySmall}>
-                  <Text style={{ fontSize: 28 }}>Empty</Text>
+                  <Text style={{ fontSize: 28 }}>📭</Text>
                   <Text style={{ fontSize: 13, color: C.textSecondary, textAlign: "center" }}>
-                    Aun no tienes solicitudes publicadas
+                    Aún no tienes solicitudes publicadas
                   </Text>
                 </View>
               ) : (
@@ -193,7 +192,7 @@ export default function PerfilScreen() {
           onPress={handleSignOut}
           activeOpacity={0.8}
         >
-          <Text style={[styles.signOutText, { color: C.error }]}>Cerrar sesion</Text>
+          <Text style={[styles.signOutText, { color: C.error }]}>Cerrar sesión</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

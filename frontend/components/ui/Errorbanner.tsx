@@ -24,6 +24,7 @@ export function ErrorBanner({ message }: ErrorBannerProps) {
         { backgroundColor: C.errorBackground, borderColor: C.borderError },
       ]}
     >
+      <Text style={[styles.icon, { color: C.error }]}>⚠️</Text>
       <Text style={[styles.text, { color: C.error }]}>{message}</Text>
     </View>
   );
@@ -36,9 +37,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
   },
+  icon: { fontSize: 14, lineHeight: 18 },
   text: {
     fontSize: 13,
     lineHeight: 18,
+    flex: 1,
   },
 });

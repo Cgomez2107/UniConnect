@@ -131,7 +131,7 @@ export default function FeedScreen() {
               ListEmptyComponent={
                 error ? (
                   <EmptyState
-                    emoji="Warning"
+                    emoji="⚠️"
                     title="Error al cargar"
                     body={error}
                     action="Reintentar"
@@ -139,7 +139,7 @@ export default function FeedScreen() {
                   />
                 ) : (
                   <EmptyState
-                    emoji="Search"
+                    emoji="🔍"
                     title="Sin resultados"
                     body="Intenta con otros filtros o crea la primera solicitud."
                   />

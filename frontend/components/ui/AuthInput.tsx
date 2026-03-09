@@ -68,7 +68,7 @@ export function AuthInput({
             activeOpacity={0.7}
           >
             <Text style={[styles.eyeText, { color: C.textSecondary }]}>
-              {showText ? "Ocultar" : "Ver"}
+              {showText ? "👁‍🗨" : "👁"}
             </Text>
           </TouchableOpacity>
         )}
