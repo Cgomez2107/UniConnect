@@ -23,12 +23,6 @@ interface CardSolicitudProps {
   isOwnPost?: boolean;
 }
 
-const MODALITY_LABEL = {
-  presencial: "📍 Presencial",
-  virtual: "💻 Virtual",
-  híbrido: "🔄 Híbrido",
-};
-
 export function CardSolicitud({
   item,
   onPress,
@@ -106,13 +100,9 @@ export function CardSolicitud({
         {item.description}
       </Text>
 
-      {/* ── Footer: modalidad + miembros + botón ─────────────────────── */}
+      {/* ── Footer: miembros + botón ─────────────────────────────────── */}
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
-          <Text style={[styles.footerMeta, { color: C.textSecondary }]}>
-            {MODALITY_LABEL[item.modality]}
-          </Text>
-          <Text style={[styles.footerDot, { color: C.border }]}>·</Text>
           <Text style={[styles.footerMeta, { color: C.textSecondary }]}>
             👥 {item.applications_count ?? 0}/{item.max_members}
           </Text>
@@ -221,10 +211,9 @@ const styles = StyleSheet.create({
   footerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 0,
   },
   footerMeta: { fontSize: 12 },
-  footerDot: { fontSize: 12 },
 
   postulateBtn: {
     paddingHorizontal: 16,

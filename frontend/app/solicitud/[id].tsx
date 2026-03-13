@@ -4,7 +4,7 @@
  *
  * Muestra información completa de la solicitud:
  * - Autor con avatar grande e iniciales
- * - Materia, facultad, modalidad
+ * - Materia y facultad
  * - Cupos disponibles
  * - Descripción completa
  * - Botón "Postularme" (si no es el propio post)
@@ -36,7 +36,6 @@ interface RequestDetail {
   author_id: string;
   title: string;
   description: string;
-  modality: string;
   max_members: number;
   status: string;
   created_at: string;
@@ -46,13 +45,6 @@ interface RequestDetail {
   subject_name: string;
   faculty_name: string;
 }
-
-const MODALITY_LABEL: Record<string, string> = {
-  presencial: "📍 Presencial",
-  virtual: "💻 Virtual",
-  hibrido: "🔄 Híbrido",
-  híbrido: "🔄 Híbrido",
-};
 
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -114,7 +106,7 @@ export default function SolicitudDetailScreen() {
         const { data, error: err } = await supabase
           .from("study_requests")
           .select(`
-            id, author_id, title, description, modality,
+            id, author_id, title, description,
             max_members, status, created_at,
             profiles ( full_name, avatar_url, bio ),
             subjects (
@@ -152,7 +144,6 @@ export default function SolicitudDetailScreen() {
           author_id: r.author_id,
           title: r.title,
           description: r.description,
-          modality: r.modality,
           max_members: r.max_members,
           status: r.status,
           created_at: r.created_at,
@@ -279,12 +270,6 @@ export default function SolicitudDetailScreen() {
         </View>
 
         <View style={styles.metaRow}>
-          {/* Modalidad */}
-          <View style={[styles.metaChip, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <Text style={[styles.metaChipText, { color: C.textSecondary }]}>
-              {MODALITY_LABEL[request.modality] ?? request.modality}
-            </Text>
-          </View>
           {/* Cupos */}
           <View style={[
             styles.metaChip,

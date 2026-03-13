@@ -12,7 +12,6 @@ import type { StudyRequest, Application, CreateStudyRequestPayload } from "@/typ
 
 // ── Feed de solicitudes ───────────────────────────────────────────────────────
 export async function getFeed(filters?: {
-  modality?: string
   subject_id?: string
   search?: string
 }): Promise<StudyRequest[]> {
@@ -22,8 +21,6 @@ export async function getFeed(filters?: {
       .eq("status", "abierta")
       .eq("is_active", true)
       .order("created_at", { ascending: false })
-    if (filters?.modality && filters.modality !== "Todos")
-      query = query.eq("modality", filters.modality)
     if (filters?.subject_id)
       query = query.eq("subject_id", filters.subject_id)
     if (filters?.search)
@@ -91,6 +88,7 @@ export async function applyToRequest(
 
   if (error) {
     if (error.code === "23505") throw new Error("Ya te postulaste a esta solicitud.")
+    if (error.code === "P0001") throw new Error(error.message)
     throw error
   }
   return data as Application
@@ -118,14 +116,22 @@ export async function getMyApplications(userId: string): Promise<Application[]> 
 
 // ── Aceptar / rechazar postulacion ────────────────────────────────────────────
 export async function reviewApplication(
+  reviewerId: string,
   applicationId: string,
   status: "aceptada" | "rechazada"
 ): Promise<void> {
-  await apiPatch<Application>(
-    "applications",
-    { status, reviewed_at: new Date().toISOString() },
-    (q) => q.eq("id", applicationId)
-  )
+  const { error } = await supabase.rpc("review_application_as_author", {
+    p_application_id: applicationId,
+    p_reviewer_id: reviewerId,
+    p_status: status,
+  })
+
+  if (error) {
+    if (error.code === "P0001") {
+      throw new Error(error.message)
+    }
+    throw error
+  }
 }
 
 // ── Postulaciones RECIBIDAS en todas mis solicitudes ──────────────────────────

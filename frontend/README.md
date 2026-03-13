@@ -169,7 +169,6 @@ components/
   feed/                Componentes del feed de solicitudes
     FeedHeader.tsx     Cabecera con título y botón de filtros
     SearchBar.tsx      Barra de búsqueda por texto
-    ModalityChips.tsx  Chips de filtro: Presencial / Virtual / Híbrido
     FeedFilterModal.tsx Modal con filtros avanzados (facultad, materia)
   perfil/              Componentes de la pantalla de perfil
     ProfileHero.tsx    Avatar, nombre, semestre y bio del usuario
@@ -240,7 +239,7 @@ Tipos TypeScript del dominio. **Fuente única de verdad**: todos los servicios y
 types/
   index.ts   UserRole, AuthProfile, Profile, UserProgram, UserSubject,
              Faculty, Program, Subject,
-             Modality, RequestStatus, ApplicationStatus,
+             RequestStatus, ApplicationStatus,
              StudyRequest, CreateStudyRequestPayload, Application
 ```
 

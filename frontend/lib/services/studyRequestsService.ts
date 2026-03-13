@@ -21,13 +21,10 @@ export interface Subject {
   name: string;
 }
 
-export type Modality = "presencial" | "virtual" | "híbrido";
-
 export interface CreateStudyRequestPayload {
   title: string;
   description: string;
   subject_id: string;
-  modality: Modality;
   max_members: number;
 }
 
@@ -39,7 +36,6 @@ export interface FeedStudyRequest {
   subject_id: string;
   title: string;
   description: string;
-  modality: Modality;
   max_members: number;
   status: "abierta" | "cerrada";
   created_at: string;
@@ -57,7 +53,6 @@ export interface FeedStudyRequest {
 }
 
 export interface FeedFilters {
-  modality?: string;
   search?: string;
   /** IDs de materias del usuario para filtrar por materias en común */
   subjectIds?: string[];
@@ -130,18 +125,10 @@ export async function createStudyRequest(
 
   if (!user) throw new Error("No hay sesión activa.");
 
-  // La BD usa 'hibrido' sin tilde en el CHECK constraint
-  const modalityMap: Record<Modality, string> = {
-    presencial: "presencial",
-    virtual: "virtual",
-    híbrido: "hibrido",
-  };
-
   const insertData = {
     title: payload.title.trim(),
     description: payload.description.trim(),
     subject_id: payload.subject_id,
-    modality: modalityMap[payload.modality],
     max_members: payload.max_members,
     author_id: user.id,
     status: "abierta",
@@ -176,7 +163,7 @@ export async function getFeedRequests(
     .from("study_requests")
     .select(`
       id, author_id, subject_id, title, description,
-      modality, max_members, status, created_at,
+      max_members, status, created_at,
       profiles (
         full_name,
         avatar_url,
@@ -202,17 +189,6 @@ export async function getFeedRequests(
   // Filtro por materias en común del usuario
   if (filters?.subjectIds && filters.subjectIds.length > 0) {
     query = query.in("subject_id", filters.subjectIds);
-  }
-
-  // Filtro de modalidad — la BD guarda "hibrido" sin tilde
-  if (filters?.modality && filters.modality !== "Todos") {
-    const modalityMap: Record<string, string> = {
-      híbrido: "hibrido",
-      presencial: "presencial",
-      virtual: "virtual",
-    };
-    const mapped = modalityMap[filters.modality] ?? filters.modality;
-    query = query.eq("modality", mapped);
   }
 
   // Filtro de búsqueda por título
@@ -259,18 +235,12 @@ export async function getFeedRequests(
       authorCareer = prog?.name ?? "";
     }
 
-    // Normalizar "hibrido" → "híbrido" para el frontend
-    const rawModality: string = r.modality ?? "presencial";
-    const modalityDisplay: Modality =
-      rawModality === "hibrido" ? "híbrido" : (rawModality as Modality);
-
     result.push({
       id: r.id,
       author_id: r.author_id,
       subject_id: r.subject_id,
       title: r.title,
       description: r.description,
-      modality: modalityDisplay,
       max_members: r.max_members,
       status: r.status,
       created_at: r.created_at,
