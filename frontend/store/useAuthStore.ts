@@ -56,39 +56,25 @@ export const useAuthStore = create<AuthState>((set) => ({
             return;
           }
 
+          const profile = await getMyProfile().catch((error) => {
+            console.warn("[authStore] No se pudo obtener perfil completo:", error);
+            return null;
+          });
+
           set({
             user: {
               id: session.user.id,
               email: session.user.email!,
-              fullName: session.user.user_metadata?.full_name ?? "Estudiante",
-              avatarUrl: session.user.user_metadata?.avatar_url ?? null,
+              fullName: profile?.full_name ?? session.user.user_metadata?.full_name ?? "Estudiante",
+              avatarUrl: profile?.avatar_url ?? session.user.user_metadata?.avatar_url ?? null,
               phoneNumber: null,
-              role: "estudiante",
-              semester: null,
-              bio: null,
+              role: profile?.role ?? "estudiante",
+              semester: profile?.semester ?? null,
+              bio: profile?.bio ?? null,
             },
             isAuthenticated: true,
             isHydrating: false,
           });
-
-          getMyProfile()
-            .then((profile) => {
-              if (profile) {
-                set((state) => ({
-                  user: state.user ? {
-                    ...state.user,
-                    fullName: profile.full_name,
-                    avatarUrl: profile.avatar_url,
-                    role: profile.role,
-                    semester: profile.semester,
-                    bio: profile.bio,
-                  } : null,
-                }));
-              }
-            })
-            .catch((error) => {
-              console.warn("[authStore] No se pudo obtener perfil completo:", error);
-            });
 
           registerAndSavePushToken(session.user.id).catch(() => {});
         } catch (error) {
@@ -140,40 +126,26 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const { user } = await sbSignIn({ email, password });
       if (!user) throw new Error("No se pudo iniciar sesión");
+      const profile = await getMyProfile().catch(() => {
+        console.warn("[authStore] No se pudo obtener perfil completo (continuando)");
+        return null;
+      });
 
       set({
         user: {
           id: user.id!,
           email: user.email!,
-          fullName: user.user_metadata?.full_name ?? "Estudiante",
-          avatarUrl: user.user_metadata?.avatar_url ?? null,
+          fullName: profile?.full_name ?? user.user_metadata?.full_name ?? "Estudiante",
+          avatarUrl: profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
           phoneNumber: null,
-          role: "estudiante",
-          semester: null,
-          bio: null,
+          role: profile?.role ?? "estudiante",
+          semester: profile?.semester ?? null,
+          bio: profile?.bio ?? null,
         },
         isAuthenticated: true,
       });
 
-      getMyProfile()
-        .then((profile) => {
-          if (profile) {
-            set((state) => ({
-              user: state.user ? {
-                ...state.user,
-                fullName: profile.full_name,
-                avatarUrl: profile.avatar_url,
-                role: profile.role,
-                semester: profile.semester,
-                bio: profile.bio,
-              } : null,
-            }));
-            registerAndSavePushToken(profile.id).catch(() => {});
-          }
-        })
-        .catch(() => {
-          console.warn("[authStore] No se pudo obtener perfil completo (continuando)");
-        });
+      registerAndSavePushToken(profile?.id ?? user.id!).catch(() => {});
     } finally {
       set({ isLoading: false });
     }
@@ -188,7 +160,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  // ── Sign Out ───────────────────────────────────────────────────────────────
   signOut: async () => {
     set({ isLoading: true });
     try {

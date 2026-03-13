@@ -13,9 +13,10 @@
 import { Colors } from "@/constants/Colors"
 import { useUploadResource } from "@/hooks/useResources"
 import {
-  getEnrolledSubjectsForUser,
+  getAvailableSubjectsForCurrentUser,
   type Subject,
 } from "@/lib/services/studyRequestsService"
+import { useAuthStore } from "@/store/useAuthStore"
 import { router } from "expo-router"
 import * as DocumentPicker from "expo-document-picker"
 import { useEffect, useState } from "react"
@@ -35,6 +36,7 @@ import {
 export default function SubirRecursoScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
+  const role = useAuthStore((s) => s.user?.role)
 
   // ── Formulario ────────────────────────────────────────────────────────────
   const [title, setTitle] = useState("")
@@ -58,10 +60,10 @@ export default function SubirRecursoScreen() {
     setLoadingData(true)
     setFetchError(null)
     try {
-      const subs = await getEnrolledSubjectsForUser()
+      const subs = await getAvailableSubjectsForCurrentUser()
       setSubjects(subs)
     } catch (e: unknown) {
-      setFetchError(e instanceof Error ? e.message : "No se pudieron cargar tus materias.")
+      setFetchError(e instanceof Error ? e.message : "No se pudieron cargar las materias disponibles.")
     } finally {
       setLoadingData(false)
     }
@@ -144,7 +146,7 @@ export default function SubirRecursoScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={C.primary} />
           <Text style={[styles.loadingText, { color: C.textSecondary }]}>
-            Cargando tus materias…
+            Cargando materias disponibles…
           </Text>
         </View>
       </SafeAreaView>
@@ -176,7 +178,9 @@ export default function SubirRecursoScreen() {
             Sin materias inscritas
           </Text>
           <Text style={[styles.emptySubtitle, { color: C.textSecondary }]}>
-            Necesitas tener materias inscritas para subir un recurso.
+            {role === "admin"
+              ? "No hay materias activas en el catálogo para subir un recurso."
+              : "Necesitas tener materias inscritas para subir un recurso."}
           </Text>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: C.primary }]}
@@ -252,7 +256,7 @@ export default function SubirRecursoScreen() {
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Materia *{" "}
           <Text style={{ fontSize: 11, textTransform: "none" }}>
-            ({subjects.length} inscritas)
+            ({subjects.length} disponibles)
           </Text>
         </Text>
 

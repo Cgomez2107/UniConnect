@@ -7,10 +7,11 @@
 import { Colors } from "@/constants/Colors";
 import {
   createStudyRequest,
-  getEnrolledSubjectsForUser,
+  getAvailableSubjectsForCurrentUser,
   type Modality,
   type Subject,
 } from "@/lib/services/studyRequestsService";
+import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -37,6 +38,7 @@ const MODALITY_LABELS: Record<Modality, string> = {
 export default function NuevaSolicitudScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
+  const role = useAuthStore((s) => s.user?.role);
 
   // ── Formulario ────────────────────────────────────────────────────────────
   const [title, setTitle] = useState("");
@@ -56,10 +58,10 @@ export default function NuevaSolicitudScreen() {
     setLoadingData(true);
     setFetchError(null);
     try {
-      const subs = await getEnrolledSubjectsForUser();
+      const subs = await getAvailableSubjectsForCurrentUser();
       setSubjects(subs);
     } catch (e: any) {
-      setFetchError(e?.message ?? "No se pudieron cargar tus materias.");
+      setFetchError(e?.message ?? "No se pudieron cargar las materias disponibles.");
     } finally {
       setLoadingData(false);
     }
@@ -109,7 +111,7 @@ export default function NuevaSolicitudScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={C.primary} />
           <Text style={[styles.loadingText, { color: C.textSecondary }]}>
-            Cargando tus materias…
+            Cargando materias disponibles…
           </Text>
         </View>
       </SafeAreaView>
@@ -136,7 +138,9 @@ export default function NuevaSolicitudScreen() {
           <Text style={styles.emptyIcon}>📚</Text>
           <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>Sin materias inscritas</Text>
           <Text style={[styles.emptySubtitle, { color: C.textSecondary }]}>
-            Necesitas tener materias inscritas en tu perfil para crear una solicitud.
+            {role === "admin"
+              ? "No hay materias activas en el catálogo para crear la solicitud."
+              : "Necesitas tener materias inscritas en tu perfil para crear una solicitud."}
           </Text>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.primary }]} onPress={() => router.back()}>
             <Text style={styles.actionBtnText}>Volver al feed</Text>
@@ -193,7 +197,7 @@ export default function NuevaSolicitudScreen() {
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Materia *{" "}
           <Text style={{ fontSize: 11, textTransform: "none" }}>
-            ({subjects.length} inscritas)
+            ({subjects.length} disponibles)
           </Text>
         </Text>
 

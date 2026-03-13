@@ -1,20 +1,10 @@
-/**
- * lib/services/studyRequestsService.ts
- * Servicio para gestionar solicitudes de estudio — US-005 + US-006
- *
- * Relación usada para materias inscritas:
- *   user_subjects → subjects
- *
- * Relación usada para el feed:
- *   study_requests → profiles (autor)
- *   study_requests → subjects → program_subjects → programs → faculties
- *
- * NOTA: Sin Map ni Set — Hermes (React Native) no soporta sus iteradores.
- */
+// Servicio para gestionar solicitudes de estudio.
+//
+// NOTA: sin Map ni Set — Hermes (React Native) no soporta sus iteradores.
 
 import { supabase } from "@/lib/supabase";
 
-// ── Tipos — US-005 ─────────────────────────────────────────────────────────────
+// Tipos de solicitud
 
 export interface Subject {
   id: string;
@@ -31,7 +21,7 @@ export interface CreateStudyRequestPayload {
   max_members: number;
 }
 
-// ── Tipos — US-006 ─────────────────────────────────────────────────────────────
+// Tipos del feed
 
 export interface FeedStudyRequest {
   id: string;
@@ -63,7 +53,7 @@ export interface FeedFilters {
   subjectIds?: string[];
 }
 
-// ── Materias inscritas del estudiante ─────────────────────────────────────────
+// Materias inscritas del estudiante
 
 /**
  * Devuelve solo las materias inscritas del estudiante logueado.
@@ -115,7 +105,41 @@ export async function getEnrolledSubjectsForUser(): Promise<Subject[]> {
   );
 }
 
-// ── Crear solicitud de estudio ─────────────────────────────────────────────────
+/**
+ * Devuelve las materias disponibles para el usuario actual.
+ * - Estudiante: solo sus materias inscritas
+ * - Admin: todas las materias activas del catálogo
+ */
+export async function getAvailableSubjectsForCurrentUser(): Promise<Subject[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("No hay sesión activa.");
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  if (profile?.role === "admin") {
+    const { data, error } = await supabase
+      .from("subjects")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+
+    if (error) throw error;
+    return (data ?? []) as Subject[];
+  }
+
+  return getEnrolledSubjectsForUser();
+}
+
+// Crear solicitud de estudio
 
 /**
  * Inserta una nueva solicitud de estudio.
@@ -153,7 +177,7 @@ export async function createStudyRequest(
   if (error) throw error;
 }
 
-// ── Feed de solicitudes ────────────────────────────────────────────────────────
+// Feed de solicitudes
 
 /**
  * Trae solicitudes activas con join de autor, materia y facultad.

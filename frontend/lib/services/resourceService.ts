@@ -1,16 +1,5 @@
-/**
- * lib/services/resourceService.ts
- * CRUD de recursos de estudio (apuntes, ejercicios) — US-006
- *
- * Flujo de subida:
- *   1. expo-document-picker → URI local
- *   2. expo-file-system → base64
- *   3. base64-arraybuffer → ArrayBuffer
- *   4. Supabase Storage (bucket "resources") → URL pública
- *   5. INSERT en study_resources → registro en BD
- *
- * Tipos importados desde @/types — no se redefinen aquí.
- */
+// CRUD de recursos de estudio (apuntes, ejercicios).
+// Flujo: expo-document-picker → base64 → Supabase Storage (bucket "resources") → INSERT en study_resources.
 
 import { supabase } from "@/lib/supabase"
 import { apiGet } from "@/lib/api/client"
@@ -18,7 +7,7 @@ import { decode } from "base64-arraybuffer"
 import * as FileSystem from "expo-file-system/legacy"
 import type { StudyResource, CreateStudyResourcePayload } from "@/types"
 
-// ── Constantes de validación ──────────────────────────────────────────────────
+// Constantes de validación
 
 const ALLOWED_EXTENSIONS = [
   "pdf", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "txt",
@@ -41,7 +30,7 @@ const MIME_TYPES: Record<string, string> = {
   png: "image/png",
 }
 
-// ── Validaciones ──────────────────────────────────────────────────────────────
+// Validaciones
 
 export function validateFileFormat(fileName: string): boolean {
   const ext = fileName.split(".").pop()?.toLowerCase() ?? ""
@@ -52,7 +41,7 @@ export function validateFileSize(sizeBytes: number): boolean {
   return sizeBytes / 1024 <= MAX_FILE_SIZE_KB
 }
 
-// ── Subir recurso ─────────────────────────────────────────────────────────────
+// Subir recurso
 
 export async function uploadResource(
   userId: string,
@@ -75,7 +64,8 @@ export async function uploadResource(
     throw new Error(`El archivo excede el máximo de 10 MB.`)
   }
 
-  // 3. Obtener programa principal del usuario
+  // 3. Obtener programa principal del usuario.
+  // Si es admin y no tiene programa, usar el primer programa vinculado a la materia.
   const { data: userPrograms, error: upError } = await supabase
     .from("user_programs")
     .select("program_id")
@@ -83,10 +73,29 @@ export async function uploadResource(
     .order("is_primary", { ascending: false })
     .limit(1)
 
-  if (upError || !userPrograms?.length) {
-    throw new Error("No tienes un programa académico asignado.")
+  if (upError) {
+    throw new Error("No se pudo resolver el programa académico del usuario.")
   }
-  const programId = userPrograms[0].program_id as string
+
+  let programId = userPrograms?.[0]?.program_id as string | undefined
+
+  if (!programId) {
+    const { data: subjectLinks, error: subjectLinkError } = await supabase
+      .from("program_subjects")
+      .select("program_id")
+      .eq("subject_id", subject_id)
+      .limit(1)
+
+    if (subjectLinkError) {
+      throw new Error("No se pudo resolver el programa de la materia seleccionada.")
+    }
+
+    programId = subjectLinks?.[0]?.program_id as string | undefined
+  }
+
+  if (!programId) {
+    throw new Error("No se encontró un programa asociado a la materia seleccionada.")
+  }
 
   // 4. Leer archivo como base64
   const base64 = await FileSystem.readAsStringAsync(file_uri, {
@@ -141,7 +150,7 @@ export async function uploadResource(
   return data as StudyResource
 }
 
-// ── Listar recursos por materia ───────────────────────────────────────────────
+// Listar recursos por materia
 
 export async function getResourcesBySubject(
   subjectId: string,
@@ -157,7 +166,7 @@ export async function getResourcesBySubject(
   )
 }
 
-// ── Listar mis recursos ───────────────────────────────────────────────────────
+// Listar mis recursos
 
 export async function getMyResources(
   userId: string,
@@ -173,7 +182,7 @@ export async function getMyResources(
   )
 }
 
-// ── Eliminar recurso ──────────────────────────────────────────────────────────
+// Eliminar recurso
 
 export async function deleteResource(
   resourceId: string,
