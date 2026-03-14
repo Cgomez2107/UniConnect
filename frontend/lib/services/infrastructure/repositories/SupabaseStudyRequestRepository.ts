@@ -7,7 +7,7 @@ export class SupabaseStudyRequestRepository implements IStudyRequestRepository {
   async getById(id: string): Promise<StudyRequest | null> {
     const { data, error } = await supabase
       .from("study_requests")
-      .select("*, subjects ( name ), profiles!study_requests_author_id_fkey ( full_name, avatar_url )")
+      .select("*, subjects ( name, program_subjects ( programs ( faculties ( name ) ) ) ), profiles!study_requests_author_id_fkey ( full_name, avatar_url, bio )")
       .eq("id", id)
       .single()
 
@@ -15,9 +15,18 @@ export class SupabaseStudyRequestRepository implements IStudyRequestRepository {
     if (!data) return null
 
     const request = data as StudyRequest
+    const programSubjects = (request.subjects as any)?.program_subjects ?? []
+    const firstProgram = Array.isArray(programSubjects[0]?.programs)
+      ? programSubjects[0].programs[0]
+      : programSubjects[0]?.programs
+    const firstFaculty = Array.isArray(firstProgram?.faculties)
+      ? firstProgram.faculties[0]
+      : firstProgram?.faculties
+
     return {
       ...request,
       subject_name: request.subjects?.name ?? "Sin materia",
+      faculty_name: firstFaculty?.name ?? "Sin facultad",
     }
   }
 

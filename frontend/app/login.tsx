@@ -18,7 +18,7 @@ import { ErrorBanner } from "@/components/ui/Errorbanner";
 import { PrimaryButton } from "@/components/ui/Primarybutton";
 import { SplashLoader } from "@/components/ui/SplashLoader";
 import { Colors } from "@/constants/Colors";
-import { useGoogleAuth } from "@/lib/services/googleAuthService";
+import { useGoogleAuth } from "@/hooks/application/useGoogleAuth";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const UCALDAS_REGEX = /^[a-zA-Z0-9._%+-]+@ucaldas\.edu\.co$/;
@@ -30,6 +30,7 @@ export default function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
   const isLoading = useAuthStore((s) => s.isLoading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrating = useAuthStore((s) => s.isHydrating);
   const user = useAuthStore((s) => s.user);
 
   const [email, setEmail] = useState("");
@@ -39,6 +40,7 @@ export default function LoginScreen() {
   const [showSplash, setShowSplash] = useState(false);
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const splashWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasNavigatedRef = useRef(false);
 
   const {
     loading: googleLoading,
@@ -47,7 +49,11 @@ export default function LoginScreen() {
   } = useGoogleAuth();
 
   useEffect(() => {
+    if (isHydrating) return;
     if (!isAuthenticated || !user) return;
+    if (hasNavigatedRef.current) return;
+
+    hasNavigatedRef.current = true;
 
     setShowSplash(true);
 
@@ -64,7 +70,13 @@ export default function LoginScreen() {
         router.replace("/(tabs)" as any);
       }
     }, 180);
-  }, [isAuthenticated, user]);
+  }, [isHydrating, isAuthenticated, user]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      hasNavigatedRef.current = false;
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!showSplash) {
@@ -81,9 +93,13 @@ export default function LoginScreen() {
       splashWatchdogRef.current = null;
       setShowSplash(false);
       setFormError("La sesión tardó más de lo esperado. Reintentamos automáticamente.");
-      router.replace("/index" as any);
+      if (user?.role === "admin") {
+        router.replace("/(admin)" as any);
+      } else {
+        router.replace("/(tabs)" as any);
+      }
     }, 4000);
-  }, [showSplash]);
+  }, [showSplash, user?.role]);
 
   useEffect(() => {
     return () => {
@@ -122,6 +138,7 @@ export default function LoginScreen() {
       await signIn(email, password);
 
     } catch (error: any) {
+      hasNavigatedRef.current = false;
       setShowSplash(false);
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);

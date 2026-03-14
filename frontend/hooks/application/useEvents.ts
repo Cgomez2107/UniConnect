@@ -1,27 +1,46 @@
-import { useCallback, useState } from "react"
+import { getUpcomingEvents } from "@/lib/services/eventService"
+import type { CampusEvent, EventCategory } from "@/types"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-interface UseEventsState {
-  loading: boolean
-  error: string | null
-}
+export type EventFilter = EventCategory | "todos"
 
 export function useEvents() {
-  const [state, setState] = useState<UseEventsState>({
-    loading: false,
-    error: null,
-  })
+  const [events, setEvents] = useState<CampusEvent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<EventFilter>("todos")
 
-  const notImplemented = useCallback(async () => {
-    setState({ loading: false, error: "Eventos pendientes de implementación (US-007/008)" })
-    throw new Error("Eventos pendientes de implementación (US-007/008)")
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setIsRefreshing(true)
+    else setIsLoading(true)
+
+    try {
+      const data = await getUpcomingEvents()
+      setEvents(data)
+    } catch {
+      setEvents([])
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
   }, [])
 
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const filteredEvents = useMemo(() => {
+    if (activeFilter === "todos") return events
+    return events.filter((e) => e.category === activeFilter)
+  }, [events, activeFilter])
+
   return {
-    ...state,
-    getEvents: notImplemented,
-    getEventById: notImplemented,
-    createEvent: notImplemented,
-    updateEvent: notImplemented,
-    deleteEvent: notImplemented,
+    events,
+    filteredEvents,
+    isLoading,
+    isRefreshing,
+    activeFilter,
+    setActiveFilter,
+    refresh: () => load(true),
   }
 }

@@ -8,8 +8,7 @@
 
 import { Colors } from "@/constants/Colors";
 import { useApplications } from "@/hooks/application/useApplications";
-import { DIContainer } from "@/lib/services/di/container";
-import { supabase } from "@/lib/supabase";
+import { useStudyRequests } from "@/hooks/application/useStudyRequests";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -44,6 +43,7 @@ export default function PostularScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const { applyToRequest, getMyApplicationStatus } = useApplications();
+  const { getRequestById } = useStudyRequests();
 
   const [request, setRequest] = useState<RequestSummary | null>(null);
   const [loadingRequest, setLoadingRequest] = useState(true);
@@ -54,20 +54,12 @@ export default function PostularScreen() {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const container = DIContainer.getInstance();
-      const requestRepo = container.getStudyRequestRepository();
-      const baseRequest = await requestRepo.getById(id);
+      const baseRequest = await getRequestById(id);
 
       if (baseRequest) {
-        const { data: authorData } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", baseRequest.author_id)
-          .single();
-
         setRequest({
           title: baseRequest.title,
-          author_name: authorData?.full_name ?? "Usuario",
+          author_name: baseRequest.profiles?.full_name ?? "Usuario",
           subject_name: baseRequest.subjects?.name ?? "Materia",
           status: baseRequest.status,
           is_active: baseRequest.is_active,
@@ -75,7 +67,7 @@ export default function PostularScreen() {
       }
       setLoadingRequest(false);
     })();
-  }, [id]);
+  }, [getRequestById, id]);
 
   const handlePostular = async () => {
     if (!user || !id) return;

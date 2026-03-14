@@ -93,6 +93,14 @@ export function useStudyRequests() {
     [container]
   )
 
+  const getRequestsByAuthor = useCallback(
+    async (authorId: string) => {
+      const repo = container.getStudyRequestRepository()
+      return repo.getByAuthor(authorId)
+    },
+    [container]
+  )
+
   const isAdmin = useCallback(
     async (requestId: string, userId: string) => {
       const repo = container.getStudyRequestRepository()
@@ -125,15 +133,34 @@ export function useStudyRequests() {
     [container]
   )
 
+  const updateRequestContent = useCallback(
+    async (requestId: string, userId: string, payload: { title?: string; description?: string }) => {
+      const repo = container.getStudyRequestRepository()
+      return repo.updateContent(requestId, userId, payload)
+    },
+    [container]
+  )
+
+  const cancelRequest = useCallback(
+    async (requestId: string, userId: string) => {
+      const repo = container.getStudyRequestRepository()
+      return repo.cancel(requestId, userId)
+    },
+    [container]
+  )
+
   return {
     ...state,
     getRequests,
     getRequestById,
+    getRequestsByAuthor,
     createRequest,
     updateStatus,
     isAdmin,
     getAdmins,
     assignAdmin,
     revokeAdmin,
+    updateRequestContent,
+    cancelRequest,
   }
 }

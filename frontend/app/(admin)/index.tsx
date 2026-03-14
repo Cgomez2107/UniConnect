@@ -7,7 +7,7 @@ import { FacultyRow, ProgramRow, SubjectRow, UserRow, RequestRow, ResourceRow, E
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
-import { useAdmin } from "@/hooks/useAdmin"
+import { useAdmin } from "@/hooks/application/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
 import { Ionicons } from "@expo/vector-icons"
 import { router } from "expo-router"

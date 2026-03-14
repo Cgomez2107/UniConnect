@@ -18,8 +18,8 @@ import { InfoRow } from "@/components/shared/InfoRow"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { SectionCard } from "@/components/shared/SectionCard"
 import { Colors } from "@/constants/Colors"
-import { useStudentProfile } from "@/hooks/useStudentProfile"
-import { getOrCreateConversation } from "@/lib/services/messagingService"
+import { useMessaging } from "@/hooks/application/useMessaging"
+import { useStudentProfile } from "@/hooks/application/useStudentProfile"
 import { useAuthStore } from "@/store/useAuthStore"
 import { router, useLocalSearchParams } from "expo-router"
 import { StatusBar } from "expo-status-bar"
@@ -42,6 +42,7 @@ export default function StudentProfileScreen() {
   const C = Colors[scheme]
   const insets = useSafeAreaInsets()
   const currentUser = useAuthStore((s) => s.user)
+  const { getOrCreateConversation } = useMessaging()
   const [startingChat, setStartingChat] = useState(false)
 
   const { profile, loading, error, refresh } = useStudentProfile(id)
@@ -59,11 +60,11 @@ export default function StudentProfileScreen() {
     if (!currentUser?.id || !profile?.id) return
     setStartingChat(true)
     try {
-      const conversationId = await getOrCreateConversation(
+      const conversation = await getOrCreateConversation(
         currentUser.id,
         profile.id
       )
-      router.push(`/chat/${conversationId}` as any)
+      router.push(`/chat/${conversation.id}` as any)
     } catch {
       Alert.alert("Error", "No se pudo iniciar la conversación.")
     } finally {

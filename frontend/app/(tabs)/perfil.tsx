@@ -15,7 +15,7 @@ import { InfoRow } from "@/components/shared/InfoRow";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Colors } from "@/constants/Colors";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/hooks/application/useProfile";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";

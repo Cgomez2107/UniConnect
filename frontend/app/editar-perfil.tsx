@@ -7,8 +7,9 @@
 
 import { Colors } from "@/constants/Colors";
 import type { Program, Subject } from "@/types";
-import { getPrograms, getSubjectsByProgram } from "@/lib/services/facultyService";
 import {
+  getPrograms,
+  getSubjectsByProgram,
   addMySubject,
   getMyPrograms,
   getMySubjects,
@@ -17,7 +18,7 @@ import {
   setPrimaryProgram,
   updateProfile,
   uploadAvatar,
-} from "@/lib/services/profileService";
+} from "@/hooks/application/useProfileEditor";
 import { useAuthStore } from "@/store/useAuthStore";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";

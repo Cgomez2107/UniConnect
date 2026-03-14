@@ -83,6 +83,30 @@ export function useApplications() {
     [container]
   )
 
+  const getApplicationsByRequest = useCallback(
+    async (requestId: string) => {
+      const repository = container.getApplicationRepository()
+      return repository.getByRequest(requestId)
+    },
+    [container]
+  )
+
+  const getReceivedByAuthor = useCallback(
+    async (authorId: string) => {
+      const repository = container.getApplicationRepository()
+      return repository.getReceivedByAuthor(authorId)
+    },
+    [container]
+  )
+
+  const getByApplicant = useCallback(
+    async (applicantId: string) => {
+      const repository = container.getApplicationRepository()
+      return repository.getByApplicant(applicantId)
+    },
+    [container]
+  )
+
   const cancelMyApplication = useCallback(
     async (requestId: string, userId: string) => {
       const repo = container.getApplicationRepository()
@@ -97,6 +121,9 @@ export function useApplications() {
     getApplicationsForRequest,
     reviewApplication,
     getMyApplicationStatus,
+    getApplicationsByRequest,
+    getReceivedByAuthor,
+    getByApplicant,
     cancelMyApplication,
   }
 }

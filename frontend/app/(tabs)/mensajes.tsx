@@ -8,7 +8,7 @@
 
 import { LoadingState } from "@/components/shared/LoadingState";
 import { Colors } from "@/constants/Colors";
-import { useConversations } from "@/hooks/useConversations";
+import { useConversations } from "@/hooks/application/useConversations";
 import type { Conversation } from "@/types";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";

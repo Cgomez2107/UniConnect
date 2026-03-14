@@ -62,6 +62,22 @@ export class SupabaseStudyResourceRepository implements IStudyResourceRepository
     return data as StudyResource
   }
 
+  async update(resourceId: string, userId: string, payload: { title?: string; description?: string | null }): Promise<StudyResource> {
+    const { data, error } = await supabase
+      .from("study_resources")
+      .update({
+        title: payload.title,
+        description: payload.description ?? null,
+      })
+      .eq("id", resourceId)
+      .eq("user_id", userId)
+      .select("*, profiles ( full_name, avatar_url ), subjects ( name )")
+      .single()
+
+    if (error) throw error
+    return data as StudyResource
+  }
+
   async delete(resourceId: string, userId: string): Promise<void> {
     const { error: fetchError } = await supabase
       .from("study_resources")

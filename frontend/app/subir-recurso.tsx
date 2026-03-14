@@ -11,17 +11,14 @@
  */
 
 import { Colors } from "@/constants/Colors"
-import { useResources } from "@/hooks/application/useResources"
+import { useUploadResource } from "@/hooks/application/useUploadResource"
 import {
   getAvailableSubjectsForCurrentUser,
   type Subject,
-} from "@/lib/services/studyRequestsService"
-import { supabase } from "@/lib/supabase"
+} from "@/hooks/application/useStudyRequestsCatalog"
 import { useAuthStore } from "@/store/useAuthStore"
-import { decode } from "base64-arraybuffer"
 import { router } from "expo-router"
 import * as DocumentPicker from "expo-document-picker"
-import * as FileSystem from "expo-file-system/legacy"
 import { useEffect, useState } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
 import {
@@ -63,7 +60,7 @@ export default function SubirRecursoScreen() {
   const [loadingData, setLoadingData] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
-  const { loading: uploading, error: uploadError, uploadResource } = useResources()
+  const { uploading, error: uploadError, upload } = useUploadResource()
 
   const validateFile = (fileName: string, sizeBytes: number): string | null => {
     const ext = fileName.split(".").pop()?.toLowerCase() ?? ""
@@ -137,64 +134,13 @@ export default function SubirRecursoScreen() {
 
     let resource = null
     try {
-      const { data: userPrograms, error: upError } = await supabase
-        .from("user_programs")
-        .select("program_id")
-        .eq("user_id", user.id)
-        .order("is_primary", { ascending: false })
-        .limit(1)
-
-      if (upError || !userPrograms?.length) {
-        throw new Error("No tienes un programa académico asignado.")
-      }
-
-      const programId = userPrograms[0].program_id as string
-      const base64 = await FileSystem.readAsStringAsync(pickedFile.uri, { encoding: "base64" })
-      const arrayBuffer = decode(base64)
-      const ext = pickedFile.name.split(".").pop()?.toLowerCase() ?? "pdf"
-      const mimeType = ext === "pdf"
-        ? "application/pdf"
-        : ext === "docx"
-        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        : ext === "doc"
-        ? "application/msword"
-        : ext === "xlsx"
-        ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        : ext === "xls"
-        ? "application/vnd.ms-excel"
-        : ext === "pptx"
-        ? "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        : ext === "ppt"
-        ? "application/vnd.ms-powerpoint"
-        : ext === "txt"
-        ? "text/plain"
-        : ext === "jpg" || ext === "jpeg"
-        ? "image/jpeg"
-        : ext === "png"
-        ? "image/png"
-        : "application/octet-stream"
-
-      const storagePath = `${user.id}/${Date.now()}_${pickedFile.name}`
-      const { error: uploadErrorStorage } = await supabase.storage
-        .from("resources")
-        .upload(storagePath, arrayBuffer, {
-          contentType: mimeType,
-          upsert: false,
-        })
-
-      if (uploadErrorStorage) {
-        throw new Error(`Error al subir archivo: ${uploadErrorStorage.message}`)
-      }
-
-      const { data: urlData } = supabase.storage.from("resources").getPublicUrl(storagePath)
-      resource = await uploadResource(user.id, programId, {
+      resource = await upload({
         subject_id: selectedSubject,
         title: title.trim(),
         description: description.trim() || undefined,
-        file_url: urlData.publicUrl,
+        file_uri: pickedFile.uri,
         file_name: pickedFile.name,
-        file_type: ext.toUpperCase(),
-        file_size_kb: Math.round(pickedFile.size / 1024),
+        file_size_bytes: pickedFile.size,
       })
     } catch (e) {
       Alert.alert("Error", e instanceof Error ? e.message : "No se pudo subir el recurso.")

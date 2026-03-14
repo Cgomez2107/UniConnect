@@ -95,10 +95,26 @@ export function useMessaging() {
     [container]
   )
 
+  const getOrCreateConversation = useCallback(
+    async (participantA: string, participantB: string) => {
+      try {
+        const repository = container.getConversationRepository()
+        const conversation = await repository.getOrCreate(participantA, participantB)
+        return conversation
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "Error al abrir conversación"
+        setState((prev) => ({ ...prev, error: errorMsg }))
+        throw err
+      }
+    },
+    [container]
+  )
+
   return {
     ...state,
     getConversations,
     getMessages,
     sendMessage,
+    getOrCreateConversation,
   }
 }

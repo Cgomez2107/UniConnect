@@ -1,7 +1,8 @@
 import { ResourceCard } from "@/components/feed/ResourceCard";
 import { Colors } from "@/constants/Colors";
 import { useApplications } from "@/hooks/application/useApplications";
-import { DIContainer } from "@/lib/services/di/container";
+import { useResources } from "@/hooks/application/useResources";
+import { useStudyRequests } from "@/hooks/application/useStudyRequests";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Application, StudyRequest, StudyResource } from "@/types";
 import { router, useFocusEffect } from "expo-router";
@@ -62,8 +63,9 @@ export default function SolicitudesHubScreen() {
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
-  const { reviewApplication } = useApplications();
-  const container = DIContainer.getInstance();
+  const { reviewApplication, getReceivedByAuthor, getByApplicant } = useApplications();
+  const { getRequestsByAuthor } = useStudyRequests();
+  const { getResourcesByUser } = useResources();
 
   const [activeTab, setActiveTab] = useState<MainTab>("mis-solicitudes");
   const [sentFilter, setSentFilter] = useState<SentFilter>("pendiente");
@@ -82,15 +84,11 @@ export default function SolicitudesHubScreen() {
       isRefresh ? setRefreshing(true) : setLoading(true);
 
       try {
-        const requestRepo = container.getStudyRequestRepository();
-        const applicationRepo = container.getApplicationRepository();
-        const resourceRepo = container.getStudyResourceRepository();
-
         const [requests, received, sent, resources] = await Promise.all([
-          requestRepo.getByAuthor(user.id),
-          applicationRepo.getReceivedByAuthor(user.id),
-          applicationRepo.getByApplicant(user.id),
-          resourceRepo.getByUser(user.id),
+          getRequestsByAuthor(user.id),
+          getReceivedByAuthor(user.id),
+          getByApplicant(user.id),
+          getResourcesByUser(user.id),
         ]);
 
         setMyRequests(requests);
@@ -104,7 +102,7 @@ export default function SolicitudesHubScreen() {
         setRefreshing(false);
       }
     },
-    [container, user?.id]
+    [getByApplicant, getReceivedByAuthor, getRequestsByAuthor, getResourcesByUser, user?.id]
   );
 
   useFocusEffect(

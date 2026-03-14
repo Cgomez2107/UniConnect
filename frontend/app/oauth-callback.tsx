@@ -45,6 +45,26 @@ const fetchProfileByUserId = async (userId: string): Promise<ProfileRow | null> 
   return data as ProfileRow | null;
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const resolveRoleForRouting = async (
+  userId: string,
+  fallbackRole: "estudiante" | "admin"
+): Promise<"estudiante" | "admin"> => {
+  // Reintento corto: evita enviar admins al feed por timeout temporal.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const profile = await withTimeout<ProfileRow | null>(
+      fetchProfileByUserId(userId),
+      4000,
+      null
+    );
+    if (profile?.role) return profile.role;
+    if (attempt < 1) await sleep(500);
+  }
+
+  return fallbackRole;
+};
+
 export default function OAuthCallbackScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
@@ -73,7 +93,9 @@ export default function OAuthCallbackScreen() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      routeByRole(user.role);
+      resolveRoleForRouting(user.id, user.role)
+        .then((role) => routeByRole(role))
+        .catch(() => routeByRole(user.role));
       return;
     }
 
@@ -114,7 +136,7 @@ export default function OAuthCallbackScreen() {
 
       const profile = await withTimeout<ProfileRow | null>(
         fetchProfileByUserId(sessionUser.id),
-        2500,
+        4000,
         null
       );
 
@@ -130,7 +152,9 @@ export default function OAuthCallbackScreen() {
         : fallbackUser;
 
       setUser(resolvedUser);
-      routeByRole(resolvedUser.role);
+
+      const roleForRoute = await resolveRoleForRouting(sessionUser.id, resolvedUser.role);
+      routeByRole(roleForRoute);
     })().catch(() => {
       router.replace("/login" as any);
     }).finally(() => {
@@ -145,8 +169,10 @@ export default function OAuthCallbackScreen() {
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        if (data.session?.user) {
-          router.replace("/index" as any);
+        const sessionUser = data.session?.user;
+        if (sessionUser) {
+          const roleForRoute = await resolveRoleForRouting(sessionUser.id, "estudiante");
+          routeByRole(roleForRoute);
           return;
         }
       } catch {

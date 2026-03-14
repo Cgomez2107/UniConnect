@@ -11,10 +11,8 @@
 
 import { Colors } from "@/constants/Colors";
 import { useApplications } from "@/hooks/application/useApplications";
+import { useMessaging } from "@/hooks/application/useMessaging";
 import { useStudyRequests } from "@/hooks/application/useStudyRequests";
-import { DIContainer } from "@/lib/services/di/container";
-import { getOrCreateConversation } from "@/lib/services/messagingService";
-import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Application } from "@/types";
 import { router, useLocalSearchParams } from "expo-router";
@@ -79,14 +77,19 @@ export default function SolicitudDetailScreen() {
     getMyApplicationStatus,
     reviewApplication: reviewApplicationUseCase,
     cancelMyApplication,
+    getApplicationsByRequest,
   } = useApplications();
   const {
+    getRequestById,
     isAdmin: checkIsAdmin,
     getAdmins,
     assignAdmin,
     revokeAdmin,
+    updateRequestContent,
+    cancelRequest,
+    updateStatus,
   } = useStudyRequests();
-  const container = DIContainer.getInstance();
+  const { getOrCreateConversation } = useMessaging();
 
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,8 +112,8 @@ export default function SolicitudDetailScreen() {
     if (!user || !request) return;
     setChatLoading(true);
     try {
-      const convId = await getOrCreateConversation(user.id, request.author_id);
-      router.push(`/chat/${convId}?otherUserName=${encodeURIComponent(request.author_name)}` as any);
+      const conversation = await getOrCreateConversation(user.id, request.author_id);
+      router.push(`/chat/${conversation.id}?otherUserName=${encodeURIComponent(request.author_name)}` as any);
     } catch (e: any) {
       console.error("Error abriendo chat:", e.message);
       Alert.alert("Error", e.message ?? "No se pudo abrir el chat.");
@@ -127,81 +130,40 @@ export default function SolicitudDetailScreen() {
       setLoading(true);
       setError(null);
       try {
-        const { data, error: err } = await supabase
-          .from("study_requests")
-          .select(`
-            id, author_id, title, description,
-            max_members, status, created_at,
-            subjects (
-              name,
-              program_subjects (
-                programs (
-                  faculties ( name )
-                )
-              )
-            )
-          `)
-          .eq("id", id)
-          .single();
-
-        if (err) throw err;
-        if (!data) throw new Error("Solicitud no encontrada.");
-
-        const r = data as any;
-
-        const { data: authorProfile, error: authorError } = await supabase
-          .from("profiles")
-          .select("full_name, avatar_url, bio")
-          .eq("id", r.author_id)
-          .maybeSingle();
-
-        if (authorError) throw authorError;
-
-        // Extraer facultad desde la cadena de joins
-        let facultyName = "Sin facultad";
-        const psArr: any[] = r.subjects?.program_subjects ?? [];
-        if (psArr.length > 0) {
-          const prog = Array.isArray(psArr[0]?.programs)
-            ? psArr[0].programs[0]
-            : psArr[0]?.programs;
-          const fac = Array.isArray(prog?.faculties)
-            ? prog.faculties[0]
-            : prog?.faculties;
-          if (fac?.name) facultyName = fac.name;
-        }
+        const baseRequest = await getRequestById(id);
+        if (!baseRequest) throw new Error("Solicitud no encontrada.");
 
         setRequest({
-          id: r.id,
-          author_id: r.author_id,
-          title: r.title,
-          description: r.description,
-          max_members: r.max_members,
-          status: r.status,
-          created_at: r.created_at,
-          author_name: authorProfile?.full_name ?? "Usuario",
-          author_avatar: authorProfile?.avatar_url ?? undefined,
-          author_bio: authorProfile?.bio ?? undefined,
-          subject_name: r.subjects?.name ?? "Sin materia",
-          faculty_name: facultyName,
+          id: baseRequest.id,
+          author_id: baseRequest.author_id,
+          title: baseRequest.title,
+          description: baseRequest.description,
+          max_members: baseRequest.max_members,
+          status: baseRequest.status,
+          created_at: baseRequest.created_at,
+          author_name: baseRequest.profiles?.full_name ?? "Usuario",
+          author_avatar: baseRequest.profiles?.avatar_url ?? undefined,
+          author_bio: baseRequest.profiles?.bio ?? undefined,
+          subject_name: baseRequest.subjects?.name ?? "Sin materia",
+          faculty_name: baseRequest.faculty_name ?? "Sin facultad",
         });
-        setDescriptionDraft(r.description ?? "");
+        setDescriptionDraft(baseRequest.description ?? "");
 
-        const applicationRepo = container.getApplicationRepository();
-        const apps = await applicationRepo.getByRequest(r.id);
+        const apps = await getApplicationsByRequest(baseRequest.id);
         setApplications(apps);
 
         if (user?.id) {
           const [canAdmin, admins] = await Promise.all([
-            checkIsAdmin(r.id, user.id),
-            getAdmins(r.id),
+            checkIsAdmin(baseRequest.id, user.id),
+            getAdmins(baseRequest.id),
           ]);
           setIsRequestAdminRole(canAdmin);
           setRequestAdmins((admins ?? []).map((a) => a.user_id));
         }
 
         // Cargar estado de mi postulación (si no soy el autor)
-        if (user?.id && r.author_id !== user.id) {
-          const status = await getMyApplicationStatus(r.id, user.id);
+        if (user?.id && baseRequest.author_id !== user.id) {
+          const status = await getMyApplicationStatus(baseRequest.id, user.id);
           setApplicationStatus(status);
         }
       } catch (e: any) {
@@ -212,7 +174,7 @@ export default function SolicitudDetailScreen() {
     };
 
     load();
-  }, [container, getMyApplicationStatus, id, user?.id]);
+  }, [checkIsAdmin, getAdmins, getApplicationsByRequest, getMyApplicationStatus, getRequestById, id, user?.id]);
 
   const isOwnPost = request?.author_id === user?.id;
   const canManageRequest = !!isOwnPost || isRequestAdminRole;
@@ -244,8 +206,7 @@ export default function SolicitudDetailScreen() {
 
     setIsSavingDescription(true);
     try {
-      const repo = container.getStudyRequestRepository();
-      await repo.updateContent(request.id, user.id, { description: clean });
+      await updateRequestContent(request.id, user.id, { description: clean });
       setRequest((prev) => (prev ? { ...prev, description: clean } : prev));
       setIsEditingDescription(false);
       Alert.alert("Actualizada", "La descripcion de la solicitud fue actualizada.");
@@ -288,8 +249,7 @@ export default function SolicitudDetailScreen() {
           onPress: async () => {
             setCancelingAction(true);
             try {
-              const repo = container.getStudyRequestRepository();
-              await repo.cancel(request.id, user.id);
+              await cancelRequest(request.id, user.id);
               setRequest((prev) => (prev ? { ...prev, status: "cerrada" } : prev));
               Alert.alert("Solicitud cancelada", "La solicitud fue cerrada correctamente.", [
                 {
@@ -358,8 +318,7 @@ export default function SolicitudDetailScreen() {
       if (status === "aceptada" && request.status === "abierta") {
         const acceptedCount = updatedApplications.filter((app) => app.status === "aceptada").length;
         if (acceptedCount + 1 >= request.max_members) {
-          const requestRepo = container.getStudyRequestRepository();
-          await requestRepo.updateStatus(request.id, "cerrada");
+          await updateStatus(request.id, user.id, "cerrada");
           setRequest((prev) => (prev ? { ...prev, status: "cerrada" } : prev));
           Alert.alert("Cupo completo", "La solicitud se cerro automaticamente porque ya se lleno el cupo.");
         }

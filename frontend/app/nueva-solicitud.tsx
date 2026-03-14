@@ -8,7 +8,7 @@ import {
   createStudyRequest,
   getAvailableSubjectsForCurrentUser,
   type Subject,
-} from "@/lib/services/studyRequestsService";
+} from "@/hooks/application/useStudyRequestsCatalog";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";

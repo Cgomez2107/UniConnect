@@ -3,7 +3,7 @@
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
-import { useEvents, type EventFilter } from "@/hooks/useEvents"
+import { useEvents, type EventFilter } from "@/hooks/application/useEvents"
 import { Ionicons } from "@expo/vector-icons"
 import type { CampusEvent, EventCategory } from "@/types"
 import { useEffect, useRef } from "react"
