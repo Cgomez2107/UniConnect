@@ -1,6 +1,7 @@
 // Barra de pestañas del panel de administración con scroll horizontal.
 
 import { Colors } from "@/constants/Colors"
+import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
@@ -8,7 +9,7 @@ export type ActiveTab = "facultades" | "programas" | "materias" | "usuarios" | "
 
 interface Tab {
   key: ActiveTab
-  emoji: string
+  icon: keyof typeof Ionicons.glyphMap
   label: string
   count: number
 }
@@ -42,7 +43,11 @@ export function AdminTabs({ tabs, activeTab, onTabChange, C }: Props) {
             }}
             activeOpacity={0.8}
           >
-            <Text style={{ fontSize: 14 }}>{tab.emoji}</Text>
+            <Ionicons
+              name={tab.icon}
+              size={16}
+              color={activeTab === tab.key ? C.primary : C.textSecondary}
+            />
             <Text
               style={[
                 styles.label,

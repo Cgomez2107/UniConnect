@@ -114,7 +114,7 @@ export function useAdmin(search: string) {
   const [programs, setPrograms] = useState<Program[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
 
-  // Nuevas secciones admin
+  // Secciones del panel administrativo.
   const [users, setUsers] = useState<AdminUser[]>([])
   const [requests, setRequests] = useState<AdminRequest[]>([])
   const [resources, setResources] = useState<AdminResource[]>([])
@@ -126,34 +126,71 @@ export function useAdmin(search: string) {
   const [subjectModal, setSubjectModal] = useState<SubjectModalState>(SUBJECT_MODAL_INIT)
   const [eventModal, setEventModal] = useState<EventModalState>(EVENT_MODAL_INIT)
 
+  const formatAdminError = (error: unknown) => {
+    const raw = error instanceof Error ? error.message : String(error ?? "")
+    const msg = raw.toLowerCase()
+
+    if (msg.includes("more than one relationship") && msg.includes("study_requests") && msg.includes("profiles")) {
+      return "Hay una configuración pendiente en la base de datos para relacionar solicitudes con perfiles."
+    }
+
+    if (msg.includes("permission denied") && msg.includes("events")) {
+      return "No tienes permisos para gestionar eventos. Verifica que tu cuenta sea admin y que la migración de eventos esté aplicada."
+    }
+
+    if (msg.includes("permission denied")) {
+      return "Tu sesión no tiene permisos para esta acción. Cierra sesión y vuelve a ingresar."
+    }
+
+    return raw || "Ocurrió un error inesperado."
+  }
+
   // Carga inicial
   useEffect(() => {
     const load = async () => {
       setIsLoading(true)
-      try {
-        const [facs, progs, subs, usrs, reqs, ress, mets, evts] = await Promise.all([
-          getFaculties(),
-          getPrograms(),
-          getSubjects(),
-          getAllUsers(),
-          getAllRequests(),
-          getAllResources(),
-          getAdminMetrics(),
-          getAllEvents(),
-        ])
-        setFaculties(facs)
-        setPrograms(progs as Program[])
-        setSubjects(subs as Subject[])
-        setUsers(usrs)
-        setRequests(reqs)
-        setResources(ress)
-        setMetrics(mets)
-        setEvents(evts)
-      } catch (e: any) {
-        Alert.alert("Error", "No se pudieron cargar los datos: " + e.message)
-      } finally {
-        setIsLoading(false)
+      const result = await Promise.allSettled([
+        getFaculties(),
+        getPrograms(),
+        getSubjects(),
+        getAllUsers(),
+        getAllRequests(),
+        getAllResources(),
+        getAdminMetrics(),
+        getAllEvents(),
+      ])
+
+      const [facs, progs, subs, usrs, reqs, ress, mets, evts] = result
+
+      if (facs.status === "fulfilled") setFaculties(facs.value)
+      if (progs.status === "fulfilled") setPrograms(progs.value as Program[])
+      if (subs.status === "fulfilled") setSubjects(subs.value as Subject[])
+      if (usrs.status === "fulfilled") setUsers(usrs.value)
+      if (reqs.status === "fulfilled") setRequests(reqs.value)
+      if (ress.status === "fulfilled") setResources(ress.value)
+      if (mets.status === "fulfilled") setMetrics(mets.value)
+      if (evts.status === "fulfilled") setEvents(evts.value)
+
+      const failedSections = [
+        facs.status === "rejected" ? "facultades" : null,
+        progs.status === "rejected" ? "programas" : null,
+        subs.status === "rejected" ? "materias" : null,
+        usrs.status === "rejected" ? "usuarios" : null,
+        reqs.status === "rejected" ? "solicitudes" : null,
+        ress.status === "rejected" ? "recursos" : null,
+        mets.status === "rejected" ? "métricas" : null,
+        evts.status === "rejected" ? "eventos" : null,
+      ].filter(Boolean)
+
+      if (failedSections.length > 0) {
+        const firstError = result.find((r): r is PromiseRejectedResult => r.status === "rejected")
+        Alert.alert(
+          "Carga parcial del panel",
+          `Se cargaron algunos datos, pero faltan secciones (${failedSections.join(", ")}). ${formatAdminError(firstError?.reason)}`,
+        )
       }
+
+      setIsLoading(false)
     }
     load()
   }, [])
@@ -630,7 +667,7 @@ export function useAdmin(search: string) {
       }
       closeEventModal()
     } catch (e: any) {
-      setEventModal((p) => ({ ...p, error: e.message }))
+      setEventModal((p) => ({ ...p, error: formatAdminError(e) }))
     } finally {
       setIsSubmitting(false)
     }
@@ -694,7 +731,7 @@ export function useAdmin(search: string) {
     deleteProgram,
     saveSubject,
     deleteSubject,
-    // Nuevas secciones
+    // Secciones administrativas
     users,
     requests,
     resources,

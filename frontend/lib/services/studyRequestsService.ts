@@ -188,14 +188,6 @@ export async function getFeedRequests(
     .select(`
       id, author_id, subject_id, title, description,
       max_members, status, created_at,
-      profiles (
-        full_name,
-        avatar_url,
-        user_programs (
-          is_primary,
-          programs ( name )
-        )
-      ),
       subjects (
         name,
         program_subjects (
@@ -224,10 +216,38 @@ export async function getFeedRequests(
   if (error) throw error;
 
   const rows: any[] = data ?? [];
+  const authorIds = rows.map((r) => r.author_id).filter(Boolean)
+
+  let profilesById: Record<string, any> = {}
+  if (authorIds.length > 0) {
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select(`
+        id,
+        full_name,
+        avatar_url,
+        user_programs (
+          is_primary,
+          programs ( name )
+        )
+      `)
+      .in("id", authorIds)
+
+    if (profilesError) throw profilesError
+
+    const map: Record<string, any> = {}
+    for (let i = 0; i < (profilesData ?? []).length; i++) {
+      const p: any = (profilesData ?? [])[i]
+      if (p?.id) map[p.id] = p
+    }
+    profilesById = map
+  }
+
   const result: FeedStudyRequest[] = [];
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
+    const authorProfile = profilesById[r.author_id] ?? null
 
     // Extraer nombre de facultad desde la cadena larga de joins
     let facultyName = "Sin facultad";
@@ -244,7 +264,7 @@ export async function getFeedRequests(
 
     // Extraer carrera del autor (programa principal)
     let authorCareer = "";
-    const upArr: any[] = r.profiles?.user_programs ?? [];
+    const upArr: any[] = authorProfile?.user_programs ?? [];
     for (let j = 0; j < upArr.length; j++) {
       const up = upArr[j];
       if (up.is_primary) {
@@ -269,13 +289,13 @@ export async function getFeedRequests(
       status: r.status,
       created_at: r.created_at,
       author: {
-        full_name: r.profiles?.full_name ?? "Usuario",
-        avatar_url: r.profiles?.avatar_url ?? undefined,
+        full_name: authorProfile?.full_name ?? "Usuario",
+        avatar_url: authorProfile?.avatar_url ?? undefined,
         career: authorCareer || undefined,
       },
       profiles: {
-        full_name: r.profiles?.full_name ?? "Usuario",
-        avatar_url: r.profiles?.avatar_url ?? null,
+        full_name: authorProfile?.full_name ?? "Usuario",
+        avatar_url: authorProfile?.avatar_url ?? null,
       },
       subject_name: r.subjects?.name ?? "Sin materia",
       faculty_name: facultyName,

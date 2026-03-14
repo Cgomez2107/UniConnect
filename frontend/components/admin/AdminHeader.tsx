@@ -4,6 +4,7 @@
  */
 
 import { Colors } from "@/constants/Colors"
+import { Ionicons } from "@expo/vector-icons"
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 interface Props {
@@ -17,7 +18,10 @@ export function AdminHeader({ userName, onSignOut, C }: Props) {
     <View style={[styles.header, { backgroundColor: C.primary }]}>
       <View>
         <Text style={styles.title}>Panel de Administración</Text>
-        <Text style={styles.sub}>Hola, {userName.split(" ")[0]} ⚙️</Text>
+        <View style={styles.subRow}>
+          <Text style={styles.sub}>Hola, {userName.split(" ")[0]}</Text>
+          <Ionicons name="settings-outline" size={13} color="rgba(255,255,255,0.8)" />
+        </View>
       </View>
       <TouchableOpacity
         style={[styles.signOutBtn, { borderColor: "rgba(255,255,255,0.4)" }]}
@@ -47,6 +51,11 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontSize: 13,
     marginTop: 2,
+  },
+  subRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   signOutBtn: {
     borderWidth: 1,

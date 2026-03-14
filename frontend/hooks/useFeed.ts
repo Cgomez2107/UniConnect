@@ -53,6 +53,21 @@ export function useFeed(): UseFeedReturn {
   const pageRef = useRef(0)
   const hasMoreRef = useRef(true)
 
+  const formatFeedError = (e: unknown) => {
+    const raw = e instanceof Error ? e.message : ""
+    const msg = raw.toLowerCase()
+
+    if (msg.includes("more than one relationship") && msg.includes("study_requests") && msg.includes("profiles")) {
+      return "Estamos ajustando una relación de base de datos para solicitudes. Intenta de nuevo en unos segundos."
+    }
+
+    if (msg.includes("permission denied")) {
+      return "Tu sesión no tiene permisos para ver esta información. Cierra sesión y vuelve a ingresar."
+    }
+
+    return raw || "No pudimos cargar el feed en este momento."
+  }
+
   useEffect(() => {
     getEnrolledSubjectsForUser()
       .then((subjects) => {
@@ -88,7 +103,7 @@ export function useFeed(): UseFeedReturn {
       setRequests(data)
       hasMoreRef.current = data.length >= PAGE_SIZE
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error al cargar el feed.")
+      setError(formatFeedError(e))
     } finally {
       setLoading(false)
       setRefreshing(false)

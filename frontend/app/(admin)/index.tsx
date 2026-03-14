@@ -9,6 +9,7 @@ import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
 import { useAdmin } from "@/hooks/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
+import { Ionicons } from "@expo/vector-icons"
 import { router } from "expo-router"
 import * as Haptics from "expo-haptics"
 import { StatusBar } from "expo-status-bar"
@@ -39,15 +40,15 @@ export default function AdminPanelScreen() {
   const admin = useAdmin(search)
 
   // Tabs config
-  const TABS = [
-    { key: "facultades"  as ActiveTab, emoji: "🏛️",  label: "Facultades",  count: admin.faculties.length  },
-    { key: "programas"   as ActiveTab, emoji: "🎓",  label: "Programas",   count: admin.programs.length   },
-    { key: "materias"    as ActiveTab, emoji: "📚",  label: "Materias",    count: admin.subjects.length   },
-    { key: "usuarios"    as ActiveTab, emoji: "👤",  label: "Usuarios",    count: admin.users.length      },
-    { key: "solicitudes" as ActiveTab, emoji: "📋",  label: "Solicitudes", count: admin.requests.length   },
-    { key: "recursos"    as ActiveTab, emoji: "📁",  label: "Recursos",    count: admin.resources.length  },
-    { key: "eventos"     as ActiveTab, emoji: "📅",  label: "Eventos",     count: admin.events.length     },
-    { key: "metricas"    as ActiveTab, emoji: "📊",  label: "Métricas",    count: 0                       },
+  const TABS: { key: ActiveTab; icon: keyof typeof Ionicons.glyphMap; label: string; count: number }[] = [
+    { key: "facultades"  as ActiveTab, icon: "business-outline", label: "Facultades",  count: admin.faculties.length  },
+    { key: "programas"   as ActiveTab, icon: "school-outline",   label: "Programas",   count: admin.programs.length   },
+    { key: "materias"    as ActiveTab, icon: "book-outline",     label: "Materias",    count: admin.subjects.length   },
+    { key: "usuarios"    as ActiveTab, icon: "people-outline",   label: "Usuarios",    count: admin.users.length      },
+    { key: "solicitudes" as ActiveTab, icon: "document-text-outline", label: "Solicitudes", count: admin.requests.length   },
+    { key: "recursos"    as ActiveTab, icon: "folder-open-outline",   label: "Recursos",    count: admin.resources.length  },
+    { key: "eventos"     as ActiveTab, icon: "calendar-outline",       label: "Eventos",     count: admin.events.length     },
+    { key: "metricas"    as ActiveTab, icon: "stats-chart-outline",    label: "Métricas",    count: 0                       },
   ]
 
   // Tabs que tienen botón + Nuevo
@@ -92,7 +93,7 @@ export default function AdminPanelScreen() {
       {activeTab !== "metricas" && (
       <View style={[styles.searchRow, { borderBottomColor: C.border }]}>
         <View style={[styles.searchBox, { backgroundColor: C.surface, borderColor: C.border }]}>
-          <Text style={{ color: C.textPlaceholder, marginRight: 6 }}>🔍</Text>
+          <Ionicons name="search-outline" size={16} color={C.textPlaceholder} style={{ marginRight: 6 }} />
           <TextInput
             style={[styles.searchInput, { color: C.textPrimary }]}
             placeholder={
@@ -112,7 +113,7 @@ export default function AdminPanelScreen() {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={{ color: C.textSecondary, fontSize: 16 }}>✕</Text>
+              <Ionicons name="close" size={18} color={C.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -152,7 +153,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay facultades" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="business-outline" title="No hay facultades" body="" />}
             />
           )}
 
@@ -172,7 +173,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay programas" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="school-outline" title="No hay programas" body="" />}
             />
           )}
 
@@ -191,7 +192,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay materias" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="book-outline" title="No hay materias" body="" />}
             />
           )}
 
@@ -209,7 +210,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay usuarios" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="people-outline" title="No hay usuarios" body="" />}
             />
           )}
 
@@ -227,7 +228,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay solicitudes" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="document-text-outline" title="No hay solicitudes" body="" />}
             />
           )}
 
@@ -244,7 +245,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay recursos" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="folder-open-outline" title="No hay recursos" body="" />}
             />
           )}
 
@@ -262,7 +263,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📅" title="No hay eventos" body="Crea el primer evento del campus" />}
+              ListEmptyComponent={<EmptyState emoji="📅" iconName="calendar-outline" title="No hay eventos" body="Crea el primer evento del campus" />}
             />
           )}
 
@@ -271,35 +272,45 @@ export default function AdminPanelScreen() {
               {admin.metrics ? (
                 <>
                   <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
-                    <Text style={styles.metricEmoji}>👥</Text>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="people-outline" size={24} color={C.primary} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.totalUsers}</Text>
                       <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Usuarios totales</Text>
                     </View>
                   </View>
                   <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
-                    <Text style={styles.metricEmoji}>🎓</Text>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="school-outline" size={24} color={C.primary} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.activeStudents}</Text>
                       <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Estudiantes activos</Text>
                     </View>
                   </View>
                   <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
-                    <Text style={styles.metricEmoji}>📋</Text>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="document-text-outline" size={24} color={C.primary} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.openRequests}</Text>
                       <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Solicitudes abiertas</Text>
                     </View>
                   </View>
                   <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
-                    <Text style={styles.metricEmoji}>📁</Text>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="folder-open-outline" size={24} color={C.primary} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.totalResources}</Text>
                       <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Recursos subidos</Text>
                     </View>
                   </View>
                   <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
-                    <Text style={styles.metricEmoji}>💬</Text>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={24} color={C.primary} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.totalMessages}</Text>
                       <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Mensajes enviados</Text>
@@ -307,7 +318,7 @@ export default function AdminPanelScreen() {
                   </View>
                 </>
               ) : (
-                <EmptyState emoji="📊" title="Sin datos" body="No se pudieron cargar las métricas." />
+                <EmptyState emoji="📊" iconName="stats-chart-outline" title="Sin datos" body="No se pudieron cargar las métricas." />
               )}
             </ScrollView>
           )}
@@ -606,7 +617,13 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
   },
-  metricEmoji: { fontSize: 36 },
+  metricIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   metricValue: { fontSize: 32, fontWeight: "800" },
   metricLabel: { fontSize: 13, marginTop: 2 },
 })

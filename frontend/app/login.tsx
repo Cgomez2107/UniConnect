@@ -39,6 +39,7 @@ export default function LoginScreen() {
   const [formError, setFormError] = useState("");
   const [splashRole, setSplashRole] = useState<UserRole | null>(null);
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const splashWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     loading: googleLoading,
@@ -55,19 +56,43 @@ export default function LoginScreen() {
     if (navigationTimerRef.current) return;
 
     navigationTimerRef.current = setTimeout(() => {
+      navigationTimerRef.current = null;
       if (role === "admin") {
         router.replace("/(admin)" as any);
       } else {
         router.replace("/(tabs)" as any);
       }
-    }, 700);
+    }, 180);
   }, [isAuthenticated, user?.id, user?.role]);
+
+  useEffect(() => {
+    if (splashRole === null) {
+      if (splashWatchdogRef.current) {
+        clearTimeout(splashWatchdogRef.current);
+        splashWatchdogRef.current = null;
+      }
+      return;
+    }
+
+    if (splashWatchdogRef.current) return;
+
+    splashWatchdogRef.current = setTimeout(() => {
+      splashWatchdogRef.current = null;
+      setSplashRole(null);
+      setFormError("La sesión tardó más de lo esperado. Reintentamos automáticamente.");
+      router.replace("/index" as any);
+    }, 4000);
+  }, [splashRole]);
 
   useEffect(() => {
     return () => {
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
         navigationTimerRef.current = null;
+      }
+      if (splashWatchdogRef.current) {
+        clearTimeout(splashWatchdogRef.current);
+        splashWatchdogRef.current = null;
       }
     };
   }, []);
@@ -100,6 +125,10 @@ export default function LoginScreen() {
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
         navigationTimerRef.current = null;
+      }
+      if (splashWatchdogRef.current) {
+        clearTimeout(splashWatchdogRef.current);
+        splashWatchdogRef.current = null;
       }
       const msg: string = error?.message ?? "";
       if (msg.includes("Email not confirmed")) {

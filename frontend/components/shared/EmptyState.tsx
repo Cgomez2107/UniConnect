@@ -15,23 +15,31 @@
  */
 
 import { Colors } from "@/constants/Colors"
+import { Ionicons } from "@expo/vector-icons"
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 
 interface Props {
   emoji: string
+  iconName?: keyof typeof Ionicons.glyphMap
   title: string
   body?: string
   action?: string
   onAction?: () => void
 }
 
-export function EmptyState({ emoji, title, body, action, onAction }: Props) {
+export function EmptyState({ emoji, iconName, title, body, action, onAction }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
 
   return (
     <View style={styles.container}>
-      <Text style={styles.emoji}>{emoji}</Text>
+      {iconName ? (
+        <View style={[styles.iconWrap, { backgroundColor: C.primary + "14" }]}>
+          <Ionicons name={iconName} size={28} color={C.primary} />
+        </View>
+      ) : (
+        <Text style={styles.emoji}>{emoji}</Text>
+      )}
       <Text style={[styles.title, { color: C.textPrimary }]}>{title}</Text>
       {body ? (
         <Text style={[styles.body, { color: C.textSecondary }]}>{body}</Text>
@@ -57,6 +65,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emoji: { fontSize: 40, marginBottom: 4 },
+  iconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
   title: { fontSize: 18, fontWeight: "700", textAlign: "center" },
   body: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   btn: {

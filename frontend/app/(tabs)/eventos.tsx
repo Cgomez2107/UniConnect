@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
 import { useEvents, type EventFilter } from "@/hooks/useEvents"
+import { Ionicons } from "@expo/vector-icons"
 import type { CampusEvent, EventCategory } from "@/types"
 import { useEffect, useRef } from "react"
 import {
@@ -21,16 +22,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 // Constantes de categoría
 
-const CATEGORY_ICON: Record<EventCategory, string>  = { academico: "🎓", cultural: "🎭", deportivo: "⚽", otro: "📌" }
+const CATEGORY_ICON: Record<EventCategory, keyof typeof Ionicons.glyphMap> = {
+  academico: "school-outline",
+  cultural: "color-palette-outline",
+  deportivo: "football-outline",
+  otro: "bookmark-outline",
+}
 const CATEGORY_COLOR: Record<EventCategory, string> = { academico: "#2563eb", cultural: "#a855f7", deportivo: "#22c55e", otro: "#f59e0b" }
 const CATEGORY_LABEL: Record<EventCategory, string> = { academico: "Académico", cultural: "Cultural", deportivo: "Deportivo", otro: "Otro" }
 
-const FILTERS: { key: EventFilter; label: string; emoji: string }[] = [
-  { key: "todos",     label: "Todos",      emoji: "📋" },
-  { key: "academico", label: "Académico",  emoji: "🎓" },
-  { key: "cultural",  label: "Cultural",   emoji: "🎭" },
-  { key: "deportivo", label: "Deportivo",  emoji: "⚽" },
-  { key: "otro",      label: "Otro",       emoji: "📌" },
+const FILTERS: { key: EventFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: "todos", label: "Todos", icon: "apps-outline" },
+  { key: "academico", label: "Académico", icon: "school-outline" },
+  { key: "cultural", label: "Cultural", icon: "color-palette-outline" },
+  { key: "deportivo", label: "Deportivo", icon: "football-outline" },
+  { key: "otro", label: "Otro", icon: "bookmark-outline" },
 ]
 
 // Tarjeta de evento
@@ -64,9 +70,12 @@ function EventCard({ item, C }: { item: CampusEvent; C: typeof Colors["light"] }
 
         <View style={styles.cardBody}>
           <View style={[styles.categoryBadge, { backgroundColor: catColor + "18" }]}>
-            <Text style={[styles.categoryText, { color: catColor }]}>
-              {CATEGORY_ICON[item.category]} {CATEGORY_LABEL[item.category]}
-            </Text>
+            <View style={styles.categoryInline}>
+              <Ionicons name={CATEGORY_ICON[item.category]} size={13} color={catColor} />
+              <Text style={[styles.categoryText, { color: catColor }]}>
+                {CATEGORY_LABEL[item.category]}
+              </Text>
+            </View>
           </View>
 
           <Text style={[styles.cardTitle, { color: C.textPrimary }]} numberOfLines={2}>
@@ -81,8 +90,9 @@ function EventCard({ item, C }: { item: CampusEvent; C: typeof Colors["light"] }
 
           {item.location ? (
             <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={13} color={C.textSecondary} style={{ marginRight: 4 }} />
               <Text style={[styles.cardMeta, { color: C.textSecondary }]}>
-                📍 {item.location}
+                {item.location}
               </Text>
             </View>
           ) : null}
@@ -106,7 +116,10 @@ export default function EventosScreen() {
 
       {/* Cabecera */}
       <View style={[styles.header, { borderBottomColor: C.border }]}>
-        <Text style={[styles.headerTitle, { color: C.textPrimary }]}>📅 Eventos del Campus</Text>
+        <View style={styles.headerTitleRow}>
+          <Ionicons name="calendar-outline" size={20} color={C.textPrimary} />
+          <Text style={[styles.headerTitle, { color: C.textPrimary }]}>Eventos del Campus</Text>
+        </View>
         <Text style={[styles.headerSub, { color: C.textSecondary }]}>Próximos eventos académicos y culturales</Text>
       </View>
 
@@ -132,9 +145,12 @@ export default function EventosScreen() {
                 onPress={() => setActiveFilter(f.key)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.filterText, { color: active ? "#fff" : C.textSecondary }]}>
-                  {f.emoji} {f.label}
-                </Text>
+                <View style={styles.filterInline}>
+                  <Ionicons name={f.icon} size={14} color={active ? "#fff" : C.textSecondary} />
+                  <Text style={[styles.filterText, { color: active ? "#fff" : C.textSecondary }]}>
+                    {f.label}
+                  </Text>
+                </View>
               </TouchableOpacity>
             )
           })}
@@ -161,6 +177,7 @@ export default function EventosScreen() {
           ListEmptyComponent={
             <EmptyState
               emoji="📅"
+              iconName="calendar-outline"
               title="No hay eventos próximos"
               body={activeFilter === "todos"
                 ? "El administrador aún no ha publicado eventos del campus."
@@ -186,6 +203,11 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderBottomWidth: 1,
   },
+  headerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   headerTitle: { fontSize: 20, fontWeight: "800" },
   headerSub:   { fontSize: 13, marginTop: 2 },
 
@@ -204,6 +226,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   filterText: { fontSize: 13, fontWeight: "600" },
+  filterInline: { flexDirection: "row", alignItems: "center", gap: 6 },
 
   // Lista
   list: { padding: 16, gap: 12 },
@@ -241,6 +264,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   categoryText: { fontSize: 11, fontWeight: "700" },
+  categoryInline: { flexDirection: "row", alignItems: "center", gap: 4 },
   cardTitle:    { fontSize: 15, fontWeight: "700", lineHeight: 20 },
   cardDesc:     { fontSize: 13, lineHeight: 18 },
   locationRow:  { flexDirection: "row", alignItems: "center" },

@@ -236,7 +236,7 @@ export interface StudentPublicProfile {
 }
 
 
-// ADMINISTRACIÓN — HU-Admin
+// Administración
 
 
 /** Usuario visto desde el panel de admin */
@@ -256,7 +256,6 @@ export interface AdminRequest {
   id: string;
   title: string;
   status: RequestStatus;
-  modality: Modality;
   created_at: string;
   author_name: string;
   subject_name: string;

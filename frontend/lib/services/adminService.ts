@@ -9,11 +9,23 @@ import type { AdminMetrics, AdminRequest, AdminResource, AdminUser, UserRole } f
 export async function getAllUsers(): Promise<AdminUser[]> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, is_active, semester, avatar_url, created_at")
+    .select("id, full_name, role, is_active, semester, avatar_url, created_at")
     .order("created_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as AdminUser[]
+
+  return (data ?? []).map((u: any) => ({
+    id: u.id,
+    full_name: u.full_name,
+    // En este esquema el correo no vive en profiles.
+    // Dejamos un valor amigable para que la UI no falle.
+    email: "Correo no disponible",
+    role: u.role,
+    is_active: u.is_active,
+    semester: u.semester,
+    avatar_url: u.avatar_url,
+    created_at: u.created_at,
+  })) as AdminUser[]
 }
 
 export async function updateUserRole(userId: string, role: UserRole): Promise<void> {
@@ -40,8 +52,7 @@ export async function getAllRequests(): Promise<AdminRequest[]> {
   const { data, error } = await supabase
     .from("study_requests")
     .select(`
-      id, title, status, modality, created_at,
-      profiles ( full_name ),
+      id, title, status, created_at, author_id,
       subjects ( name ),
       applications ( id )
     `)
@@ -49,13 +60,33 @@ export async function getAllRequests(): Promise<AdminRequest[]> {
 
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((r: any) => ({
+  const rows: any[] = data ?? []
+  const authorIds = rows
+    .map((r) => r.author_id)
+    .filter(Boolean)
+
+  let authorsById: Record<string, { full_name: string | null }> = {}
+  if (authorIds.length > 0) {
+    const { data: authors, error: authorsError } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", authorIds)
+
+    if (authorsError) throw new Error(authorsError.message)
+
+    const mapped: Record<string, { full_name: string | null }> = {}
+    for (const a of authors ?? []) {
+      mapped[a.id] = { full_name: a.full_name ?? null }
+    }
+    authorsById = mapped
+  }
+
+  return rows.map((r: any) => ({
     id: r.id,
     title: r.title,
     status: r.status,
-    modality: r.modality,
     created_at: r.created_at,
-    author_name: r.profiles?.full_name ?? "Desconocido",
+    author_name: authorsById[r.author_id]?.full_name ?? "Desconocido",
     subject_name: r.subjects?.name ?? "—",
     applications_count: Array.isArray(r.applications) ? r.applications.length : 0,
   })) as AdminRequest[]
