@@ -1,12 +1,8 @@
 import { ResourceCard } from "@/components/feed/ResourceCard";
 import { Colors } from "@/constants/Colors";
-import {
-  getMyApplications,
-  getMyRequests,
-  getReceivedApplications,
-  reviewApplication,
-} from "@/lib/services/careerService";
-import { getMyResources } from "@/lib/services/resourceService";
+import { useApplications } from "@/hooks/application/useApplications";
+import { useResources } from "@/hooks/application/useResources";
+import { useStudyRequests } from "@/hooks/application/useStudyRequests";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Application, StudyRequest, StudyResource } from "@/types";
 import { router, useFocusEffect } from "expo-router";
@@ -67,6 +63,9 @@ export default function SolicitudesHubScreen() {
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const { reviewApplication, getReceivedByAuthor, getByApplicant } = useApplications();
+  const { getRequestsByAuthor } = useStudyRequests();
+  const { getResourcesByUser } = useResources();
 
   const [activeTab, setActiveTab] = useState<MainTab>("mis-solicitudes");
   const [sentFilter, setSentFilter] = useState<SentFilter>("pendiente");
@@ -86,10 +85,10 @@ export default function SolicitudesHubScreen() {
 
       try {
         const [requests, received, sent, resources] = await Promise.all([
-          getMyRequests(user.id),
-          getReceivedApplications(user.id),
-          getMyApplications(user.id),
-          getMyResources(user.id, 0, 50),
+          getRequestsByAuthor(user.id),
+          getReceivedByAuthor(user.id),
+          getByApplicant(user.id),
+          getResourcesByUser(user.id),
         ]);
 
         setMyRequests(requests);
@@ -103,7 +102,7 @@ export default function SolicitudesHubScreen() {
         setRefreshing(false);
       }
     },
-    [user?.id]
+    [getByApplicant, getReceivedByAuthor, getRequestsByAuthor, getResourcesByUser, user?.id]
   );
 
   useFocusEffect(
@@ -163,7 +162,7 @@ export default function SolicitudesHubScreen() {
         onPress: async () => {
           setActionId(applicationId);
           try {
-            await reviewApplication(user.id, applicationId, status);
+            await reviewApplication(applicationId, user.id, status);
             setReceivedApplications((prev) =>
               prev.map((a) => (a.id === applicationId ? { ...a, status } : a))
             );

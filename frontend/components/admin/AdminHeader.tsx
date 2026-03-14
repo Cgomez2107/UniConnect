@@ -13,6 +13,9 @@ interface Props {
   C: typeof Colors["light"]
 }
 
+/**
+ * Cabecera del panel admin con saludo contextual y acción de cierre de sesión.
+ */
 export function AdminHeader({ userName, onSignOut, C }: Props) {
   return (
     <View style={[styles.header, { backgroundColor: C.primary }]}>

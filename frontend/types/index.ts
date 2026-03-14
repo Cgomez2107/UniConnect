@@ -115,8 +115,13 @@ export interface StudyRequest {
   created_at: string;
   updated_at: string;
   // joins
-  profiles?: { full_name: string; avatar_url: string | null };
-  subjects?: { name: string };
+  profiles?: { full_name: string; avatar_url: string | null; bio?: string | null };
+  subjects?: {
+    name: string;
+    program_subjects?: Array<{
+      programs?: { faculties?: { name: string } | { name: string }[] } | Array<{ faculties?: { name: string } | { name: string }[] }>;
+    }>;
+  };
   applications_count?: number;
   // campos derivados (feed)
   faculty_name?: string;

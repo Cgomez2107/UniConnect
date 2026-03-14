@@ -10,10 +10,11 @@
 import { ChatInput } from "@/components/chat/ChatInput";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Colors } from "@/constants/Colors";
-import { useChat } from "@/hooks/useChat";
+import { useMessaging } from "@/hooks/application/useMessaging";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -24,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { Message } from "@/types";
 
 export default function ChatScreen() {
   const { conversationId, otherUserName } = useLocalSearchParams<{
@@ -35,17 +37,38 @@ export default function ChatScreen() {
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const flatListRef = useRef<FlatList<Message>>(null);
+  const [inputText, setInputText] = useState("");
+  const [sending, setSending] = useState(false);
 
   const {
     messages,
     loading,
     error,
-    inputText,
-    setInputText,
-    sending,
-    send,
-    flatListRef,
-  } = useChat(conversationId);
+    getMessages,
+    sendMessage,
+  } = useMessaging();
+
+  const conversationIdValue = typeof conversationId === "string" ? conversationId : "";
+
+  useEffect(() => {
+    if (!conversationIdValue) return;
+    getMessages(conversationIdValue).catch(() => undefined);
+  }, [conversationIdValue, getMessages]);
+
+  const send = useCallback(async () => {
+    if (!conversationIdValue || !user?.id) return;
+    const content = inputText.trim();
+    if (!content || sending) return;
+
+    setSending(true);
+    try {
+      await sendMessage(conversationIdValue, user.id, content);
+      setInputText("");
+    } finally {
+      setSending(false);
+    }
+  }, [conversationIdValue, user?.id, inputText, sending, sendMessage]);
 
   const displayName = otherUserName
     ? decodeURIComponent(otherUserName)

@@ -11,19 +11,19 @@
  */
 
 import { Colors } from "@/constants/Colors"
-import { useUploadResource } from "@/hooks/useResources"
+import { useUploadResource } from "@/hooks/application/useUploadResource"
 import {
   getAvailableSubjectsForCurrentUser,
   type Subject,
-} from "@/lib/services/studyRequestsService"
+} from "@/hooks/application/useStudyRequestsCatalog"
 import { useAuthStore } from "@/store/useAuthStore"
 import { router } from "expo-router"
 import * as DocumentPicker from "expo-document-picker"
 import { useEffect, useState } from "react"
+import { SafeAreaView } from "react-native-safe-area-context"
 import {
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -33,9 +33,16 @@ import {
   View,
 } from "react-native"
 
+const ALLOWED_EXTENSIONS = [
+  "pdf", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "txt", "jpg", "jpeg", "png",
+] as const
+
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
 export default function SubirRecursoScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
+  const user = useAuthStore((s) => s.user)
   const role = useAuthStore((s) => s.user?.role)
 
   // ── Formulario ────────────────────────────────────────────────────────────
@@ -53,7 +60,18 @@ export default function SubirRecursoScreen() {
   const [loadingData, setLoadingData] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
-  const { uploading, error: uploadError, upload, validateFile } = useUploadResource()
+  const { uploading, error: uploadError, upload } = useUploadResource()
+
+  const validateFile = (fileName: string, sizeBytes: number): string | null => {
+    const ext = fileName.split(".").pop()?.toLowerCase() ?? ""
+    if (!(ALLOWED_EXTENSIONS as readonly string[]).includes(ext)) {
+      return "Formato no permitido. Usa: pdf, docx, xlsx, pptx, txt, jpg, png."
+    }
+    if (sizeBytes > MAX_FILE_SIZE_BYTES) {
+      return "El archivo excede el máximo de 10 MB."
+    }
+    return null
+  }
 
   // ── Carga inicial ─────────────────────────────────────────────────────────
   const loadData = async () => {
@@ -112,16 +130,22 @@ export default function SubirRecursoScreen() {
 
   // ── Envío ─────────────────────────────────────────────────────────────────
   const handleUpload = async () => {
-    if (!isValid || !selectedSubject || !pickedFile) return
+    if (!isValid || !selectedSubject || !pickedFile || !user?.id) return
 
-    const resource = await upload({
-      subject_id: selectedSubject,
-      title: title.trim(),
-      description: description.trim() || undefined,
-      file_uri: pickedFile.uri,
-      file_name: pickedFile.name,
-      file_size_bytes: pickedFile.size,
-    })
+    let resource = null
+    try {
+      resource = await upload({
+        subject_id: selectedSubject,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        file_uri: pickedFile.uri,
+        file_name: pickedFile.name,
+        file_size_bytes: pickedFile.size,
+      })
+    } catch (e) {
+      Alert.alert("Error", e instanceof Error ? e.message : "No se pudo subir el recurso.")
+      return
+    }
 
     if (resource) {
       Alert.alert(

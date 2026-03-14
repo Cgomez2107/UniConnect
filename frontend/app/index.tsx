@@ -1,7 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, useColorScheme, View } from "react-native";
 
 /**
@@ -16,7 +16,7 @@ export default function IndexScreen() {
   const isHydrating = useAuthStore((s) => s.isHydrating);
   const role = useAuthStore((s) => s.user?.role);
   const [ready, setReady] = useState(false);
-  const [routed, setRouted] = useState(false);
+  const lastRouteRef = useRef<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 50);
@@ -24,21 +24,18 @@ export default function IndexScreen() {
   }, []);
 
   useEffect(() => {
-    if (!ready || isHydrating || routed) return;
+    if (!ready || isHydrating) return;
+
+    let nextRoute = "/onboarding";
 
     if (isAuthenticated) {
-      setRouted(true);
-      if (role === "admin") {
-        router.replace("/(admin)" as any);
-      } else {
-        router.replace("/(tabs)" as any);
-      }
-      return;
+      nextRoute = role === "admin" ? "/(admin)" : "/(tabs)";
     }
 
-    setRouted(true);
-    router.replace("/onboarding" as any);
-  }, [ready, isHydrating, isAuthenticated, role, routed]);
+    if (lastRouteRef.current === nextRoute) return;
+    lastRouteRef.current = nextRoute;
+    router.replace(nextRoute as any);
+  }, [ready, isHydrating, isAuthenticated, role]);
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>

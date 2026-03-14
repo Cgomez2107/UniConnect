@@ -17,6 +17,9 @@ export function MiniRequestCard({ request }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
 
+  const occupied = Math.max(1, Math.min(request.applications_count ?? 1, request.max_members))
+  const available = Math.max(request.max_members - occupied, 0)
+
   return (
     <TouchableOpacity
       style={[styles.card, { borderColor: C.border }]}
@@ -29,7 +32,7 @@ export function MiniRequestCard({ request }: Props) {
         </Text>
       </View>
       <Text style={[styles.title, { color: C.textPrimary }]}>{request.title}</Text>
-      <Text style={[styles.meta, { color: C.textSecondary }]}>👥 Cupos: {request.max_members}</Text>
+      <Text style={[styles.meta, { color: C.textSecondary }]}>👥 Cupos disponibles: {available}</Text>
     </TouchableOpacity>
   )
 }

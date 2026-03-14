@@ -7,8 +7,9 @@
 
 import { Colors } from "@/constants/Colors";
 import type { Program, Subject } from "@/types";
-import { getPrograms, getSubjectsByProgram } from "@/lib/services/facultyService";
 import {
+  getPrograms,
+  getSubjectsByProgram,
   addMySubject,
   getMyPrograms,
   getMySubjects,
@@ -17,11 +18,11 @@ import {
   setPrimaryProgram,
   updateProfile,
   uploadAvatar,
-} from "@/lib/services/profileService";
+} from "@/hooks/application/useProfileEditor";
 import { useAuthStore } from "@/store/useAuthStore";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -71,6 +72,7 @@ export default function EditarPerfilScreen() {
   const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
   const [userSubjects, setUserSubjects] = useState<string[]>([]);
   const [showAddSubjects, setShowAddSubjects] = useState(false);
+  const [subjectSearch, setSubjectSearch] = useState("");
 
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
@@ -275,6 +277,12 @@ export default function EditarPerfilScreen() {
     }
   };
 
+  const filteredAvailableSubjects = useMemo(() => {
+    const query = subjectSearch.trim().toLowerCase();
+    if (!query) return allSubjects;
+    return allSubjects.filter((subject) => subject.name.toLowerCase().includes(query));
+  }, [allSubjects, subjectSearch]);
+
   if (isLoadingData) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
@@ -284,11 +292,6 @@ export default function EditarPerfilScreen() {
       </SafeAreaView>
     );
   }
-
-  const currentSelected = allPrograms.find((p) => p.id === selectedProgramId);
-  const programName = currentSelected
-    ? `${currentSelected.name} — ${currentSelected.faculty_name}`
-    : "Sin programa";
 
   const isFormValid = bio.trim() || phoneNumber.trim();
 
@@ -392,6 +395,61 @@ export default function EditarPerfilScreen() {
             </Text>
           </TouchableOpacity>
 
+          {showAddSubjects && selectedProgramId && (
+            <View style={[styles.subjectsSelector, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <TextInput
+                style={[
+                  styles.subjectSearchInput,
+                  { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary },
+                ]}
+                value={subjectSearch}
+                onChangeText={setSubjectSearch}
+                placeholder="Buscar materia..."
+                placeholderTextColor={C.textPlaceholder}
+              />
+
+              <ScrollView
+                style={styles.subjectsSelectorScroll}
+                contentContainerStyle={styles.subjectsSelectorContent}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
+                {allSubjects.length === 0 ? (
+                  <Text style={{ color: C.textSecondary, textAlign: "center", padding: 15 }}>
+                    No hay materias disponibles para este programa
+                  </Text>
+                ) : filteredAvailableSubjects.length === 0 ? (
+                  <Text style={{ color: C.textSecondary, textAlign: "center", padding: 15 }}>
+                    No hay materias que coincidan con la búsqueda
+                  </Text>
+                ) : (
+                  filteredAvailableSubjects.map((subject) => {
+                    const isSelected = userSubjects.includes(subject.id);
+                    return (
+                      <TouchableOpacity
+                        key={subject.id}
+                        style={[
+                          styles.subjectCheckbox,
+                          {
+                            backgroundColor: isSelected ? C.primaryLight : "transparent",
+                            borderColor: C.border,
+                          },
+                        ]}
+                        onPress={() => handleToggleSubject(subject.id, isSelected)}
+                      >
+                        <Text style={{ color: C.textPrimary, fontSize: 18, marginRight: 10 }}>
+                          {isSelected ? "☑" : "☐"}
+                        </Text>
+                        <Text style={{ color: C.textPrimary, flex: 1 }}>{subject.name}</Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
+            </View>
+          )}
+
           {userSubjects.length > 0 && (
             <View style={[styles.subjectsList, { borderColor: C.border }]}>
               {userSubjects.map((subjectId) => {
@@ -410,38 +468,6 @@ export default function EditarPerfilScreen() {
                   </View>
                 );
               })}
-            </View>
-          )}
-
-          {showAddSubjects && selectedProgramId && (
-            <View style={[styles.subjectsSelector, { backgroundColor: C.surface, borderColor: C.border }]}>
-              {allSubjects.length > 0 ? (
-                allSubjects.map((subject) => {
-                  const isSelected = userSubjects.includes(subject.id);
-                  return (
-                    <TouchableOpacity
-                      key={subject.id}
-                      style={[
-                        styles.subjectCheckbox,
-                        {
-                          backgroundColor: isSelected ? C.primaryLight : "transparent",
-                          borderColor: C.border,
-                        },
-                      ]}
-                      onPress={() => handleToggleSubject(subject.id, isSelected)}
-                    >
-                      <Text style={{ color: C.textPrimary, fontSize: 18, marginRight: 10 }}>
-                        {isSelected ? "☑" : "☐"}
-                      </Text>
-                      <Text style={{ color: C.textPrimary, flex: 1 }}>{subject.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })
-              ) : (
-                <Text style={{ color: C.textSecondary, textAlign: "center", padding: 15 }}>
-                  No hay materias disponibles para este programa
-                </Text>
-              )}
             </View>
           )}
 
@@ -617,7 +643,10 @@ const styles = StyleSheet.create({
   subjectsList: { borderWidth: 1, borderRadius: 8, padding: 8, marginTop: 10, gap: 8 },
   subjectItem: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   subjectName: { fontSize: 14, fontWeight: "500", flex: 1 },
-  subjectsSelector: { borderWidth: 1, borderRadius: 8, marginTop: 8, maxHeight: 300 },
+  subjectsSelector: { borderWidth: 1, borderRadius: 8, marginTop: 8, maxHeight: 300, overflow: "hidden" },
+  subjectSearchInput: { borderWidth: 1, borderRadius: 8, margin: 10, paddingHorizontal: 12, height: 42, fontSize: 14 },
+  subjectsSelectorScroll: { maxHeight: 220 },
+  subjectsSelectorContent: { paddingBottom: 6 },
   subjectCheckbox: { padding: 14, borderBottomWidth: 1, flexDirection: "row", alignItems: "center", borderBottomColor: "transparent" },
 
   // Save button

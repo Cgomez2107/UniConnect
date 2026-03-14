@@ -23,7 +23,7 @@ import { AuthInput } from "@/components/ui/AuthInput";
 import { ErrorBanner } from "@/components/ui/Errorbanner";
 import { PrimaryButton } from "@/components/ui/Primarybutton";
 import { Colors } from "@/constants/Colors";
-import { supabase } from "@/lib/supabase";
+import { signIn, signUp } from "@/hooks/application/useAuthActions";
 
 // ── Validación ────────────────────────────────────────────────────────────────
 const UCALDAS_REGEX = /^[a-zA-Z0-9._%+-]+@ucaldas\.edu\.co$/;
@@ -120,18 +120,17 @@ export default function RegisterScreen() {
     setIsLoading(true);
     try {
       // Registrar usuario
-      const { error: signUpError } = await supabase.auth.signUp({
-        email, password,
-        options: { data: { full_name: fullName } },
+      await signUp({
+        email,
+        password,
+        fullName,
       });
-      if (signUpError) throw signUpError;
 
       // Auto-login inmediatamente después del registro
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      await signIn({
         email,
         password,
       });
-      if (signInError) throw signInError;
 
       // Redirigir al home
       router.replace("/(tabs)");

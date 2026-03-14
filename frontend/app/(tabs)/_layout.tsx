@@ -4,8 +4,10 @@
  */
 
 import { Colors } from "@/constants/Colors";
+import { SplashLoader } from "@/components/ui/SplashLoader";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
 import { useRef, useEffect } from "react";
 import { Animated, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,7 +22,7 @@ function AnimatedTabIcon({ name, color, focused }: { name: any; color: string; f
       speed: 20,
       bounciness: 10,
     }).start();
-  }, [focused]);
+  }, [focused, scale]);
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
@@ -33,6 +35,18 @@ export default function TabLayout() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
   const insets = useSafeAreaInsets(); // ✅ altura real del home indicator
+  const role = useAuthStore((s) => s.user?.role);
+  const isHydrating = useAuthStore((s) => s.isHydrating);
+
+  useEffect(() => {
+    if (role === "admin") {
+      router.replace("/(admin)" as any);
+    }
+  }, [role]);
+
+  if (isHydrating) {
+    return <SplashLoader message="Resolviendo sesión..." />;
+  }
 
   return (
     <Tabs

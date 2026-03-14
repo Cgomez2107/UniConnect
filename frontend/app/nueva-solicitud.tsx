@@ -8,15 +8,15 @@ import {
   createStudyRequest,
   getAvailableSubjectsForCurrentUser,
   type Subject,
-} from "@/lib/services/studyRequestsService";
+} from "@/hooks/application/useStudyRequestsCatalog";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,

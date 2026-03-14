@@ -13,8 +13,8 @@
  */
 
 import { Colors } from "@/constants/Colors"
-import { useDeleteResource } from "@/hooks/useResources"
-import { supabase } from "@/lib/supabase"
+import { useResources } from "@/hooks/application/useResources"
+import { useDeleteResource } from "@/hooks/application/useDeleteResource"
 import { useAuthStore } from "@/store/useAuthStore"
 import type { StudyResource } from "@/types"
 import { router, useLocalSearchParams } from "expo-router"
@@ -99,6 +99,7 @@ export default function RecursoDetailScreen() {
 
   // Eliminación
   const { deleting, remove } = useDeleteResource()
+  const { getResourceById, updateResource } = useResources()
 
   // Descarga
   const [downloading, setDownloading] = useState(false)
@@ -113,14 +114,9 @@ export default function RecursoDetailScreen() {
       setLoading(true)
       setError(null)
       try {
-        const { data, error: err } = await supabase
-          .from("study_resources")
-          .select("*, profiles(full_name, avatar_url), subjects(name)")
-          .eq("id", id)
-          .single()
-
-        if (err) throw new Error(err.message)
-        setResource(data as StudyResource)
+        const data = await getResourceById(id)
+        if (!data) throw new Error("Recurso no encontrado.")
+        setResource(data)
         setEditTitle(data.title)
         setEditDescription(data.description ?? "")
       } catch (e: unknown) {
@@ -131,7 +127,7 @@ export default function RecursoDetailScreen() {
     }
 
     load()
-  }, [id])
+  }, [getResourceById, id])
 
   // ── Abrir archivo ───────────────────────────────────────────────────────
   const handleOpen = () => {
@@ -165,25 +161,18 @@ export default function RecursoDetailScreen() {
 
   // ── Guardar edición ─────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!resource || editTitle.trim().length < 3) {
+    if (!resource || !user?.id || editTitle.trim().length < 3) {
       Alert.alert("Error", "El título debe tener al menos 3 caracteres.")
       return
     }
 
     setSaving(true)
     try {
-      const { data, error: err } = await supabase
-        .from("study_resources")
-        .update({
-          title: editTitle.trim(),
-          description: editDescription.trim() || null,
-        })
-        .eq("id", resource.id)
-        .select("*, profiles(full_name, avatar_url), subjects(name)")
-        .single()
-
-      if (err) throw new Error(err.message)
-      setResource(data as StudyResource)
+      const updated = await updateResource(resource.id, user.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+      })
+      setResource(updated)
       setEditing(false)
       Alert.alert("Actualizado", "El recurso se actualizó correctamente.")
     } catch (e: unknown) {

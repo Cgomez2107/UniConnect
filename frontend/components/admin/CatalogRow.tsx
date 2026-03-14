@@ -29,7 +29,7 @@ function useEntryAnim() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 260, useNativeDriver: true }),
     ]).start()
-  }, [])
+  }, [fadeAnim, slideAnim])
   return { fadeAnim, slideAnim }
 }
 
@@ -41,6 +41,9 @@ interface RowActionsProps {
   C: typeof Colors["light"]
 }
 
+/**
+ * Renderiza las acciones estándar de edición y eliminación para una fila del catálogo.
+ */
 export function RowActions({ onEdit, onDelete, C }: RowActionsProps) {
   return (
     <View style={styles.actions}>
@@ -76,6 +79,9 @@ interface FacultyRowProps {
   C: typeof Colors["light"]
 }
 
+/**
+ * Renderiza una fila de facultad con su contador de programas asociados.
+ */
 export function FacultyRow({ item, index, programsCount, onEdit, onDelete, C }: FacultyRowProps) {
   const { fadeAnim, slideAnim } = useEntryAnim()
   return (
@@ -107,6 +113,9 @@ interface ProgramRowProps {
   C: typeof Colors["light"]
 }
 
+/**
+ * Renderiza una fila de programa con facultad asociada y número de materias vinculadas.
+ */
 export function ProgramRow({ item, index, subjectsCount, onEdit, onDelete, C }: ProgramRowProps) {
   const { fadeAnim, slideAnim } = useEntryAnim()
   return (
@@ -144,6 +153,9 @@ interface SubjectRowProps {
   C: typeof Colors["light"]
 }
 
+/**
+ * Renderiza una fila de materia con los programas a los que está vinculada.
+ */
 export function SubjectRow({ item, programs, onEdit, onDelete, C }: SubjectRowProps) {
   const { fadeAnim, slideAnim } = useEntryAnim()
   return (

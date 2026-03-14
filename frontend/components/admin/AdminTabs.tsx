@@ -7,7 +7,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 
 export type ActiveTab = "facultades" | "programas" | "materias" | "usuarios" | "solicitudes" | "recursos" | "metricas" | "eventos"
 
-interface Tab {
+export interface AdminTabItem {
   key: ActiveTab
   icon: keyof typeof Ionicons.glyphMap
   label: string
@@ -15,12 +15,15 @@ interface Tab {
 }
 
 interface Props {
-  tabs: Tab[]
+  tabs: AdminTabItem[]
   activeTab: ActiveTab
   onTabChange: (tab: ActiveTab) => void
   C: typeof Colors["light"]
 }
 
+/**
+ * Navegación por pestañas del catálogo académico en el panel admin.
+ */
 export function AdminTabs({ tabs, activeTab, onTabChange, C }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: C.surface, borderBottomColor: C.border }]}>

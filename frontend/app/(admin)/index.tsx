@@ -3,11 +3,11 @@
 import { AdminHeader } from "@/components/admin/AdminHeader"
 import { AdminTabs, type ActiveTab } from "@/components/admin/AdminTabs"
 import { CrudModal, FieldLabel } from "@/components/admin/CrudModal"
-import { FacultyRow, ProgramRow, RowActions, SubjectRow, UserRow, RequestRow, ResourceRow, EventRow } from "@/components/admin/CatalogRow"
+import { FacultyRow, ProgramRow, SubjectRow, UserRow, RequestRow, ResourceRow, EventRow } from "@/components/admin/CatalogRow"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
-import { useAdmin } from "@/hooks/useAdmin"
+import { useAdmin } from "@/hooks/application/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
 import { Ionicons } from "@expo/vector-icons"
 import { router } from "expo-router"
@@ -186,7 +186,7 @@ export default function AdminPanelScreen() {
               renderItem={({ item }) => (
                 <SubjectRow
                   item={item}
-                  programs={admin.programsForSubject(item.id) as any}
+                  programs={admin.programsForSubject(item.id)}
                   onEdit={() => admin.openEditSubject(item)}
                   onDelete={() => admin.deleteSubject(item)}
                   C={C}
@@ -343,7 +343,7 @@ export default function AdminPanelScreen() {
           autoCapitalize="words"
           autoFocus
           onChangeText={(v) =>
-            admin.setFacultyModal((p) => ({ ...p, form: { name: v }, error: "" }))
+            admin.setFacultyModal((p: any) => ({ ...p, form: { name: v }, error: "" }))
           }
         />
       </CrudModal>
@@ -366,12 +366,12 @@ export default function AdminPanelScreen() {
           autoCapitalize="words"
           autoFocus
           onChangeText={(v) =>
-            admin.setProgramModal((p) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
+            admin.setProgramModal((p: any) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
           }
         />
         <FieldLabel text="Facultad *" C={C} style={{ marginTop: 14 }} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 2 }}>
-          {admin.faculties.map((f) => (
+          {admin.faculties.map((f: any) => (
             <TouchableOpacity
               key={f.id}
               style={[
@@ -382,7 +382,7 @@ export default function AdminPanelScreen() {
                 },
               ]}
               onPress={() =>
-                admin.setProgramModal((p) => ({ ...p, form: { ...p.form, faculty_id: f.id }, error: "" }))
+                admin.setProgramModal((p: any) => ({ ...p, form: { ...p.form, faculty_id: f.id }, error: "" }))
               }
               activeOpacity={0.8}
             >
@@ -415,12 +415,12 @@ export default function AdminPanelScreen() {
           autoCapitalize="words"
           autoFocus
           onChangeText={(v) =>
-            admin.setSubjectModal((p) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
+            admin.setSubjectModal((p: any) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
           }
         />
         <FieldLabel text="Programas vinculados * (seleccion multiple)" C={C} style={{ marginTop: 14 }} />
         <View style={styles.chipsWrap}>
-          {admin.programs.map((prog) => {
+          {admin.programs.map((prog: any) => {
             const selected = admin.subjectModal.form.program_ids.includes(prog.id)
             return (
               <TouchableOpacity
@@ -433,12 +433,12 @@ export default function AdminPanelScreen() {
                   },
                 ]}
                 onPress={() =>
-                  admin.setSubjectModal((p) => ({
+                  admin.setSubjectModal((p: any) => ({
                     ...p,
                     form: {
                       ...p.form,
                       program_ids: selected
-                        ? p.form.program_ids.filter((id) => id !== prog.id)
+                        ? p.form.program_ids.filter((id: string) => id !== prog.id)
                         : [...p.form.program_ids, prog.id],
                     },
                     error: "",
@@ -483,7 +483,7 @@ export default function AdminPanelScreen() {
           autoCapitalize="sentences"
           autoFocus
           onChangeText={(v) =>
-            admin.setEventModal((p) => ({ ...p, form: { ...p.form, title: v }, error: "" }))
+            admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, title: v }, error: "" }))
           }
         />
 
@@ -496,7 +496,7 @@ export default function AdminPanelScreen() {
           multiline
           numberOfLines={3}
           onChangeText={(v) =>
-            admin.setEventModal((p) => ({ ...p, form: { ...p.form, description: v }, error: "" }))
+            admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, description: v }, error: "" }))
           }
         />
 
@@ -509,7 +509,7 @@ export default function AdminPanelScreen() {
           keyboardType="default"
           autoCapitalize="none"
           onChangeText={(v) =>
-            admin.setEventModal((p) => ({ ...p, form: { ...p.form, event_date: v }, error: "" }))
+            admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, event_date: v }, error: "" }))
           }
         />
 
@@ -521,7 +521,7 @@ export default function AdminPanelScreen() {
           value={admin.eventModal.form.location}
           autoCapitalize="sentences"
           onChangeText={(v) =>
-            admin.setEventModal((p) => ({ ...p, form: { ...p.form, location: v }, error: "" }))
+            admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, location: v }, error: "" }))
           }
         />
 
@@ -538,7 +538,7 @@ export default function AdminPanelScreen() {
                 },
               ]}
               onPress={() =>
-                admin.setEventModal((p) => ({ ...p, form: { ...p.form, category: cat }, error: "" }))
+                admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, category: cat }, error: "" }))
               }
               activeOpacity={0.8}
             >
