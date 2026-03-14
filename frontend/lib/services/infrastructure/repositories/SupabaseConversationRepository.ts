@@ -16,7 +16,11 @@ export class SupabaseConversationRepository implements IConversationRepository {
       .single()
 
     if (error && error.code !== "PGRST116") throw error
-    return data ? this.enrichConversation(data) : null
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    return data ? this.enrichConversation(data, user?.id) : null
   }
 
   async getByUser(userId: string): Promise<Conversation[]> {
@@ -27,7 +31,7 @@ export class SupabaseConversationRepository implements IConversationRepository {
         .order("updated_at", { ascending: false })
     )
 
-    return Promise.all(conversations.map((c) => this.enrichConversation(c)))
+    return Promise.all(conversations.map((c) => this.enrichConversation(c, userId)))
   }
 
   async getOrCreate(participantA: string, participantB: string): Promise<Conversation> {
@@ -44,7 +48,10 @@ export class SupabaseConversationRepository implements IConversationRepository {
     )
 
     if (existing.length > 0) {
-      return this.enrichConversation(existing[0])
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      return this.enrichConversation(existing[0], user?.id)
     }
 
     const { data, error } = await supabase
@@ -57,15 +64,21 @@ export class SupabaseConversationRepository implements IConversationRepository {
       .single()
 
     if (error) throw error
-    return this.enrichConversation(data)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    return this.enrichConversation(data, user?.id)
   }
 
   async updateLastActivity(id: string): Promise<void> {
     await apiPatch<Conversation>("conversations", { updated_at: new Date().toISOString() }, (q) => q.eq("id", id))
   }
 
-  private async enrichConversation(conversation: any): Promise<Conversation> {
-    const otherParticipantId = conversation.participant_a
+  private async enrichConversation(conversation: any, currentUserId?: string): Promise<Conversation> {
+    const otherParticipantId =
+      currentUserId && conversation.participant_a === currentUserId
+        ? conversation.participant_b
+        : conversation.participant_a
     const { data: otherUser } = await supabase.from("profiles").select("full_name, avatar_url").eq("id", otherParticipantId).single()
 
     const { data: lastMsg } = await supabase
@@ -76,11 +89,17 @@ export class SupabaseConversationRepository implements IConversationRepository {
       .limit(1)
       .single()
 
-    const { data: unreadCount } = await supabase
+    let unreadQuery = supabase
       .from("messages")
       .select("*", { count: "exact", head: true })
       .eq("conversation_id", conversation.id)
       .is("read_at", null)
+
+    if (currentUserId) {
+      unreadQuery = unreadQuery.neq("sender_id", currentUserId)
+    }
+
+    const { count: unreadCount } = await unreadQuery
 
     return {
       ...conversation,
@@ -89,7 +108,7 @@ export class SupabaseConversationRepository implements IConversationRepository {
       other_user_avatar: otherUser?.avatar_url ?? null,
       last_message: lastMsg?.content ?? null,
       last_message_at: lastMsg?.created_at ?? null,
-      unread_count: unreadCount?.count ?? 0,
+      unread_count: unreadCount ?? 0,
     } as Conversation
   }
 }

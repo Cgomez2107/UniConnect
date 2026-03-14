@@ -6,6 +6,7 @@ import { Colors } from "@/constants/Colors"
 import { useEvents, type EventFilter } from "@/hooks/application/useEvents"
 import { Ionicons } from "@expo/vector-icons"
 import type { CampusEvent, EventCategory } from "@/types"
+import { router } from "expo-router"
 import { useEffect, useRef } from "react"
 import {
   Animated,
@@ -60,7 +61,11 @@ function EventCard({ item, C }: { item: CampusEvent; C: typeof Colors["light"] }
 
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-      <View style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}
+        activeOpacity={0.9}
+        onPress={() => router.push(`/eventos/${item.id}` as any)}
+      >
 
         <View style={[styles.dateBlock, { backgroundColor: catColor + "18" }]}>
           <Text style={[styles.dateDay,   { color: catColor }]}>{day}</Text>
@@ -97,7 +102,7 @@ function EventCard({ item, C }: { item: CampusEvent; C: typeof Colors["light"] }
             </View>
           ) : null}
         </View>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   )
 }

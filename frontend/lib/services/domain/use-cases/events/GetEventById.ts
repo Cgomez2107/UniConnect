@@ -1,11 +1,17 @@
 /**
  * Use case: Get event by ID.
- * 
- * TODO: Implement
- * - Validate event exists
- * - Return event data
  */
+import type { CampusEvent } from "@/types"
+import type { IEventRepository } from "../../repositories/IEventRepository"
+
 export class GetEventById {
-  // TODO: constructor(private repo: IEventRepository) {}
-  // TODO: async execute(id: string): Promise<Event>
+  constructor(private repository: IEventRepository) {}
+
+  async execute(id: string): Promise<CampusEvent | null> {
+    if (!id || id.trim().length === 0) {
+      throw new Error("Event ID is required")
+    }
+
+    return this.repository.getById(id)
+  }
 }

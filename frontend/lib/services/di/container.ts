@@ -69,6 +69,7 @@ import { SubscribeAuthStateChanges } from "../domain/use-cases/auth/SubscribeAut
 import { GetOAuthSignInUrl } from "../domain/use-cases/auth/GetOAuthSignInUrl"
 import { ResolveSessionFromOAuthUrl } from "../domain/use-cases/auth/ResolveSessionFromOAuthUrl"
 import { GetUpcomingEvents } from "../domain/use-cases/events/GetUpcomingEvents"
+import { GetEventById } from "../domain/use-cases/events/GetEventById"
 import { SearchStudentsBySubject } from "../domain/use-cases/students/SearchStudentsBySubject"
 import { GetStudentPublicProfile } from "../domain/use-cases/students/GetStudentPublicProfile"
 import { UploadResourceFromDevice } from "../domain/use-cases/resources/UploadResourceFromDevice"
@@ -153,6 +154,7 @@ export class DIContainer {
   private getOAuthSignInUrl?: GetOAuthSignInUrl
   private resolveSessionFromOAuthUrl?: ResolveSessionFromOAuthUrl
   private getUpcomingEvents?: GetUpcomingEvents
+  private getEventById?: GetEventById
   private searchStudentsBySubject?: SearchStudentsBySubject
   private getStudentPublicProfile?: GetStudentPublicProfile
   private getProfileByUserId?: GetProfileByUserId
@@ -578,6 +580,13 @@ export class DIContainer {
       this.getUpcomingEvents = new GetUpcomingEvents(this.getEventRepository())
     }
     return this.getUpcomingEvents
+  }
+
+  getGetEventById(): GetEventById {
+    if (!this.getEventById) {
+      this.getEventById = new GetEventById(this.getEventRepository())
+    }
+    return this.getEventById
   }
 
   getSearchStudentsBySubject(): SearchStudentsBySubject {

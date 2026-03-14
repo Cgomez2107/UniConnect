@@ -14,6 +14,20 @@ import type { CampusEvent } from "@/types"
  * - delete()
  */
 export class SupabaseEventRepository implements IEventRepository {
+  async getById(id: string): Promise<CampusEvent | null> {
+    const { data, error } = await supabase
+      .from("events")
+      .select("*, creator:created_by ( full_name )")
+      .eq("id", id)
+      .single()
+
+    if (error && error.code !== "PGRST116") {
+      throw new Error(error.message)
+    }
+
+    return (data as CampusEvent | null) ?? null
+  }
+
   async getUpcoming(): Promise<CampusEvent[]> {
     const now = new Date().toISOString()
     const { data, error } = await supabase
