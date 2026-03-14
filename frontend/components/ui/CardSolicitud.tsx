@@ -46,6 +46,7 @@ export function CardSolicitud({
   const timeAgo = getTimeAgo(item.created_at);
   const authorName = item.profiles?.full_name ?? (item as any).author?.full_name ?? "Estudiante";
   const authorCareer = (item as any).author?.career ?? "";
+  const occupiedSlots = Math.max(1, Math.min(item.applications_count ?? 1, item.max_members));
   const initials = authorName
     .split(" ")
     .slice(0, 2)
@@ -104,7 +105,7 @@ export function CardSolicitud({
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
           <Text style={[styles.footerMeta, { color: C.textSecondary }]}>
-            👥 {item.applications_count ?? 0}/{item.max_members}
+            👥 {occupiedSlots}/{item.max_members}
           </Text>
         </View>
 

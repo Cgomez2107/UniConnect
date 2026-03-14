@@ -82,7 +82,7 @@ export async function getEnrolledSubjectsForUser(): Promise<Subject[]> {
     `)
     .eq("user_id", user.id);
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || "No se pudieron cargar tus materias.");
 
   const rows: any[] = data ?? [];
   const subjectRecord: Record<string, Subject> = {};
@@ -137,7 +137,7 @@ export async function createStudyRequest(
 
   const { error } = await supabase.from("study_requests").insert(insertData);
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || "No se pudo crear la solicitud.");
 }
 
 // ── Feed de solicitudes ────────────────────────────────────────────────────────
@@ -164,14 +164,6 @@ export async function getFeedRequests(
     .select(`
       id, author_id, subject_id, title, description,
       max_members, status, created_at,
-      profiles (
-        full_name,
-        avatar_url,
-        user_programs (
-          is_primary,
-          programs ( name )
-        )
-      ),
       subjects (
         name,
         program_subjects (
@@ -197,9 +189,58 @@ export async function getFeedRequests(
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) throw new Error(error.message || "No se pudo cargar el feed.");
 
   const rows: any[] = data ?? [];
+  const authorIds: string[] = [];
+  const requestIds: string[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const aid = String(rows[i]?.author_id ?? "");
+    if (aid && !authorIds.includes(aid)) authorIds.push(aid);
+
+    const rid = String(rows[i]?.id ?? "");
+    if (rid) requestIds.push(rid);
+  }
+
+  let authorMap: Record<string, { full_name: string; avatar_url: string | null }> = {};
+  if (authorIds.length > 0) {
+    const { data: authorRows, error: authorsError } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .in("id", authorIds);
+
+    if (authorsError) throw new Error(authorsError.message || "No se pudieron cargar los autores.");
+
+    const list: any[] = authorRows ?? [];
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      authorMap[String(a.id)] = {
+        full_name: String(a.full_name ?? "Usuario"),
+        avatar_url: a.avatar_url ?? null,
+      };
+    }
+  }
+
+  // Conteo de miembros aceptados por solicitud (fallback seguro si falla por RLS).
+  const acceptedByRequest: Record<string, number> = {};
+  if (requestIds.length > 0) {
+    const { data: acceptedRows, error: acceptedErr } = await supabase
+      .from("applications")
+      .select("request_id")
+      .in("request_id", requestIds)
+      .eq("status", "aceptada");
+
+    if (!acceptedErr) {
+      const rowsAccepted: any[] = acceptedRows ?? [];
+      for (let i = 0; i < rowsAccepted.length; i++) {
+        const reqId = String(rowsAccepted[i].request_id ?? "");
+        if (!reqId) continue;
+        acceptedByRequest[reqId] = (acceptedByRequest[reqId] ?? 0) + 1;
+      }
+    }
+  }
+
   const result: FeedStudyRequest[] = [];
 
   for (let i = 0; i < rows.length; i++) {
@@ -218,22 +259,10 @@ export async function getFeedRequests(
       if (fac?.name) facultyName = fac.name;
     }
 
-    // Extraer carrera del autor (programa principal)
-    let authorCareer = "";
-    const upArr: any[] = r.profiles?.user_programs ?? [];
-    for (let j = 0; j < upArr.length; j++) {
-      const up = upArr[j];
-      if (up.is_primary) {
-        const prog = Array.isArray(up.programs) ? up.programs[0] : up.programs;
-        authorCareer = prog?.name ?? "";
-        break;
-      }
-    }
-    // Si no hay programa principal, tomar el primero disponible
-    if (!authorCareer && upArr.length > 0) {
-      const prog = Array.isArray(upArr[0].programs) ? upArr[0].programs[0] : upArr[0].programs;
-      authorCareer = prog?.name ?? "";
-    }
+    const author = authorMap[String(r.author_id)] ?? { full_name: "Usuario", avatar_url: null };
+
+    const acceptedCount = acceptedByRequest[String(r.id)] ?? 0;
+    const occupiedSlots = Math.min(acceptedCount + 1, Number(r.max_members ?? 1));
 
     result.push({
       id: r.id,
@@ -245,16 +274,17 @@ export async function getFeedRequests(
       status: r.status,
       created_at: r.created_at,
       author: {
-        full_name: r.profiles?.full_name ?? "Usuario",
-        avatar_url: r.profiles?.avatar_url ?? undefined,
-        career: authorCareer || undefined,
+        full_name: author.full_name,
+        avatar_url: author.avatar_url ?? undefined,
+        career: undefined,
       },
       profiles: {
-        full_name: r.profiles?.full_name ?? "Usuario",
-        avatar_url: r.profiles?.avatar_url ?? null,
+        full_name: author.full_name,
+        avatar_url: author.avatar_url,
       },
       subject_name: r.subjects?.name ?? "Sin materia",
       faculty_name: facultyName,
+      applications_count: occupiedSlots,
     });
   }
 

@@ -88,7 +88,13 @@ export function useFeed(): UseFeedReturn {
       setRequests(data)
       hasMoreRef.current = data.length >= PAGE_SIZE
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error al cargar el feed.")
+      const errMsg =
+        e instanceof Error
+          ? e.message
+          : typeof e === "object" && e !== null && "message" in e
+          ? String((e as { message: unknown }).message)
+          : "Error al cargar el feed."
+      setError(errMsg)
     } finally {
       setLoading(false)
       setRefreshing(false)
