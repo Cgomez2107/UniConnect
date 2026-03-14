@@ -2,7 +2,6 @@
  * app/solicitud/[id].tsx
  * Detalle de una solicitud de estudio — US-009 (vista previa)
  *
- * Muestra información completa de la solicitud:
  * - Autor con avatar grande e iniciales
  * - Materia y facultad
  * - Cupos disponibles
@@ -12,11 +11,19 @@
 
 import { Colors } from "@/constants/Colors";
 import {
+  assignRequestAdmin,
+  cancelMyApplication,
+  cancelStudyRequest,
   getApplicationsForRequest,
+  getRequestAdmins,
   getMyApplicationStatus,
+  isRequestAdmin,
+  revokeRequestAdmin,
   reviewApplication,
   updateRequestStatus,
-} from "@/lib/services/careerService";
+  updateRequestContentAsAdmin,
+                    }
+                  from "@/lib/services/careerService";
 import { getOrCreateConversation } from "@/lib/services/messagingService";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -30,6 +37,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     useColorScheme,
     View
@@ -85,6 +93,13 @@ export default function SolicitudDetailScreen() {
   const [chatLoading, setChatLoading] = useState(false);
   const [applications, setApplications] = useState<Application[]>([]);
   const [reviewingApplicationId, setReviewingApplicationId] = useState<string | null>(null);
+  const [isRequestAdminRole, setIsRequestAdminRole] = useState(false);
+  const [requestAdmins, setRequestAdmins] = useState<string[]>([]);
+  const [isSavingDescription, setIsSavingDescription] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [updatingAdminUserId, setUpdatingAdminUserId] = useState<string | null>(null);
+  const [cancelingAction, setCancelingAction] = useState(false);
   const [applicationStatus, setApplicationStatus] = useState<
     "pendiente" | "aceptada" | "rechazada" | null
   >(null);
@@ -116,7 +131,6 @@ export default function SolicitudDetailScreen() {
           .select(`
             id, author_id, title, description,
             max_members, status, created_at,
-            profiles ( full_name, avatar_url, bio ),
             subjects (
               name,
               program_subjects (
@@ -133,6 +147,14 @@ export default function SolicitudDetailScreen() {
         if (!data) throw new Error("Solicitud no encontrada.");
 
         const r = data as any;
+
+        const { data: authorProfile, error: authorError } = await supabase
+          .from("profiles")
+          .select("full_name, avatar_url, bio")
+          .eq("id", r.author_id)
+          .maybeSingle();
+
+        if (authorError) throw authorError;
 
         // Extraer facultad desde la cadena de joins
         let facultyName = "Sin facultad";
@@ -155,15 +177,25 @@ export default function SolicitudDetailScreen() {
           max_members: r.max_members,
           status: r.status,
           created_at: r.created_at,
-          author_name: r.profiles?.full_name ?? "Usuario",
-          author_avatar: r.profiles?.avatar_url ?? undefined,
-          author_bio: r.profiles?.bio ?? undefined,
+          author_name: authorProfile?.full_name ?? "Usuario",
+          author_avatar: authorProfile?.avatar_url ?? undefined,
+          author_bio: authorProfile?.bio ?? undefined,
           subject_name: r.subjects?.name ?? "Sin materia",
           faculty_name: facultyName,
         });
+        setDescriptionDraft(r.description ?? "");
 
         const apps = await getApplicationsForRequest(r.id);
         setApplications(apps);
+
+        if (user?.id) {
+          const [canAdmin, admins] = await Promise.all([
+            isRequestAdmin(r.id, user.id),
+            getRequestAdmins(r.id),
+          ]);
+          setIsRequestAdminRole(canAdmin);
+          setRequestAdmins((admins ?? []).map((a) => a.user_id));
+        }
 
         // Cargar estado de mi postulación (si no soy el autor)
         if (user?.id && r.author_id !== user.id) {
@@ -181,11 +213,128 @@ export default function SolicitudDetailScreen() {
   }, [id]);
 
   const isOwnPost = request?.author_id === user?.id;
+  const canManageRequest = !!isOwnPost || isRequestAdminRole;
 
   const acceptedMembers = applications.filter((app) => app.status === "aceptada");
   const pendingApplications = applications.filter((app) => app.status === "pendiente");
   const occupiedSlots = Math.min(acceptedMembers.length + 1, request?.max_members ?? 0);
   const remainingSlots = Math.max((request?.max_members ?? 0) - occupiedSlots, 0);
+
+  const isExtraAdmin = (userId: string) => requestAdmins.includes(userId);
+
+  const refreshAdminData = async () => {
+    if (!request?.id || !user?.id) return;
+    const [canAdmin, admins] = await Promise.all([
+      isRequestAdmin(request.id, user.id),
+      getRequestAdmins(request.id),
+    ]);
+    setIsRequestAdminRole(canAdmin);
+    setRequestAdmins((admins ?? []).map((a) => a.user_id));
+  };
+
+  const handleUpdateDescription = async () => {
+    if (!request || !user?.id) return;
+    const clean = descriptionDraft.trim();
+    if (!clean) {
+      Alert.alert("Descripcion requerida", "La descripcion no puede quedar vacia.");
+      return;
+    }
+
+    setIsSavingDescription(true);
+    try {
+      await updateRequestContentAsAdmin(request.id, user.id, { description: clean });
+      setRequest((prev) => (prev ? { ...prev, description: clean } : prev));
+      setIsEditingDescription(false);
+      Alert.alert("Actualizada", "La descripcion de la solicitud fue actualizada.");
+    } catch (e: any) {
+      Alert.alert("Error", e.message ?? "No se pudo actualizar la descripcion.");
+    } finally {
+      setIsSavingDescription(false);
+    }
+  };
+
+  const handleSetAdmin = async (targetUserId: string, makeAdmin: boolean) => {
+    if (!request || !user?.id) return;
+
+    setUpdatingAdminUserId(targetUserId);
+    try {
+      if (makeAdmin) {
+        await assignRequestAdmin(request.id, targetUserId, user.id);
+      } else {
+        await revokeRequestAdmin(request.id, targetUserId, user.id);
+      }
+      await refreshAdminData();
+    } catch (e: any) {
+      Alert.alert("Error", e.message ?? "No se pudo actualizar el rol de administrador.");
+    } finally {
+      setUpdatingAdminUserId(null);
+    }
+  };
+
+  const handleCancelRequest = () => {
+    if (!request || !user?.id) return;
+
+    Alert.alert(
+      "Cancelar solicitud",
+      "Se cerrara y dejara de estar activa en el feed. ¿Deseas continuar?",
+      [
+        { text: "Volver", style: "cancel" },
+        {
+          text: "Cancelar solicitud",
+          style: "destructive",
+          onPress: async () => {
+            setCancelingAction(true);
+            try {
+              await cancelStudyRequest(request.id, user.id);
+              setRequest((prev) => (prev ? { ...prev, status: "cerrada" } : prev));
+              Alert.alert("Solicitud cancelada", "La solicitud fue cerrada correctamente.", [
+                {
+                  text: "OK",
+                  onPress: () => router.replace("/(tabs)/invitaciones" as any),
+                },
+              ]);
+            } catch (e: any) {
+              Alert.alert("Error", e.message ?? "No se pudo cancelar la solicitud.");
+            } finally {
+              setCancelingAction(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCancelMyApplication = () => {
+    if (!request || !user?.id) return;
+
+    Alert.alert(
+      "Cancelar postulación",
+      applicationStatus === "aceptada"
+        ? "Saldras del grupo. ¿Deseas continuar?"
+        : "Tu postulación sera retirada. ¿Deseas continuar?",
+      [
+        { text: "Volver", style: "cancel" },
+        {
+          text: applicationStatus === "aceptada" ? "Salir del grupo" : "Retirar postulación",
+          style: "destructive",
+          onPress: async () => {
+            setCancelingAction(true);
+            try {
+              await cancelMyApplication(request.id, user.id);
+              setApplications((prev) => prev.filter((app) => app.applicant_id !== user.id));
+              setApplicationStatus(null);
+              await refreshAdminData();
+              Alert.alert("Listo", "La cancelacion se realizo correctamente.");
+            } catch (e: any) {
+              Alert.alert("Error", e.message ?? "No se pudo cancelar la postulación.");
+            } finally {
+              setCancelingAction(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleReviewApplication = async (
     applicationId: string,
@@ -277,7 +426,7 @@ export default function SolicitudDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 260 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Tarjeta del autor ─────────────────────────────────────────── */}
@@ -355,9 +504,62 @@ export default function SolicitudDetailScreen() {
           <Text style={[styles.sectionLabel, { color: C.textPlaceholder }]}>
             DESCRIPCIÓN
           </Text>
-          <Text style={[styles.descText, { color: C.textPrimary }]}>
-            {request.description}
-          </Text>
+
+          {isEditingDescription ? (
+            <View style={styles.editorWrap}>
+              <TextInput
+                value={descriptionDraft}
+                onChangeText={setDescriptionDraft}
+                multiline
+                style={[
+                  styles.descInput,
+                  { color: C.textPrimary, borderColor: C.border, backgroundColor: C.surface },
+                ]}
+                placeholder="Escribe una descripcion clara para el grupo..."
+                placeholderTextColor={C.textPlaceholder}
+              />
+              <View style={styles.editorActions}>
+                <TouchableOpacity
+                  style={[styles.editBtn, styles.ghostBtn, { borderColor: C.border }]}
+                  onPress={() => {
+                    setDescriptionDraft(request.description);
+                    setIsEditingDescription(false);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.editBtnText, { color: C.textSecondary }]}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.editBtn, { backgroundColor: isSavingDescription ? C.border : C.primary }]}
+                  onPress={handleUpdateDescription}
+                  disabled={isSavingDescription}
+                  activeOpacity={0.85}
+                >
+                  {isSavingDescription ? (
+                    <ActivityIndicator size="small" color={C.textOnPrimary} />
+                  ) : (
+                    <Text style={[styles.editBtnText, { color: C.textOnPrimary }]}>Guardar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <>
+              <Text style={[styles.descText, { color: C.textPrimary }]}>
+                {request.description}
+              </Text>
+              {canManageRequest && (
+                <TouchableOpacity
+                  style={[styles.inlineActionBtn, { borderColor: C.border }]}
+                  onPress={() => setIsEditingDescription(true)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.inlineActionText, { color: C.textSecondary }]}>✏️ Editar descripcion</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
         </View>
 
         <View style={[styles.section, { borderColor: C.border }]}>
@@ -377,7 +579,7 @@ export default function SolicitudDetailScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.memberName, { color: C.textPrimary }]}>{request.author_name}</Text>
-              <Text style={[styles.memberRole, { color: C.textSecondary }]}>Creador</Text>
+              <Text style={[styles.memberRole, { color: C.primary }]}>Creador · Administrador</Text>
             </View>
           </View>
 
@@ -393,14 +595,41 @@ export default function SolicitudDetailScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.memberName, { color: C.textPrimary }]}>{name}</Text>
-                  <Text style={[styles.memberRole, { color: C.success }]}>Participante aceptado</Text>
+                  <Text style={[styles.memberRole, { color: isExtraAdmin(member.applicant_id) ? C.primary : C.success }]}>
+                    {isExtraAdmin(member.applicant_id) ? "Administrador" : "Participante aceptado"}
+                  </Text>
                 </View>
+
+                {canManageRequest && (
+                  <TouchableOpacity
+                    style={[
+                      styles.adminToggleBtn,
+                      {
+                        borderColor: isExtraAdmin(member.applicant_id) ? C.error : C.primary,
+                        backgroundColor: C.surface,
+                        opacity: updatingAdminUserId === member.applicant_id ? 0.7 : 1,
+                      },
+                    ]}
+                    onPress={() => handleSetAdmin(member.applicant_id, !isExtraAdmin(member.applicant_id))}
+                    disabled={updatingAdminUserId === member.applicant_id}
+                    activeOpacity={0.85}
+                  >
+                    <Text
+                      style={[
+                        styles.adminToggleText,
+                        { color: isExtraAdmin(member.applicant_id) ? C.error : C.primary },
+                      ]}
+                    >
+                      {isExtraAdmin(member.applicant_id) ? "Quitar admin" : "Hacer admin"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           })}
         </View>
 
-        {isOwnPost && (
+        {canManageRequest && (
           <View style={[styles.section, { borderColor: C.border }]}>
             <Text style={[styles.sectionLabel, { color: C.textPlaceholder }]}>SOLICITUDES PENDIENTES</Text>
 
@@ -429,7 +658,7 @@ export default function SolicitudDetailScreen() {
                         <Text style={[styles.memberName, styles.profileLink, { color: C.textPrimary }]}>{name}</Text>
                       </TouchableOpacity>
                       <Text style={[styles.pendingMessage, { color: C.textSecondary }]} numberOfLines={2}>
-                        "{app.message}"
+                        &quot;{app.message}&quot;
                       </Text>
                     </View>
 
@@ -476,34 +705,74 @@ export default function SolicitudDetailScreen() {
         ]}
       >
         {isOwnPost ? (
-          <View style={[styles.ownPostBanner, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <Text style={[styles.ownPostText, { color: C.textSecondary }]}>
-              ✏️ Esta es tu solicitud
-            </Text>
+          <View style={{ gap: 8 }}>
+            <View style={[styles.ownPostBanner, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <Text style={[styles.ownPostText, { color: C.textSecondary }]}>✏️ Esta es tu solicitud</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.secondaryDangerBtn, { borderColor: C.error }]}
+              onPress={handleCancelRequest}
+              disabled={cancelingAction}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.secondaryDangerText, { color: C.error }]}>Cancelar solicitud</Text>
+            </TouchableOpacity>
+          </View>
+
+        ) : canManageRequest ? (
+          <View style={{ gap: 8 }}>
+            <View style={[styles.ownPostBanner, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <Text style={[styles.ownPostText, { color: C.textSecondary }]}>🛠 Eres administrador de esta solicitud</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.secondaryDangerBtn, { borderColor: C.error }]}
+              onPress={handleCancelRequest}
+              disabled={cancelingAction}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.secondaryDangerText, { color: C.error }]}>Cancelar solicitud</Text>
+            </TouchableOpacity>
           </View>
 
         ) : applicationStatus === "aceptada" ? (
-          // ✅ Postulación aceptada → mostrar botón de chat
-          <TouchableOpacity
-            style={[
-              styles.postulateBtn,
-              { backgroundColor: chatLoading ? C.border : C.primary },
-            ]}
-            onPress={openChat}
-            disabled={chatLoading}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.postulateBtnText, { color: C.textOnPrimary }]}>
-              {chatLoading ? "Abriendo chat…" : `💬 Mensaje a ${request.author_name.split(" ")[0]}`}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ gap: 8 }}>
+            <TouchableOpacity
+              style={[
+                styles.postulateBtn,
+                { backgroundColor: chatLoading ? C.border : C.primary },
+              ]}
+              onPress={openChat}
+              disabled={chatLoading}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.postulateBtnText, { color: C.textOnPrimary }]}> 
+                {chatLoading ? "Abriendo chat..." : `💬 Mensaje a ${request.author_name.split(" ")[0]}`}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.secondaryDangerBtn, { borderColor: C.error }]}
+              onPress={handleCancelMyApplication}
+              disabled={cancelingAction}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.secondaryDangerText, { color: C.error }]}>Salir del grupo</Text>
+            </TouchableOpacity>
+          </View>
 
         ) : applicationStatus === "pendiente" ? (
-          // ⏳ En espera de respuesta
-          <View style={[styles.ownPostBanner, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <Text style={[styles.ownPostText, { color: C.textSecondary }]}>
-              ⏳ Tu postulación está en revisión
-            </Text>
+          <View style={{ gap: 8 }}>
+            <View style={[styles.ownPostBanner, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <Text style={[styles.ownPostText, { color: C.textSecondary }]}>⏳ Tu postulación está en revisión</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.secondaryDangerBtn, { borderColor: C.error }]}
+              onPress={handleCancelMyApplication}
+              disabled={cancelingAction}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.secondaryDangerText, { color: C.error }]}>Retirar postulación</Text>
+            </TouchableOpacity>
           </View>
 
         ) : applicationStatus === "rechazada" ? (
@@ -675,6 +944,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 1,
   },
+  adminToggleBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  adminToggleText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
 
   emptyBox: {
     borderWidth: 1,
@@ -722,6 +1001,51 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  editorWrap: {
+    gap: 10,
+  },
+  descInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    minHeight: 120,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    textAlignVertical: "top",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  editorActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  editBtn: {
+    flex: 1,
+    borderRadius: 9,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ghostBtn: {
+    borderWidth: 1,
+    backgroundColor: "transparent",
+  },
+  editBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  inlineActionBtn: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  inlineActionText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
   // Barra flotante inferior
   floatingBar: {
     position: "absolute",
@@ -745,6 +1069,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   ownPostText: { fontSize: 14, fontWeight: "600" },
+  secondaryDangerBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  secondaryDangerText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
   closedBanner: {
     borderRadius: 12,
     paddingVertical: 14,

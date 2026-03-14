@@ -17,7 +17,7 @@ export async function getFeed(filters?: {
 }): Promise<StudyRequest[]> {
   return apiGet<StudyRequest>("study_requests", (q) => {
     let query = q
-      .select("*, profiles ( full_name, avatar_url ), subjects ( name )")
+      .select("*, subjects ( name )")
       .eq("status", "abierta")
       .eq("is_active", true)
       .order("created_at", { ascending: false })
@@ -31,13 +31,40 @@ export async function getFeed(filters?: {
 
 // ── Mis solicitudes ───────────────────────────────────────────────────────────
 export async function getMyRequests(userId: string): Promise<StudyRequest[]> {
-  return apiGet<StudyRequest>("study_requests", (q) =>
-    q
-      .select("*, subjects ( name )")
-      .eq("author_id", userId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-  )
+  const { data, error } = await supabase
+    .from("study_requests")
+    .select("*, subjects ( name )")
+    .eq("author_id", userId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  const requests = (data ?? []) as StudyRequest[]
+  if (requests.length === 0) return requests
+
+  const requestIds = requests.map((r) => r.id)
+  const acceptedByRequest: Record<string, number> = {}
+
+  const { data: acceptedRows, error: acceptedErr } = await supabase
+    .from("applications")
+    .select("request_id")
+    .in("request_id", requestIds)
+    .eq("status", "aceptada")
+
+  if (!acceptedErr) {
+    const rows: any[] = acceptedRows ?? []
+    for (let i = 0; i < rows.length; i++) {
+      const reqId = String(rows[i].request_id ?? "")
+      if (!reqId) continue
+      acceptedByRequest[reqId] = (acceptedByRequest[reqId] ?? 0) + 1
+    }
+  }
+
+  return requests.map((r) => ({
+    ...r,
+    applications_count: Math.min((acceptedByRequest[r.id] ?? 0) + 1, r.max_members),
+  }))
 }
 
 // ── Crear solicitud ───────────────────────────────────────────────────────────
@@ -50,7 +77,7 @@ export async function createRequest(
   const { data, error } = await supabase
     .from("study_requests")
     .insert({ author_id: userId, ...requestData })
-    .select("*, profiles ( full_name, avatar_url ), subjects ( name )")
+    .select("*, subjects ( name )")
     .single()
 
   if (error) {
@@ -166,4 +193,119 @@ export async function getMyApplicationStatus(
 
   if (error) return null;
   return (data?.status ?? null) as "pendiente" | "aceptada" | "rechazada" | null;
+}
+
+// ── Admins de solicitud (autor + admins asignados) ──────────────────────────
+export async function isRequestAdmin(requestId: string, userId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("is_request_admin", {
+    p_request_id: requestId,
+    p_user_id: userId,
+  })
+
+  if (error) throw error
+  return !!data
+}
+
+export async function getRequestAdmins(requestId: string): Promise<Array<{
+  user_id: string
+  full_name: string
+  avatar_url: string | null
+  granted_by: string
+  created_at: string
+}>> {
+  const { data, error } = await supabase.rpc("get_request_admins", {
+    p_request_id: requestId,
+  })
+
+  if (error) throw error
+  return (data ?? []) as Array<{
+    user_id: string
+    full_name: string
+    avatar_url: string | null
+    granted_by: string
+    created_at: string
+  }>
+}
+
+export async function assignRequestAdmin(
+  requestId: string,
+  targetUserId: string,
+  actorUserId: string
+): Promise<void> {
+  const { error } = await supabase.rpc("assign_request_admin", {
+    p_request_id: requestId,
+    p_target_user_id: targetUserId,
+    p_actor_user_id: actorUserId,
+  })
+
+  if (error) {
+    if (error.code === "P0001") throw new Error(error.message)
+    throw error
+  }
+}
+
+export async function revokeRequestAdmin(
+  requestId: string,
+  targetUserId: string,
+  actorUserId: string
+): Promise<void> {
+  const { error } = await supabase.rpc("revoke_request_admin", {
+    p_request_id: requestId,
+    p_target_user_id: targetUserId,
+    p_actor_user_id: actorUserId,
+  })
+
+  if (error) {
+    if (error.code === "P0001") throw new Error(error.message)
+    throw error
+  }
+}
+
+// ── Edicion y cancelacion de solicitud/postulacion ───────────────────────────
+export async function updateRequestContentAsAdmin(
+  requestId: string,
+  actorUserId: string,
+  payload: { title?: string; description?: string }
+): Promise<void> {
+  const { error } = await supabase.rpc("update_request_content_as_admin", {
+    p_request_id: requestId,
+    p_actor_user_id: actorUserId,
+    p_title: payload.title ?? null,
+    p_description: payload.description ?? null,
+  })
+
+  if (error) {
+    if (error.code === "P0001") throw new Error(error.message)
+    throw error
+  }
+}
+
+export async function cancelStudyRequest(
+  requestId: string,
+  actorUserId: string
+): Promise<void> {
+  const { error } = await supabase.rpc("cancel_study_request", {
+    p_request_id: requestId,
+    p_actor_user_id: actorUserId,
+  })
+
+  if (error) {
+    if (error.code === "P0001") throw new Error(error.message)
+    throw error
+  }
+}
+
+export async function cancelMyApplication(
+  requestId: string,
+  actorUserId: string
+): Promise<void> {
+  const { error } = await supabase.rpc("cancel_my_application", {
+    p_request_id: requestId,
+    p_actor_user_id: actorUserId,
+  })
+
+  if (error) {
+    if (error.code === "P0001") throw new Error(error.message)
+    throw error
+  }
 }
