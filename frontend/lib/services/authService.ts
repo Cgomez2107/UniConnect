@@ -98,7 +98,7 @@ export async function getMyProfile(): Promise<AuthProfile | null> {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("*")
+      .select("id, full_name, avatar_url, bio, role, semester, is_active")
       .eq("id", user.id)
       .single()
 

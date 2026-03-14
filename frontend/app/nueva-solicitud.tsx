@@ -1,15 +1,15 @@
 /**
- * app/nueva-solicitud.tsx
- * Modal para crear una solicitud de estudio — US-005
- * Selector de materia: carrusel horizontal de chips
+ * Modal para crear solicitudes de estudio.
+ * Incluye validaciones básicas y selección de materia.
  */
 
 import { Colors } from "@/constants/Colors";
 import {
   createStudyRequest,
-  getEnrolledSubjectsForUser,
+  getAvailableSubjectsForCurrentUser,
   type Subject,
 } from "@/lib/services/studyRequestsService";
+import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -29,28 +29,29 @@ import {
 export default function NuevaSolicitudScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
+  const role = useAuthStore((s) => s.user?.role);
 
-  // ── Formulario ────────────────────────────────────────────────────────────
+  // Formulario
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [maxMembers, setMaxMembers] = useState("4");
 
-  // ── Estado remoto ─────────────────────────────────────────────────────────
+  // Estado remoto
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // ── Carga inicial ─────────────────────────────────────────────────────────
+  // Carga inicial
   const loadData = async () => {
     setLoadingData(true);
     setFetchError(null);
     try {
-      const subs = await getEnrolledSubjectsForUser();
+      const subs = await getAvailableSubjectsForCurrentUser();
       setSubjects(subs);
     } catch (e: any) {
-      setFetchError(e?.message ?? "No se pudieron cargar tus materias.");
+      setFetchError(e?.message ?? "No se pudieron cargar las materias disponibles.");
     } finally {
       setLoadingData(false);
     }
@@ -58,13 +59,13 @@ export default function NuevaSolicitudScreen() {
 
   useEffect(() => { loadData(); }, []);
 
-  // ── Validación ────────────────────────────────────────────────────────────
+  // Validación
   const isValid =
     title.trim().length >= 5 &&
     description.trim().length >= 10 &&
     !!selectedSubject;
 
-  // ── Envío ─────────────────────────────────────────────────────────────────
+  // Envío
   const handleCreate = async () => {
     if (!isValid || !selectedSubject) return;
     setIsSubmitting(true);
@@ -92,14 +93,14 @@ export default function NuevaSolicitudScreen() {
     }
   };
 
-  // ── Estados de carga / error / vacío ─────────────────────────────────────
+  // Estados de carga / error / vacío
   if (loadingData) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={C.primary} />
           <Text style={[styles.loadingText, { color: C.textSecondary }]}>
-            Cargando tus materias…
+            Cargando materias disponibles…
           </Text>
         </View>
       </SafeAreaView>
@@ -126,7 +127,9 @@ export default function NuevaSolicitudScreen() {
           <Text style={styles.emptyIcon}>📚</Text>
           <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>Sin materias inscritas</Text>
           <Text style={[styles.emptySubtitle, { color: C.textSecondary }]}>
-            Necesitas tener materias inscritas en tu perfil para crear una solicitud.
+            {role === "admin"
+              ? "No hay materias activas en el catálogo para crear la solicitud."
+              : "Necesitas tener materias inscritas en tu perfil para crear una solicitud."}
           </Text>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.primary }]} onPress={() => router.back()}>
             <Text style={styles.actionBtnText}>Volver al feed</Text>
@@ -136,7 +139,7 @@ export default function NuevaSolicitudScreen() {
     );
   }
 
-  // ── Pantalla principal ────────────────────────────────────────────────────
+  // Pantalla principal
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
       <ScrollView
@@ -144,8 +147,7 @@ export default function NuevaSolicitudScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Título ───────────────────────────────────────────────── */}
-        <Text style={[styles.label, { color: C.textSecondary }]}>
+        <Text style={[styles.label, { color: C.textSecondary }]}> 
           Título de la solicitud *
         </Text>
         <TextInput
@@ -160,7 +162,6 @@ export default function NuevaSolicitudScreen() {
           {title.trim().length}/80 · mínimo 5 caracteres
         </Text>
 
-        {/* ── Descripción ──────────────────────────────────────────── */}
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Descripción *
         </Text>
@@ -179,11 +180,10 @@ export default function NuevaSolicitudScreen() {
           {description.trim().length}/400 · mínimo 10 caracteres
         </Text>
 
-        {/* ── Carrusel de materias ──────────────────────────────────── */}
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Materia *{" "}
           <Text style={{ fontSize: 11, textTransform: "none" }}>
-            ({subjects.length} inscritas)
+            ({subjects.length} disponibles)
           </Text>
         </Text>
 
@@ -231,7 +231,6 @@ export default function NuevaSolicitudScreen() {
           </Text>
         )}
 
-        {/* ── Cupos ────────────────────────────────────────────────── */}
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Cupos máximos (2–10)
         </Text>
@@ -251,7 +250,6 @@ export default function NuevaSolicitudScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Botón publicar ───────────────────────────────────────── */}
         <TouchableOpacity
           style={[
             styles.submitBtn,

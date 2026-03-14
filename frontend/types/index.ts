@@ -1,20 +1,9 @@
-/**
- * types/index.ts
- *
- * Fuente única de verdad para todos los tipos del dominio UniConnect.
- * Todos los servicios, hooks y componentes importan desde aquí.
- * NO definir tipos de dominio en servicios individuales.
- *
- * Organización:
- *   - Auth
- *   - Perfil
- *   - Catálogo académico (Facultades, Programas, Materias)
- *   - Grupos de estudio (Solicitudes, Postulaciones)
- */
+// Fuente única de verdad para todos los tipos del dominio UniConnect.
+// No definir tipos de dominio en servicios individuales.
 
-// ══════════════════════════════════════════════════════════════════════════════
+
 // AUTH
-// ══════════════════════════════════════════════════════════════════════════════
+
 
 export type UserRole = "estudiante" | "admin";
 
@@ -32,9 +21,9 @@ export interface AuthProfile {
   updated_at: string;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+
 // PERFIL
-// ══════════════════════════════════════════════════════════════════════════════
+
 
 export interface Profile {
   id: string;
@@ -73,9 +62,9 @@ export interface UserSubject {
   subjects?: { id: string; name: string };
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+
 // CATÁLOGO ACADÉMICO
-// ══════════════════════════════════════════════════════════════════════════════
+
 
 export interface Faculty {
   id: string;
@@ -107,9 +96,9 @@ export interface Subject {
   programs?: Program[];
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+
 // GRUPOS DE ESTUDIO
-// ══════════════════════════════════════════════════════════════════════════════
+
 
 export type RequestStatus = "abierta" | "cerrada" | "expirada";
 export type ApplicationStatus = "pendiente" | "aceptada" | "rechazada";
@@ -154,9 +143,9 @@ export interface Application {
   study_requests?: { title: string; status: RequestStatus; subjects?: { name: string } };
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MENSAJERÍA — US-011
-// ══════════════════════════════════════════════════════════════════════════════
+
+// Mensajería
+
 
 export interface Message {
   id: string;
@@ -189,9 +178,9 @@ export interface SendMessagePayload {
   content: string;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// RECURSOS DE ESTUDIO — US-006
-// ══════════════════════════════════════════════════════════════════════════════
+
+// Recursos de estudio
+
 
 export interface StudyResource {
   id: string;
@@ -218,9 +207,9 @@ export interface CreateStudyResourcePayload {
   file_uri: string;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// BÚSQUEDA DE COMPAÑEROS — US-005
-// ══════════════════════════════════════════════════════════════════════════════
+
+// Búsqueda de compañeros
+
 
 /** Resultado de la RPC search_students_by_subject */
 export interface StudentSearchResult {
@@ -244,4 +233,94 @@ export interface StudentPublicProfile {
   faculty_name: string | null;
   /** Solo las materias que comparte con el usuario autenticado */
   shared_subjects: { id: string; name: string }[];
+}
+
+
+// Administración
+
+
+/** Usuario visto desde el panel de admin */
+export interface AdminUser {
+  id: string;
+  full_name: string;
+  email: string;
+  role: UserRole;
+  is_active: boolean;
+  semester: number | null;
+  avatar_url: string | null;
+  created_at: string;
+}
+
+/** Solicitud de estudio vista desde el panel de admin */
+export interface AdminRequest {
+  id: string;
+  title: string;
+  status: RequestStatus;
+  created_at: string;
+  author_name: string;
+  subject_name: string;
+  applications_count: number;
+}
+
+/** Recurso visto desde el panel de admin */
+export interface AdminResource {
+  id: string;
+  title: string;
+  file_type: string | null;
+  file_size_kb: number | null;
+  created_at: string;
+  author_name: string;
+  subject_name: string;
+}
+
+/** Métricas globales para el dashboard */
+export interface AdminMetrics {
+  totalUsers: number;
+  activeStudents: number;
+  openRequests: number;
+  totalResources: number;
+  totalMessages: number;
+}
+
+
+// Eventos del campus
+
+
+export type EventCategory = "academico" | "cultural" | "deportivo" | "otro";
+
+/** Evento del campus (vista estudiante y admin) */
+export interface CampusEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  event_date: string;       // ISO 8601
+  location: string | null;
+  category: EventCategory;
+  image_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // join opcional
+  creator?: { full_name: string } | null;
+}
+
+/** Payload para crear/editar un evento */
+export interface CreateEventPayload {
+  title: string;
+  description?: string;
+  event_date: string;
+  location?: string;
+  category: EventCategory;
+  image_url?: string;
+}
+
+/** Evento visto desde el panel de admin (con nombre del creador aplanado) */
+export interface AdminEvent {
+  id: string;
+  title: string;
+  event_date: string;
+  location: string | null;
+  category: EventCategory;
+  created_at: string;
+  creator_name: string;
 }

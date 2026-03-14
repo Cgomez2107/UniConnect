@@ -1,25 +1,19 @@
-/**
- * app/(admin)/index.tsx
- * Panel de administración — US-002 y US-003
- * 3 tabs: Facultades → Programas → Materias
- *
- * Refactorizado: de 731 líneas a ~190.
- * Toda la lógica CRUD vive en hooks/useAdmin.ts
- * Los subcomponentes están en components/admin/
- */
+// Panel de administración UniConnect.
 
 import { AdminHeader } from "@/components/admin/AdminHeader"
 import { AdminTabs, type ActiveTab } from "@/components/admin/AdminTabs"
 import { CrudModal, FieldLabel } from "@/components/admin/CrudModal"
-import { FacultyRow, ProgramRow, SubjectRow } from "@/components/admin/CatalogRow"
+import { FacultyRow, ProgramRow, SubjectRow, UserRow, RequestRow, ResourceRow, EventRow } from "@/components/admin/CatalogRow"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
 import { useAdmin } from "@/hooks/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
+import { Ionicons } from "@expo/vector-icons"
 import { router } from "expo-router"
+import * as Haptics from "expo-haptics"
 import { StatusBar } from "expo-status-bar"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import {
   Alert,
   FlatList,
@@ -45,22 +39,20 @@ export default function AdminPanelScreen() {
 
   const admin = useAdmin(search)
 
-  const searchPlaceholder =
-    activeTab === "facultades"
-      ? "Buscar facultad..."
-      : activeTab === "programas"
-        ? "Buscar programa o facultad..."
-        : "Buscar materia..."
+  // Tabs config
+  const TABS: { key: ActiveTab; icon: keyof typeof Ionicons.glyphMap; label: string; count: number }[] = [
+    { key: "facultades"  as ActiveTab, icon: "business-outline", label: "Facultades",  count: admin.faculties.length  },
+    { key: "programas"   as ActiveTab, icon: "school-outline",   label: "Programas",   count: admin.programs.length   },
+    { key: "materias"    as ActiveTab, icon: "book-outline",     label: "Materias",    count: admin.subjects.length   },
+    { key: "usuarios"    as ActiveTab, icon: "people-outline",   label: "Usuarios",    count: admin.users.length      },
+    { key: "solicitudes" as ActiveTab, icon: "document-text-outline", label: "Solicitudes", count: admin.requests.length   },
+    { key: "recursos"    as ActiveTab, icon: "folder-open-outline",   label: "Recursos",    count: admin.resources.length  },
+    { key: "eventos"     as ActiveTab, icon: "calendar-outline",       label: "Eventos",     count: admin.events.length     },
+    { key: "metricas"    as ActiveTab, icon: "stats-chart-outline",    label: "Métricas",    count: 0                       },
+  ]
 
-  // ── Tabs config ────────────────────────────────────────────────────────────
-  const tabs = useMemo(
-    () => [
-      { key: "facultades" as const, emoji: "🏛️", label: "Facultades", count: admin.faculties.length },
-      { key: "programas" as const, emoji: "🎓", label: "Programas", count: admin.programs.length },
-      { key: "materias" as const, emoji: "📚", label: "Materias", count: admin.subjects.length },
-    ],
-    [admin.faculties.length, admin.programs.length, admin.subjects.length]
-  )
+  // Tabs que tienen botón + Nuevo
+  const TABS_WITH_ADD = ["facultades", "programas", "materias", "eventos"]
 
   const handleSignOut = () => {
     Alert.alert("Cerrar sesión", "¿Seguro que quieres salir?", [
@@ -77,12 +69,14 @@ export default function AdminPanelScreen() {
       admin.openCreateFaculty()
     } else if (activeTab === "programas") {
       admin.openCreateProgram()
+    } else if (activeTab === "eventos") {
+      admin.openCreateEvent()
     } else {
       admin.openCreateSubject()
     }
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // Render
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <StatusBar style="light" />
@@ -90,37 +84,53 @@ export default function AdminPanelScreen() {
       <AdminHeader userName={user?.fullName ?? "Admin"} onSignOut={handleSignOut} C={C} />
 
       <AdminTabs
-        tabs={tabs}
+        tabs={TABS}
         activeTab={activeTab}
         onTabChange={(tab) => { setActiveTab(tab); setSearch("") }}
         C={C}
       />
 
-      {/* Buscador + boton nuevo */}
+      {activeTab !== "metricas" && (
       <View style={[styles.searchRow, { borderBottomColor: C.border }]}>
         <View style={[styles.searchBox, { backgroundColor: C.surface, borderColor: C.border }]}>
-          <Text style={{ color: C.textPlaceholder, marginRight: 6 }}>🔍</Text>
+          <Ionicons name="search-outline" size={16} color={C.textPlaceholder} style={{ marginRight: 6 }} />
           <TextInput
             style={[styles.searchInput, { color: C.textPrimary }]}
-            placeholder={searchPlaceholder}
+            placeholder={
+              activeTab === "facultades"  ? "Buscar facultad..." :
+              activeTab === "programas"   ? "Buscar programa o facultad..." :
+              activeTab === "materias"    ? "Buscar materia..." :
+              activeTab === "usuarios"    ? "Buscar usuario o email..." :
+              activeTab === "solicitudes" ? "Buscar solicitud o autor..." :
+              activeTab === "recursos"    ? "Buscar recurso o autor..." :
+              activeTab === "eventos"     ? "Buscar evento o lugar..." :
+              "Métricas globales"
+            }
             placeholderTextColor={C.textPlaceholder}
             value={search}
             onChangeText={setSearch}
+            editable
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")}>
-              <Text style={{ color: C.textSecondary, fontSize: 18 }}>x</Text>
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={18} color={C.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: C.primary }]}
-          onPress={handleAddPress}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.addBtnText}>+ Nuevo</Text>
-        </TouchableOpacity>
+        {TABS_WITH_ADD.includes(activeTab) && (
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: C.primary }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              handleAddPress()
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.addBtnText}>+ Nuevo</Text>
+          </TouchableOpacity>
+        )}
       </View>
+      )}
 
       {/* Contenido principal */}
       {admin.isLoading ? (
@@ -143,7 +153,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay facultades" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="business-outline" title="No hay facultades" body="" />}
             />
           )}
 
@@ -163,7 +173,7 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay programas" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="school-outline" title="No hay programas" body="" />}
             />
           )}
 
@@ -182,13 +192,139 @@ export default function AdminPanelScreen() {
                   C={C}
                 />
               )}
-              ListEmptyComponent={<EmptyState emoji="📭" title="No hay materias" body="" />}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="book-outline" title="No hay materias" body="" />}
             />
+          )}
+
+          {activeTab === "usuarios" && (
+            <FlatList
+              data={admin.filteredUsers}
+              keyExtractor={(i) => i.id}
+              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <UserRow
+                  item={item}
+                  onToggleRole={() => admin.handleToggleUserRole(item)}
+                  onToggleActive={() => admin.handleToggleUserActive(item)}
+                  C={C}
+                />
+              )}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="people-outline" title="No hay usuarios" body="" />}
+            />
+          )}
+
+          {activeTab === "solicitudes" && (
+            <FlatList
+              data={admin.filteredRequests}
+              keyExtractor={(i) => i.id}
+              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <RequestRow
+                  item={item}
+                  onClose={() => admin.handleCloseRequest(item)}
+                  onDelete={() => admin.handleDeleteRequest(item)}
+                  C={C}
+                />
+              )}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="document-text-outline" title="No hay solicitudes" body="" />}
+            />
+          )}
+
+          {activeTab === "recursos" && (
+            <FlatList
+              data={admin.filteredResources}
+              keyExtractor={(i) => i.id}
+              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <ResourceRow
+                  item={item}
+                  onDelete={() => admin.handleDeleteResource(item)}
+                  C={C}
+                />
+              )}
+              ListEmptyComponent={<EmptyState emoji="📭" iconName="folder-open-outline" title="No hay recursos" body="" />}
+            />
+          )}
+
+          {activeTab === "eventos" && (
+            <FlatList
+              data={admin.filteredEvents}
+              keyExtractor={(i) => i.id}
+              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <EventRow
+                  item={item}
+                  onEdit={() => admin.openEditEvent(item)}
+                  onDelete={() => admin.handleDeleteEvent(item)}
+                  C={C}
+                />
+              )}
+              ListEmptyComponent={<EmptyState emoji="📅" iconName="calendar-outline" title="No hay eventos" body="Crea el primer evento del campus" />}
+            />
+          )}
+
+          {activeTab === "metricas" && (
+            <ScrollView contentContainerStyle={[styles.metricsContainer, { paddingBottom: insets.bottom + 80 }]}>
+              {admin.metrics ? (
+                <>
+                  <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="people-outline" size={24} color={C.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.totalUsers}</Text>
+                      <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Usuarios totales</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="school-outline" size={24} color={C.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.activeStudents}</Text>
+                      <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Estudiantes activos</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="document-text-outline" size={24} color={C.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.openRequests}</Text>
+                      <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Solicitudes abiertas</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="folder-open-outline" size={24} color={C.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.totalResources}</Text>
+                      <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Recursos subidos</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>
+                    <View style={[styles.metricIconWrap, { backgroundColor: C.primary + "14" }]}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={24} color={C.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.metricValue, { color: C.textPrimary }]}>{admin.metrics.totalMessages}</Text>
+                      <Text style={[styles.metricLabel, { color: C.textSecondary }]}>Mensajes enviados</Text>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <EmptyState emoji="📊" iconName="stats-chart-outline" title="Sin datos" body="No se pudieron cargar las métricas." />
+              )}
+            </ScrollView>
           )}
         </>
       )}
 
-      {/* ── Modal Facultad ────────────────────────────────────────────────── */}
       <CrudModal
         visible={admin.facultyModal.visible}
         title={admin.facultyModal.mode === "create" ? "Nueva facultad" : "Editar facultad"}
@@ -207,12 +343,11 @@ export default function AdminPanelScreen() {
           autoCapitalize="words"
           autoFocus
           onChangeText={(v) =>
-            admin.setFacultyModal((p) => ({ ...p, form: { name: v }, error: "" }))
+            admin.setFacultyModal((p: any) => ({ ...p, form: { name: v }, error: "" }))
           }
         />
       </CrudModal>
 
-      {/* ── Modal Programa ────────────────────────────────────────────────── */}
       <CrudModal
         visible={admin.programModal.visible}
         title={admin.programModal.mode === "create" ? "Nuevo programa" : "Editar programa"}
@@ -231,12 +366,12 @@ export default function AdminPanelScreen() {
           autoCapitalize="words"
           autoFocus
           onChangeText={(v) =>
-            admin.setProgramModal((p) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
+            admin.setProgramModal((p: any) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
           }
         />
         <FieldLabel text="Facultad *" C={C} style={{ marginTop: 14 }} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 2 }}>
-          {admin.faculties.map((f) => (
+          {admin.faculties.map((f: any) => (
             <TouchableOpacity
               key={f.id}
               style={[
@@ -247,7 +382,7 @@ export default function AdminPanelScreen() {
                 },
               ]}
               onPress={() =>
-                admin.setProgramModal((p) => ({ ...p, form: { ...p.form, faculty_id: f.id }, error: "" }))
+                admin.setProgramModal((p: any) => ({ ...p, form: { ...p.form, faculty_id: f.id }, error: "" }))
               }
               activeOpacity={0.8}
             >
@@ -262,7 +397,6 @@ export default function AdminPanelScreen() {
         </ScrollView>
       </CrudModal>
 
-      {/* ── Modal Materia ─────────────────────────────────────────────────── */}
       <CrudModal
         visible={admin.subjectModal.visible}
         title={admin.subjectModal.mode === "create" ? "Nueva materia" : "Editar materia"}
@@ -281,12 +415,12 @@ export default function AdminPanelScreen() {
           autoCapitalize="words"
           autoFocus
           onChangeText={(v) =>
-            admin.setSubjectModal((p) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
+            admin.setSubjectModal((p: any) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
           }
         />
         <FieldLabel text="Programas vinculados * (seleccion multiple)" C={C} style={{ marginTop: 14 }} />
         <View style={styles.chipsWrap}>
-          {admin.programs.map((prog) => {
+          {admin.programs.map((prog: any) => {
             const selected = admin.subjectModal.form.program_ids.includes(prog.id)
             return (
               <TouchableOpacity
@@ -299,12 +433,12 @@ export default function AdminPanelScreen() {
                   },
                 ]}
                 onPress={() =>
-                  admin.setSubjectModal((p) => ({
+                  admin.setSubjectModal((p: any) => ({
                     ...p,
                     form: {
                       ...p.form,
                       program_ids: selected
-                        ? p.form.program_ids.filter((id) => id !== prog.id)
+                        ? p.form.program_ids.filter((id: string) => id !== prog.id)
                         : [...p.form.program_ids, prog.id],
                     },
                     error: "",
@@ -329,6 +463,97 @@ export default function AdminPanelScreen() {
             </Text>
           </View>
         )}
+      </CrudModal>
+
+      <CrudModal
+        visible={admin.eventModal.visible}
+        title={admin.eventModal.mode === "create" ? "Nuevo evento" : "Editar evento"}
+        error={admin.eventModal.error}
+        isSubmitting={admin.isSubmitting}
+        onClose={admin.closeEventModal}
+        onSave={admin.saveEvent}
+        C={C}
+      >
+        <FieldLabel text="Título *" C={C} />
+        <TextInput
+          style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
+          placeholder="Ej: Semana de la Ingeniería"
+          placeholderTextColor={C.textPlaceholder}
+          value={admin.eventModal.form.title}
+          autoCapitalize="sentences"
+          autoFocus
+          onChangeText={(v) =>
+            admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, title: v }, error: "" }))
+          }
+        />
+
+        <FieldLabel text="Descripción (opcional)" C={C} style={{ marginTop: 14 }} />
+        <TextInput
+          style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary, height: 80 }]}
+          placeholder="Breve descripción del evento..."
+          placeholderTextColor={C.textPlaceholder}
+          value={admin.eventModal.form.description}
+          multiline
+          numberOfLines={3}
+          onChangeText={(v) =>
+            admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, description: v }, error: "" }))
+          }
+        />
+
+        <FieldLabel text="Fecha y hora * (AAAA-MM-DDTHH:mm)" C={C} style={{ marginTop: 14 }} />
+        <TextInput
+          style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
+          placeholder="2025-06-15T10:00"
+          placeholderTextColor={C.textPlaceholder}
+          value={admin.eventModal.form.event_date}
+          keyboardType="default"
+          autoCapitalize="none"
+          onChangeText={(v) =>
+            admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, event_date: v }, error: "" }))
+          }
+        />
+
+        <FieldLabel text="Lugar (opcional)" C={C} style={{ marginTop: 14 }} />
+        <TextInput
+          style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
+          placeholder="Ej: Auditorio Central"
+          placeholderTextColor={C.textPlaceholder}
+          value={admin.eventModal.form.location}
+          autoCapitalize="sentences"
+          onChangeText={(v) =>
+            admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, location: v }, error: "" }))
+          }
+        />
+
+        <FieldLabel text="Categoría *" C={C} style={{ marginTop: 14 }} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 2 }}>
+          {(["academico", "cultural", "deportivo", "otro"] as const).map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: admin.eventModal.form.category === cat ? C.primary : C.background,
+                  borderColor: admin.eventModal.form.category === cat ? C.primary : C.border,
+                },
+              ]}
+              onPress={() =>
+                admin.setEventModal((p: any) => ({ ...p, form: { ...p.form, category: cat }, error: "" }))
+              }
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.chipText,
+                { color: admin.eventModal.form.category === cat ? "#fff" : C.textSecondary },
+              ]}>
+                {cat === "academico" ? "🎓 Académico" :
+                 cat === "cultural"  ? "🎭 Cultural"  :
+                 cat === "deportivo" ? "⚽ Deportivo" :
+                                      "📌 Otro"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </CrudModal>
     </View>
   )
@@ -382,4 +607,23 @@ const styles = StyleSheet.create({
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", marginTop: 2 },
   selectionInfo: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginTop: 8 },
   selectionInfoText: { fontSize: 13, fontWeight: "600" },
+  // Métricas
+  metricsContainer: { padding: 16, gap: 12 },
+  metricCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 20,
+    gap: 16,
+  },
+  metricIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  metricValue: { fontSize: 32, fontWeight: "800" },
+  metricLabel: { fontSize: 13, marginTop: 2 },
 })

@@ -1,24 +1,20 @@
 /**
- * components/feed/SearchModeToggle.tsx
- * Toggle para alternar entre modos de búsqueda — US-005 + US-006
- *
- * Tres modos:
- *   - "solicitudes": búsqueda normal del feed (por defecto)
- *   - "compañeros": búsqueda de estudiantes por materia
- *   - "recursos": recursos de estudio compartidos
+ * Selector de modo de búsqueda del feed.
+ * Permite alternar entre solicitudes, compañeros y recursos.
  */
 
 import { Colors } from "@/constants/Colors"
+import { Ionicons } from "@expo/vector-icons"
 import { useEffect, useRef, useState } from "react"
 import { Animated, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 
 export type SearchMode = "solicitudes" | "compañeros" | "recursos"
 
 const MODES: SearchMode[] = ["solicitudes", "compañeros", "recursos"]
-const LABELS: Record<SearchMode, string> = {
-  solicitudes: "📋 Solicitudes",
-  "compañeros": "👥 Compañeros",
-  recursos: "📚 Recursos",
+const MODE_META: Record<SearchMode, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  solicitudes: { label: "Solicitudes", icon: "document-text-outline" },
+  "compañeros": { label: "Compañeros", icon: "people-outline" },
+  recursos: { label: "Recursos", icon: "library-outline" },
 }
 
 interface Props {
@@ -71,14 +67,21 @@ export function SearchModeToggle({ mode, onChangeMode }: Props) {
           onPress={() => onChangeMode(m)}
           activeOpacity={0.8}
         >
-          <Text
-            style={[
-              styles.tabText,
-              { color: mode === m ? C.textOnPrimary : C.textSecondary },
-            ]}
-          >
-            {LABELS[m]}
-          </Text>
+          <View style={styles.tabInline}>
+            <Ionicons
+              name={MODE_META[m].icon}
+              size={14}
+              color={mode === m ? C.textOnPrimary : C.textSecondary}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                { color: mode === m ? C.textOnPrimary : C.textSecondary },
+              ]}
+            >
+              {MODE_META[m].label}
+            </Text>
+          </View>
         </TouchableOpacity>
       ))}
     </View>
@@ -110,5 +113,10 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 13,
     fontWeight: "600",
+  },
+  tabInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
   },
 })

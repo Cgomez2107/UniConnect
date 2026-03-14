@@ -1,4 +1,5 @@
 import {
+  getMyProfile,
   onAuthStateChange,
   signIn as sbSignIn,
   signOut as sbSignOut,
@@ -34,15 +35,6 @@ interface AuthState {
   initialize: () => () => void;
 }
 
-interface ProfileRow {
-  id: string;
-  full_name: string;
-  avatar_url: string | null;
-  role: UserRole;
-  semester: number | null;
-  bio: string | null;
-}
-
 const buildFallbackUser = (sessionUser: any): UserSession => ({
   id: sessionUser.id,
   email: sessionUser.email!,
@@ -54,42 +46,25 @@ const buildFallbackUser = (sessionUser: any): UserSession => ({
   bio: null,
 });
 
-const normalizeEmail = (email?: string | null) => email?.toLowerCase() ?? "";
+const HYDRATION_TIMEOUT_MS = 9000;
+const SESSION_TIMEOUT_MS = 1800;
+const PROFILE_TIMEOUT_MS = 3200;
 
-const withTimeout = async <T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  fallbackValue: T
-): Promise<T> => {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  try {
-    return await Promise.race<T>([
-      promise,
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => resolve(fallbackValue), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-};
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error("Auth timeout")), ms);
+    }),
+  ]);
+}
 
-const fetchProfileByUserId = async (userId: string): Promise<ProfileRow | null> => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url, role, semester, bio")
-    .eq("id", userId)
-    .maybeSingle();
+function isAuthTimeoutError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.toLowerCase().includes("auth timeout");
+}
 
-  if (error) {
-    console.warn("[authStore] No se pudo obtener perfil completo:", error);
-    return null;
-  }
-
-  return data;
-};
-
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: false,
   isAuthenticated: false,
@@ -98,11 +73,34 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user, isAuthenticated: !!user }),
 
   initialize: () => {
+    const hydrationWatchdog = setTimeout(() => {
+      if (get().isHydrating) {
+        console.warn("[authStore] Hydration timeout. Forzando salida de estado de carga.");
+        set({ isHydrating: false });
+      }
+    }, HYDRATION_TIMEOUT_MS);
+
+    const isInvalidRefreshTokenError = (error: unknown) => {
+      const message =
+        error instanceof Error ? error.message : String(error ?? "");
+      return message.toLowerCase().includes("invalid refresh token");
+    };
+
+    const clearCorruptedSession = async () => {
+      try {
+        await supabase.auth.signOut({ scope: "local" as any });
+      } catch {
+        // Si falla la limpieza remota/local, igual forzamos estado no autenticado.
+      }
+
+      set({ user: null, isAuthenticated: false, isHydrating: false });
+    };
+
     const processSession = async (session: any) => {
       if (session?.user) {
         const fallbackUser = buildFallbackUser(session.user);
         try {
-          const email = normalizeEmail(session.user.email);
+          const email = session.user.email?.toLowerCase();
 
           if (!email?.endsWith('@ucaldas.edu.co')) {
             console.warn("[authStore] Usuario rechazado: no es de ucaldas.edu.co -", email);
@@ -111,39 +109,45 @@ export const useAuthStore = create<AuthState>((set) => ({
             return;
           }
 
-          // No bloquear navegación por una consulta lenta de perfil.
           set({
             user: fallbackUser,
             isAuthenticated: true,
             isHydrating: false,
           });
 
-          registerAndSavePushToken(session.user.id).catch(() => {});
-
-          const profile = await withTimeout<ProfileRow | null>(
-            fetchProfileByUserId(session.user.id),
-            3500,
-            null
+          const profile = await withTimeout(getMyProfile(), PROFILE_TIMEOUT_MS).catch(
+            (error: unknown) => {
+              console.warn("[authStore] No se pudo obtener perfil completo:", error);
+              return null;
+            }
           );
 
           if (profile) {
-            set((state) => {
-              if (!state.user || state.user.id !== session.user.id) return state;
-              return {
-                ...state,
-                user: {
-                  ...state.user,
-                  fullName: profile.full_name,
-                  avatarUrl: profile.avatar_url,
-                  role: profile.role,
-                  semester: profile.semester,
-                  bio: profile.bio,
-                },
-              };
-            });
+            set((state) => ({
+              user: state.user
+                ? {
+                    ...state.user,
+                    fullName: profile.full_name,
+                    avatarUrl: profile.avatar_url,
+                    role: profile.role,
+                    semester: profile.semester,
+                    bio: profile.bio,
+                  }
+                : null,
+            }));
           }
+
+          registerAndSavePushToken(session.user.id).catch(() => {});
         } catch (error) {
-          console.warn("[authStore] Error al procesar sesión:", error);
+          if (isInvalidRefreshTokenError(error)) {
+            console.warn("[authStore] Refresh token invalido durante hidratacion. Cerrando sesion local.");
+            await clearCorruptedSession();
+            return;
+          }
+
+          if (!isAuthTimeoutError(error)) {
+            console.warn("[authStore] Error al procesar sesión:", error);
+          }
           set({
             user: fallbackUser,
             isAuthenticated: true,
@@ -157,15 +161,24 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await withTimeout(supabase.auth.getSession(), SESSION_TIMEOUT_MS);
         await processSession(session);
       } catch (error) {
+        if (isInvalidRefreshTokenError(error)) {
+          console.warn("[authStore] Refresh token invalido en getSession inicial. Limpiando sesion local.");
+          await clearCorruptedSession();
+          return;
+        }
+
         console.error("[authStore] Error al verificar sesión inicial:", error);
         set({ user: null, isAuthenticated: false, isHydrating: false });
       }
     })();
 
     const { data: { subscription } } = onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN") {
+        await processSession(session);
+      }
       if (event === "SIGNED_OUT") {
         set({ user: null, isAuthenticated: false, isHydrating: false });
         return;
@@ -178,7 +191,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(hydrationWatchdog);
+      subscription.unsubscribe();
+    };
   },
 
   signIn: async (email, password) => {
@@ -186,37 +202,34 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const { user } = await sbSignIn({ email, password });
       if (!user) throw new Error("No se pudo iniciar sesión");
-
       const fallbackUser = buildFallbackUser(user);
       set({
         user: fallbackUser,
         isAuthenticated: true,
       });
 
-      const profile = await withTimeout<ProfileRow | null>(
-        fetchProfileByUserId(user.id),
-        3500,
-        null
+      const profile = await withTimeout(getMyProfile(), PROFILE_TIMEOUT_MS).catch(
+        () => {
+          console.warn("[authStore] No se pudo obtener perfil completo (continuando)");
+          return null;
+        }
       );
 
       if (profile) {
-        set((state) => {
-          if (!state.user || state.user.id !== user.id) return state;
-          return {
-            ...state,
-            user: {
-              ...state.user,
-              fullName: profile.full_name,
-              avatarUrl: profile.avatar_url,
-              role: profile.role,
-              semester: profile.semester,
-              bio: profile.bio,
-            },
-          };
-        });
+        set((state) => ({
+          user: state.user
+            ? {
+                ...state.user,
+                fullName: profile.full_name,
+                avatarUrl: profile.avatar_url,
+                role: profile.role,
+                semester: profile.semester,
+                bio: profile.bio,
+              }
+            : null,
+        }));
+        registerAndSavePushToken(profile.id).catch(() => {});
       }
-
-      registerAndSavePushToken(profile?.id ?? user.id).catch(() => {});
     } finally {
       set({ isLoading: false });
     }
@@ -231,12 +244,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  // ── Sign Out ───────────────────────────────────────────────────────────────
   signOut: async () => {
     set({ isLoading: true });
     try {
       await sbSignOut();
-      set({ user: null, isAuthenticated: false });
+      set({ user: null, isAuthenticated: false, isHydrating: false });
     } finally {
       set({ isLoading: false });
     }

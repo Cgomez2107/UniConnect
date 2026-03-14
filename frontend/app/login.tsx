@@ -38,6 +38,7 @@ export default function LoginScreen() {
   const [formError, setFormError] = useState("");
   const [showSplash, setShowSplash] = useState(false);
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const splashWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     loading: googleLoading,
@@ -56,19 +57,43 @@ export default function LoginScreen() {
     }
 
     navigationTimerRef.current = setTimeout(() => {
+      navigationTimerRef.current = null;
       if (user.role === "admin") {
         router.replace("/(admin)" as any);
       } else {
         router.replace("/(tabs)" as any);
       }
-    }, 700);
-  }, [isAuthenticated, user, user?.id, user?.role]);
+    }, 180);
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    if (!showSplash) {
+      if (splashWatchdogRef.current) {
+        clearTimeout(splashWatchdogRef.current);
+        splashWatchdogRef.current = null;
+      }
+      return;
+    }
+
+    if (splashWatchdogRef.current) return;
+
+    splashWatchdogRef.current = setTimeout(() => {
+      splashWatchdogRef.current = null;
+      setShowSplash(false);
+      setFormError("La sesión tardó más de lo esperado. Reintentamos automáticamente.");
+      router.replace("/index" as any);
+    }, 4000);
+  }, [showSplash]);
 
   useEffect(() => {
     return () => {
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
         navigationTimerRef.current = null;
+      }
+      if (splashWatchdogRef.current) {
+        clearTimeout(splashWatchdogRef.current);
+        splashWatchdogRef.current = null;
       }
     };
   }, []);
@@ -101,6 +126,10 @@ export default function LoginScreen() {
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
         navigationTimerRef.current = null;
+      }
+      if (splashWatchdogRef.current) {
+        clearTimeout(splashWatchdogRef.current);
+        splashWatchdogRef.current = null;
       }
       const msg: string = error?.message ?? "";
       if (msg.includes("Email not confirmed")) {

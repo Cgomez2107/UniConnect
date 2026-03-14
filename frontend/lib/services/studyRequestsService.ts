@@ -1,20 +1,10 @@
-/**
- * lib/services/studyRequestsService.ts
- * Servicio para gestionar solicitudes de estudio — US-005 + US-006
- *
- * Relación usada para materias inscritas:
- *   user_subjects → subjects
- *
- * Relación usada para el feed:
- *   study_requests → profiles (autor)
- *   study_requests → subjects → program_subjects → programs → faculties
- *
- * NOTA: Sin Map ni Set — Hermes (React Native) no soporta sus iteradores.
- */
+// Servicio para gestionar solicitudes de estudio.
+//
+// NOTA: sin Map ni Set — Hermes (React Native) no soporta sus iteradores.
 
 import { supabase } from "@/lib/supabase";
 
-// ── Tipos — US-005 ─────────────────────────────────────────────────────────────
+// Tipos de solicitud
 
 export interface Subject {
   id: string;
@@ -28,7 +18,7 @@ export interface CreateStudyRequestPayload {
   max_members: number;
 }
 
-// ── Tipos — US-006 ─────────────────────────────────────────────────────────────
+// Tipos del feed
 
 export interface FeedStudyRequest {
   id: string;
@@ -58,7 +48,7 @@ export interface FeedFilters {
   subjectIds?: string[];
 }
 
-// ── Materias inscritas del estudiante ─────────────────────────────────────────
+// Materias inscritas del estudiante
 
 /**
  * Devuelve solo las materias inscritas del estudiante logueado.
@@ -110,7 +100,41 @@ export async function getEnrolledSubjectsForUser(): Promise<Subject[]> {
   );
 }
 
-// ── Crear solicitud de estudio ─────────────────────────────────────────────────
+/**
+ * Devuelve las materias disponibles para el usuario actual.
+ * - Estudiante: solo sus materias inscritas
+ * - Admin: todas las materias activas del catálogo
+ */
+export async function getAvailableSubjectsForCurrentUser(): Promise<Subject[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("No hay sesión activa.");
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  if (profile?.role === "admin") {
+    const { data, error } = await supabase
+      .from("subjects")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+
+    if (error) throw error;
+    return (data ?? []) as Subject[];
+  }
+
+  return getEnrolledSubjectsForUser();
+}
+
+// Crear solicitud de estudio
 
 /**
  * Inserta una nueva solicitud de estudio.
@@ -140,7 +164,7 @@ export async function createStudyRequest(
   if (error) throw new Error(error.message || "No se pudo crear la solicitud.");
 }
 
-// ── Feed de solicitudes ────────────────────────────────────────────────────────
+// Feed de solicitudes
 
 /**
  * Trae solicitudes activas con join de autor, materia y facultad.
@@ -192,59 +216,38 @@ export async function getFeedRequests(
   if (error) throw new Error(error.message || "No se pudo cargar el feed.");
 
   const rows: any[] = data ?? [];
-  const authorIds: string[] = [];
-  const requestIds: string[] = [];
+  const authorIds = rows.map((r) => r.author_id).filter(Boolean)
 
-  for (let i = 0; i < rows.length; i++) {
-    const aid = String(rows[i]?.author_id ?? "");
-    if (aid && !authorIds.includes(aid)) authorIds.push(aid);
-
-    const rid = String(rows[i]?.id ?? "");
-    if (rid) requestIds.push(rid);
-  }
-
-  let authorMap: Record<string, { full_name: string; avatar_url: string | null }> = {};
+  let profilesById: Record<string, any> = {}
   if (authorIds.length > 0) {
-    const { data: authorRows, error: authorsError } = await supabase
+    const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_url")
-      .in("id", authorIds);
+      .select(`
+        id,
+        full_name,
+        avatar_url,
+        user_programs (
+          is_primary,
+          programs ( name )
+        )
+      `)
+      .in("id", authorIds)
 
-    if (authorsError) throw new Error(authorsError.message || "No se pudieron cargar los autores.");
+    if (profilesError) throw profilesError
 
-    const list: any[] = authorRows ?? [];
-    for (let i = 0; i < list.length; i++) {
-      const a = list[i];
-      authorMap[String(a.id)] = {
-        full_name: String(a.full_name ?? "Usuario"),
-        avatar_url: a.avatar_url ?? null,
-      };
+    const map: Record<string, any> = {}
+    for (let i = 0; i < (profilesData ?? []).length; i++) {
+      const p: any = (profilesData ?? [])[i]
+      if (p?.id) map[p.id] = p
     }
-  }
-
-  // Conteo de miembros aceptados por solicitud (fallback seguro si falla por RLS).
-  const acceptedByRequest: Record<string, number> = {};
-  if (requestIds.length > 0) {
-    const { data: acceptedRows, error: acceptedErr } = await supabase
-      .from("applications")
-      .select("request_id")
-      .in("request_id", requestIds)
-      .eq("status", "aceptada");
-
-    if (!acceptedErr) {
-      const rowsAccepted: any[] = acceptedRows ?? [];
-      for (let i = 0; i < rowsAccepted.length; i++) {
-        const reqId = String(rowsAccepted[i].request_id ?? "");
-        if (!reqId) continue;
-        acceptedByRequest[reqId] = (acceptedByRequest[reqId] ?? 0) + 1;
-      }
-    }
+    profilesById = map
   }
 
   const result: FeedStudyRequest[] = [];
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
+    const authorProfile = profilesById[r.author_id] ?? null
 
     // Extraer nombre de facultad desde la cadena larga de joins
     let facultyName = "Sin facultad";
@@ -259,10 +262,22 @@ export async function getFeedRequests(
       if (fac?.name) facultyName = fac.name;
     }
 
-    const author = authorMap[String(r.author_id)] ?? { full_name: "Usuario", avatar_url: null };
-
-    const acceptedCount = acceptedByRequest[String(r.id)] ?? 0;
-    const occupiedSlots = Math.min(acceptedCount + 1, Number(r.max_members ?? 1));
+    // Extraer carrera del autor (programa principal)
+    let authorCareer = "";
+    const upArr: any[] = authorProfile?.user_programs ?? [];
+    for (let j = 0; j < upArr.length; j++) {
+      const up = upArr[j];
+      if (up.is_primary) {
+        const prog = Array.isArray(up.programs) ? up.programs[0] : up.programs;
+        authorCareer = prog?.name ?? "";
+        break;
+      }
+    }
+    // Si no hay programa principal, tomar el primero disponible
+    if (!authorCareer && upArr.length > 0) {
+      const prog = Array.isArray(upArr[0].programs) ? upArr[0].programs[0] : upArr[0].programs;
+      authorCareer = prog?.name ?? "";
+    }
 
     result.push({
       id: r.id,
@@ -274,17 +289,17 @@ export async function getFeedRequests(
       status: r.status,
       created_at: r.created_at,
       author: {
-        full_name: author.full_name,
-        avatar_url: author.avatar_url ?? undefined,
-        career: undefined,
+        full_name: authorProfile?.full_name ?? "Usuario",
+        avatar_url: authorProfile?.avatar_url ?? undefined,
+        career: authorCareer || undefined,
       },
       profiles: {
-        full_name: author.full_name,
-        avatar_url: author.avatar_url,
+        full_name: authorProfile?.full_name ?? "Usuario",
+        avatar_url: authorProfile?.avatar_url ?? null,
       },
       subject_name: r.subjects?.name ?? "Sin materia",
       faculty_name: facultyName,
-      applications_count: occupiedSlots,
+      applications_count: 0,
     });
   }
 

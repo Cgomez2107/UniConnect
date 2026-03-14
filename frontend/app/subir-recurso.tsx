@@ -12,6 +12,10 @@
 
 import { Colors } from "@/constants/Colors"
 import { useResources } from "@/hooks/application/useResources"
+import {
+  getAvailableSubjectsForCurrentUser,
+  type Subject,
+} from "@/lib/services/studyRequestsService"
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/store/useAuthStore"
 import { decode } from "base64-arraybuffer"
@@ -32,11 +36,6 @@ import {
   View,
 } from "react-native"
 
-interface Subject {
-  id: string
-  name: string
-}
-
 const ALLOWED_EXTENSIONS = [
   "pdf", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "txt", "jpg", "jpeg", "png",
 ] as const
@@ -47,6 +46,7 @@ export default function SubirRecursoScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
   const user = useAuthStore((s) => s.user)
+  const role = useAuthStore((s) => s.user?.role)
 
   // ── Formulario ────────────────────────────────────────────────────────────
   const [title, setTitle] = useState("")
@@ -81,36 +81,10 @@ export default function SubirRecursoScreen() {
     setLoadingData(true)
     setFetchError(null)
     try {
-      if (!user?.id) {
-        throw new Error("No hay sesión activa.")
-      }
-
-      const { data, error } = await supabase
-        .from("user_subjects")
-        .select("subject_id, subjects(id, name)")
-        .eq("user_id", user.id)
-
-      if (error) throw new Error(error.message)
-
-      const rows: any[] = data ?? []
-      const mapped: Subject[] = []
-      const seen: Record<string, boolean> = {}
-      for (let i = 0; i < rows.length; i++) {
-        const subj = rows[i].subjects
-        const list = Array.isArray(subj) ? subj : subj ? [subj] : []
-        for (let j = 0; j < list.length; j++) {
-          const item = list[j]
-          if (!item?.id || seen[item.id]) continue
-          seen[item.id] = true
-          mapped.push({ id: item.id, name: item.name })
-        }
-      }
-
-      mapped.sort((a, b) => a.name.localeCompare(b.name))
-      const subs = mapped
+      const subs = await getAvailableSubjectsForCurrentUser()
       setSubjects(subs)
     } catch (e: unknown) {
-      setFetchError(e instanceof Error ? e.message : "No se pudieron cargar tus materias.")
+      setFetchError(e instanceof Error ? e.message : "No se pudieron cargar las materias disponibles.")
     } finally {
       setLoadingData(false)
     }
@@ -118,7 +92,7 @@ export default function SubirRecursoScreen() {
 
   useEffect(() => {
     loadData()
-  }, [user?.id])
+  }, [])
 
   // ── Seleccionar archivo ───────────────────────────────────────────────────
   const handlePickFile = async () => {
@@ -250,7 +224,7 @@ export default function SubirRecursoScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={C.primary} />
           <Text style={[styles.loadingText, { color: C.textSecondary }]}>
-            Cargando tus materias…
+            Cargando materias disponibles…
           </Text>
         </View>
       </SafeAreaView>
@@ -282,7 +256,9 @@ export default function SubirRecursoScreen() {
             Sin materias inscritas
           </Text>
           <Text style={[styles.emptySubtitle, { color: C.textSecondary }]}>
-            Necesitas tener materias inscritas para subir un recurso.
+            {role === "admin"
+              ? "No hay materias activas en el catálogo para subir un recurso."
+              : "Necesitas tener materias inscritas para subir un recurso."}
           </Text>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: C.primary }]}
@@ -358,7 +334,7 @@ export default function SubirRecursoScreen() {
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Materia *{" "}
           <Text style={{ fontSize: 11, textTransform: "none" }}>
-            ({subjects.length} inscritas)
+            ({subjects.length} disponibles)
           </Text>
         </Text>
 

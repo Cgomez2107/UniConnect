@@ -29,6 +29,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { CardSolicitud } from "@/components/ui/CardSolicitud";
 import { Colors } from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
 import { useApplications } from "@/hooks/application/useApplications";
 import { useResources } from "@/hooks/application/useResources";
 import { useStudyRequests } from "@/hooks/application/useStudyRequests";
@@ -74,10 +75,8 @@ export default function FeedScreen() {
     getResourcesBySubject,
   } = useResources();
 
-  // Hook de búsqueda de compañeros (US-005)
+  // Datos de compañeros y recursos por materia.
   const studentSearch = useStudentSearch();
-
-  // Hook de recursos por materia (US-006)
   const [resourceSubjectId, setResourceSubjectId] = useState<string | null>(null);
   const [resources, setResources] = useState<any[]>([]);
 
@@ -99,7 +98,7 @@ export default function FeedScreen() {
 
       const filteredByEnrollment =
         enrolledSubjectIds.length > 0
-          ? result.filter((r) => enrolledSubjectIds.includes(r.subject_id))
+          ? result.filter((r: any) => enrolledSubjectIds.includes(r.subject_id))
           : [];
 
       setRequests(filteredByEnrollment);
@@ -179,7 +178,7 @@ export default function FeedScreen() {
 
       const filteredByEnrollment =
         enrolledSubjectIds.length > 0
-          ? result.filter((r) => enrolledSubjectIds.includes(r.subject_id))
+          ? result.filter((r: any) => enrolledSubjectIds.includes(r.subject_id))
           : [];
 
       if (filteredByEnrollment.length > 0) {
@@ -242,7 +241,6 @@ export default function FeedScreen() {
       {/* Toggle de modo de búsqueda */}
       <SearchModeToggle mode={searchMode} onChangeMode={setSearchMode} />
 
-      {/* ── Modo Solicitudes ─────────────────────────────────────────── */}
       {searchMode === "solicitudes" && (
         <>
           <SearchBar
@@ -290,6 +288,7 @@ export default function FeedScreen() {
                 requestsError ? (
                   <EmptyState
                     emoji="⚠️"
+                    iconName="warning-outline"
                     title="Error al cargar"
                     body={requestsError}
                     action="Reintentar"
@@ -298,6 +297,7 @@ export default function FeedScreen() {
                 ) : (
                   <EmptyState
                     emoji="🔍"
+                    iconName="search-outline"
                     title="Sin resultados"
                     body="Intenta con otros filtros o crea la primera solicitud."
                   />
@@ -317,7 +317,6 @@ export default function FeedScreen() {
         </>
       )}
 
-      {/* ── Modo Compañeros (US-005) ─────────────────────────────────── */}
       {searchMode === "compañeros" && (
         <>
           <SubjectSelector
@@ -329,6 +328,7 @@ export default function FeedScreen() {
           {!studentSearch.selectedSubjectId ? (
             <EmptyState
               emoji="📚"
+              iconName="book-outline"
               title="Selecciona una materia"
               body="Elige una materia para buscar compañeros que la estén cursando."
             />
@@ -369,6 +369,7 @@ export default function FeedScreen() {
                 studentSearch.error ? (
                   <EmptyState
                     emoji="⚠️"
+                    iconName="warning-outline"
                     title="Error en la búsqueda"
                     body={studentSearch.error}
                     action="Reintentar"
@@ -377,6 +378,7 @@ export default function FeedScreen() {
                 ) : (
                   <EmptyState
                     emoji="🔍"
+                    iconName="search-outline"
                     title="Sin compañeros encontrados"
                     body="No hay otros estudiantes inscritos en esta materia."
                   />
@@ -387,7 +389,6 @@ export default function FeedScreen() {
         </>
       )}
 
-      {/* ── Modo Recursos (US-006) ───────────────────────────────────── */}
       {searchMode === "recursos" && (
         <>
           <SubjectSelector
@@ -402,14 +403,16 @@ export default function FeedScreen() {
             onPress={() => router.push("/subir-recurso" as any)}
             activeOpacity={0.85}
           >
-            <Text style={[styles.uploadFabText, { color: C.textOnPrimary }]}>
-              📤 Subir recurso
-            </Text>
+            <View style={styles.uploadFabInline}>
+              <Ionicons name="cloud-upload-outline" size={17} color={C.textOnPrimary} />
+              <Text style={[styles.uploadFabText, { color: C.textOnPrimary }]}>Subir recurso</Text>
+            </View>
           </TouchableOpacity>
 
           {!resourceSubjectId ? (
             <EmptyState
               emoji="📚"
+              iconName="book-outline"
               title="Selecciona una materia"
               body="Elige una materia para ver los recursos compartidos."
             />
@@ -440,6 +443,7 @@ export default function FeedScreen() {
                 resourcesError ? (
                   <EmptyState
                     emoji="⚠️"
+                    iconName="warning-outline"
                     title="Error al cargar"
                     body={resourcesError}
                     action="Reintentar"
@@ -448,6 +452,7 @@ export default function FeedScreen() {
                 ) : (
                   <EmptyState
                     emoji="📭"
+                    iconName="folder-open-outline"
                     title="Sin recursos"
                     body="Aún no hay recursos compartidos para esta materia. ¡Sé el primero en compartir!"
                     action="Subir recurso"
@@ -473,4 +478,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   uploadFabText: { fontSize: 14, fontWeight: "600" },
+  uploadFabInline: { flexDirection: "row", alignItems: "center", gap: 8 },
 });

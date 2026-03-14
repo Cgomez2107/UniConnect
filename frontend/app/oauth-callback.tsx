@@ -49,11 +49,17 @@ export default function OAuthCallbackScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
-  const [waitExpired, setWaitExpired] = useState(false);
   const recoveringRef = useRef(false);
+  const [waitExpired, setWaitExpired] = useState(false);
+  const [hardTimeoutExpired, setHardTimeoutExpired] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setWaitExpired(true), 5000);
+    const t = setTimeout(() => setWaitExpired(true), 900);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setHardTimeoutExpired(true), 6000);
     return () => clearTimeout(t);
   }, []);
 
@@ -132,6 +138,24 @@ export default function OAuthCallbackScreen() {
     });
 
   }, [isAuthenticated, user, waitExpired, setUser]);
+
+  useEffect(() => {
+    if (!hardTimeoutExpired || isAuthenticated) return;
+
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          router.replace("/index" as any);
+          return;
+        }
+      } catch {
+        // Si no se puede leer sesión, continuamos a login.
+      }
+
+      router.replace("/login" as any);
+    })();
+  }, [hardTimeoutExpired, isAuthenticated]);
 
   return <SplashLoader message="Iniciando sesión..." />;
 }
