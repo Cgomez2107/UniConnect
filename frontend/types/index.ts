@@ -100,7 +100,6 @@ export interface Subject {
 // GRUPOS DE ESTUDIO
 
 
-export type Modality = "presencial" | "virtual" | "híbrido";
 export type RequestStatus = "abierta" | "cerrada" | "expirada";
 export type ApplicationStatus = "pendiente" | "aceptada" | "rechazada";
 
@@ -110,7 +109,6 @@ export interface StudyRequest {
   subject_id: string;
   title: string;
   description: string;
-  modality: Modality;
   max_members: number;
   status: RequestStatus;
   is_active: boolean;
@@ -129,7 +127,6 @@ export interface CreateStudyRequestPayload {
   subject_id: string;
   title: string;
   description: string;
-  modality: Modality;
   max_members: number;
 }
 

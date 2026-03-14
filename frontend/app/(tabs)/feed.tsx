@@ -29,11 +29,12 @@ import { Colors } from "@/constants/Colors";
 import { useFeed } from "@/hooks/useFeed";
 import { useResourceList } from "@/hooks/useResources";
 import { useStudentSearch } from "@/hooks/useStudentSearch";
+import { getMyApplicationStatus } from "@/lib/services/careerService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState, useCallback } from "react";
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function FeedScreen() {
@@ -75,6 +76,39 @@ export default function FeedScreen() {
     []
   );
 
+  const handlePostulateFromFeed = useCallback(
+    async (requestId: string) => {
+      if (!user?.id) {
+        Alert.alert("Sesion requerida", "Debes iniciar sesion para postularte.");
+        router.push("/login" as any);
+        return;
+      }
+
+      try {
+        const status = await getMyApplicationStatus(requestId, user.id);
+        if (status) {
+          if (status === "aceptada") {
+            Alert.alert("Ya fuiste aceptado", "Esta solicitud ya te acepto. Puedes verla en Solicitudes > Mis postulaciones.");
+            return;
+          }
+
+          if (status === "pendiente") {
+            Alert.alert("Postulacion existente", "Ya te postulaste a esta solicitud y esta pendiente de revision.");
+            return;
+          }
+
+          Alert.alert("Postulacion existente", "Ya te postulaste a esta solicitud.");
+          return;
+        }
+
+        router.push(`/postular/${requestId}` as any);
+      } catch {
+        Alert.alert("Error", "No se pudo validar tu estado de postulacion. Intenta nuevamente.");
+      }
+    },
+    [user?.id]
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
@@ -106,7 +140,7 @@ export default function FeedScreen() {
                   item={item as any}
                   isOwnPost={item.author_id === user?.id}
                   onPress={() => router.push(`/solicitud/${item.id}` as any)}
-                  onPostulate={() => router.push(`/postular/${item.id}` as any)}
+                  onPostulate={() => handlePostulateFromFeed(item.id)}
                 />
               )}
               contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 80 }}

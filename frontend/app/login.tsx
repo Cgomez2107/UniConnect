@@ -38,7 +38,7 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState("");
   const [formError, setFormError] = useState("");
   const [splashRole, setSplashRole] = useState<UserRole | null>(null);
-  const hasNavigated = useRef(false);
+  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     loading: googleLoading,
@@ -47,22 +47,30 @@ export default function LoginScreen() {
   } = useGoogleAuth();
 
   useEffect(() => {
-    if (!isAuthenticated || !user || hasNavigated.current) return;
+    if (!isAuthenticated || !user) return;
 
     const role = user.role ?? "estudiante";
     setSplashRole(role);
 
-    hasNavigated.current = true;
-    const timeout = setTimeout(() => {
+    if (navigationTimerRef.current) return;
+
+    navigationTimerRef.current = setTimeout(() => {
       if (role === "admin") {
         router.replace("/(admin)" as any);
       } else {
         router.replace("/(tabs)" as any);
       }
     }, 700);
+  }, [isAuthenticated, user?.id, user?.role]);
 
-    return () => clearTimeout(timeout);
-  }, [isAuthenticated, user]);
+  useEffect(() => {
+    return () => {
+      if (navigationTimerRef.current) {
+        clearTimeout(navigationTimerRef.current);
+        navigationTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
@@ -89,6 +97,10 @@ export default function LoginScreen() {
 
     } catch (error: any) {
       setSplashRole(null);
+      if (navigationTimerRef.current) {
+        clearTimeout(navigationTimerRef.current);
+        navigationTimerRef.current = null;
+      }
       const msg: string = error?.message ?? "";
       if (msg.includes("Email not confirmed")) {
         setFormError("Confirma tu correo institucional antes de ingresar.");

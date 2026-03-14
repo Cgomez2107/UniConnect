@@ -32,6 +32,8 @@ interface RequestSummary {
   title: string;
   author_name: string;
   subject_name: string;
+  status: string;
+  is_active: boolean;
 }
 
 export default function PostularScreen() {
@@ -52,7 +54,7 @@ export default function PostularScreen() {
     (async () => {
       const { data } = await supabase
         .from("study_requests")
-        .select("title, profiles ( full_name ), subjects ( name )")
+        .select("title, status, is_active, profiles ( full_name ), subjects ( name )")
         .eq("id", id)
         .single();
 
@@ -62,6 +64,8 @@ export default function PostularScreen() {
           title: d.title,
           author_name: d.profiles?.full_name ?? "Usuario",
           subject_name: d.subjects?.name ?? "Materia",
+          status: d.status,
+          is_active: d.is_active,
         });
       }
       setLoadingRequest(false);
@@ -70,6 +74,11 @@ export default function PostularScreen() {
 
   const handlePostular = async () => {
     if (!user || !id) return;
+    if (!request || request.status !== "abierta" || !request.is_active) {
+      Alert.alert("Convocatoria cerrada", "Esta convocatoria ya no esta activa.");
+      return;
+    }
+
     if (message.trim().length < 10) {
       Alert.alert("Mensaje muy corto", "Escribe al menos 10 caracteres para presentarte.");
       return;
@@ -139,6 +148,9 @@ export default function PostularScreen() {
             <Text style={[styles.cardMeta, { color: C.textSecondary }]}>
               📚 {request.subject_name} · por {request.author_name}
             </Text>
+            {request.status !== "abierta" || !request.is_active ? (
+              <Text style={[styles.closedNotice, { color: C.error }]}>Convocatoria cerrada</Text>
+            ) : null}
           </View>
         )}
 
@@ -188,10 +200,25 @@ export default function PostularScreen() {
         <TouchableOpacity
           style={[
             styles.sendBtn,
-            { backgroundColor: sending || message.trim().length < 10 ? C.border : C.primary },
+            {
+              backgroundColor:
+                sending ||
+                message.trim().length < 10 ||
+                !request ||
+                request.status !== "abierta" ||
+                !request.is_active
+                  ? C.border
+                  : C.primary,
+            },
           ]}
           onPress={handlePostular}
-          disabled={sending || message.trim().length < 10}
+          disabled={
+            sending ||
+            message.trim().length < 10 ||
+            !request ||
+            request.status !== "abierta" ||
+            !request.is_active
+          }
           activeOpacity={0.85}
         >
           {sending ? (
@@ -234,6 +261,7 @@ const styles = StyleSheet.create({
   cardLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   cardTitle: { fontSize: 17, fontWeight: "700", lineHeight: 24 },
   cardMeta: { fontSize: 13 },
+  closedNotice: { fontSize: 12, marginTop: 4, fontWeight: "700" },
 
   section: { gap: 8 },
   label: { fontSize: 15, fontWeight: "700" },

@@ -28,13 +28,6 @@ import {
   View,
 } from "react-native";
 
-const MODALITIES: Modality[] = ["presencial", "virtual", "híbrido"];
-const MODALITY_LABELS: Record<Modality, string> = {
-  presencial: "🏫 Presencial",
-  virtual: "💻 Virtual",
-  híbrido: "🔀 Híbrido",
-};
-
 export default function NuevaSolicitudScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
@@ -44,7 +37,6 @@ export default function NuevaSolicitudScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [modality, setModality] = useState<Modality>("presencial");
   const [maxMembers, setMaxMembers] = useState("4");
 
   // ── Estado remoto ─────────────────────────────────────────────────────────
@@ -84,7 +76,6 @@ export default function NuevaSolicitudScreen() {
         title: title.trim(),
         description: description.trim(),
         subject_id: selectedSubject,
-        modality,
         max_members: Math.max(2, Math.min(10, parseInt(maxMembers) || 4)),
       });
       Alert.alert(
@@ -245,28 +236,6 @@ export default function NuevaSolicitudScreen() {
           </Text>
         )}
 
-        {/* ── Modalidad ────────────────────────────────────────────── */}
-        <Text style={[styles.label, { color: C.textSecondary }]}>Modalidad</Text>
-        <View style={styles.modalityRow}>
-          {MODALITIES.map((m) => {
-            const active = modality === m;
-            return (
-              <TouchableOpacity
-                key={m}
-                style={[
-                  styles.modalityBtn,
-                  { flex: 1, backgroundColor: active ? C.primary : C.surface, borderColor: active ? C.primary : C.border },
-                ]}
-                onPress={() => setModality(m)}
-              >
-                <Text style={[styles.modalityText, { color: active ? C.textOnPrimary : C.textPrimary }]}>
-                  {MODALITY_LABELS[m]}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
         {/* ── Cupos ────────────────────────────────────────────────── */}
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Cupos máximos (2–10)
@@ -337,11 +306,6 @@ const styles = StyleSheet.create({
   },
   chipCheck: { color: "#fff", fontWeight: "700", fontSize: 13 },
   chipText: { fontSize: 13, fontWeight: "500", flexShrink: 1 },
-
-  // Modalidad
-  modalityRow: { flexDirection: "row", gap: 8 },
-  modalityBtn: { paddingVertical: 10, paddingHorizontal: 6, borderRadius: 10, borderWidth: 1, alignItems: "center" },
-  modalityText: { fontSize: 12, fontWeight: "600", textAlign: "center" },
 
   // Contador
   counterRow: { flexDirection: "row", alignItems: "center", gap: 20 },

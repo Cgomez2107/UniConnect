@@ -4,17 +4,23 @@
  *
  * Muestra información completa de la solicitud:
  * - Autor con avatar grande e iniciales
- * - Materia, facultad, modalidad
+ * - Materia y facultad
  * - Cupos disponibles
  * - Descripción completa
  * - Botón "Postularme" (si no es el propio post)
  */
 
 import { Colors } from "@/constants/Colors";
-import { getMyApplicationStatus } from "@/lib/services/careerService";
+import {
+  getApplicationsForRequest,
+  getMyApplicationStatus,
+  reviewApplication,
+  updateRequestStatus,
+} from "@/lib/services/careerService";
 import { getOrCreateConversation } from "@/lib/services/messagingService";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
+import type { Application } from "@/types";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
@@ -36,7 +42,6 @@ interface RequestDetail {
   author_id: string;
   title: string;
   description: string;
-  modality: string;
   max_members: number;
   status: string;
   created_at: string;
@@ -46,13 +51,6 @@ interface RequestDetail {
   subject_name: string;
   faculty_name: string;
 }
-
-const MODALITY_LABEL: Record<string, string> = {
-  presencial: "📍 Presencial",
-  virtual: "💻 Virtual",
-  hibrido: "🔄 Híbrido",
-  híbrido: "🔄 Híbrido",
-};
 
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -85,6 +83,8 @@ export default function SolicitudDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [reviewingApplicationId, setReviewingApplicationId] = useState<string | null>(null);
   const [applicationStatus, setApplicationStatus] = useState<
     "pendiente" | "aceptada" | "rechazada" | null
   >(null);
@@ -114,7 +114,7 @@ export default function SolicitudDetailScreen() {
         const { data, error: err } = await supabase
           .from("study_requests")
           .select(`
-            id, author_id, title, description, modality,
+            id, author_id, title, description,
             max_members, status, created_at,
             profiles ( full_name, avatar_url, bio ),
             subjects (
@@ -152,7 +152,6 @@ export default function SolicitudDetailScreen() {
           author_id: r.author_id,
           title: r.title,
           description: r.description,
-          modality: r.modality,
           max_members: r.max_members,
           status: r.status,
           created_at: r.created_at,
@@ -162,6 +161,9 @@ export default function SolicitudDetailScreen() {
           subject_name: r.subjects?.name ?? "Sin materia",
           faculty_name: facultyName,
         });
+
+        const apps = await getApplicationsForRequest(r.id);
+        setApplications(apps);
 
         // Cargar estado de mi postulación (si no soy el autor)
         if (user?.id && r.author_id !== user.id) {
@@ -179,6 +181,46 @@ export default function SolicitudDetailScreen() {
   }, [id]);
 
   const isOwnPost = request?.author_id === user?.id;
+
+  const acceptedMembers = applications.filter((app) => app.status === "aceptada");
+  const pendingApplications = applications.filter((app) => app.status === "pendiente");
+  const occupiedSlots = Math.min(acceptedMembers.length + 1, request?.max_members ?? 0);
+  const remainingSlots = Math.max((request?.max_members ?? 0) - occupiedSlots, 0);
+
+  const handleReviewApplication = async (
+    applicationId: string,
+    status: "aceptada" | "rechazada"
+  ) => {
+    if (!user?.id || !request) return;
+
+    setReviewingApplicationId(applicationId);
+    try {
+      await reviewApplication(user.id, applicationId, status);
+      const updatedApplications = applications.map((app) =>
+        app.id === applicationId ? { ...app, status } : app
+      );
+      setApplications(updatedApplications);
+
+      // Si se llena el cupo total (incluyendo al creador), cerramos automaticamente.
+      if (status === "aceptada" && request.status === "abierta") {
+        const acceptedCount = updatedApplications.filter((app) => app.status === "aceptada").length;
+        if (acceptedCount + 1 >= request.max_members) {
+          await updateRequestStatus(request.id, "cerrada");
+          setRequest((prev) => (prev ? { ...prev, status: "cerrada" } : prev));
+          Alert.alert("Cupo completo", "La solicitud se cerro automaticamente porque ya se lleno el cupo.");
+        }
+      }
+
+      const reviewed = applications.find((app) => app.id === applicationId);
+      if (reviewed?.applicant_id === user.id) {
+        setApplicationStatus(status);
+      }
+    } catch (e: any) {
+      Alert.alert("Error", e.message ?? "No se pudo actualizar la postulación.");
+    } finally {
+      setReviewingApplicationId(null);
+    }
+  };
 
   // ── Estados de carga / error ────────────────────────────────────────────
   if (loading) {
@@ -279,12 +321,6 @@ export default function SolicitudDetailScreen() {
         </View>
 
         <View style={styles.metaRow}>
-          {/* Modalidad */}
-          <View style={[styles.metaChip, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <Text style={[styles.metaChipText, { color: C.textSecondary }]}>
-              {MODALITY_LABEL[request.modality] ?? request.modality}
-            </Text>
-          </View>
           {/* Cupos */}
           <View style={[
             styles.metaChip,
@@ -299,7 +335,7 @@ export default function SolicitudDetailScreen() {
               styles.metaChipText,
               { color: request.status === "abierta" ? C.success : C.textSecondary },
             ]}>
-              👥 {request.max_members} cupos · {request.status}
+              👥 {remainingSlots} cupos disponibles · {request.status}
             </Text>
           </View>
         </View>
@@ -323,6 +359,109 @@ export default function SolicitudDetailScreen() {
             {request.description}
           </Text>
         </View>
+
+        <View style={[styles.section, { borderColor: C.border }]}>
+          <Text style={[styles.sectionLabel, { color: C.textPlaceholder }]}>INTEGRANTES</Text>
+
+          <View style={[styles.counterWrap, { backgroundColor: C.primary + "12", borderColor: C.primary + "35" }]}> 
+            <Text style={[styles.counterText, { color: C.primary }]}> 
+              Integrantes: {occupiedSlots}/{request.max_members}
+            </Text>
+          </View>
+
+          <View style={[styles.memberCard, { backgroundColor: C.surface, borderColor: C.border }]}> 
+            <View style={[styles.memberAvatar, { backgroundColor: C.primary + "20" }]}> 
+              <Text style={[styles.memberAvatarText, { color: C.primary }]}>
+                {getInitials(request.author_name)}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.memberName, { color: C.textPrimary }]}>{request.author_name}</Text>
+              <Text style={[styles.memberRole, { color: C.textSecondary }]}>Creador</Text>
+            </View>
+          </View>
+
+          {acceptedMembers.map((member) => {
+            const name = member.profiles?.full_name ?? "Integrante";
+            return (
+              <View
+                key={member.id}
+                style={[styles.memberCard, { backgroundColor: C.surface, borderColor: C.border }]}
+              >
+                <View style={[styles.memberAvatar, { backgroundColor: C.success + "20" }]}> 
+                  <Text style={[styles.memberAvatarText, { color: C.success }]}>{getInitials(name)}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.memberName, { color: C.textPrimary }]}>{name}</Text>
+                  <Text style={[styles.memberRole, { color: C.success }]}>Participante aceptado</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {isOwnPost && (
+          <View style={[styles.section, { borderColor: C.border }]}>
+            <Text style={[styles.sectionLabel, { color: C.textPlaceholder }]}>SOLICITUDES PENDIENTES</Text>
+
+            {pendingApplications.length === 0 ? (
+              <View style={[styles.emptyBox, { borderColor: C.border }]}> 
+                <Text style={[styles.emptyText, { color: C.textSecondary }]}>No hay solicitudes pendientes.</Text>
+              </View>
+            ) : (
+              pendingApplications.map((app) => {
+                const name = app.profiles?.full_name ?? "Estudiante";
+                const loadingAction = reviewingApplicationId === app.id;
+                return (
+                  <View
+                    key={app.id}
+                    style={[styles.pendingCard, { backgroundColor: C.surface, borderColor: C.border }]}
+                  >
+                    <View style={[styles.memberAvatar, { backgroundColor: C.primary + "20" }]}> 
+                      <Text style={[styles.memberAvatarText, { color: C.primary }]}>{getInitials(name)}</Text>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <TouchableOpacity
+                        onPress={() => router.push(`/perfil-estudiante/${app.applicant_id}` as any)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.memberName, styles.profileLink, { color: C.textPrimary }]}>{name}</Text>
+                      </TouchableOpacity>
+                      <Text style={[styles.pendingMessage, { color: C.textSecondary }]} numberOfLines={2}>
+                        "{app.message}"
+                      </Text>
+                    </View>
+
+                    <View style={styles.pendingActions}>
+                      <TouchableOpacity
+                        style={[styles.smallActionBtn, styles.rejectBtn, { borderColor: C.error }]}
+                        onPress={() => handleReviewApplication(app.id, "rechazada")}
+                        disabled={loadingAction}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={[styles.smallActionText, { color: C.error }]}>Rechazar</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.smallActionBtn, { backgroundColor: loadingAction ? C.border : C.success }]}
+                        onPress={() => handleReviewApplication(app.id, "aceptada")}
+                        disabled={loadingAction}
+                        activeOpacity={0.85}
+                      >
+                        {loadingAction ? (
+                          <ActivityIndicator size="small" color={C.textOnPrimary} />
+                        ) : (
+                          <Text style={[styles.smallActionText, { color: C.textOnPrimary }]}>✅ Aceptar</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {/* ── Botón flotante de acción ─────────────────────────────────────── */}
@@ -494,6 +633,93 @@ const styles = StyleSheet.create({
   descText: {
     fontSize: 15,
     lineHeight: 24,
+  },
+
+  memberCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+  },
+  counterWrap: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignSelf: "flex-start",
+  },
+  counterText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  memberAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberAvatarText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  memberName: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  memberRole: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+
+  emptyBox: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  emptyText: {
+    fontSize: 13,
+  },
+
+  pendingCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    gap: 10,
+    marginTop: 8,
+  },
+  profileLink: {
+    textDecorationLine: "underline",
+  },
+  pendingMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+    fontStyle: "italic",
+  },
+  pendingActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  smallActionBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    paddingVertical: 8,
+  },
+  rejectBtn: {
+    borderWidth: 1,
+  },
+  smallActionText: {
+    fontSize: 13,
+    fontWeight: "700",
   },
 
   // Barra flotante inferior

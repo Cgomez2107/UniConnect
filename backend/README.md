@@ -68,7 +68,6 @@ Frontend → GET study_requests
          [Filtros opcionales]
            WHERE faculty_name = ?    ← filtro por facultad
            WHERE subject_id = ?      ← filtro por materia
-           WHERE modality = ?        ← presencial / virtual / híbrido
            ilike title | description ← búsqueda por texto
 ```
 
