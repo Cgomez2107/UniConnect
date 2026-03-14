@@ -26,6 +26,8 @@ import type { Faculty, Program, Subject } from "@/types"
 import { useEffect, useMemo, useState } from "react"
 import { Alert } from "react-native"
 
+type SubjectWithPrograms = Subject & { programs?: Program[] }
+
 // ── Tipos de estado para los modales ──────────────────────────────────────────
 
 export interface FacultyModalState {
@@ -52,6 +54,41 @@ export interface SubjectModalState {
   error: string
 }
 
+export interface UseAdminResult {
+  isLoading: boolean
+  isSubmitting: boolean
+  faculties: Faculty[]
+  programs: Program[]
+  subjects: Subject[]
+  filteredFaculties: Faculty[]
+  filteredPrograms: Program[]
+  filteredSubjects: Subject[]
+  programsCountForFaculty: (fid: string) => number
+  subjectsCountForProgram: (pid: string) => number
+  programsForSubject: (sid: string) => Program[]
+  facultyModal: FacultyModalState
+  programModal: ProgramModalState
+  subjectModal: SubjectModalState
+  setFacultyModal: React.Dispatch<React.SetStateAction<FacultyModalState>>
+  setProgramModal: React.Dispatch<React.SetStateAction<ProgramModalState>>
+  setSubjectModal: React.Dispatch<React.SetStateAction<SubjectModalState>>
+  openCreateFaculty: () => void
+  openEditFaculty: (item: Faculty) => void
+  closeFacultyModal: () => void
+  openCreateProgram: () => void
+  openEditProgram: (item: Program) => void
+  closeProgramModal: () => void
+  openCreateSubject: () => void
+  openEditSubject: (item: Subject) => void
+  closeSubjectModal: () => void
+  saveFaculty: () => Promise<void>
+  deleteFaculty: (item: Faculty) => void
+  saveProgram: () => Promise<void>
+  deleteProgram: (item: Program) => void
+  saveSubject: () => Promise<void>
+  deleteSubject: (item: Subject) => void
+}
+
 const FACULTY_MODAL_INIT: FacultyModalState = {
   visible: false, mode: "create", item: null, form: { name: "" }, error: "",
 }
@@ -62,9 +99,20 @@ const SUBJECT_MODAL_INIT: SubjectModalState = {
   visible: false, mode: "create", item: null, form: { name: "", program_ids: [] }, error: "",
 }
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message
+  return "Ocurrió un error inesperado."
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useAdmin(search: string) {
+/**
+ * Administra estado, validaciones y acciones CRUD del panel de administración.
+ *
+ * @param search Texto de búsqueda aplicado sobre facultades, programas y materias.
+ * @returns API completa de datos, modales y acciones para la vista admin.
+ */
+export function useAdmin(search: string): UseAdminResult {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -87,10 +135,10 @@ export function useAdmin(search: string) {
           getSubjects(),
         ])
         setFaculties(facs)
-        setPrograms(progs as Program[])
-        setSubjects(subs as Subject[])
-      } catch (e: any) {
-        Alert.alert("Error", "No se pudieron cargar los datos: " + e.message)
+        setPrograms(progs)
+        setSubjects(subs)
+      } catch (error: unknown) {
+        Alert.alert("Error", "No se pudieron cargar los datos: " + getErrorMessage(error))
       } finally {
         setIsLoading(false)
       }
@@ -123,10 +171,12 @@ export function useAdmin(search: string) {
     programs.filter((p) => p.faculty_id === fid).length
 
   const subjectsCountForProgram = (pid: string) =>
-    subjects.filter((s) => s.programs?.some((p: any) => p.id === pid)).length
+    subjects.filter((s) => s.programs?.some((p) => p.id === pid)).length
 
-  const programsForSubject = (sid: string) =>
-    subjects.find((s) => s.id === sid)?.programs ?? []
+  const programsForSubject = (sid: string): Program[] => {
+    const subject = subjects.find((s): s is SubjectWithPrograms => s.id === sid)
+    return subject?.programs ?? []
+  }
 
   // ── Acciones de modal ─────────────────────────────────────────────────────
   const openCreateFaculty = () => setFacultyModal({ ...FACULTY_MODAL_INIT, visible: true })
@@ -148,7 +198,7 @@ export function useAdmin(search: string) {
       visible: true, mode: "edit", item,
       form: {
         name: item.name,
-        program_ids: (item.programs ?? []).map((p: any) => p.id),
+        program_ids: (item.programs ?? []).map((p) => p.id),
       },
       error: "",
     })
@@ -189,8 +239,8 @@ export function useAdmin(search: string) {
         )
       }
       closeFacultyModal()
-    } catch (e: any) {
-      setFacultyModal((p) => ({ ...p, error: e.message }))
+    } catch (error: unknown) {
+      setFacultyModal((p) => ({ ...p, error: getErrorMessage(error) }))
     } finally {
       setIsSubmitting(false)
     }
@@ -215,11 +265,11 @@ export function useAdmin(search: string) {
               setSubjects((p) =>
                 p.map((s) => ({
                   ...s,
-                  programs: s.programs?.filter((pr: any) => !progIds.includes(pr.id)),
+                  programs: s.programs?.filter((pr) => !progIds.includes(pr.id)),
                 }))
               )
-            } catch (e: any) {
-              Alert.alert("Error", e.message)
+            } catch (error: unknown) {
+              Alert.alert("Error", getErrorMessage(error))
             }
           },
         },
@@ -262,8 +312,8 @@ export function useAdmin(search: string) {
         )
       }
       closeProgramModal()
-    } catch (e: any) {
-      setProgramModal((p) => ({ ...p, error: e.message }))
+    } catch (error: unknown) {
+      setProgramModal((p) => ({ ...p, error: getErrorMessage(error) }))
     } finally {
       setIsSubmitting(false)
     }
@@ -286,11 +336,11 @@ export function useAdmin(search: string) {
               setSubjects((p) =>
                 p.map((s) => ({
                   ...s,
-                  programs: s.programs?.filter((pr: any) => pr.id !== item.id),
+                  programs: s.programs?.filter((pr) => pr.id !== item.id),
                 }))
               )
-            } catch (e: any) {
-              Alert.alert("Error", e.message)
+            } catch (error: unknown) {
+              Alert.alert("Error", getErrorMessage(error))
             }
           },
         },
@@ -332,8 +382,8 @@ export function useAdmin(search: string) {
         )
       }
       closeSubjectModal()
-    } catch (e: any) {
-      setSubjectModal((p) => ({ ...p, error: e.message }))
+    } catch (error: unknown) {
+      setSubjectModal((p) => ({ ...p, error: getErrorMessage(error) }))
     } finally {
       setIsSubmitting(false)
     }
@@ -350,8 +400,8 @@ export function useAdmin(search: string) {
             try {
               await sbDeleteSubject(item.id)
               setSubjects((p) => p.filter((s) => s.id !== item.id))
-            } catch (e: any) {
-              Alert.alert("Error", e.message)
+            } catch (error: unknown) {
+              Alert.alert("Error", getErrorMessage(error))
             }
           },
         },

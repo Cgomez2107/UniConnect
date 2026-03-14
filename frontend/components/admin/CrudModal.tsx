@@ -11,8 +11,10 @@ import {
   Modal,
   Platform,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
+  TextStyle,
   TouchableOpacity,
   View,
 } from "react-native"
@@ -28,6 +30,18 @@ interface Props {
   C: typeof Colors["light"]
 }
 
+/**
+ * Modal reutilizable para operaciones CRUD del panel admin.
+ *
+ * @param visible Controla la visibilidad del modal.
+ * @param title Título principal mostrado en la cabecera.
+ * @param error Mensaje de error de validación o persistencia.
+ * @param isSubmitting Indica si hay una operación de guardado en curso.
+ * @param onClose Cierra el modal.
+ * @param onSave Ejecuta la acción de guardado.
+ * @param children Contenido del formulario renderizado dentro del modal.
+ * @param C Paleta de colores activa de la aplicación.
+ */
 export function CrudModal({
   visible, title, error, isSubmitting, onClose, onSave, children, C,
 }: Props) {
@@ -93,7 +107,7 @@ export function FieldLabel({
 }: {
   text: string
   C: typeof Colors["light"]
-  style?: object
+  style?: StyleProp<TextStyle>
 }) {
   return (
     <Text

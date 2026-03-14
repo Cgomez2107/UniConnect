@@ -11,7 +11,7 @@
 import { AdminHeader } from "@/components/admin/AdminHeader"
 import { AdminTabs, type ActiveTab } from "@/components/admin/AdminTabs"
 import { CrudModal, FieldLabel } from "@/components/admin/CrudModal"
-import { FacultyRow, ProgramRow, RowActions, SubjectRow } from "@/components/admin/CatalogRow"
+import { FacultyRow, ProgramRow, SubjectRow } from "@/components/admin/CatalogRow"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
@@ -19,7 +19,7 @@ import { useAdmin } from "@/hooks/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
 import { router } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Alert,
   FlatList,
@@ -45,12 +45,22 @@ export default function AdminPanelScreen() {
 
   const admin = useAdmin(search)
 
+  const searchPlaceholder =
+    activeTab === "facultades"
+      ? "Buscar facultad..."
+      : activeTab === "programas"
+        ? "Buscar programa o facultad..."
+        : "Buscar materia..."
+
   // ── Tabs config ────────────────────────────────────────────────────────────
-  const TABS = [
-    { key: "facultades" as ActiveTab, emoji: "🏛️", label: "Facultades", count: admin.faculties.length },
-    { key: "programas"  as ActiveTab, emoji: "🎓", label: "Programas",  count: admin.programs.length  },
-    { key: "materias"   as ActiveTab, emoji: "📚", label: "Materias",   count: admin.subjects.length  },
-  ]
+  const tabs = useMemo(
+    () => [
+      { key: "facultades" as const, emoji: "🏛️", label: "Facultades", count: admin.faculties.length },
+      { key: "programas" as const, emoji: "🎓", label: "Programas", count: admin.programs.length },
+      { key: "materias" as const, emoji: "📚", label: "Materias", count: admin.subjects.length },
+    ],
+    [admin.faculties.length, admin.programs.length, admin.subjects.length]
+  )
 
   const handleSignOut = () => {
     Alert.alert("Cerrar sesión", "¿Seguro que quieres salir?", [
@@ -80,7 +90,7 @@ export default function AdminPanelScreen() {
       <AdminHeader userName={user?.fullName ?? "Admin"} onSignOut={handleSignOut} C={C} />
 
       <AdminTabs
-        tabs={TABS}
+        tabs={tabs}
         activeTab={activeTab}
         onTabChange={(tab) => { setActiveTab(tab); setSearch("") }}
         C={C}
@@ -92,11 +102,7 @@ export default function AdminPanelScreen() {
           <Text style={{ color: C.textPlaceholder, marginRight: 6 }}>🔍</Text>
           <TextInput
             style={[styles.searchInput, { color: C.textPrimary }]}
-            placeholder={
-              activeTab === "facultades" ? "Buscar facultad..." :
-              activeTab === "programas"  ? "Buscar programa o facultad..." :
-              "Buscar materia..."
-            }
+            placeholder={searchPlaceholder}
             placeholderTextColor={C.textPlaceholder}
             value={search}
             onChangeText={setSearch}
@@ -170,7 +176,7 @@ export default function AdminPanelScreen() {
               renderItem={({ item }) => (
                 <SubjectRow
                   item={item}
-                  programs={admin.programsForSubject(item.id) as any}
+                  programs={admin.programsForSubject(item.id)}
                   onEdit={() => admin.openEditSubject(item)}
                   onDelete={() => admin.deleteSubject(item)}
                   C={C}

@@ -16,6 +16,9 @@ interface RowActionsProps {
   C: typeof Colors["light"]
 }
 
+/**
+ * Renderiza las acciones estándar de edición y eliminación para una fila del catálogo.
+ */
 export function RowActions({ onEdit, onDelete, C }: RowActionsProps) {
   return (
     <View style={styles.actions}>
@@ -48,6 +51,9 @@ interface FacultyRowProps {
   C: typeof Colors["light"]
 }
 
+/**
+ * Renderiza una fila de facultad con su contador de programas asociados.
+ */
 export function FacultyRow({ item, index, programsCount, onEdit, onDelete, C }: FacultyRowProps) {
   return (
     <View style={[styles.row, { backgroundColor: C.surface, borderColor: C.border }]}>
@@ -76,11 +82,14 @@ interface ProgramRowProps {
   C: typeof Colors["light"]
 }
 
+/**
+ * Renderiza una fila de programa con facultad asociada y número de materias vinculadas.
+ */
 export function ProgramRow({ item, index, subjectsCount, onEdit, onDelete, C }: ProgramRowProps) {
   return (
     <View style={[styles.row, { backgroundColor: C.surface, borderColor: C.border }]}>
-      <View style={[styles.indexBox, { backgroundColor: (C as any).accent + "30" }]}>
-        <Text style={[styles.indexText, { color: (C as any).accentDark }]}>{index + 1}</Text>
+      <View style={[styles.indexBox, { backgroundColor: C.accent + "30" }]}>
+        <Text style={[styles.indexText, { color: C.accentDark }]}>{index + 1}</Text>
       </View>
       <View style={styles.info}>
         <Text style={[styles.name, { color: C.textPrimary }]}>{item.name}</Text>
@@ -110,6 +119,9 @@ interface SubjectRowProps {
   C: typeof Colors["light"]
 }
 
+/**
+ * Renderiza una fila de materia con los programas a los que está vinculada.
+ */
 export function SubjectRow({ item, programs, onEdit, onDelete, C }: SubjectRowProps) {
   return (
     <View style={[styles.row, { backgroundColor: C.surface, borderColor: C.border }]}>

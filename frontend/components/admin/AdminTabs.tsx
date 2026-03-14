@@ -8,7 +8,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 export type ActiveTab = "facultades" | "programas" | "materias"
 
-interface Tab {
+export interface AdminTabItem {
   key: ActiveTab
   emoji: string
   label: string
@@ -16,12 +16,15 @@ interface Tab {
 }
 
 interface Props {
-  tabs: Tab[]
+  tabs: AdminTabItem[]
   activeTab: ActiveTab
   onTabChange: (tab: ActiveTab) => void
   C: typeof Colors["light"]
 }
 
+/**
+ * Navegación por pestañas del catálogo académico en el panel admin.
+ */
 export function AdminTabs({ tabs, activeTab, onTabChange, C }: Props) {
   return (
     <View style={[styles.row, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
