@@ -19,7 +19,6 @@ import { PrimaryButton } from "@/components/ui/Primarybutton";
 import { SplashLoader } from "@/components/ui/SplashLoader";
 import { Colors } from "@/constants/Colors";
 import { useGoogleAuth } from "@/lib/services/googleAuthService";
-import type { UserRole } from "@/store/useAuthStore";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const UCALDAS_REGEX = /^[a-zA-Z0-9._%+-]+@ucaldas\.edu\.co$/;
@@ -37,7 +36,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [formError, setFormError] = useState("");
-  const [splashRole, setSplashRole] = useState<UserRole | null>(null);
+  const [showSplash, setShowSplash] = useState(false);
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -49,19 +48,21 @@ export default function LoginScreen() {
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const role = user.role ?? "estudiante";
-    setSplashRole(role);
+    setShowSplash(true);
 
-    if (navigationTimerRef.current) return;
+    if (navigationTimerRef.current) {
+      clearTimeout(navigationTimerRef.current);
+      navigationTimerRef.current = null;
+    }
 
     navigationTimerRef.current = setTimeout(() => {
-      if (role === "admin") {
+      if (user.role === "admin") {
         router.replace("/(admin)" as any);
       } else {
         router.replace("/(tabs)" as any);
       }
     }, 700);
-  }, [isAuthenticated, user?.id, user?.role]);
+  }, [isAuthenticated, user, user?.id, user?.role]);
 
   useEffect(() => {
     return () => {
@@ -96,7 +97,7 @@ export default function LoginScreen() {
       await signIn(email, password);
 
     } catch (error: any) {
-      setSplashRole(null);
+      setShowSplash(false);
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
         navigationTimerRef.current = null;
@@ -112,15 +113,10 @@ export default function LoginScreen() {
     }
   };
 
-  if (splashRole !== null) {
+  if (showSplash) {
     return (
       <SplashLoader
-        role={splashRole}
-        message={
-          splashRole === "admin"
-            ? "Cargando panel de administración..."
-            : "Cargando tu feed de estudio..."
-        }
+        message="Iniciando sesión..."
       />
     );
   }
