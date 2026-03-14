@@ -1,8 +1,10 @@
+import { resolveSessionFromOAuthUrl } from "@/lib/services/googleAuthService";
 import { SplashLoader } from "@/components/ui/SplashLoader";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
+import * as Linking from "expo-linking";
 
 const withTimeout = async <T,>(
   promise: Promise<T>,
@@ -47,6 +49,30 @@ const fetchProfileByUserId = async (userId: string): Promise<ProfileRow | null> 
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getSessionUser = async () => {
+  const session = await withTimeout(
+    supabase.auth.getSession().then((result) => result.data.session),
+    2500,
+    null
+  );
+  return session?.user ?? null;
+};
+
+const waitForSessionUser = async (attempts = 5, delayMs = 350) => {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const sessionUser = await getSessionUser();
+    if (sessionUser) {
+      return sessionUser;
+    }
+
+    if (attempt < attempts - 1) {
+      await sleep(delayMs);
+    }
+  }
+
+  return null;
+};
+
 const resolveRoleForRouting = async (
   userId: string,
   fallbackRole: "estudiante" | "admin"
@@ -67,9 +93,13 @@ const resolveRoleForRouting = async (
 
 export default function OAuthCallbackScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrating = useAuthStore((s) => s.isHydrating);
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const incomingUrl = Linking.useURL();
   const recoveringRef = useRef(false);
+  const lastRoutedRoleRef = useRef<"estudiante" | "admin" | null>(null);
+  const lastProcessedUrlRef = useRef<string | null>(null);
   const [waitExpired, setWaitExpired] = useState(false);
   const [hardTimeoutExpired, setHardTimeoutExpired] = useState(false);
 
@@ -84,6 +114,11 @@ export default function OAuthCallbackScreen() {
   }, []);
 
   const routeByRole = (role: "estudiante" | "admin") => {
+    if (lastRoutedRoleRef.current === role) {
+      return;
+    }
+    lastRoutedRoleRef.current = role;
+
     if (role === "admin") {
       router.replace("/(admin)" as any);
       return;
@@ -91,29 +126,67 @@ export default function OAuthCallbackScreen() {
     router.replace("/(tabs)" as any);
   };
 
+  const routeByRoleOptimistic = (
+    userId: string,
+    fallbackRole: "estudiante" | "admin"
+  ) => {
+    // Fast path: route immediately, then correct only if backend resolves admin.
+    routeByRole(fallbackRole);
+
+    resolveRoleForRouting(userId, fallbackRole)
+      .then((resolvedRole) => {
+        if (resolvedRole !== fallbackRole) {
+          routeByRole(resolvedRole);
+        }
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     if (isAuthenticated && user) {
-      resolveRoleForRouting(user.id, user.role)
-        .then((role) => routeByRole(role))
-        .catch(() => routeByRole(user.role));
+      routeByRoleOptimistic(user.id, user.role);
       return;
     }
 
-    if (!waitExpired || recoveringRef.current) return;
+    if ((!waitExpired && !incomingUrl) || recoveringRef.current) return;
 
     recoveringRef.current = true;
 
     (async () => {
-      const session = await withTimeout(
-        supabase.auth.getSession().then((result) => result.data.session),
-        2500,
-        null
-      );
-      const sessionUser = session?.user;
+      if (incomingUrl && lastProcessedUrlRef.current !== incomingUrl) {
+        lastProcessedUrlRef.current = incomingUrl;
+        try {
+          await resolveSessionFromOAuthUrl(incomingUrl);
+        } catch {
+          // Continuamos con recuperación por sesión/store.
+        }
+      }
+
+      let sessionUser = await getSessionUser();
 
       if (!sessionUser) {
-        router.replace("/login" as any);
-        return;
+        const currentState = useAuthStore.getState();
+        if (currentState.isAuthenticated && currentState.user) {
+            routeByRoleOptimistic(currentState.user.id, currentState.user.role);
+          return;
+        }
+
+        sessionUser = await waitForSessionUser();
+
+        if (!sessionUser) {
+          const lateState = useAuthStore.getState();
+          if (lateState.isAuthenticated && lateState.user) {
+            routeByRoleOptimistic(lateState.user.id, lateState.user.role);
+            return;
+          }
+
+          if (lateState.isHydrating) {
+            return;
+          }
+
+          router.replace("/login" as any);
+          return;
+        }
       }
 
       const email = sessionUser.email?.toLowerCase() ?? "";
@@ -161,10 +234,13 @@ export default function OAuthCallbackScreen() {
       recoveringRef.current = false;
     });
 
-  }, [isAuthenticated, user, waitExpired, setUser]);
+  }, [incomingUrl, isAuthenticated, isHydrating, user, waitExpired, setUser]);
 
   useEffect(() => {
     if (!hardTimeoutExpired || isAuthenticated) return;
+    if (isHydrating) {
+      return;
+    }
 
     (async () => {
       try {
@@ -181,7 +257,7 @@ export default function OAuthCallbackScreen() {
 
       router.replace("/login" as any);
     })();
-  }, [hardTimeoutExpired, isAuthenticated]);
+  }, [hardTimeoutExpired, isAuthenticated, isHydrating]);
 
   return <SplashLoader message="Iniciando sesión..." />;
 }

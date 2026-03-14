@@ -21,34 +21,35 @@ function getOAuthRedirectUrl() {
   })
 }
 
+export async function resolveSessionFromOAuthUrl(url: string) {
+  const queryParams = extractQueryParams(url)
+  const hashParams = extractHashParams(url)
+
+  if (queryParams.code) {
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(queryParams.code)
+    if (exchangeError) throw exchangeError
+    return "code"
+  }
+
+  if (hashParams.access_token && hashParams.refresh_token) {
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: hashParams.access_token,
+      refresh_token: hashParams.refresh_token,
+    })
+    if (sessionError) throw sessionError
+    return "token"
+  }
+
+  return "none"
+}
+
 export function useGoogleAuth() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const createSessionFromUrl = useCallback(async (url: string) => {
     try {
-      const queryParams = extractQueryParams(url)
-      const hashParams = extractHashParams(url)
-
-      if (queryParams.code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(queryParams.code)
-        if (exchangeError) throw exchangeError
-
-        setLoading(false)
-        return
-      }
-
-      if (hashParams.access_token && hashParams.refresh_token) {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: hashParams.access_token,
-          refresh_token: hashParams.refresh_token,
-        })
-        if (sessionError) throw sessionError
-
-        setLoading(false)
-        return
-      }
-
+      await resolveSessionFromOAuthUrl(url)
       setLoading(false)
     } catch (e: any) {
       setError(`Error: ${e.message}`)

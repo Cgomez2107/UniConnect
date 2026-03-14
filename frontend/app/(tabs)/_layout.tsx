@@ -4,6 +4,7 @@
  */
 
 import { Colors } from "@/constants/Colors";
+import { SplashLoader } from "@/components/ui/SplashLoader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Tabs } from "expo-router";
@@ -35,12 +36,17 @@ export default function TabLayout() {
   const C = Colors[scheme];
   const insets = useSafeAreaInsets(); // ✅ altura real del home indicator
   const role = useAuthStore((s) => s.user?.role);
+  const isHydrating = useAuthStore((s) => s.isHydrating);
 
   useEffect(() => {
     if (role === "admin") {
       router.replace("/(admin)" as any);
     }
   }, [role]);
+
+  if (isHydrating) {
+    return <SplashLoader message="Resolviendo sesión..." />;
+  }
 
   return (
     <Tabs

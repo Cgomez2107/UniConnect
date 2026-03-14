@@ -16,7 +16,6 @@ import {
 import { AuthInput } from "@/components/ui/AuthInput";
 import { ErrorBanner } from "@/components/ui/Errorbanner";
 import { PrimaryButton } from "@/components/ui/Primarybutton";
-import { SplashLoader } from "@/components/ui/SplashLoader";
 import { Colors } from "@/constants/Colors";
 import { useGoogleAuth } from "@/hooks/application/useGoogleAuth";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -37,10 +36,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [formError, setFormError] = useState("");
-  const [showSplash, setShowSplash] = useState(false);
-  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const splashWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasNavigatedRef = useRef(false);
+  const lastRedirectKeyRef = useRef<string | null>(null);
 
   const {
     loading: googleLoading,
@@ -55,64 +52,25 @@ export default function LoginScreen() {
 
     hasNavigatedRef.current = true;
 
-    setShowSplash(true);
-
-    if (navigationTimerRef.current) {
-      clearTimeout(navigationTimerRef.current);
-      navigationTimerRef.current = null;
+    const redirectKey = `${user.id}:${user.role}`;
+    if (lastRedirectKeyRef.current === redirectKey) {
+      return;
     }
+    lastRedirectKeyRef.current = redirectKey;
 
-    navigationTimerRef.current = setTimeout(() => {
-      navigationTimerRef.current = null;
-      if (user.role === "admin") {
-        router.replace("/(admin)" as any);
-      } else {
-        router.replace("/(tabs)" as any);
-      }
-    }, 180);
+    if (user.role === "admin") {
+      router.replace("/(admin)" as any);
+    } else {
+      router.replace("/(tabs)" as any);
+    }
   }, [isHydrating, isAuthenticated, user]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       hasNavigatedRef.current = false;
+      lastRedirectKeyRef.current = null;
     }
   }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (!showSplash) {
-      if (splashWatchdogRef.current) {
-        clearTimeout(splashWatchdogRef.current);
-        splashWatchdogRef.current = null;
-      }
-      return;
-    }
-
-    if (splashWatchdogRef.current) return;
-
-    splashWatchdogRef.current = setTimeout(() => {
-      splashWatchdogRef.current = null;
-      setShowSplash(false);
-      setFormError("La sesión tardó más de lo esperado. Reintentamos automáticamente.");
-      if (user?.role === "admin") {
-        router.replace("/(admin)" as any);
-      } else {
-        router.replace("/(tabs)" as any);
-      }
-    }, 4000);
-  }, [showSplash, user?.role]);
-
-  useEffect(() => {
-    return () => {
-      if (navigationTimerRef.current) {
-        clearTimeout(navigationTimerRef.current);
-        navigationTimerRef.current = null;
-      }
-      if (splashWatchdogRef.current) {
-        clearTimeout(splashWatchdogRef.current);
-        splashWatchdogRef.current = null;
-      }
-    };
-  }, []);
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
@@ -139,15 +97,6 @@ export default function LoginScreen() {
 
     } catch (error: any) {
       hasNavigatedRef.current = false;
-      setShowSplash(false);
-      if (navigationTimerRef.current) {
-        clearTimeout(navigationTimerRef.current);
-        navigationTimerRef.current = null;
-      }
-      if (splashWatchdogRef.current) {
-        clearTimeout(splashWatchdogRef.current);
-        splashWatchdogRef.current = null;
-      }
       const msg: string = error?.message ?? "";
       if (msg.includes("Email not confirmed")) {
         setFormError("Confirma tu correo institucional antes de ingresar.");
@@ -158,14 +107,6 @@ export default function LoginScreen() {
       }
     }
   };
-
-  if (showSplash) {
-    return (
-      <SplashLoader
-        message="Iniciando sesión..."
-      />
-    );
-  }
 
   const isValid = UCALDAS_REGEX.test(email) && password.length >= 6;
 

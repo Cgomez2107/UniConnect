@@ -53,6 +53,7 @@ export default function FeedScreen() {
   const [searchMode, setSearchMode] = useState<SearchMode>("solicitudes");
   const [search, setSearch] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [enrolledSubjectIds, setEnrolledSubjectIds] = useState<string[] | null>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [userSubjects, setUserSubjects] = useState<FeedSubject[]>([]);
   const [subjectsLoaded, setSubjectsLoaded] = useState(false);
@@ -80,13 +81,8 @@ export default function FeedScreen() {
   const [resourceSubjectId, setResourceSubjectId] = useState<string | null>(null);
   const [resources, setResources] = useState<any[]>([]);
 
-  const enrolledSubjectIds = useMemo(
-    () => userSubjects.map((s) => s.id),
-    [userSubjects]
-  );
-
   const fetchRequests = useCallback(async () => {
-    if (!subjectsLoaded) return;
+    if (!subjectsLoaded || enrolledSubjectIds === null) return;
 
     setInitialRequestsLoaded(false);
     try {
@@ -119,8 +115,14 @@ export default function FeedScreen() {
 
   useEffect(() => {
     getEnrolledSubjectsForUser()
-      .then((subjects) => setUserSubjects(subjects))
-      .catch(() => setUserSubjects([]))
+      .then((subjects) => {
+        setUserSubjects(subjects);
+        setEnrolledSubjectIds(subjects.map((s) => s.id));
+      })
+      .catch(() => {
+        setUserSubjects([]);
+        setEnrolledSubjectIds([]);
+      })
       .finally(() => setSubjectsLoaded(true));
   }, []);
 
@@ -165,7 +167,7 @@ export default function FeedScreen() {
   }, [fetchResources, resourceSubjectId]);
 
   const loadMoreRequests = useCallback(async () => {
-    if (!subjectsLoaded || !hasMoreRequests || loadingMoreRequests || requestsLoading) return;
+    if (!subjectsLoaded || enrolledSubjectIds === null || !hasMoreRequests || loadingMoreRequests || requestsLoading) return;
 
     setLoadingMoreRequests(true);
     try {
@@ -236,7 +238,11 @@ export default function FeedScreen() {
     <View style={[styles.container, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
 
-      <FeedHeader count={filtered.length} loading={!subjectsLoaded || requestsLoading} mode={searchMode} />
+      <FeedHeader
+        count={filtered.length}
+        loading={!subjectsLoaded || enrolledSubjectIds === null || requestsLoading}
+        mode={searchMode}
+      />
 
       {/* Toggle de modo de búsqueda */}
       <SearchModeToggle mode={searchMode} onChangeMode={setSearchMode} />
@@ -251,8 +257,8 @@ export default function FeedScreen() {
             onOpenFilters={() => setShowFilters(true)}
           />
 
-          {!subjectsLoaded || (!initialRequestsLoaded && requestsLoading && !refreshingSolicitudes) ? (
-            <LoadingState message="Cargando solicitudes..." />
+          {!subjectsLoaded || enrolledSubjectIds === null || !initialRequestsLoaded ? (
+            <LoadingState message="Cargando tu feed..." />
           ) : (
             <FlatList
               data={filtered}

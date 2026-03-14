@@ -48,7 +48,7 @@ const buildFallbackUser = (sessionUser: any): UserSession => ({
 
 const HYDRATION_TIMEOUT_MS = 9000;
 const SESSION_TIMEOUT_MS = 1800;
-const PROFILE_TIMEOUT_MS = 7000;
+const PROFILE_TIMEOUT_MS = 2200;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -116,7 +116,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isHydrating: true,
           }));
 
-          const profile = await getMyProfile().catch((error: unknown) => {
+          const profile = await withTimeout(getMyProfile(), PROFILE_TIMEOUT_MS).catch((error: unknown) => {
             console.warn("[authStore] No se pudo obtener perfil completo:", error);
             return null;
           });
@@ -233,58 +233,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signIn: async (email, password) => {
-    set({ isLoading: true });
+    const normalizedEmail = email.trim().toLowerCase();
+    set({ isLoading: true, isHydrating: true });
+
     try {
-      const { user } = await sbSignIn({ email, password });
+      const { user } = await sbSignIn({ email: normalizedEmail, password });
       if (!user) throw new Error("No se pudo iniciar sesión");
-      const fallbackUser = buildFallbackUser(user);
-      set({
-        user: fallbackUser,
-        isAuthenticated: true,
-      });
-
-      const profile = await withTimeout(getMyProfile(), PROFILE_TIMEOUT_MS).catch(
-        (error: unknown) => {
-          if (!isAuthTimeoutError(error)) {
-            console.warn("[authStore] No se pudo obtener perfil completo (continuando)");
-          }
-          return null;
-        }
-      );
-
-      if (profile) {
-        set((state) => ({
-          user: state.user
-            ? {
-                ...state.user,
-                fullName: profile.full_name,
-                avatarUrl: profile.avatar_url,
-                role: profile.role,
-                semester: profile.semester,
-                bio: profile.bio,
-              }
-            : null,
-        }));
-        registerAndSavePushToken(profile.id).catch(() => {});
-      } else {
-        getMyProfile()
-          .then((profileRetry) => {
-            if (!profileRetry) return;
-            set((state) => ({
-              user: state.user
-                ? {
-                    ...state.user,
-                    fullName: profileRetry.full_name,
-                    avatarUrl: profileRetry.avatar_url,
-                    role: profileRetry.role,
-                    semester: profileRetry.semester,
-                    bio: profileRetry.bio,
-                  }
-                : null,
-            }));
-          })
-          .catch(() => {});
-      }
+    } catch (error) {
+      set({ user: null, isAuthenticated: false, isHydrating: false });
+      throw error;
     } finally {
       set({ isLoading: false });
     }
