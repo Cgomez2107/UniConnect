@@ -1,0 +1,17 @@
+{
+  "name": "@uniconnect/profiles-catalog",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"profiles-catalog dev config scaffold\"",
+    "build": "echo \"profiles-catalog build config scaffold\"",
+    "lint": "echo \"profiles-catalog lint config scaffold\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"profiles-catalog tests config scaffold\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.1"
+  }
+}

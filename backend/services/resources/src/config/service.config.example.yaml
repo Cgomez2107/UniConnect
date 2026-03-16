@@ -1,0 +1,22 @@
+﻿service:
+  name: resources
+  port: 3103
+  apiPrefix: /api/v1
+  requestTimeoutMs: 15000
+  gracefulShutdownMs: 15000
+
+security:
+  jwtIssuer: ${JWT_ISSUER}
+  jwtAudience: ${JWT_AUDIENCE}
+  requireAuthByDefault: true
+
+database:
+  provider: postgres
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  dbName: ${DB_NAME}
+
+observability:
+  logs: structured-json
+  includeRequestId: true
+  metricsEnabled: true

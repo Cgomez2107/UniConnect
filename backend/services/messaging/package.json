@@ -1,0 +1,17 @@
+{
+  "name": "@uniconnect/messaging",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"messaging dev config scaffold\"",
+    "build": "echo \"messaging build config scaffold\"",
+    "lint": "echo \"messaging lint config scaffold\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"messaging tests config scaffold\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.1"
+  }
+}

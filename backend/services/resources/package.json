@@ -1,0 +1,17 @@
+{
+  "name": "@uniconnect/resources",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"resources dev config scaffold\"",
+    "build": "echo \"resources build config scaffold\"",
+    "lint": "echo \"resources lint config scaffold\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"resources tests config scaffold\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.1"
+  }
+}

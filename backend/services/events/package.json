@@ -1,0 +1,17 @@
+{
+  "name": "@uniconnect/events",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"events dev config scaffold\"",
+    "build": "echo \"events build config scaffold\"",
+    "lint": "echo \"events lint config scaffold\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"events tests config scaffold\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.1"
+  }
+}
