@@ -6,6 +6,17 @@ Capa de backend de UniConnect. Combina **Supabase Cloud** (base de datos, autent
 
 ## Arquitectura general
 
+El objetivo del monorepo Node es migrar hacia cinco microservicios de dominio:
+- `study-groups`
+- `resources`
+- `messaging`
+- `profiles-catalog`
+- `events`
+
+Notas de frontera:
+- `applications` se absorbe dentro de `study-groups` como subdominio.
+- `admin` no se modela como microservicio independiente; queda como capacidad de autorizacion/orquestacion por dominio.
+
 ```
 Frontend (Expo)
     │
@@ -85,7 +96,7 @@ Frontend → INSERT applications {request_id, applicant_id, message}
                                → Expo Push API → push al autor
 ```
 
-### Panel de administrador
+### Operaciones administrativas
 
 ```
 Frontend (rol: admin)
