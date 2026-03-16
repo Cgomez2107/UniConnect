@@ -1,271 +1,161 @@
-# Backend — UniConnect
+# Backend - UniConnect
 
-Capa de backend de UniConnect. Combina **Supabase Cloud** (base de datos, autenticación y almacenamiento gestionados) con **Supabase Edge Functions** (microservicios en runtime Deno) para lógica de negocio avanzada.
+Backend de UniConnect en monorepo Node.js con enfoque de arquitectura limpia por dominio.
 
----
+## Objetivo
 
-## Arquitectura general
+Este backend esta preparado para migrar la logica que hoy vive en Supabase hacia microservicios Node, manteniendo a Supabase principalmente como base de datos Postgres (y auth en transicion).
 
-El objetivo del monorepo Node es migrar hacia cinco microservicios de dominio:
-- `study-groups`
-- `resources`
-- `messaging`
-- `profiles-catalog`
-- `events`
+## Microservicios activos
 
-Notas de frontera:
-- `applications` se absorbe dentro de `study-groups` como subdominio.
-- `admin` no se modela como microservicio independiente; queda como capacidad de autorizacion/orquestacion por dominio.
+- gateway (BFF de entrada)
+- study-groups
+- resources (scaffold)
+- messaging (scaffold)
+- profiles-catalog (scaffold)
+- events (scaffold)
 
-```
-Frontend (Expo)
-    │
-    ├── lib/api/client.ts         ← gateway: todas las peticiones pasan por aquí
-    │       │
-    │       ├── Supabase PostgREST API    ← SELECT / INSERT / UPDATE / DELETE directo
-    │       │       │
-    │       │       └── PostgreSQL (Supabase Cloud)
-    │       │               ├── profiles          Perfiles de usuario
-    │       │               ├── faculties         Facultades
-    │       │               ├── programs          Programas académicos
-    │       │               ├── subjects          Materias
-    │       │               ├── program_subjects  Relación N:N programa-materia
-    │       │               ├── user_programs     Programas inscritos por usuario
-    │       │               ├── user_subjects     Materias inscritas por usuario
-    │       │               ├── study_requests    Solicitudes de grupos de estudio
-    │       │               └── applications      Postulaciones a solicitudes
-    │       │
-    │       └── Supabase Edge Functions  ← microservicios (Deno, deploy en Supabase)
-    │               ├── /study-groups    lógica de feed y postulaciones (STUB)
-    │               └── /notifications   push notifications via webhooks  (STUB)
-    │
-    └── Supabase Auth             ← autenticación: email/password + Google OAuth
-    └── Supabase Storage          ← almacenamiento de avatares de usuario
-```
+## Estructura del backend
 
-### ¿Por qué Edge Functions si ya existe PostgREST?
+- gateway/: entrada HTTP para la app cliente.
+- services/: microservicios por dominio.
+- shared/: contratos y tipos compartidos.
+- docs/: decisiones de arquitectura y migracion.
+- infra/: CI, docker y plantillas de despliegue.
+- supabase/: migraciones SQL y funciones legacy/stub.
 
-PostgREST cubre las operaciones CRUD simples. Las Edge Functions están pensadas para cuando se necesita:
-- Lógica de negocio compleja que no puede vivir en el cliente
-- Validaciones cruzadas entre tablas
-- Integraciones con servicios externos (push notifications, emails, etc.)
-- Endpoints que agregan datos de múltiples tablas en una sola llamada
+## Estado actual
 
----
+### gateway
 
-## Flujo de datos por funcionalidad
+Implementado y ejecutable.
 
-### Autenticación
+Incluye:
+- healthcheck: GET /health
+- proxy a study-groups: /api/v1/study-groups*
+- manejo basico de errores JSON
 
-```
-Frontend → Supabase Auth (email/password o Google OAuth)
-         ← JWT token  (incluido automáticamente en cada petición siguiente)
+### study-groups
 
-Frontend → SELECT profiles WHERE id = auth.uid()
-         ← {full_name, role, avatar_url, semester, bio}
-```
+Implementado y ejecutable.
 
-El token JWT permite que las políticas **RLS (Row Level Security)** de PostgreSQL restrinjan automáticamente qué datos puede ver cada usuario.
+Incluye:
+- GET /health
+- GET /api/v1/study-groups
+- GET /api/v1/study-groups/:id
+- POST /api/v1/study-groups
+- GET /api/v1/study-groups/:id/applications
+- POST /api/v1/study-groups/:id/apply
+- PUT /api/v1/study-groups/applications/:id/review
 
-### Feed de solicitudes
+Persistencia:
+- Usa Postgres real si detecta configuracion DB valida.
+- Hace fallback a repositorio in-memory si faltan credenciales o siguen placeholders.
 
-```
-Frontend → GET study_requests
-             JOIN subjects (name)
-             JOIN profiles (full_name, avatar_url)
-           WHERE status = 'abierta' AND is_active = true
-         ← lista de StudyRequest con datos del autor y materia
-
-         [Filtros opcionales]
-           WHERE faculty_name = ?    ← filtro por facultad
-           WHERE subject_id = ?      ← filtro por materia
-           ilike title | description ← búsqueda por texto
-```
-
-Actualmente este flujo pasa por PostgREST. Cuando `study-groups` Edge Function esté activa, el mismo flujo pasará por `fetch("/functions/v1/study-groups")` — solo cambia `client.ts`.
-
-### Postulación a un grupo
-
-```
-Frontend → INSERT applications {request_id, applicant_id, message}
-         ← {id, status: "pendiente"}
-
-         [Trigger de BD]
-         applications (INSERT) → Supabase Database Webhook
-                               → Edge Function "notifications"
-                               → Expo Push API → push al autor
-```
-
-### Operaciones administrativas
-
-```
-Frontend (rol: admin)
-  → CRUD faculties:   INSERT / UPDATE / DELETE (RLS solo permite admin)
-  → CRUD programs:    INSERT / UPDATE / DELETE
-  → CRUD subjects:    INSERT / UPDATE / DELETE
-                      + gestión de relación N:N en program_subjects
-```
-
----
-
-## Estructura de carpetas
-
-```
-backend/
-  README.md
-  supabase/
-    functions/
-      README.md          Guía de comandos Supabase CLI
-      study-groups/
-        index.ts         Edge Function: API REST de grupos de estudio
-      notifications/
-        index.ts         Edge Function: webhook para push notifications
-```
-
-### `supabase/functions/study-groups/index.ts`
-
-**Estado:** STUB — estructura completa, lógica pendiente de implementar.
-
-Rutas planeadas:
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| `GET` | `/study-groups` | Feed de solicitudes abiertas |
-| `POST` | `/study-groups` | Crear solicitud de grupo |
-| `GET` | `/study-groups/:id` | Detalle de una solicitud |
-| `POST` | `/study-groups/:id/apply` | Postularse a una solicitud |
-| `PUT` | `/study-groups/:id/review` | Aceptar o rechazar postulación |
-
-Cuando esta función esté activa, en `frontend/lib/api/client.ts` se cambia una línea:
-```typescript
-// Antes (PostgREST directo):
-supabase.from("study_requests").select(...)
-
-// Después (Edge Function):
-fetch(`${FUNCTIONS_URL}/study-groups`, { headers: { Authorization: ... } })
-```
-Ningún hook ni pantalla necesita cambiar.
-
-### `supabase/functions/notifications/index.ts`
-
-**Estado:** STUB — estructura completa, integración con Expo Push pendiente.
-
-Se dispara mediante **Database Webhooks** de Supabase:
-
-| Evento | Tabla | Acción |
-|---|---|---|
-| `INSERT` | `applications` | Notifica al autor que alguien se postuló |
-| `UPDATE status='aceptada'` | `applications` | Notifica al postulante que fue aceptado |
-| `UPDATE status='rechazada'` | `applications` | Notifica al postulante que fue rechazado |
-
----
-
-## Seguridad — RLS (Row Level Security)
-
-Las políticas de PostgreSQL garantizan que cada usuario solo accede a sus propios datos, sin importar desde dónde haga la petición:
-
-| Tabla | Lectura | Escritura |
-|---|---|---|
-| `profiles` | Solo el propio perfil | Solo el propio perfil |
-| `study_requests` | Cualquier usuario autenticado | Solo el autor |
-| `applications` | El autor de la solicitud + el postulante | Solo el postulante |
-| `faculties`, `programs`, `subjects` | Cualquier usuario autenticado | Solo rol `admin` |
-
----
-
-## Requisitos para trabajar con Edge Functions
-
-- [Supabase CLI](https://supabase.com/docs/guides/cli)
-- Docker Desktop (para pruebas locales con `supabase start`)
-
-## Comandos
-
-```bash
-# Desde la raíz del proyecto o desde backend/
-
-# Autenticarse en Supabase
-supabase login
-
-# Vincular con el proyecto remoto
-supabase link --project-ref <project-ref>
-
-# Desplegar una función
-supabase functions deploy study-groups
-supabase functions deploy notifications
-
-# Probar localmente
-supabase start
-supabase functions serve study-groups --env-file supabase/.env.local
-
-# Ver logs en tiempo real
-supabase functions logs study-groups --tail
-```
-
-## Variables de entorno para Edge Functions
-
-Crea `backend/supabase/.env.local`:
-```
-SUPABASE_URL=https://<project>.supabase.co
-SUPABASE_ANON_KEY=<anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-```
+Identidad temporal para escrituras:
+- Mientras se integra JWT, los endpoints de escritura usan el header x-user-id.
 
 ## Requisitos
 
-- [Supabase CLI](https://supabase.com/docs/guides/cli) instalado
-- Acceso al proyecto en [supabase.com](https://supabase.com)
+- Node.js 20+
+- Corepack habilitado
+- pnpm 9.x
 
-## Comandos
+## Instalacion
+
+Desde la raiz del repo:
 
 ```bash
-# Desde esta carpeta (backend/)
-
-# Autenticarse
-supabase login
-
-# Vincular con el proyecto remoto
-supabase link --project-ref <project-ref>
-
-# Desplegar funciones
-supabase functions deploy study-groups
-supabase functions deploy notifications
-
-# Probar localmente (levanta un servidor Deno local)
-supabase start
-supabase functions serve study-groups --env-file supabase/.env.local
-
-# Ver logs en producción
-supabase functions logs study-groups --tail
+cd backend
+corepack enable
+corepack prepare pnpm@9.12.0 --activate
+pnpm install
 ```
-
-## Funciones disponibles
-
-| Función          | Ruta                         | Estado  | Descripción                          |
-| ---------------- | ---------------------------- | ------- | ------------------------------------ |
-| `study-groups`   | `supabase/functions/study-groups/`  | STUB    | API REST de solicitudes de estudio   |
-| `notifications`  | `supabase/functions/notifications/` | STUB    | Webhooks para push notifications     |
 
 ## Variables de entorno
 
-Crea `supabase/.env.local`:
-```
-SUPABASE_URL=https://<project>.supabase.co
-SUPABASE_ANON_KEY=<anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-```
+Cada servicio tiene su propio .env.example.
 
-## Conexión con el frontend
+Archivos clave:
+- backend/gateway/.env.example
+- backend/services/study-groups/.env.example
 
-El frontend consume estas funciones a través de `frontend/lib/api/client.ts`.  
-Para activar una Edge Function en vez de Supabase directo, actualiza ese archivo:
 
-```ts
-// ANTES — Supabase directo
-const data = await apiGet<StudyRequest>("study_requests", q => q.select("*"))
+En PowerShell puedes crear tus archivos locales asi:
 
-// DESPUÉS — Edge Function
-const res = await fetch(`${process.env.EXPO_PUBLIC_FUNCTIONS_URL}/study-groups`)
-const data = await res.json()
+```powershell
+Copy-Item .\gateway\.env.example .\gateway\.env.local
+Copy-Item .\services\study-groups\.env.example .\services\study-groups\.env.local
 ```
 
-**Solo `client.ts` cambia. Nada en pantallas, hooks ni componentes.**
+Luego reemplaza valores placeholder, especialmente:
+- DB_HOST
+- DB_PORT
+- DB_NAME
+- DB_USER
+- DB_PASSWORD
+- JWT_ISSUER
+- JWT_JWKS_URL
+- JWT_AUDIENCE
+
+## Como correr en local
+
+Abre dos terminales dentro de backend.
+
+Terminal 1:
+
+```bash
+pnpm --filter @uniconnect/study-groups dev
+```
+
+Terminal 2:
+
+```bash
+pnpm --filter @uniconnect/gateway dev
+```
+
+Puertos por defecto:
+- gateway: 3000
+- study-groups: 3101
+
+## Pruebas rapidas de endpoints
+
+Health gateway:
+
+```bash
+curl http://localhost:3000/health
+```
+
+Listar solicitudes (via gateway):
+
+```bash
+curl "http://localhost:3000/api/v1/study-groups"
+```
+
+
+## Comandos utiles de desarrollo
+
+Desde backend:
+
+```bash
+pnpm typecheck
+pnpm build
+pnpm test
+pnpm lint
+```
+
+## Contratos y alineacion frontend
+
+Contrato OpenAPI base:
+- shared/contracts/openapi/openapi.v1.yaml
+
+Regla de migracion:
+- Cambiar frontend por dominio cuando el endpoint backend este listo.
+- Evitar migracion big-bang.
+
+## Siguientes pasos recomendados
+
+1. Integrar middleware JWT real en gateway y study-groups.
+2. Reemplazar header x-user-id por identidad extraida del token.
+3. Completar resources, messaging, profiles-catalog y events con el mismo patron.
+4. Agregar tests de integracion por caso de uso critico.
