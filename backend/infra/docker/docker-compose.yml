@@ -1,0 +1,55 @@
+﻿version: "3.9"
+services:
+  gateway:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "echo gateway scaffold"]
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../../gateway/.env.example
+
+  study-groups:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "echo study-groups scaffold"]
+    ports:
+      - "3101:3101"
+    env_file:
+      - ../../services/study-groups/.env.example
+
+  resources:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "echo resources scaffold"]
+    ports:
+      - "3103:3103"
+    env_file:
+      - ../../services/resources/.env.example
+
+  messaging:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "echo messaging scaffold"]
+    ports:
+      - "3104:3104"
+    env_file:
+      - ../../services/messaging/.env.example
+
+  profiles-catalog:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "echo profiles-catalog scaffold"]
+    ports:
+      - "3105:3105"
+    env_file:
+      - ../../services/profiles-catalog/.env.example
+
+  events:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "echo events scaffold"]
+    ports:
+      - "3106:3106"
+    env_file:
+      - ../../services/events/.env.example

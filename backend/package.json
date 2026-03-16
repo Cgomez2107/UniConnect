@@ -1,0 +1,23 @@
+{
+  "name": "uniconnect-backend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "UniConnect backend microservices monorepo",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "echo \"format config pending\"",
+    "gateway:dev": "pnpm --filter @uniconnect/gateway dev",
+    "study-groups:dev": "pnpm --filter @uniconnect/study-groups dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.3"
+  }
+}
