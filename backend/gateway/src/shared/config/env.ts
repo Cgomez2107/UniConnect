@@ -9,6 +9,15 @@ export interface GatewayEnv {
  * Fail-fast validation avoids booting with broken routing config.
  */
 export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): GatewayEnv {
+  // Use native Node.js env loading as fallback/primary for reliability with tsx watch
+  try {
+    if (typeof process.loadEnvFile === 'function') {
+      process.loadEnvFile('.env');
+    }
+  } catch (error) {
+    // Ignore if file doesn't exist
+  }
+
   const portRaw = source.PORT ?? "3000";
   const studyGroupsBaseUrl = source.STUDY_GROUPS_BASE_URL;
 

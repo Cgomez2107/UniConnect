@@ -10,6 +10,15 @@ export interface StudyGroupsEnv {
 }
 
 export function loadStudyGroupsEnv(source: NodeJS.ProcessEnv = process.env): StudyGroupsEnv {
+  // Use native Node.js env loading as fallback/primary for reliability with tsx watch
+  try {
+    if (typeof process.loadEnvFile === 'function') {
+      process.loadEnvFile('.env');
+    }
+  } catch (error) {
+    // Ignore if file doesn't exist
+  }
+
   const portRaw = source.PORT ?? "3101";
   const port = Number(portRaw);
 

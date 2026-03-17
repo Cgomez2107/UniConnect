@@ -3,8 +3,12 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { sendJson } from "./sendJson.js";
 
 /**
- * Proxies the incoming request to a downstream service preserving method,
- * headers and payload. It returns a normalized error payload on network faults.
+ * Reenvía la solicitud entrante al servicio downstream preservando método,
+ * headers y cuerpo. Devuelve un payload de error normalizado ante fallos de red.
+ *
+ * Los métodos GET y HEAD no admiten cuerpo según la especificación HTTP.
+ * Adjuntar `body` en esos casos provoca un error inmediato en Node.js fetch,
+ * por lo que se omite explícitamente antes de despachar la solicitud downstream.
  */
 export async function proxyRequest(
   req: IncomingMessage,
@@ -21,7 +25,6 @@ export async function proxyRequest(
       bodyParts.push(decoder.decode(chunk, { stream: true }));
       continue;
     }
-
     if (typeof chunk === "string") {
       bodyParts.push(chunk);
     }
@@ -39,11 +42,16 @@ export async function proxyRequest(
     }
   }
 
+  const method = req.method?.toUpperCase() ?? "GET";
+  const isPayloadMethod = method !== "GET" && method !== "HEAD";
+  const rawBody = bodyParts.join("");
+  const body = isPayloadMethod && rawBody.length > 0 ? rawBody : undefined;
+
   try {
     const downstreamResponse = await fetch(targetUrl, {
       method: req.method,
       headers,
-      body: bodyParts.length > 0 ? bodyParts.join("") : undefined,
+      body,
     });
 
     const responseText = await downstreamResponse.text();

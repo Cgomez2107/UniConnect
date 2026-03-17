@@ -15,7 +15,11 @@ export interface RequestAdminEntry {
 
 export interface IStudyRequestRepository {
   getById(id: string): Promise<StudyRequest | null>
-  getFeed(filters?: { subject_id?: string; search?: string }, page?: number, pageSize?: number): Promise<StudyRequest[]>
+  getFeed(
+    filters?: { subjectIds?: string[]; subject_id?: string; search?: string },
+    page?: number,
+    pageSize?: number
+  ): Promise<StudyRequest[]>
   getByAuthor(userId: string): Promise<StudyRequest[]>
   getEnrolledSubjects(userId: string): Promise<UserSubjectCatalogItem[]>
   getAvailableSubjectsForUser(userId: string): Promise<UserSubjectCatalogItem[]>

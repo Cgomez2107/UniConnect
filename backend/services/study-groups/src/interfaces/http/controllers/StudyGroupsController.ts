@@ -8,7 +8,6 @@ import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenSt
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
 import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
 import type { CreateStudyGroupDto } from "../dto/CreateStudyGroupDto.js";
-import type { ListStudyGroupsQueryDto } from "../dto/ListStudyGroupsQueryDto.js";
 import type { ReviewApplicationDto } from "../dto/ReviewApplicationDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
@@ -23,6 +22,18 @@ function sendJson(res: ServerResponse, statusCode: number, payload: unknown): vo
   res.end(body);
 }
 
+/**
+ * Controlador HTTP del dominio study-groups.
+ *
+ * Responsabilidad única: traducir la solicitud HTTP a llamadas de casos de uso
+ * y serializar la respuesta. No contiene lógica de negocio.
+ *
+ * Aplica el patrón Facade: oculta la complejidad de los casos de uso
+ * detrás de métodos de alto nivel que el router puede invocar directamente.
+ *
+ * Las dependencias se inyectan en el constructor (Dependency Injection),
+ * lo que facilita el reemplazo de implementaciones en tests y migraciones.
+ */
 export class StudyGroupsController {
   constructor(
     private readonly listOpenStudyRequests: ListOpenStudyRequests,
@@ -31,21 +42,33 @@ export class StudyGroupsController {
     private readonly listApplicationsByRequest: ListApplicationsByRequest,
     private readonly applyToStudyRequest: ApplyToStudyRequest,
     private readonly reviewApplication: ReviewApplication,
-  ) {}
+  ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const requestUrl = new URL(req.url ?? "/", "http://localhost");
-    const query: ListStudyGroupsQueryDto = {
-      subjectId: requestUrl.searchParams.get("subjectId") ?? undefined,
-      search: requestUrl.searchParams.get("search") ?? undefined,
-    };
 
-    const result = await this.listOpenStudyRequests.execute(query);
+    const subjectIdsRaw = requestUrl.searchParams.get("subjectIds");
+    const subjectIds = subjectIdsRaw
+      ? subjectIdsRaw.split(",").map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
+    const pageRaw = requestUrl.searchParams.get("page");
+    const limitRaw = requestUrl.searchParams.get("limit");
+
+    const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
+    const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 10;
+
+    const result = await this.listOpenStudyRequests.execute({
+      subjectId: requestUrl.searchParams.get("subjectId") ?? undefined,
+      subjectIds,
+      search: requestUrl.searchParams.get("search") ?? undefined,
+      page,
+      pageSize,
+    });
+
     sendJson(res, 200, {
       data: result,
-      meta: {
-        total: result.length,
-      },
+      meta: { total: result.length, page, pageSize },
     });
   }
 
@@ -53,21 +76,17 @@ export class StudyGroupsController {
     const result = await this.getStudyRequestById.execute(id);
 
     if (!result) {
-      sendJson(res, 404, {
-        error: "Study request not found",
-      });
+      sendJson(res, 404, { error: "Solicitud de estudio no encontrada." });
       return;
     }
 
-    sendJson(res, 200, {
-      data: result,
-    });
+    sendJson(res, 200, { data: result });
   }
 
   async create(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Missing x-user-id header" });
+      sendJson(res, 401, { error: "Token de autenticación requerido." });
       return;
     }
 
@@ -83,21 +102,29 @@ export class StudyGroupsController {
     sendJson(res, 201, { data: created });
   }
 
-  async listApplications(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
+  async listApplications(
+    req: IncomingMessage,
+    res: ServerResponse,
+    requestId: string,
+  ): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Missing x-user-id header" });
+      sendJson(res, 401, { error: "Token de autenticación requerido." });
       return;
     }
 
-    const applications = await this.listApplicationsByRequest.execute({ requestId, actorUserId });
+    const applications = await this.listApplicationsByRequest.execute({
+      requestId,
+      actorUserId,
+    });
+
     sendJson(res, 200, { data: applications, meta: { total: applications.length } });
   }
 
   async apply(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Missing x-user-id header" });
+      sendJson(res, 401, { error: "Token de autenticación requerido." });
       return;
     }
 
@@ -111,16 +138,20 @@ export class StudyGroupsController {
     sendJson(res, 201, { data: created });
   }
 
-  async review(req: IncomingMessage, res: ServerResponse, applicationId: string): Promise<void> {
+  async review(
+    req: IncomingMessage,
+    res: ServerResponse,
+    applicationId: string,
+  ): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Missing x-user-id header" });
+      sendJson(res, 401, { error: "Token de autenticación requerido." });
       return;
     }
 
     const body = await readJsonBody<ReviewApplicationDto>(req);
     if (body.status !== "aceptada" && body.status !== "rechazada") {
-      sendJson(res, 422, { error: "Review status must be 'aceptada' or 'rechazada'" });
+      sendJson(res, 422, { error: "El estado debe ser 'aceptada' o 'rechazada'." });
       return;
     }
 
@@ -130,6 +161,6 @@ export class StudyGroupsController {
       status: body.status,
     });
 
-    sendJson(res, 200, { message: "Application reviewed" });
+    sendJson(res, 200, { message: "Postulación revisada correctamente." });
   }
 }

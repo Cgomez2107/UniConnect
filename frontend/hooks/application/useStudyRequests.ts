@@ -16,30 +16,32 @@ function toErrorMessage(err: unknown, fallback: string): string {
   return fallback
 }
 
+const container = DIContainer.getInstance()
+
 export function useStudyRequests() {
-  const container = DIContainer.getInstance()
   const [state, setState] = useState<UseStudyRequestsState>({
     loading: false,
     error: null,
     data: [],
   })
 
+
   const getRequests = useCallback(
-    async (filters?: { subject_id?: string; search?: string }, page = 0, pageSize = 10) => {
-      setState({ loading: true, error: null, data: [] })
+    async (filters?: { subjectIds?: string[]; subject_id?: string; search?: string }, page = 0, pageSize = 10) => {
+      setState(prev => ({ ...prev, loading: true, error: null }));
       try {
-        const useCase = container.getGetFeedRequests()
-        const result = await useCase.execute(filters, page, pageSize)
-        setState({ loading: false, error: null, data: result })
-        return result
+        const useCase = container.getGetFeedRequests();
+        const result = await useCase.execute(filters, page, pageSize);
+        setState({ loading: false, error: null, data: result });
+        return result;
       } catch (err) {
-        const errorMsg = toErrorMessage(err, "Error al cargar solicitudes")
-        setState({ loading: false, error: errorMsg, data: [] })
-        throw err
+        const errorMsg = toErrorMessage(err, "Error al cargar solicitudes");
+        setState(prev => ({ ...prev, loading: false, error: errorMsg }));
+        throw err;
       }
     },
     [container]
-  )
+  );
 
   const createRequest = useCallback(
     async (

@@ -1,8 +1,11 @@
 import { Pool } from "pg";
 
-import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
-import type { IStudyRequestRepository } from "../../domain/repositories/IStudyRequestRepository.js";
 import type { StudyGroupsEnv } from "../../config/env.js";
+import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
+import type {
+  IStudyRequestRepository,
+  ListOpenFilters,
+} from "../../domain/repositories/IStudyRequestRepository.js";
 
 interface StudyRequestRow {
   id: string;
@@ -38,22 +41,24 @@ function mapStudyRequest(row: StudyRequestRow): StudyRequest {
     subjectName: row.subject_name ?? undefined,
     facultyName: row.faculty_name ?? undefined,
     applicationsCount:
-      row.applications_count === null || row.applications_count === undefined
+      row.applications_count == null
         ? undefined
         : Number(row.applications_count),
     author: row.author_full_name
       ? {
-          fullName: row.author_full_name,
-          avatarUrl: row.author_avatar_url,
-          bio: row.author_bio,
-        }
+        fullName: row.author_full_name,
+        avatarUrl: row.author_avatar_url,
+        bio: row.author_bio,
+      }
       : undefined,
   };
 }
 
 function buildPool(env: StudyGroupsEnv): Pool {
   if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error("Database environment variables are incomplete for PostgresStudyRequestRepository");
+    throw new Error(
+      "Variables de entorno de base de datos incompletas para PostgresStudyRequestRepository.",
+    );
   }
 
   return new Pool({
@@ -70,8 +75,13 @@ function buildPool(env: StudyGroupsEnv): Pool {
 }
 
 /**
- * Postgres adapter for study requests.
- * It mirrors the current Supabase-backed read model while moving access into the service.
+ * Implementación Postgres del repositorio de solicitudes de estudio.
+ *
+ * El pool de conexiones se crea una única vez en el constructor (Singleton por instancia),
+ * lo que garantiza reutilización de conexiones sin abrir una nueva por cada solicitud.
+ *
+ * El filtro por `subjectIds` se resuelve en el servidor mediante `= ANY($n)`,
+ * eliminando el antipatrón de filtrado en el cliente que genera paginación inconsistente.
  */
 export class PostgresStudyRequestRepository implements IStudyRequestRepository {
   private readonly pool: Pool;
@@ -80,19 +90,34 @@ export class PostgresStudyRequestRepository implements IStudyRequestRepository {
     this.pool = buildPool(env);
   }
 
-  async listOpen(filters: { subjectId?: string; search?: string } = {}): Promise<StudyRequest[]> {
-    const values: Array<string> = [];
+  async listOpen(filters: ListOpenFilters = {}): Promise<StudyRequest[]> {
+    const values: Array<string | number | string[]> = [];
     const conditions = ["sr.status = 'abierta'", "sr.is_active = true"];
 
-    if (filters.subjectId) {
+    if (filters.subjectIds && filters.subjectIds.length > 0) {
+      values.push(filters.subjectIds);
+      conditions.push(`sr.subject_id = ANY($${values.length})`);
+    } else if (filters.subjectId) {
       values.push(filters.subjectId);
       conditions.push(`sr.subject_id = $${values.length}`);
     }
 
     if (filters.search) {
       values.push(`%${filters.search}%`);
-      conditions.push(`(sr.title ILIKE $${values.length} OR sr.description ILIKE $${values.length})`);
+      conditions.push(
+        `(sr.title ILIKE $${values.length} OR sr.description ILIKE $${values.length})`,
+      );
     }
+
+    const page = filters.page ?? 0;
+    const pageSize = filters.pageSize ?? 10;
+    const offset = page * pageSize;
+
+    values.push(pageSize);
+    const limitClause = `LIMIT $${values.length}`;
+
+    values.push(offset);
+    const offsetClause = `OFFSET $${values.length}`;
 
     const result = await this.pool.query<StudyRequestRow>(
       `
@@ -107,31 +132,33 @@ export class PostgresStudyRequestRepository implements IStudyRequestRepository {
           sr.is_active,
           sr.created_at,
           sr.updated_at,
-          s.name AS subject_name,
+          s.name                                        AS subject_name,
           (
             SELECT f.name
-            FROM program_subjects ps
-            JOIN programs p ON p.id = ps.program_id
-            JOIN faculties f ON f.id = p.faculty_id
-            WHERE ps.subject_id = sr.subject_id
-            ORDER BY p.name ASC
-            LIMIT 1
-          ) AS faculty_name,
-          COALESCE(a.accepted_count, 0) + 1 AS applications_count,
-          pr.full_name AS author_full_name,
-          pr.avatar_url AS author_avatar_url,
-          pr.bio AS author_bio
+            FROM   program_subjects ps
+            JOIN   programs         p  ON p.id  = ps.program_id
+            JOIN   faculties        f  ON f.id  = p.faculty_id
+            WHERE  ps.subject_id = sr.subject_id
+            ORDER  BY p.name ASC
+            LIMIT  1
+          )                                             AS faculty_name,
+          COALESCE(a.accepted_count, 0) + 1             AS applications_count,
+          pr.full_name                                  AS author_full_name,
+          pr.avatar_url                                 AS author_avatar_url,
+          pr.bio                                        AS author_bio
         FROM study_requests sr
-        LEFT JOIN subjects s ON s.id = sr.subject_id
-        LEFT JOIN profiles pr ON pr.id = sr.author_id
+        LEFT JOIN subjects  s  ON s.id  = sr.subject_id
+        LEFT JOIN profiles  pr ON pr.id = sr.author_id
         LEFT JOIN (
           SELECT request_id, COUNT(*)::int AS accepted_count
-          FROM applications
-          WHERE status = 'aceptada'
-          GROUP BY request_id
+          FROM   applications
+          WHERE  status = 'aceptada'
+          GROUP  BY request_id
         ) a ON a.request_id = sr.id
         WHERE ${conditions.join(" AND ")}
         ORDER BY sr.created_at DESC
+        ${limitClause}
+        ${offsetClause}
       `,
       values,
     );
@@ -153,28 +180,28 @@ export class PostgresStudyRequestRepository implements IStudyRequestRepository {
           sr.is_active,
           sr.created_at,
           sr.updated_at,
-          s.name AS subject_name,
+          s.name                                        AS subject_name,
           (
             SELECT f.name
-            FROM program_subjects ps
-            JOIN programs p ON p.id = ps.program_id
-            JOIN faculties f ON f.id = p.faculty_id
-            WHERE ps.subject_id = sr.subject_id
-            ORDER BY p.name ASC
-            LIMIT 1
-          ) AS faculty_name,
-          COALESCE(a.accepted_count, 0) + 1 AS applications_count,
-          pr.full_name AS author_full_name,
-          pr.avatar_url AS author_avatar_url,
-          pr.bio AS author_bio
+            FROM   program_subjects ps
+            JOIN   programs         p  ON p.id  = ps.program_id
+            JOIN   faculties        f  ON f.id  = p.faculty_id
+            WHERE  ps.subject_id = sr.subject_id
+            ORDER  BY p.name ASC
+            LIMIT  1
+          )                                             AS faculty_name,
+          COALESCE(a.accepted_count, 0) + 1             AS applications_count,
+          pr.full_name                                  AS author_full_name,
+          pr.avatar_url                                 AS author_avatar_url,
+          pr.bio                                        AS author_bio
         FROM study_requests sr
-        LEFT JOIN subjects s ON s.id = sr.subject_id
-        LEFT JOIN profiles pr ON pr.id = sr.author_id
+        LEFT JOIN subjects  s  ON s.id  = sr.subject_id
+        LEFT JOIN profiles  pr ON pr.id = sr.author_id
         LEFT JOIN (
           SELECT request_id, COUNT(*)::int AS accepted_count
-          FROM applications
-          WHERE status = 'aceptada'
-          GROUP BY request_id
+          FROM   applications
+          WHERE  status = 'aceptada'
+          GROUP  BY request_id
         ) a ON a.request_id = sr.id
         WHERE sr.id = $1
         LIMIT 1
@@ -196,13 +223,7 @@ export class PostgresStudyRequestRepository implements IStudyRequestRepository {
       const insertResult = await this.pool.query<{ id: string }>(
         `
           INSERT INTO study_requests (
-            author_id,
-            subject_id,
-            title,
-            description,
-            max_members,
-            status,
-            is_active
+            author_id, subject_id, title, description, max_members, status, is_active
           ) VALUES ($1, $2, $3, $4, $5, 'abierta', true)
           RETURNING id
         `,
@@ -211,15 +232,14 @@ export class PostgresStudyRequestRepository implements IStudyRequestRepository {
 
       const created = await this.getById(insertResult.rows[0].id);
       if (!created) {
-        throw new Error("Study request was created but could not be reloaded");
+        throw new Error("La solicitud fue creada pero no pudo ser recuperada.");
       }
 
       return created;
     } catch (error) {
       if (error instanceof Error && error.message.includes("validate_request_subject")) {
-        throw new Error("Solo puedes crear solicitudes de materias que estes cursando actualmente.");
+        throw new Error("Solo puedes crear solicitudes de materias que estés cursando actualmente.");
       }
-
       throw error;
     }
   }
