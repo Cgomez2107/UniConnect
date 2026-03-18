@@ -41,7 +41,6 @@ export function useGoogleAuth() {
 
 		try {
 			const redirectUrl = getOAuthRedirectUrl()
-			console.log("🔑 REDIRECT URL:", redirectUrl)
 			const useCase = container.getGetOAuthSignInUrl()
 			const authUrl = await useCase.execute({
 				provider: "google",

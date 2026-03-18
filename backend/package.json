@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "dev:tunnel": "concurrently \"pnpm dev\" \"ngrok http --domain=gibbosely-multilamellar-darcey.ngrok-free.dev 3000\"",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
