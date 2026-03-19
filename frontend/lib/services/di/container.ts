@@ -1,6 +1,6 @@
 import { ApiStudyRequestRepository } from "../infrastructure/repositories/ApiStudyRequestRepository";
 import { ApiApplicationRepository } from "../infrastructure/repositories/ApiApplicationRepository";
-import { SupabaseStudyResourceRepository } from "../infrastructure/repositories/SupabaseStudyResourceRepository";
+import { ApiStudyResourceRepository } from "../infrastructure/repositories/ApiStudyResourceRepository";
 import { SupabaseMessageRepository } from "../infrastructure/repositories/SupabaseMessageRepository";
 import { SupabaseConversationRepository } from "../infrastructure/repositories/SupabaseConversationRepository";
 import { SupabaseEventRepository } from "../infrastructure/repositories/SupabaseEventRepository";
@@ -103,7 +103,7 @@ export class DIContainer {
 
   private studyRequestRepo?: ApiStudyRequestRepository;
   private applicationRepo?: ApiApplicationRepository;
-  private resourceRepo?: SupabaseStudyResourceRepository;
+  private resourceRepo?: ApiStudyResourceRepository;
   private messageRepo?: SupabaseMessageRepository;
   private conversationRepo?: SupabaseConversationRepository;
   private eventRepo?: SupabaseEventRepository;
@@ -198,7 +198,7 @@ export class DIContainer {
 
   getStudyResourceRepository(): IStudyResourceRepository {
     if (!this.resourceRepo) {
-      this.resourceRepo = new SupabaseStudyResourceRepository();
+      this.resourceRepo = new ApiStudyResourceRepository();
     }
     return this.resourceRepo;
   }

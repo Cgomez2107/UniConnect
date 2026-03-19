@@ -2,6 +2,7 @@ export interface GatewayEnv {
   readonly port: number;
   readonly nodeEnv: string;
   readonly studyGroupsBaseUrl: string;
+  readonly resourcesBaseUrl: string;
 }
 
 /**
@@ -20,6 +21,7 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
 
   const portRaw = source.PORT ?? "3000";
   const studyGroupsBaseUrl = source.STUDY_GROUPS_BASE_URL;
+  const resourcesBaseUrl = source.RESOURCES_BASE_URL;
 
   const port = Number(portRaw);
   if (!Number.isInteger(port) || port <= 0) {
@@ -30,9 +32,14 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
     throw new Error("STUDY_GROUPS_BASE_URL is required");
   }
 
+  if (!resourcesBaseUrl) {
+    throw new Error("RESOURCES_BASE_URL is required");
+  }
+
   return {
     port,
     nodeEnv: source.NODE_ENV ?? "development",
     studyGroupsBaseUrl,
+    resourcesBaseUrl,
   };
 }

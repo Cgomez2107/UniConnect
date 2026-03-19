@@ -19,6 +19,7 @@
     "study-groups:dev": "pnpm --filter @uniconnect/study-groups dev"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "turbo": "^2.1.3"
   }
 }

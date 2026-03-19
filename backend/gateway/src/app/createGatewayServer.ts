@@ -8,6 +8,10 @@ function isStudyGroupsRoute(pathname: string): boolean {
   return pathname === "/api/v1/study-groups" || pathname.startsWith("/api/v1/study-groups/");
 }
 
+function isResourcesRoute(pathname: string): boolean {
+  return pathname === "/api/v1/resources" || pathname.startsWith("/api/v1/resources/");
+}
+
 async function handleRequest(req: IncomingMessage, res: ServerResponse, env: GatewayEnv): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
 
@@ -23,6 +27,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, env: Gat
 
   if (isStudyGroupsRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.studyGroupsBaseUrl);
+    return;
+  }
+
+  if (isResourcesRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.resourcesBaseUrl);
     return;
   }
 
