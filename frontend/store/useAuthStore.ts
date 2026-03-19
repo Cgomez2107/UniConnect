@@ -41,9 +41,9 @@ const buildFallbackUser = (sessionUser: any): UserSession => ({
   bio: null,
 });
 
-const HYDRATION_TIMEOUT_MS = 9000;
-const SESSION_TIMEOUT_MS = 1800;
-const PROFILE_TIMEOUT_MS = 2200;
+const HYDRATION_TIMEOUT_MS = 12000;
+const SESSION_TIMEOUT_MS = 4500;
+const PROFILE_TIMEOUT_MS = 6000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([

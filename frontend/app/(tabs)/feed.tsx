@@ -86,15 +86,25 @@ export default function FeedScreen() {
     return enrolledSubjectIds ?? [];
   }, [selectedSubjects, enrolledSubjectIds]);
 
+  const normalizeSearch = useCallback((value: unknown): string | undefined => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    const fallback = typeof search === "string" ? search.trim() : "";
+    return fallback.length > 0 ? fallback : undefined;
+  }, [search]);
+
   // --- LÓGICA DE SOLICITUDES ---
   const fetchRequests = useCallback(
-    async (overrideSearch?: string) => {
+    async (overrideSearch?: unknown) => {
       if (!subjectsLoaded || enrolledSubjectIds === null) return;
       try {
         const result = await getRequests(
           {
             subjectIds: activeSubjectIds.length > 0 ? activeSubjectIds : undefined,
-            search: (overrideSearch ?? search).trim() || undefined,
+            search: normalizeSearch(overrideSearch),
           } as any,
           0,
           REQUESTS_PAGE_SIZE,
@@ -106,7 +116,7 @@ export default function FeedScreen() {
         setIsFirstLoad(false);
       }
     },
-    [activeSubjectIds, enrolledSubjectIds, getRequests, search, subjectsLoaded],
+    [activeSubjectIds, enrolledSubjectIds, getRequests, normalizeSearch, subjectsLoaded],
   );
 
   // --- LÓGICA DE RECURSOS ---
@@ -182,7 +192,7 @@ export default function FeedScreen() {
       const result = await getRequests(
         {
           subjectIds: activeSubjectIds.length > 0 ? activeSubjectIds : undefined,
-          search: search.trim() || undefined,
+          search: normalizeSearch(undefined),
         } as any,
         nextPage,
         REQUESTS_PAGE_SIZE,
@@ -197,7 +207,7 @@ export default function FeedScreen() {
     } finally {
       setLoadingMoreRequests(false);
     }
-  }, [activeSubjectIds, getRequests, hasMoreRequests, loadingMoreRequests, requestsError, requestsLoading, requestsPage, search, subjectsLoaded]);
+  }, [activeSubjectIds, getRequests, hasMoreRequests, loadingMoreRequests, normalizeSearch, requestsError, requestsLoading, requestsPage, subjectsLoaded]);
 
   const handlePostulateFromFeed = useCallback(
     async (requestId: string) => {
