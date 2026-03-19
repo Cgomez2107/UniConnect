@@ -25,7 +25,6 @@ import { useEffect, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -132,8 +131,14 @@ export default function RecursoDetailScreen() {
   // ── Abrir archivo ───────────────────────────────────────────────────────
   const handleOpen = () => {
     if (resource?.file_url) {
-      Linking.openURL(resource.file_url).catch(() => {
-        Alert.alert("Error", "No se pudo abrir el archivo.")
+      router.push({
+        pathname: "/viewer",
+        params: {
+          url: resource.file_url,
+          title: resource.title,
+          fileName: resource.file_name,
+          fileType: resource.file_type ?? "",
+        },
       })
     }
   }

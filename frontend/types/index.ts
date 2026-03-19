@@ -157,6 +157,13 @@ export interface Message {
   conversation_id: string;
   sender_id: string;
   content: string;
+  media_url?: string | null;
+  media_type?: string | null;
+  media_filename?: string | null;
+  reply_to_message_id?: string | null;
+  reply_preview?: string | null;
+  client_status?: "sending" | "sent" | "retrying" | "failed";
+  client_error?: string | null;
   created_at: string;
   read_at: string | null;
   // join

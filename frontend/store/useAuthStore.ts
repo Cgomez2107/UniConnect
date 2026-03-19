@@ -41,9 +41,9 @@ const buildFallbackUser = (sessionUser: any): UserSession => ({
   bio: null,
 });
 
-const HYDRATION_TIMEOUT_MS = 12000;
-const SESSION_TIMEOUT_MS = 4500;
-const PROFILE_TIMEOUT_MS = 6000;
+const HYDRATION_TIMEOUT_MS = 6000;
+const SESSION_TIMEOUT_MS = 3500;
+const PROFILE_TIMEOUT_MS = 2500;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -110,66 +110,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             return;
           }
 
-          // Mientras resolvemos perfil, mantenemos hidratación activa para evitar
-          // redirecciones tempranas a tabs cuando el usuario realmente es admin.
-          set((state) => ({
-            ...state,
-            isHydrating: true,
-          }));
-
-          const profile = await withTimeout(getMyAuthProfile.execute(), PROFILE_TIMEOUT_MS).catch((error: unknown) => {
-            console.warn("[authStore] No se pudo obtener perfil completo:", error);
-            return null;
+          // Entramos rápido con datos de sesión y completamos perfil luego.
+          set({
+            user: fallbackUser,
+            isAuthenticated: true,
+            isHydrating: false,
           });
 
-          if (profile) {
-            set((state) => ({
-              user: state.user
-                ? {
-                    ...state.user,
-                    fullName: profile.full_name,
-                    avatarUrl: profile.avatar_url,
-                    role: profile.role,
-                    semester: profile.semester,
-                    bio: profile.bio,
-                  }
-                : {
-                    ...fallbackUser,
-                    fullName: profile.full_name,
-                    avatarUrl: profile.avatar_url,
-                    role: profile.role,
-                    semester: profile.semester,
-                    bio: profile.bio,
-                  },
-              isAuthenticated: true,
-              isHydrating: false,
-            }));
-          } else {
-            set({
-              user: fallbackUser,
-              isAuthenticated: true,
-              isHydrating: false,
+          withTimeout(getMyAuthProfile.execute(), PROFILE_TIMEOUT_MS)
+            .then((profile) => {
+              if (!profile) return;
+              set((state) => ({
+                user: state.user
+                  ? {
+                      ...state.user,
+                      fullName: profile.full_name,
+                      avatarUrl: profile.avatar_url,
+                      role: profile.role,
+                      semester: profile.semester,
+                      bio: profile.bio,
+                    }
+                  : null,
+              }));
+            })
+            .catch(() => {
+              // Falla de perfil no bloquea la UI.
             });
-
-            // Reintento en segundo plano para no fijar rol incorrecto por timeout.
-            getMyAuthProfile.execute()
-              .then((profileRetry) => {
-                if (!profileRetry) return;
-                set((state) => ({
-                  user: state.user
-                    ? {
-                        ...state.user,
-                        fullName: profileRetry.full_name,
-                        avatarUrl: profileRetry.avatar_url,
-                        role: profileRetry.role,
-                        semester: profileRetry.semester,
-                        bio: profileRetry.bio,
-                      }
-                    : null,
-                }));
-              })
-              .catch(() => {});
-          }
 
           registerAndSavePushToken(session.user.id).catch(() => {});
         } catch (error) {
@@ -201,6 +167,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (isInvalidRefreshTokenError(error)) {
           console.warn("[authStore] Refresh token invalido en getSession inicial. Limpiando sesion local.");
           await clearCorruptedSession();
+          return;
+        }
+
+        if (isAuthTimeoutError(error)) {
+          console.warn("[authStore] Timeout inicial de sesión. Reintentando en background...");
+          set((state) => ({
+            ...state,
+            isHydrating: false,
+          }));
+
+          getCurrentSession
+            .execute()
+            .then((sessionRetry) => processSession(sessionRetry))
+            .catch((retryError) => {
+              console.error("[authStore] Error en reintento de sesión:", retryError);
+              set({ user: null, isAuthenticated: false, isHydrating: false });
+            });
+
           return;
         }
 

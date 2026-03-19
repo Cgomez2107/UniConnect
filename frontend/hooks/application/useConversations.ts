@@ -15,6 +15,8 @@ interface UseConversationsReturn {
 export function useConversations(): UseConversationsReturn {
 	const container = DIContainer.getInstance()
 	const user = useAuthStore((s) => s.user)
+	const isHydrating = useAuthStore((s) => s.isHydrating)
+	const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
 	const [conversations, setConversations] = useState<Conversation[]>([])
 	const [loading, setLoading] = useState(true)
@@ -23,7 +25,18 @@ export function useConversations(): UseConversationsReturn {
 
 	const fetchData = useCallback(
 		async (isRefresh = false) => {
-			if (!user?.id) return
+			if (isHydrating) {
+				return
+			}
+
+			if (!user?.id || !isAuthenticated) {
+				setConversations([])
+				setError("Tu sesión aún no está lista. Intenta recargar en unos segundos.")
+				setLoading(false)
+				setRefreshing(false)
+				return
+			}
+
 			isRefresh ? setRefreshing(true) : setLoading(true)
 			setError(null)
 			try {
@@ -37,7 +50,7 @@ export function useConversations(): UseConversationsReturn {
 				setRefreshing(false)
 			}
 		},
-		[container, user?.id]
+		[container, isAuthenticated, isHydrating, user?.id]
 	)
 
 	useFocusEffect(

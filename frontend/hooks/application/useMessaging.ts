@@ -1,6 +1,13 @@
 import { useState, useCallback } from "react"
 import { DIContainer } from "@/lib/services/di/container"
 import type { Message, Conversation } from "@/types"
+import type { CreateMessagePayload } from "@/lib/services/domain/repositories/IMessageRepository"
+
+interface PendingMessage {
+  conversationId: string
+  senderId: string
+  payload: CreateMessagePayload
+}
 
 interface UseMessagingState {
   loading: boolean
@@ -11,6 +18,7 @@ interface UseMessagingState {
 
 export function useMessaging() {
   const container = DIContainer.getInstance()
+  const [pendingByTempId, setPendingByTempId] = useState<Record<string, PendingMessage>>({})
   const [state, setState] = useState<UseMessagingState>({
     loading: false,
     error: null,
@@ -41,7 +49,12 @@ export function useMessaging() {
       try {
         const useCase = container.getGetMessages()
         const result = await useCase.execute(conversationId, limit, offset)
-        setState((prev) => ({ ...prev, loading: false, error: null, messages: result }))
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: null,
+          messages: result.map((msg) => ({ ...msg, client_status: "sent", client_error: null })),
+        }))
         return result
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Error al cargar mensajes"
@@ -53,46 +66,172 @@ export function useMessaging() {
   )
 
   const sendMessage = useCallback(
-    async (conversationId: string, senderId: string, content: string) => {
+    async (conversationId: string, senderId: string, payload: string | CreateMessagePayload) => {
+      const normalized =
+        typeof payload === "string"
+          ? { content: payload }
+          : payload
+
+      const tempId = `temp-${Date.now()}`
+      const optimisticContent = normalized.content?.trim() ?? ""
+
       // Optimistic update
       const newMessage: Message = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         conversation_id: conversationId,
         sender_id: senderId,
-        content,
+        content: optimisticContent,
+        media_url: normalized.media_url ?? null,
+        media_type: normalized.media_type ?? null,
+        media_filename: normalized.media_filename ?? null,
+        reply_to_message_id: normalized.reply_to_message_id ?? null,
+        reply_preview: normalized.reply_preview ?? null,
+        client_status: "sending",
+        client_error: null,
         created_at: new Date().toISOString(),
         read_at: null,
       }
+
+      setPendingByTempId((prev) => ({
+        ...prev,
+        [tempId]: {
+          conversationId,
+          senderId,
+          payload: normalized,
+        },
+      }))
 
       setState((prev) => ({
         ...prev,
         messages: [...prev.messages, newMessage],
       }))
 
+      const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+      const isTransientError = (err: unknown): boolean => {
+        const msg = err instanceof Error ? err.message.toLowerCase() : ""
+        return (
+          msg.includes("network") ||
+          msg.includes("timeout") ||
+          msg.includes("fetch") ||
+          msg.includes("servidor") ||
+          msg.includes("gateway") ||
+          msg.includes("503") ||
+          msg.includes("502")
+        )
+      }
+
       try {
         const useCase = container.getSendMessage()
-        const result = await useCase.execute(conversationId, senderId, content)
+
+        let attempts = 0
+        let result: Message | null = null
+        let lastError: unknown = null
+
+        while (attempts < 2 && !result) {
+          attempts += 1
+
+          if (attempts > 1) {
+            setState((prev) => ({
+              ...prev,
+              messages: prev.messages.map((m) =>
+                m.id === tempId ? { ...m, client_status: "retrying", client_error: null } : m
+              ),
+            }))
+          }
+
+          try {
+            result = await useCase.execute(conversationId, senderId, normalized)
+          } catch (err) {
+            lastError = err
+            if (attempts >= 2 || !isTransientError(err)) {
+              throw err
+            }
+            await delay(1200)
+          }
+        }
+
+        if (!result) {
+          throw lastError instanceof Error ? lastError : new Error("No se pudo enviar el mensaje")
+        }
 
         // Replace optimistic with real
         setState((prev) => ({
           ...prev,
-          messages: prev.messages.map((m) => (m.id.startsWith("temp-") ? result : m)),
+          messages: prev.messages.map((m) =>
+            m.id === tempId ? { ...result, client_status: "sent", client_error: null } : m
+          ),
         }))
+
+        setPendingByTempId((prev) => {
+          const { [tempId]: _, ...rest } = prev
+          return rest
+        })
 
         return result
       } catch (err) {
-        // Rollback optimistic update
+        const errorMsg = err instanceof Error ? err.message : "Error al enviar mensaje"
+
         setState((prev) => ({
           ...prev,
-          messages: prev.messages.filter((m) => !m.id.startsWith("temp-")),
+          messages: prev.messages.map((m) =>
+            m.id === tempId
+              ? { ...m, client_status: "failed", client_error: errorMsg }
+              : m
+          ),
+          error: errorMsg,
         }))
-
-        const errorMsg = err instanceof Error ? err.message : "Error al enviar mensaje"
-        setState((prev) => ({ ...prev, error: errorMsg }))
         throw err
       }
     },
     [container]
+  )
+
+  const retryMessage = useCallback(
+    async (tempId: string) => {
+      const pending = pendingByTempId[tempId]
+      if (!pending) {
+        throw new Error("No hay datos para reintentar este mensaje")
+      }
+
+      setState((prev) => ({
+        ...prev,
+        messages: prev.messages.map((m) =>
+          m.id === tempId ? { ...m, client_status: "retrying", client_error: null } : m
+        ),
+      }))
+
+      try {
+        const useCase = container.getSendMessage()
+        const result = await useCase.execute(
+          pending.conversationId,
+          pending.senderId,
+          pending.payload,
+        )
+
+        setState((prev) => ({
+          ...prev,
+          messages: prev.messages.map((m) =>
+            m.id === tempId ? { ...result, client_status: "sent", client_error: null } : m
+          ),
+        }))
+
+        setPendingByTempId((prev) => {
+          const { [tempId]: _, ...rest } = prev
+          return rest
+        })
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "Error al reenviar"
+        setState((prev) => ({
+          ...prev,
+          messages: prev.messages.map((m) =>
+            m.id === tempId ? { ...m, client_status: "failed", client_error: errorMsg } : m
+          ),
+          error: errorMsg,
+        }))
+      }
+    },
+    [container, pendingByTempId]
   )
 
   const getOrCreateConversation = useCallback(
@@ -115,6 +254,7 @@ export function useMessaging() {
     getConversations,
     getMessages,
     sendMessage,
+    retryMessage,
     getOrCreateConversation,
   }
 }

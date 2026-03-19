@@ -26,11 +26,51 @@ interface MessageRow {
   id: string;
   conversation_id: string;
   sender_id: string;
-  content: string;
+  content: string | null;
+  media_url: string | null;
+  media_type: string | null;
+  media_filename: string | null;
+  reply_to_message_id: string | null;
+  reply_preview: string | null;
   created_at: string | Date;
   read_at: string | Date | null;
   sender_full_name: string | null;
   sender_avatar_url: string | null;
+}
+
+const LEGACY_IMAGE_PREFIX = "__img__:";
+
+function decodeLegacyMediaContent(content: string): { content: string; mediaUrl: string | null } {
+  if (!content.startsWith(LEGACY_IMAGE_PREFIX)) {
+    return { content, mediaUrl: null };
+  }
+
+  const payload = content.slice(LEGACY_IMAGE_PREFIX.length);
+  const separatorIndex = payload.indexOf("|");
+
+  if (separatorIndex < 0) {
+    return {
+      content: "",
+      mediaUrl: payload || null,
+    };
+  }
+
+  return {
+    mediaUrl: payload.slice(0, separatorIndex) || null,
+    content: payload.slice(separatorIndex + 1),
+  };
+}
+
+function buildLegacyMediaContent(content: string, mediaUrl: string | undefined): string {
+  const cleanContent = content.trim();
+  const cleanMediaUrl = mediaUrl?.trim();
+
+  if (!cleanMediaUrl) {
+    return cleanContent;
+  }
+
+  const encoded = `${LEGACY_IMAGE_PREFIX}${cleanMediaUrl}${cleanContent ? `|${cleanContent}` : ""}`;
+  return encoded.slice(0, 1000);
 }
 
 function buildPool(env: MessagingEnv): Pool {
@@ -68,11 +108,21 @@ function mapConversation(row: ConversationRow): ConversationSummary {
 }
 
 function mapMessage(row: MessageRow): Message {
+  const rawContent = row.content ?? "";
+  const legacy = decodeLegacyMediaContent(rawContent);
+  const resolvedMediaUrl = row.media_url ?? legacy.mediaUrl;
+  const resolvedContent = row.media_url ? rawContent : legacy.content;
+
   return {
     id: row.id,
     conversationId: row.conversation_id,
     senderId: row.sender_id,
-    content: row.content,
+    content: resolvedContent,
+    mediaUrl: resolvedMediaUrl,
+    mediaType: row.media_type,
+    mediaFilename: row.media_filename,
+    replyToMessageId: row.reply_to_message_id,
+    replyPreview: row.reply_preview,
     createdAt: new Date(row.created_at).toISOString(),
     readAt: row.read_at ? new Date(row.read_at).toISOString() : null,
     sender: {
@@ -108,7 +158,13 @@ export class PostgresMessagingRepository implements IMessagingRepository {
         LEFT JOIN profiles p
           ON p.id = CASE WHEN c.participant_a = $2 THEN c.participant_b ELSE c.participant_a END
         LEFT JOIN LATERAL (
-          SELECT m.content, m.created_at
+          SELECT
+            COALESCE(
+              CASE WHEN m.content LIKE '__img__:%' THEN '📷 Foto' END,
+              NULLIF(m.content, ''),
+              CASE WHEN (to_jsonb(m)->>'media_url') IS NOT NULL THEN '📷 Foto' END
+            ) AS content,
+            m.created_at
           FROM messages m
           WHERE m.conversation_id = c.id
           ORDER BY m.created_at DESC
@@ -150,7 +206,13 @@ export class PostgresMessagingRepository implements IMessagingRepository {
         LEFT JOIN profiles p
           ON p.id = CASE WHEN c.participant_a = $1 THEN c.participant_b ELSE c.participant_a END
         LEFT JOIN LATERAL (
-          SELECT m.content, m.created_at
+          SELECT
+            COALESCE(
+              CASE WHEN m.content LIKE '__img__:%' THEN '📷 Foto' END,
+              NULLIF(m.content, ''),
+              CASE WHEN (to_jsonb(m)->>'media_url') IS NOT NULL THEN '📷 Foto' END
+            ) AS content,
+            m.created_at
           FROM messages m
           WHERE m.conversation_id = c.id
           ORDER BY m.created_at DESC
@@ -238,6 +300,11 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           m.conversation_id,
           m.sender_id,
           m.content,
+          to_jsonb(m)->>'media_url' AS media_url,
+          to_jsonb(m)->>'media_type' AS media_type,
+          to_jsonb(m)->>'media_filename' AS media_filename,
+          to_jsonb(m)->>'reply_to_message_id' AS reply_to_message_id,
+          to_jsonb(m)->>'reply_preview' AS reply_preview,
           m.created_at,
           m.read_at,
           p.full_name AS sender_full_name,
@@ -283,6 +350,11 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           m.conversation_id,
           m.sender_id,
           m.content,
+          to_jsonb(m)->>'media_url' AS media_url,
+          to_jsonb(m)->>'media_type' AS media_type,
+          to_jsonb(m)->>'media_filename' AS media_filename,
+          to_jsonb(m)->>'reply_to_message_id' AS reply_to_message_id,
+          to_jsonb(m)->>'reply_preview' AS reply_preview,
           m.created_at,
           m.read_at,
           p.full_name AS sender_full_name,
@@ -315,14 +387,56 @@ export class PostgresMessagingRepository implements IMessagingRepository {
       throw new Error("No tienes permisos para enviar mensajes en esta conversacion.");
     }
 
-    const inserted = await this.pool.query<{ id: string }>(
-      `
-        INSERT INTO messages (conversation_id, sender_id, content)
-        VALUES ($1, $2, $3)
-        RETURNING id
-      `,
-      [input.conversationId, input.senderId, input.content],
-    );
+    const normalizedContent = input.content.trim();
+    const legacySafeContent = buildLegacyMediaContent(normalizedContent, input.mediaUrl);
+
+    let insertedId: string;
+
+    try {
+      const inserted = await this.pool.query<{ id: string }>(
+        `
+          INSERT INTO messages (
+            conversation_id,
+            sender_id,
+            content,
+            media_url,
+            media_type,
+            media_filename,
+            reply_to_message_id,
+            reply_preview
+          )
+          VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''))
+          RETURNING id
+        `,
+        [
+          input.conversationId,
+          input.senderId,
+          normalizedContent,
+          input.mediaUrl ?? "",
+          input.mediaType ?? "",
+          input.mediaFilename ?? "",
+          input.replyToMessageId ?? "",
+          input.replyPreview ?? "",
+        ],
+      );
+
+      insertedId = inserted.rows[0].id;
+    } catch (error) {
+      try {
+        const legacyInserted = await this.pool.query<{ id: string }>(
+          `
+            INSERT INTO messages (conversation_id, sender_id, content)
+            VALUES ($1, $2, NULLIF($3, ''))
+            RETURNING id
+          `,
+          [input.conversationId, input.senderId, legacySafeContent],
+        );
+
+        insertedId = legacyInserted.rows[0].id;
+      } catch {
+        throw error;
+      }
+    }
 
     await this.pool.query(
       `
@@ -333,7 +447,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
       [input.conversationId],
     );
 
-    const created = await this.getMessageById(inserted.rows[0].id, input.senderId);
+    const created = await this.getMessageById(insertedId, input.senderId);
     if (!created) {
       throw new Error("El mensaje fue creado pero no pudo recuperarse.");
     }

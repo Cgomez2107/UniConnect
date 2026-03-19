@@ -1,23 +1,41 @@
 ﻿# Messaging Service
 
-Microservicio del dominio de mensajeria (US-011, US-015, US-016).
+Microservicio del dominio de mensajeria privada 1:1 de UniConnect.
 
-## Objetivo
+## Alcance
 
-Exponer una API para conversaciones 1:1 y mensajes, desacoplando este dominio del acceso directo desde frontend a Supabase.
+Este servicio cubre:
 
-## Estado actual
+- Conversaciones privadas entre dos usuarios.
+- Envio y lectura de mensajes.
+- Mensajes de texto y multimedia (imagen/audio).
+- Respuesta a mensajes (reply).
+- Compatibilidad con esquema nuevo y esquema legado.
 
-- Conversaciones:
-	- listar conversaciones del usuario autenticado.
-	- obtener conversacion por id.
-	- crear u obtener conversacion existente entre dos participantes.
-	- actualizar actividad de la conversacion (`touch`).
-- Mensajes:
-	- listar mensajes por conversacion.
-	- obtener mensaje por id.
-	- enviar mensaje.
-	- marcar mensaje como leido.
+## Integracion End-to-End
+
+Flujo completo en produccion/local:
+
+1. Frontend sube archivo a Supabase Storage.
+2. Frontend envia metadatos al gateway (`/api/v1/messages`).
+3. Gateway reenvia a `@uniconnect/messaging`.
+4. Messaging valida permisos/entrada y persiste en Postgres.
+5. Frontend consulta conversaciones/mensajes desde gateway.
+
+### Piezas involucradas
+
+- Frontend:
+	- `frontend/app/chat/[conversationId].tsx`
+	- `frontend/components/chat/ChatInput.tsx`
+	- `frontend/components/chat/MessageBubble.tsx`
+	- `frontend/lib/services/infrastructure/chatMediaUpload.ts`
+- Gateway:
+	- proxy de `/api/v1/conversations*` y `/api/v1/messages*`
+- Messaging:
+	- `backend/services/messaging/src/**`
+- Storage y migraciones:
+	- `backend/supabase/migrations/20260319_messaging_media.sql`
+	- `backend/supabase/migrations/20260319_chat_audio_bucket.sql`
 
 ## Arquitectura
 
@@ -25,31 +43,41 @@ Clean Architecture por capas:
 
 - `src/domain`: entidades y contratos.
 - `src/application`: casos de uso.
-- `src/infrastructure`: repositorios Postgres y fallback in-memory.
-- `src/interfaces`: HTTP (controlador, rutas, DTOs, middlewares).
+- `src/infrastructure`: repositorios (`Postgres` + `InMemory`).
+- `src/interfaces`: controlador HTTP, DTOs, rutas y autenticacion.
 
-Punto de entrada:
+Entry point:
 
-- `src/main.ts`: carga env, selecciona repositorio, hace wiring y arranca servidor.
+- `src/main.ts`: carga configuracion, arma dependencias y levanta servidor.
 
-## Persistencia
+## Persistencia y compatibilidad
 
-Seleccion de repositorio en runtime:
+El servicio selecciona repositorio en runtime:
 
-- Usa `PostgresMessagingRepository` cuando existe configuracion DB valida.
-- Hace fallback a `InMemoryMessagingRepository` cuando falta configuracion.
+- `PostgresMessagingRepository` cuando la configuracion de DB es valida.
+- `InMemoryMessagingRepository` como fallback en entornos sin DB.
 
-## Autenticacion y permisos
+Ademas, el repositorio Postgres contempla dos escenarios:
 
-- El actor se extrae de `x-user-id` o del `sub` en `Authorization: Bearer <jwt>`.
-- Solo participantes de una conversacion pueden:
-	- verla,
-	- listar sus mensajes,
-	- enviar mensajes,
-	- marcar mensajes como leidos,
-	- tocar actividad.
+- Esquema nuevo: columnas `media_url`, `media_type`, `media_filename`, `reply_*`.
+- Esquema legado: fallback de insercion/lectura cuando esas columnas aun no existen.
 
-## Contrato HTTP
+Esto evita caidas si la migracion de multimedia no se ha ejecutado en todos los entornos.
+
+## Autenticacion y autorizacion
+
+Identidad del actor:
+
+- Header `x-user-id`, o
+- `sub` del JWT en `Authorization: Bearer <token>`.
+
+Reglas de acceso:
+
+- Solo participantes de una conversacion pueden verla.
+- Solo participantes pueden listar/enviar mensajes en esa conversacion.
+- Solo participantes pueden marcar mensajes como leidos.
+
+## API HTTP
 
 Base path: `/api/v1`
 
@@ -66,21 +94,40 @@ Base path: `/api/v1`
 - `GET /api/v1/messages?conversationId=<id>&limit=50&offset=0`
 - `GET /api/v1/messages/:id`
 - `POST /api/v1/messages`
-	- body: `{ "conversationId": "<id>", "content": "texto" }`
+	- body minimo: `{ "conversationId": "<id>", "content": "texto" }`
+	- body multimedia:
+		- `mediaUrl`
+		- `mediaType`
+		- `mediaFilename`
+		- `replyToMessageId`
+		- `replyPreview`
 - `PATCH /api/v1/messages/:id/read`
 
 ### Health
 
 - `GET /health`
 
+## Migraciones necesarias
+
+Para funcionalidad multimedia completa:
+
+1. Ejecutar `backend/supabase/migrations/20260319_messaging_media.sql`.
+2. Ejecutar `backend/supabase/migrations/20260319_chat_audio_bucket.sql`.
+
+La segunda migracion crea el bucket `chat-audio` con MIME permitidos para notas de voz y politicas RLS de `storage.objects`.
+
 ## Variables de entorno
 
-Ver `.env.example`.
+Revisar `.env.example` del servicio.
 
-Claves:
+Claves principales:
 
 - `PORT`, `NODE_ENV`
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL`
+
+En gateway:
+
+- `MESSAGING_BASE_URL=http://localhost:3104`
 
 ## Ejecucion local
 
@@ -89,16 +136,20 @@ Desde `backend/`:
 1. `pnpm install`
 2. `pnpm --filter @uniconnect/messaging dev`
 
-## Integracion con gateway
+Con gateway:
 
-El gateway debe enrutar:
+1. `pnpm --filter @uniconnect/gateway dev`
+2. Consumir endpoints via `http://localhost:3000/api/v1/...`
 
-- `/api/v1/conversations`
-- `/api/v1/messages`
+## Verificacion rapida
 
-con `MESSAGING_BASE_URL=http://localhost:3104`.
+1. Crear/obtener conversacion.
+2. Enviar mensaje de texto.
+3. Enviar imagen (con `mediaUrl`).
+4. Enviar audio (con `mediaType` de audio).
+5. Confirmar lectura y listado de conversaciones.
 
-## Scripts
+## Scripts utiles
 
 - `pnpm --filter @uniconnect/messaging dev`
 - `pnpm --filter @uniconnect/messaging build`

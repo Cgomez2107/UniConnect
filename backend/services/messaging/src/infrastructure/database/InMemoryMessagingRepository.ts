@@ -136,6 +136,11 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
       conversationId: input.conversationId,
       senderId: input.senderId,
       content: input.content,
+      mediaUrl: input.mediaUrl ?? null,
+      mediaType: input.mediaType ?? null,
+      mediaFilename: input.mediaFilename ?? null,
+      replyToMessageId: input.replyToMessageId ?? null,
+      replyPreview: input.replyPreview ?? null,
       createdAt: new Date().toISOString(),
       readAt: null,
       sender: {
@@ -211,7 +216,7 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
       otherUserId,
       otherUserName: "Usuario",
       otherUserAvatar: null,
-      lastMessage: latest?.content ?? null,
+      lastMessage: latest ? latest.content || (latest.mediaUrl ? "📷 Foto" : null) : null,
       lastMessageAt: latest?.createdAt ?? null,
       unreadCount,
     };

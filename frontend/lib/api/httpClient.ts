@@ -3,6 +3,38 @@ import { supabase } from "@/lib/supabase";
 const API_BASE_URL =
     process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:3000/api/v1";
 
+const TOKEN_CACHE_TTL_MS = 10_000;
+let cachedAccessToken: string | null = null;
+let cachedAccessTokenAt = 0;
+let inflightTokenPromise: Promise<string | null> | null = null;
+
+async function getAccessTokenFast(): Promise<string | null> {
+    const now = Date.now();
+    if (cachedAccessToken && now - cachedAccessTokenAt < TOKEN_CACHE_TTL_MS) {
+        return cachedAccessToken;
+    }
+
+    if (!inflightTokenPromise) {
+        inflightTokenPromise = supabase.auth
+            .getSession()
+            .then(({ data: { session } }) => {
+                cachedAccessToken = session?.access_token ?? null;
+                cachedAccessTokenAt = Date.now();
+                return cachedAccessToken;
+            })
+            .catch(() => {
+                cachedAccessToken = null;
+                cachedAccessTokenAt = Date.now();
+                return null;
+            })
+            .finally(() => {
+                inflightTokenPromise = null;
+            });
+    }
+
+    return inflightTokenPromise;
+}
+
 /**
  * Realiza una petición HTTP autenticada al API Gateway.
  *
@@ -22,16 +54,14 @@ export async function fetchApi<T>(
     endpoint: string,
     options: RequestInit = {},
 ): Promise<T> {
-    const {
-        data: { session },
-    } = await supabase.auth.getSession();
+    const accessToken = await getAccessTokenFast();
 
     const headers = new Headers(options.headers);
     headers.set("Content-Type", "application/json");
     headers.set("bypass-tunnel-reminder", "true");
 
-    if (session?.access_token) {
-        headers.set("Authorization", `Bearer ${session.access_token}`);
+    if (accessToken) {
+        headers.set("Authorization", `Bearer ${accessToken}`);
     }
 
     const method = (options.method ?? "GET").toUpperCase();

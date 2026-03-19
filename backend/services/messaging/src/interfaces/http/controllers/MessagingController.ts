@@ -50,7 +50,7 @@ function mapApplicationError(error: unknown): { statusCode: number; message: str
     return { statusCode: 404, message };
   }
 
-  return { statusCode: 500, message: "Error interno del servicio." };
+  return { statusCode: 500, message };
 }
 
 function toApiConversation(conversation: ConversationSummary) {
@@ -75,6 +75,11 @@ function toApiMessage(message: Message) {
     conversation_id: message.conversationId,
     sender_id: message.senderId,
     content: message.content,
+    media_url: message.mediaUrl,
+    media_type: message.mediaType,
+    media_filename: message.mediaFilename,
+    reply_to_message_id: message.replyToMessageId,
+    reply_preview: message.replyPreview,
     created_at: message.createdAt,
     read_at: message.readAt,
     sender: message.sender
@@ -227,6 +232,13 @@ export class MessagingController {
         body.conversationId ?? "",
         actorUserId,
         body.content ?? "",
+        {
+          mediaUrl: body.mediaUrl,
+          mediaType: body.mediaType,
+          mediaFilename: body.mediaFilename,
+          replyToMessageId: body.replyToMessageId,
+          replyPreview: body.replyPreview,
+        },
       );
 
       sendJson(res, 201, { data: toApiMessage(message) });
