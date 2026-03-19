@@ -1,8 +1,8 @@
 import { ApiStudyRequestRepository } from "../infrastructure/repositories/ApiStudyRequestRepository";
 import { ApiApplicationRepository } from "../infrastructure/repositories/ApiApplicationRepository";
 import { ApiStudyResourceRepository } from "../infrastructure/repositories/ApiStudyResourceRepository";
-import { SupabaseMessageRepository } from "../infrastructure/repositories/SupabaseMessageRepository";
-import { SupabaseConversationRepository } from "../infrastructure/repositories/SupabaseConversationRepository";
+import { ApiMessageRepository } from "../infrastructure/repositories/ApiMessageRepository";
+import { ApiConversationRepository } from "../infrastructure/repositories/ApiConversationRepository";
 import { SupabaseEventRepository } from "../infrastructure/repositories/SupabaseEventRepository";
 import { SupabaseStudyGroupRepository } from "../infrastructure/repositories/SupabaseStudyGroupRepository";
 import { SupabaseAuthRepository } from "../infrastructure/repositories/SupabaseAuthRepository";
@@ -104,8 +104,8 @@ export class DIContainer {
   private studyRequestRepo?: ApiStudyRequestRepository;
   private applicationRepo?: ApiApplicationRepository;
   private resourceRepo?: ApiStudyResourceRepository;
-  private messageRepo?: SupabaseMessageRepository;
-  private conversationRepo?: SupabaseConversationRepository;
+  private messageRepo?: ApiMessageRepository;
+  private conversationRepo?: ApiConversationRepository;
   private eventRepo?: SupabaseEventRepository;
   private studyGroupRepo?: SupabaseStudyGroupRepository;
   private authRepo?: SupabaseAuthRepository;
@@ -205,14 +205,14 @@ export class DIContainer {
 
   getMessageRepository(): IMessageRepository {
     if (!this.messageRepo) {
-      this.messageRepo = new SupabaseMessageRepository();
+      this.messageRepo = new ApiMessageRepository();
     }
     return this.messageRepo;
   }
 
   getConversationRepository(): IConversationRepository {
     if (!this.conversationRepo) {
-      this.conversationRepo = new SupabaseConversationRepository();
+      this.conversationRepo = new ApiConversationRepository();
     }
     return this.conversationRepo;
   }

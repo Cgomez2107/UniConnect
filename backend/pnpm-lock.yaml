@@ -37,10 +37,20 @@ importers:
         version: 5.9.3
 
   services/messaging:
+    dependencies:
+      pg:
+        specifier: ^8.13.1
+        version: 8.20.0
     devDependencies:
       '@types/node':
         specifier: ^22.10.1
         version: 22.19.15
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.18.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

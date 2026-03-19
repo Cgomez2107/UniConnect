@@ -12,6 +12,15 @@ function isResourcesRoute(pathname: string): boolean {
   return pathname === "/api/v1/resources" || pathname.startsWith("/api/v1/resources/");
 }
 
+function isMessagingRoute(pathname: string): boolean {
+  return (
+    pathname === "/api/v1/conversations" ||
+    pathname.startsWith("/api/v1/conversations/") ||
+    pathname === "/api/v1/messages" ||
+    pathname.startsWith("/api/v1/messages/")
+  );
+}
+
 async function handleRequest(req: IncomingMessage, res: ServerResponse, env: GatewayEnv): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
 
@@ -32,6 +41,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, env: Gat
 
   if (isResourcesRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.resourcesBaseUrl);
+    return;
+  }
+
+  if (isMessagingRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.messagingBaseUrl);
     return;
   }
 

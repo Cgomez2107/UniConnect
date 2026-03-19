@@ -16,7 +16,9 @@
     "typecheck": "turbo run typecheck",
     "format": "echo \"format config pending\"",
     "gateway:dev": "pnpm --filter @uniconnect/gateway dev",
-    "study-groups:dev": "pnpm --filter @uniconnect/study-groups dev"
+    "study-groups:dev": "pnpm --filter @uniconnect/study-groups dev",
+    "resources:dev": "pnpm --filter @uniconnect/resources dev",
+    "messaging:dev": "pnpm --filter @uniconnect/messaging dev"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
