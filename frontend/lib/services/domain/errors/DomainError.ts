@@ -36,8 +36,15 @@ export class UnauthorizedError extends DomainError {
  * Thrown when business rule validation fails.
  */
 export class ValidationError extends DomainError {
-  constructor(message: string) {
-    super(message)
+  readonly property: string
+  constructor(propertyOrMessage: string, message?: string) {
+    if (message) {
+      super(message)
+      this.property = propertyOrMessage
+    } else {
+      super(propertyOrMessage)
+      this.property = ""
+    }
     Object.setPrototypeOf(this, ValidationError.prototype)
   }
 }

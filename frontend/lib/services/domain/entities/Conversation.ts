@@ -10,5 +10,7 @@ import { Entity } from "./Entity"
  * - createdAt: Date
  */
 export class Conversation extends Entity<any> {
-  // TODO: Implement
+  toPrimitive() {
+    return { id: this.id }
+  }
 }

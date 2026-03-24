@@ -39,4 +39,28 @@ export class SupabaseEventRepository implements IEventRepository {
     if (error) throw new Error(error.message)
     return (data ?? []) as CampusEvent[]
   }
+
+  async getAllEvents(): Promise<CampusEvent[]> {
+    throw new Error("Not implemented in Supabase fallback")
+  }
+
+  async create(_userId: string, _payload: any): Promise<CampusEvent> {
+    throw new Error("Not implemented in Supabase fallback")
+  }
+
+  async update(_eventId: string, _userId: string, _payload: any): Promise<void> {
+    throw new Error("Not implemented in Supabase fallback")
+  }
+
+  async delete(_eventId: string, _userId: string): Promise<void> {
+    throw new Error("Not implemented in Supabase fallback")
+  }
+
+  async getByAuthor(_userId: string): Promise<CampusEvent[]> {
+    throw new Error("Not implemented in Supabase fallback")
+  }
+
+  async updateStatus(_eventId: string, _status: string): Promise<void> {
+    throw new Error("Not implemented in Supabase fallback")
+  }
 }

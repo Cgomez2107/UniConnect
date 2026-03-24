@@ -11,5 +11,7 @@ import { Entity } from "./Entity"
  * - readAt?: Date
  */
 export class Message extends Entity<any> {
-  // TODO: Implement
+  toPrimitive() {
+    return { id: this.id }
+  }
 }

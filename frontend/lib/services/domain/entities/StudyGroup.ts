@@ -11,5 +11,7 @@ import { Entity } from "./Entity"
  * - createdAt: Date
  */
 export class StudyGroup extends Entity<any> {
-  // TODO: Implement
+  toPrimitive() {
+    return { id: this.id }
+  }
 }

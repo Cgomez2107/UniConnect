@@ -14,5 +14,7 @@ import { Entity } from "./Entity"
  * - modality: Modality
  */
 export class StudyRequest extends Entity<any> {
-  // TODO: Implement
+  toPrimitive() {
+    return { id: this.id }
+  }
 }

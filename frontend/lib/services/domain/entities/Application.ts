@@ -12,5 +12,7 @@ import { Entity } from "./Entity"
  * - reviewedAt?: Date
  */
 export class Application extends Entity<any> {
-  // TODO: Implement
+  toPrimitive() {
+    return { id: this.id }
+  }
 }

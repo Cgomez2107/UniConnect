@@ -8,10 +8,10 @@ import type { CampusEvent } from "@/types"
 export interface IEventRepository {
   getById(id: string): Promise<CampusEvent | null>
   getUpcoming(): Promise<CampusEvent[]>
-  // TODO: Define methods
-  // - getById(id: string): Promise<Event | null>
-  // - getAll(page?: number, pageSize?: number): Promise<Event[]>
-  // - create(event: Event): Promise<void>
-  // - update(event: Event): Promise<void>
-  // - delete(id: string): Promise<void>
+  getAllEvents(): Promise<CampusEvent[]>
+  create(userId: string, payload: any): Promise<CampusEvent>
+  update(eventId: string, userId: string, payload: any): Promise<void>
+  delete(eventId: string, userId: string): Promise<void>
+  getByAuthor(userId: string): Promise<CampusEvent[]>
+  updateStatus(eventId: string, status: string): Promise<void>
 }
