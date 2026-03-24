@@ -3,12 +3,12 @@ import { ApiApplicationRepository } from "../infrastructure/repositories/ApiAppl
 import { ApiStudyResourceRepository } from "../infrastructure/repositories/ApiStudyResourceRepository";
 import { ApiMessageRepository } from "../infrastructure/repositories/ApiMessageRepository";
 import { ApiConversationRepository } from "../infrastructure/repositories/ApiConversationRepository";
-import { SupabaseEventRepository } from "../infrastructure/repositories/SupabaseEventRepository";
+import { ApiEventRepository } from "../infrastructure/repositories/ApiEventRepository";
+import { ApiStudentRepository } from "../infrastructure/repositories/ApiStudentRepository";
+import { ApiFacultyCatalogRepository } from "../infrastructure/repositories/ApiFacultyCatalogRepository";
 import { SupabaseStudyGroupRepository } from "../infrastructure/repositories/SupabaseStudyGroupRepository";
 import { SupabaseAuthRepository } from "../infrastructure/repositories/SupabaseAuthRepository";
-import { SupabaseStudentRepository } from "../infrastructure/repositories/SupabaseStudentRepository";
 import { SupabaseProfileRepository } from "../infrastructure/repositories/SupabaseProfileRepository";
-import { SupabaseFacultyCatalogRepository } from "../infrastructure/repositories/SupabaseFacultyCatalogRepository";
 import { SupabaseResourceUploadRepository } from "../infrastructure/repositories/SupabaseResourceUploadRepository";
 import { SupabaseAdminPanelRepository } from "../infrastructure/repositories/SupabaseAdminPanelRepository";
 import type { IStudyRequestRepository } from "../domain/repositories/IStudyRequestRepository";
@@ -106,12 +106,12 @@ export class DIContainer {
   private resourceRepo?: ApiStudyResourceRepository;
   private messageRepo?: ApiMessageRepository;
   private conversationRepo?: ApiConversationRepository;
-  private eventRepo?: SupabaseEventRepository;
+  private eventRepo?: ApiEventRepository;
   private studyGroupRepo?: SupabaseStudyGroupRepository;
   private authRepo?: SupabaseAuthRepository;
-  private studentRepo?: SupabaseStudentRepository;
+  private studentRepo?: ApiStudentRepository;
   private profileRepo?: SupabaseProfileRepository;
-  private facultyCatalogRepo?: SupabaseFacultyCatalogRepository;
+  private facultyCatalogRepo?: ApiFacultyCatalogRepository;
   private resourceUploadRepo?: SupabaseResourceUploadRepository;
   private adminPanelRepo?: SupabaseAdminPanelRepository;
 
@@ -219,7 +219,7 @@ export class DIContainer {
 
   getEventRepository(): IEventRepository {
     if (!this.eventRepo) {
-      this.eventRepo = new SupabaseEventRepository();
+      this.eventRepo = new ApiEventRepository();
     }
     return this.eventRepo;
   }
@@ -240,7 +240,7 @@ export class DIContainer {
 
   getStudentRepository(): IStudentRepository {
     if (!this.studentRepo) {
-      this.studentRepo = new SupabaseStudentRepository();
+      this.studentRepo = new ApiStudentRepository();
     }
     return this.studentRepo;
   }
@@ -254,7 +254,7 @@ export class DIContainer {
 
   getFacultyCatalogRepository(): IFacultyCatalogRepository {
     if (!this.facultyCatalogRepo) {
-      this.facultyCatalogRepo = new SupabaseFacultyCatalogRepository();
+      this.facultyCatalogRepo = new ApiFacultyCatalogRepository();
     }
     return this.facultyCatalogRepo;
   }
