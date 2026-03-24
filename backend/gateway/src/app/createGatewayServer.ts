@@ -21,6 +21,21 @@ function isMessagingRoute(pathname: string): boolean {
   );
 }
 
+function isProfilesCatalogRoute(pathname: string): boolean {
+  return (
+    pathname.startsWith("/api/v1/students") ||
+    pathname.startsWith("/api/v1/catalog")
+  );
+}
+
+function isEventsRoute(pathname: string): boolean {
+  return pathname === "/api/v1/events" || pathname.startsWith("/api/v1/events/");
+}
+
+function isAuthRoute(pathname: string): boolean {
+  return pathname.startsWith("/api/v1/auth");
+}
+
 async function handleRequest(req: IncomingMessage, res: ServerResponse, env: GatewayEnv): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
 
@@ -46,6 +61,20 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, env: Gat
 
   if (isMessagingRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.messagingBaseUrl);
+    return;
+  }
+  if (isProfilesCatalogRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.profilesCatalogBaseUrl);
+    return;
+  }
+
+  if (isEventsRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.eventsBaseUrl);
+    return;
+  }
+
+  if (isAuthRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.authBaseUrl);
     return;
   }
 

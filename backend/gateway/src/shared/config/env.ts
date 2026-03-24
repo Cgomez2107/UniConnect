@@ -4,6 +4,9 @@ export interface GatewayEnv {
   readonly studyGroupsBaseUrl: string;
   readonly resourcesBaseUrl: string;
   readonly messagingBaseUrl: string;
+  readonly profilesCatalogBaseUrl: string;
+  readonly eventsBaseUrl: string;
+  readonly authBaseUrl: string;
 }
 
 /**
@@ -42,11 +45,29 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
     throw new Error("MESSAGING_BASE_URL is required");
   }
 
+  const profilesCatalogBaseUrl = source.PROFILES_CATALOG_BASE_URL;
+  if (!profilesCatalogBaseUrl) {
+    throw new Error("PROFILES_CATALOG_BASE_URL is required");
+  }
+
+  const eventsBaseUrl = source.EVENTS_BASE_URL;
+  if (!eventsBaseUrl) {
+    throw new Error("EVENTS_BASE_URL is required");
+  }
+
+  const authBaseUrl = source.AUTH_BASE_URL;
+  if (!authBaseUrl) {
+    throw new Error("AUTH_BASE_URL is required");
+  }
+
   return {
     port,
     nodeEnv: source.NODE_ENV ?? "development",
     studyGroupsBaseUrl,
     resourcesBaseUrl,
     messagingBaseUrl,
+    profilesCatalogBaseUrl,
+    eventsBaseUrl,
+    authBaseUrl,
   };
 }
