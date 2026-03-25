@@ -2,7 +2,7 @@ import { DIContainer } from "@/lib/services/di/container"
 import type { CampusEvent, EventCategory } from "@/types"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-export type EventFilter = EventCategory | "todos"
+export type EventFilter = EventCategory | "todos" | "pasados"
 
 export function useEvents() {
   const container = DIContainer.getInstance()
@@ -11,13 +11,22 @@ export function useEvents() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [activeFilter, setActiveFilter] = useState<EventFilter>("todos")
 
-  const load = useCallback(async (isRefresh = false) => {
+  const load = useCallback(async (isRefresh = false, filterToLoad: EventFilter = activeFilter) => {
     if (isRefresh) setIsRefreshing(true)
     else setIsLoading(true)
 
     try {
-      const useCase = container.getGetUpcomingEvents()
-      const data = await useCase.execute()
+      let data: CampusEvent[] = [];
+      if (filterToLoad === "pasados") {
+        const useCase = container.getGetAllEvents()
+        const allEvents = await useCase.execute()
+        // Filtrar solo los pasados localmente
+        const now = new Date()
+        data = allEvents.filter((e: CampusEvent) => new Date(e.event_date) < now)
+      } else {
+        const useCase = container.getGetUpcomingEvents()
+        data = await useCase.execute()
+      }
       setEvents(data)
     } catch {
       setEvents([])
@@ -25,14 +34,16 @@ export function useEvents() {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [container])
+  }, [container, activeFilter])
 
+  // Recargar eventos si cambiamos de "pasados" a filtro normal o viceversa
+  // Porque la fuente de datos (GetAll vs GetUpcoming) cambia
   useEffect(() => {
-    load()
-  }, [load])
+    load(false, activeFilter)
+  }, [activeFilter, load])
 
   const filteredEvents = useMemo(() => {
-    if (activeFilter === "todos") return events
+    if (activeFilter === "todos" || activeFilter === "pasados") return events
     return events.filter((e) => e.category === activeFilter)
   }, [events, activeFilter])
 
@@ -43,6 +54,6 @@ export function useEvents() {
     isRefreshing,
     activeFilter,
     setActiveFilter,
-    refresh: () => load(true),
+    refresh: () => load(true, activeFilter),
   }
 }

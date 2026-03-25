@@ -5,9 +5,10 @@ import type { CampusEvent } from "@/types";
 
 /**
  * Repositorio de eventos que delega al microservicio events vía gateway.
- * Aplica el patrón Adapter: traduce camelCase (API) → snake_case (dominio frontend)
  *
- * Fallback a Supabase para operaciones aún no migradas.
+ * El backend ahora refleja el schema real de Supabase:
+ *   event_date → startAt, created_by → organizerId
+ *   category, imageUrl presentes
  */
 export class ApiEventRepository implements IEventRepository {
   private readonly fallback = new SupabaseEventRepository();
@@ -35,7 +36,7 @@ export class ApiEventRepository implements IEventRepository {
   }
 
   async create(
-    _userId: string,
+    userId: string,
     payload: {
       title: string;
       description: string;
@@ -43,6 +44,8 @@ export class ApiEventRepository implements IEventRepository {
       startAt: string;
       endAt: string;
       maxCapacity?: number;
+      category?: string;
+      imageUrl?: string;
     },
   ): Promise<CampusEvent> {
     const data = await fetchApi<CampusEvent>("/events", {
@@ -53,6 +56,8 @@ export class ApiEventRepository implements IEventRepository {
         location: payload.location,
         startAt: payload.startAt,
         endAt: payload.endAt,
+        category: payload.category,
+        imageUrl: payload.imageUrl,
         maxCapacity: payload.maxCapacity,
       }),
     });
@@ -70,18 +75,13 @@ export class ApiEventRepository implements IEventRepository {
       startAt?: string;
       endAt?: string;
       maxCapacity?: number | null;
+      category?: string;
+      imageUrl?: string;
     },
   ): Promise<void> {
     await fetchApi(`/events/${eventId}`, {
       method: "PUT",
-      body: JSON.stringify({
-        title: payload.title,
-        description: payload.description,
-        location: payload.location,
-        startAt: payload.startAt,
-        endAt: payload.endAt,
-        maxCapacity: payload.maxCapacity,
-      }),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -102,32 +102,28 @@ export class ApiEventRepository implements IEventRepository {
 }
 
 /**
- * Mapea respuesta del microservicio (camelCase) al tipo CampusEvent
- * que espera el frontend (snake_case)
+ * Mapea la respuesta del microservicio al tipo CampusEvent del frontend.
+ *
+ * El backend devuelve:
+ *   { id, title, description, location, startAt (= event_date), endAt,
+ *     organizerId (= created_by), organizerName, category, imageUrl,
+ *     createdAt, updatedAt }
  */
 function mapEventFromApi(raw: any): CampusEvent {
   return {
     id: raw.id,
     title: raw.title,
-    description: raw.description,
-    location: raw.location,
-    event_date: raw.startAt ?? raw.start_at,
+    description: raw.description ?? "",
+    location: raw.location ?? "",
+    // event_date del schema → startAt en el backend → event_date en el frontend
+    event_date: raw.startAt ?? raw.eventDate ?? raw.event_date,
     category: raw.category ?? "academico",
     image_url: raw.imageUrl ?? raw.image_url ?? null,
-    created_by: raw.organizerId ?? raw.organizer_id,
+    created_by: raw.organizerId ?? raw.createdBy ?? raw.created_by,
     created_at: raw.createdAt ?? raw.created_at,
     updated_at: raw.updatedAt ?? raw.updated_at,
     creator: raw.organizerName
-      ? {
-          full_name: raw.organizerName ?? raw.organizer_name,
-        }
+      ? { full_name: raw.organizerName }
       : undefined,
-    // Conservar campos adicionales para la UI aunque no estén estrictamente en CampusEvent
-    ...({
-      end_at: raw.endAt ?? raw.end_at,
-      status: raw.status,
-      max_capacity: raw.maxCapacity ?? raw.max_capacity,
-      registered_count: raw.registeredCount ?? raw.registered_count ?? 0,
-    } as any),
   } as CampusEvent;
 }

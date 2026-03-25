@@ -66,6 +66,7 @@ import { GetMyAuthProfile } from "../domain/use-cases/auth/GetMyAuthProfile";
 import { SubscribeAuthStateChanges } from "../domain/use-cases/auth/SubscribeAuthStateChanges";
 import { GetOAuthSignInUrl } from "../domain/use-cases/auth/GetOAuthSignInUrl";
 import { ResolveSessionFromOAuthUrl } from "../domain/use-cases/auth/ResolveSessionFromOAuthUrl";
+import { GetAllEvents } from "../domain/use-cases/events/GetAllEvents";
 import { GetUpcomingEvents } from "../domain/use-cases/events/GetUpcomingEvents";
 import { GetEventById } from "../domain/use-cases/events/GetEventById";
 import { SearchStudentsBySubject } from "../domain/use-cases/students/SearchStudentsBySubject";
@@ -155,7 +156,8 @@ export class DIContainer {
   private getMyAuthProfile?: GetMyAuthProfile;
   private subscribeAuthStateChanges?: SubscribeAuthStateChanges;
   private getOAuthSignInUrl?: GetOAuthSignInUrl;
-  private resolveSessionFromOAuthUrl?: ResolveSessionFromOAuthUrl;
+  private resolveSessionFromOAuthUrl?: ResolveSessionFromOAuthUrl;  // Events
+  private getAllEvents?: GetAllEvents
   private getUpcomingEvents?: GetUpcomingEvents;
   private getEventById?: GetEventById;
   private searchStudentsBySubject?: SearchStudentsBySubject;
@@ -564,6 +566,13 @@ export class DIContainer {
       this.resolveSessionFromOAuthUrl = new ResolveSessionFromOAuthUrl(this.getAuthRepository());
     }
     return this.resolveSessionFromOAuthUrl;
+  }
+
+  getGetAllEvents(): GetAllEvents {
+    if (!this.getAllEvents) {
+      this.getAllEvents = new GetAllEvents(this.getEventRepository());
+    }
+    return this.getAllEvents;
   }
 
   getGetUpcomingEvents(): GetUpcomingEvents {

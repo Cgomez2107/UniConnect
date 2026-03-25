@@ -38,6 +38,7 @@ const FILTERS: { key: EventFilter; label: string; icon: keyof typeof Ionicons.gl
   { key: "cultural", label: "Cultural", icon: "color-palette-outline" },
   { key: "deportivo", label: "Deportivo", icon: "football-outline" },
   { key: "otro", label: "Otro", icon: "bookmark-outline" },
+  { key: "pasados", label: "Pasados", icon: "time-outline" },
 ]
 
 // Tarjeta de evento
@@ -183,10 +184,13 @@ export default function EventosScreen() {
             <EmptyState
               emoji="📅"
               iconName="calendar-outline"
-              title="No hay eventos próximos"
-              body={activeFilter === "todos"
-                ? "El administrador aún no ha publicado eventos del campus."
-                : `No hay eventos de tipo "${CATEGORY_LABEL[activeFilter as EventCategory] ?? activeFilter}".`
+              title={activeFilter === "pasados" ? "No hay eventos pasados" : "No hay eventos próximos"}
+              body={
+                activeFilter === "todos"
+                  ? "El administrador aún no ha publicado eventos del campus."
+                  : activeFilter === "pasados"
+                  ? "No se han registrado eventos en el pasado."
+                  : `No hay eventos de tipo "${CATEGORY_LABEL[activeFilter as EventCategory] ?? activeFilter}".`
               }
             />
           }
