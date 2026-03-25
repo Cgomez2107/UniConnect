@@ -1,42 +1,26 @@
-import type { Event, EventStatus } from "../entities/Event.js";
+import type { Event } from "../entities/Event.js";
 
 /**
  * Contrato: acceso a datos de eventos
- * Solo admins pueden crear/editar/borrar
- * Cualquiera puede listar y ver detalles
+ * Schema real de Supabase: event_date, created_by, category, image_url
  */
 export interface IEventRepository {
-  /**
-   * Obtener todos los eventos activos, ordenados por fecha de inicio
-   */
   getAllEvents(): Promise<Event[]>;
-
-  /**
-   * Obtener eventos futuros (startAt > ahora)
-   */
   getUpcomingEvents(limit?: number): Promise<Event[]>;
-
-  /**
-   * Obtener evento por ID
-   */
   getById(id: string): Promise<Event | null>;
 
-  /**
-   * Crear evento (solo admin)
-   */
   create(input: {
     title: string;
     description: string;
     location: string;
-    startAt: string;
-    endAt: string;
-    organizerId: string;
-    maxCapacity?: number;
+    startAt: string;       // Se guarda como event_date
+    endAt?: string;        // Ignorado (tabla no tiene end_at)
+    organizerId: string;   // Se guarda como created_by
+    category?: string;
+    imageUrl?: string;
+    maxCapacity?: number;  // Ignorado (tabla no tiene max_capacity)
   }): Promise<Event>;
 
-  /**
-   * Actualizar evento (solo admin y solo si es propietario)
-   */
   update(
     id: string,
     organizerId: string,
@@ -46,17 +30,12 @@ export interface IEventRepository {
       location?: string;
       startAt?: string;
       endAt?: string;
+      category?: string;
+      imageUrl?: string;
       maxCapacity?: number | null;
     },
   ): Promise<Event>;
 
-  /**
-   * Cambiar estado del evento
-   */
-  updateStatus(id: string, organizerId: string, status: EventStatus): Promise<void>;
-
-  /**
-   * Eliminar evento (solo admin y solo si es propietario)
-   */
+  updateStatus(id: string, organizerId: string, status: string): Promise<void>;
   delete(id: string, organizerId: string): Promise<void>;
 }

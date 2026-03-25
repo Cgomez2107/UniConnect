@@ -7,14 +7,16 @@ export interface CreateEventInput {
   readonly description: string;
   readonly location: string;
   readonly startAt: string;
-  readonly endAt: string;
+  readonly endAt?: string;
+  readonly category?: string;
+  readonly imageUrl?: string;
   readonly maxCapacity?: number;
 }
 
 /**
  * Caso de uso: crear evento
- * Solo admins pueden crear eventos
- * Nota: validación de permisos ocurre en el middleware HTTP
+ * Solo admins pueden crear eventos.
+ * La tabla `events` de Supabase usa event_date (no start_at/end_at).
  */
 export class CreateEvent {
   constructor(private readonly repository: IEventRepository) {}
@@ -28,31 +30,13 @@ export class CreateEvent {
       throw new Error("Title is required");
     }
 
-    if (!description) {
-      throw new Error("Description is required");
-    }
-
     if (!location) {
       throw new Error("Location is required");
     }
 
     const startDate = new Date(input.startAt);
-    const endDate = new Date(input.endAt);
-
     if (isNaN(startDate.getTime())) {
       throw new Error("Invalid startAt date");
-    }
-
-    if (isNaN(endDate.getTime())) {
-      throw new Error("Invalid endAt date");
-    }
-
-    if (endDate <= startDate) {
-      throw new Error("End date must be after start date");
-    }
-
-    if (input.maxCapacity && input.maxCapacity < 1) {
-      throw new Error("Max capacity must be at least 1");
     }
 
     return this.repository.create({
@@ -62,6 +46,8 @@ export class CreateEvent {
       startAt: input.startAt,
       endAt: input.endAt,
       organizerId: input.actorUserId,
+      category: input.category,
+      imageUrl: input.imageUrl,
       maxCapacity: input.maxCapacity,
     });
   }
