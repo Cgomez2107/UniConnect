@@ -7,6 +7,7 @@ export interface GatewayEnv {
   readonly profilesCatalogBaseUrl: string;
   readonly eventsBaseUrl: string;
   readonly authBaseUrl: string;
+  readonly jwtAccessSecret: string;
 }
 
 /**
@@ -60,6 +61,11 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
     throw new Error("AUTH_BASE_URL is required");
   }
 
+  const jwtAccessSecret = source.JWT_ACCESS_SECRET;
+  if (!jwtAccessSecret) {
+    throw new Error("JWT_ACCESS_SECRET is required");
+  }
+
   return {
     port,
     nodeEnv: source.NODE_ENV ?? "development",
@@ -69,5 +75,6 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
     profilesCatalogBaseUrl,
     eventsBaseUrl,
     authBaseUrl,
+    jwtAccessSecret,
   };
 }

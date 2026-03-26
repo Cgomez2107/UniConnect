@@ -1,5 +1,6 @@
 packages:
   - "gateway"
+  - "services/auth"
   - "services/study-groups"
   - "services/resources"
   - "services/messaging"

@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { GatewayEnv } from "../shared/config/env.js";
 import { proxyRequest } from "../shared/http/proxyRequest.js";
 import { sendJson } from "../shared/http/sendJson.js";
+import { JWTMiddleware } from "../middleware/JWTMiddleware.js";
 
 function isStudyGroupsRoute(pathname: string): boolean {
   return pathname === "/api/v1/study-groups" || pathname.startsWith("/api/v1/study-groups/");
@@ -38,6 +39,7 @@ function isAuthRoute(pathname: string): boolean {
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse, env: GatewayEnv): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
+  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
@@ -46,6 +48,19 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, env: Gat
       environment: env.nodeEnv,
       timestamp: new Date().toISOString(),
     });
+    return;
+  }
+
+  // Rutas de autenticación (sin protección de JWT)
+  if (isAuthRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.authBaseUrl);
+    return;
+  }
+
+  // Rutas protegidas (requieren JWT válido)
+  const payload = jwtMiddleware.authenticate(req, res);
+  if (!payload) {
+    // El middleware ya envió la respuesta de error
     return;
   }
 
@@ -70,11 +85,6 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, env: Gat
 
   if (isEventsRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.eventsBaseUrl);
-    return;
-  }
-
-  if (isAuthRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.authBaseUrl);
     return;
   }
 
