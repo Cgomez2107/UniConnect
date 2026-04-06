@@ -1,5 +1,6 @@
 import type { Message } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
+import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 export class ListMessages {
   constructor(private readonly repository: IMessagingRepository) {}
@@ -10,13 +11,8 @@ export class ListMessages {
     limit = 50,
     offset = 0,
   ): Promise<Message[]> {
-    if (!conversationId.trim()) {
-      throw new Error("conversationId es obligatorio.");
-    }
-
-    if (!actorUserId.trim()) {
-      throw new Error("Token de autenticacion requerido.");
-    }
+    const normalizedConversationId = requireTrimmed(conversationId, "conversationId");
+    const normalizedActorUserId = requireTrimmed(actorUserId, "actorUserId");
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       throw new Error("limit debe estar entre 1 y 100.");
@@ -26,6 +22,6 @@ export class ListMessages {
       throw new Error("offset no puede ser negativo.");
     }
 
-    return this.repository.listMessages(conversationId, actorUserId, limit, offset);
+    return this.repository.listMessages(normalizedConversationId, normalizedActorUserId, limit, offset);
   }
 }

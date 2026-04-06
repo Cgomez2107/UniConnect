@@ -8,16 +8,8 @@ import type { DeleteEvent } from "../../../application/use-cases/DeleteEvent.js"
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { isAdminUser } from "../middlewares/isAdminUser.js";
-
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
-  const body = JSON.stringify(payload);
-  const contentLength = new TextEncoder().encode(body).byteLength;
-  res.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": contentLength.toString(),
-  });
-  res.end(body);
-}
+import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
+import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
 /**
  * Controlador HTTP del dominio events
@@ -41,11 +33,10 @@ export class EventsController {
         ? await this.getUpcomingEvents.execute(20)
         : await this.getAllEvents.execute();
 
-      sendJson(res, 200, { data: result, meta: { total: result.length } });
+      sendData(res, 200, result, { total: result.length });
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -54,27 +45,26 @@ export class EventsController {
       const result = await this.getEventById.execute(eventId);
 
       if (!result) {
-        sendJson(res, 404, { error: "Event not found" });
+        sendError(res, 404, "Event not found");
         return;
       }
 
-      sendJson(res, 200, { data: result });
+      sendData(res, 200, result);
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
   async create(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Authentication required" });
+      sendError(res, 401, "Authentication required");
       return;
     }
 
     if (!isAdminUser(req)) {
-      sendJson(res, 403, { error: "Only admins can create events" });
+      sendError(res, 403, "Only admins can create events");
       return;
     }
 
@@ -91,23 +81,22 @@ export class EventsController {
         maxCapacity: body.maxCapacity,
       });
 
-      sendJson(res, 201, { data: result });
+      sendData(res, 201, result);
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
   async update(req: IncomingMessage, res: ServerResponse, eventId: string): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Authentication required" });
+      sendError(res, 401, "Authentication required");
       return;
     }
 
     if (!isAdminUser(req)) {
-      sendJson(res, 403, { error: "Only admins can update events" });
+      sendError(res, 403, "Only admins can update events");
       return;
     }
 
@@ -125,33 +114,31 @@ export class EventsController {
         maxCapacity: body.maxCapacity,
       });
 
-      sendJson(res, 200, { data: result });
+      sendData(res, 200, result);
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
   async delete(req: IncomingMessage, res: ServerResponse, eventId: string): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Authentication required" });
+      sendError(res, 401, "Authentication required");
       return;
     }
 
     if (!isAdminUser(req)) {
-      sendJson(res, 403, { error: "Only admins can delete events" });
+      sendError(res, 403, "Only admins can delete events");
       return;
     }
 
     try {
       await this.deleteEvent.execute({ eventId, actorUserId });
-      sendJson(res, 200, { message: "Event deleted successfully" });
+      sendData(res, 200, { message: "Event deleted successfully" });
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 }

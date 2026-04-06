@@ -2,15 +2,7 @@ import bcryptjs from "bcryptjs";
 import { IAuthRepository } from "../../domain/repositories/IAuthRepository.js";
 import { ITokenRepository } from "../../domain/repositories/ITokenRepository.js";
 import { SignInRequest, SignInResponse } from "../dtos/index.js";
-
-// Error class simple para esta fase
-class AuthenticationError extends Error {
-  statusCode = 401;
-  constructor(message: string) {
-    super(message);
-    this.name = "AuthenticationError";
-  }
-}
+import { AuthenticationError } from "../../../../../shared/libs/errors/index.js";
 
 export class SignInUseCase {
   constructor(
@@ -23,7 +15,7 @@ export class SignInUseCase {
     // Buscar usuario
     const user = await this.authRepository.findByEmail(request.email);
     if (!user) {
-      throw new AuthenticationError("Invalid credentials");
+      throw new AuthenticationError("Credenciales inválidas.", { reason: "user_not_found" });
     }
 
     // Validar contraseña
@@ -32,7 +24,7 @@ export class SignInUseCase {
       user.passwordHash
     );
     if (!isPasswordValid) {
-      throw new AuthenticationError("Invalid credentials");
+      throw new AuthenticationError("Credenciales inválidas.", { reason: "password_mismatch" });
     }
 
     // Generar tokens

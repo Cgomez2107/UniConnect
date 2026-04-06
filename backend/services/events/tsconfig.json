@@ -1,8 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": "../../",
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "test/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "test/**/*.ts",
+    "../../shared/http/sendJson.ts",
+    "../../shared/libs/errors/ApplicationError.ts",
+    "../../shared/libs/errors/mapHttpStatus.ts"
+  ]
 }

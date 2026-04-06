@@ -2,6 +2,7 @@
   "name": "uniconnect-backend",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "description": "UniConnect backend microservices monorepo",
   "packageManager": "pnpm@9.12.0",
   "engines": {

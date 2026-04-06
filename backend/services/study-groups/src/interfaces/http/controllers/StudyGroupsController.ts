@@ -11,16 +11,9 @@ import type { CreateStudyGroupDto } from "../dto/CreateStudyGroupDto.js";
 import type { ReviewApplicationDto } from "../dto/ReviewApplicationDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
-
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
-  const body = JSON.stringify(payload);
-  const contentLength = new TextEncoder().encode(body).byteLength;
-  res.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": contentLength.toString(),
-  });
-  res.end(body);
-}
+import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
+import { DtoValidationError, Validators, validateDto } from "../../../../../../shared/libs/validation/index.js";
+import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
 
 /**
  * Controlador HTTP del dominio study-groups.
@@ -66,27 +59,24 @@ export class StudyGroupsController {
       pageSize,
     });
 
-    sendJson(res, 200, {
-      data: result,
-      meta: { total: result.length, page, pageSize },
-    });
+    sendData(res, 200, result, { total: result.length, page, pageSize });
   }
 
   async getById(_req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
     const result = await this.getStudyRequestById.execute(id);
 
     if (!result) {
-      sendJson(res, 404, { error: "Solicitud de estudio no encontrada." });
+      sendError(res, 404, "Solicitud de estudio no encontrada.");
       return;
     }
 
-    sendJson(res, 200, { data: result });
+    sendData(res, 200, result);
   }
 
   async create(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Token de autenticación requerido." });
+      sendError(res, 401, "Token de autenticación requerido.");
       return;
     }
 
@@ -99,7 +89,7 @@ export class StudyGroupsController {
       maxMembers: body.maxMembers ?? Number.NaN,
     });
 
-    sendJson(res, 201, { data: created });
+    sendData(res, 201, created);
   }
 
   async listApplications(
@@ -109,7 +99,7 @@ export class StudyGroupsController {
   ): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Token de autenticación requerido." });
+      sendError(res, 401, "Token de autenticación requerido.");
       return;
     }
 
@@ -118,13 +108,13 @@ export class StudyGroupsController {
       actorUserId,
     });
 
-    sendJson(res, 200, { data: applications, meta: { total: applications.length } });
+    sendData(res, 200, applications, { total: applications.length });
   }
 
   async apply(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Token de autenticación requerido." });
+      sendError(res, 401, "Token de autenticación requerido.");
       return;
     }
 
@@ -135,7 +125,7 @@ export class StudyGroupsController {
       message: body.message ?? "",
     });
 
-    sendJson(res, 201, { data: created });
+    sendData(res, 201, created);
   }
 
   async review(
@@ -145,22 +135,39 @@ export class StudyGroupsController {
   ): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
-      sendJson(res, 401, { error: "Token de autenticación requerido." });
+      sendError(res, 401, "Token de autenticación requerido.");
       return;
     }
 
     const body = await readJsonBody<ReviewApplicationDto>(req);
-    if (body.status !== "aceptada" && body.status !== "rechazada") {
-      sendJson(res, 422, { error: "El estado debe ser 'aceptada' o 'rechazada'." });
-      return;
+    try {
+      validateDto(
+        body,
+        {
+          status: [
+            (value) => Validators.required(value, "status"),
+            (value) => Validators.oneOf(value, ["aceptada", "rechazada"], "status"),
+          ],
+        },
+      );
+
+      const validatedStatus = body.status as "aceptada" | "rechazada";
+
+      await this.reviewApplication.execute({
+        applicationId,
+        actorUserId,
+        status: validatedStatus,
+      });
+
+      sendData(res, 200, { message: "Postulación revisada correctamente." });
+    } catch (error) {
+      if (error instanceof DtoValidationError) {
+        sendJson(res, 400, { error: error.message, fields: error.fields });
+        return;
+      }
+
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
-
-    await this.reviewApplication.execute({
-      applicationId,
-      actorUserId,
-      status: body.status,
-    });
-
-    sendJson(res, 200, { message: "Postulación revisada correctamente." });
   }
 }

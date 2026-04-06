@@ -1,15 +1,7 @@
 import { ITokenRepository } from "../../domain/repositories/ITokenRepository.js";
 import { IAuthRepository } from "../../domain/repositories/IAuthRepository.js";
 import { RefreshTokenRequest, RefreshTokenResponse } from "../dtos/index.js";
-
-// Error class simple para esta fase
-class AuthenticationError extends Error {
-  statusCode = 401;
-  constructor(message: string) {
-    super(message);
-    this.name = "AuthenticationError";
-  }
-}
+import { AuthenticationError } from "../../../../../shared/libs/errors/index.js";
 
 export class RefreshTokenUseCase {
   constructor(
@@ -22,13 +14,13 @@ export class RefreshTokenUseCase {
     // Validar token
     const stored = await this.tokenRepository.findByToken(request.refreshToken);
     if (!stored || stored.expiresAt < new Date() || stored.revokedAt) {
-      throw new AuthenticationError("Invalid or expired refresh token");
+      throw new AuthenticationError("Refresh token inválido o expirado.", { reason: "refresh_token_invalid" });
     }
 
     // Verificar que el usuario existe
     const user = await this.authRepository.findById(stored.userId);
     if (!user) {
-      throw new AuthenticationError("User not found");
+      throw new AuthenticationError("Usuario no encontrado.", { reason: "user_not_found" });
     }
 
     // Generar nuevo access token

@@ -1,20 +1,16 @@
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
+import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 export class ReviewApplication {
   constructor(private readonly repository: IApplicationRepository) {}
 
   async execute(input: { applicationId: string; actorUserId: string; status: "aceptada" | "rechazada" }): Promise<void> {
-    if (!input.applicationId.trim()) {
-      throw new Error("Application id is required");
-    }
-
-    if (!input.actorUserId.trim()) {
-      throw new Error("Actor user id is required");
-    }
+    const applicationId = requireTrimmed(input.applicationId, "applicationId");
+    const actorUserId = requireTrimmed(input.actorUserId, "actorUserId");
 
     await this.repository.review({
-      applicationId: input.applicationId.trim(),
-      actorUserId: input.actorUserId.trim(),
+      applicationId,
+      actorUserId,
       status: input.status,
     });
   }

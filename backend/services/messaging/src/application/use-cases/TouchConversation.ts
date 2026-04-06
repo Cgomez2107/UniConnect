@@ -1,17 +1,13 @@
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
+import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 export class TouchConversation {
   constructor(private readonly repository: IMessagingRepository) {}
 
   async execute(conversationId: string, actorUserId: string): Promise<void> {
-    if (!conversationId.trim()) {
-      throw new Error("conversationId es obligatorio.");
-    }
+    const normalizedConversationId = requireTrimmed(conversationId, "conversationId");
+    const normalizedActorUserId = requireTrimmed(actorUserId, "actorUserId");
 
-    if (!actorUserId.trim()) {
-      throw new Error("Token de autenticacion requerido.");
-    }
-
-    await this.repository.touchConversation(conversationId, actorUserId);
+    await this.repository.touchConversation(normalizedConversationId, normalizedActorUserId);
   }
 }

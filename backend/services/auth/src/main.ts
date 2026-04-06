@@ -7,7 +7,20 @@ import { SignInUseCase } from "./application/use-cases/SignInUseCase.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshTokenUseCase.js";
 import { AuthController } from "./interfaces/http/AuthController.js";
 
-const PORT = process.env.AUTH_SERVICE_PORT || 3001;
+try {
+  if (typeof process.loadEnvFile === "function") {
+    process.loadEnvFile(".env");
+  }
+} catch {
+  // Ignore missing .env on environments where vars are injected externally.
+}
+
+const portRaw = process.env.PORT ?? process.env.AUTH_SERVICE_PORT ?? "3001";
+const PORT = Number(portRaw);
+
+if (!Number.isInteger(PORT) || PORT <= 0) {
+  throw new Error(`Invalid auth service PORT value: ${portRaw}`);
+}
 
 async function main() {
   // Inyección de dependencias
@@ -52,7 +65,15 @@ async function main() {
   });
 
   server.listen(PORT, () => {
-    console.log(`Auth service listening on port ${PORT}`);
+    console.log(
+      JSON.stringify({
+        service: "auth",
+        level: "info",
+        message: "Service listening",
+        port: PORT,
+        nodeEnv: process.env.NODE_ENV ?? "development",
+      }),
+    );
   });
 }
 

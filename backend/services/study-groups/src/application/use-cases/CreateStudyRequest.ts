@@ -1,5 +1,6 @@
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type { IStudyRequestRepository } from "../../domain/repositories/IStudyRequestRepository.js";
+import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 export interface CreateStudyRequestInput {
   readonly actorUserId: string;
@@ -13,28 +14,17 @@ export class CreateStudyRequest {
   constructor(private readonly repository: IStudyRequestRepository) {}
 
   async execute(input: CreateStudyRequestInput): Promise<StudyRequest> {
-    const title = input.title.trim();
-    const description = input.description.trim();
-
-    if (!input.subjectId.trim()) {
-      throw new Error("Subject id is required");
-    }
-
-    if (title.length === 0) {
-      throw new Error("Title is required");
-    }
-
-    if (description.length === 0) {
-      throw new Error("Description is required");
-    }
+    const subjectId = requireTrimmed(input.subjectId, "subjectId");
+    const title = requireTrimmed(input.title, "title");
+    const description = requireTrimmed(input.description, "description");
 
     if (!Number.isInteger(input.maxMembers) || input.maxMembers < 2) {
-      throw new Error("Max members must be an integer greater than or equal to 2");
+      throw new Error("maxMembers debe ser un entero mayor o igual a 2.");
     }
 
     return this.repository.create({
       authorId: input.actorUserId,
-      subjectId: input.subjectId.trim(),
+      subjectId,
       title,
       description,
       maxMembers: input.maxMembers,

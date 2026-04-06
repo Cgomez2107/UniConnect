@@ -36,16 +36,21 @@ export type ValidationRules<T> = {
  * // ❌ Lanza DtoValidationError si alguno falla
  * ```
  */
-export function validateDto<T extends Record<string, unknown>>(
+export function validateDto<T extends object>(
   dto: T,
   rules: ValidationRules<T>,
 ): void {
   const errors: Record<string, string> = {};
+  const dtoRecord = dto as Record<string, unknown>;
+  const ruleEntries = Object.entries(rules) as Array<[
+    string,
+    Array<(value: unknown) => string | null> | undefined,
+  ]>;
 
-  for (const [fieldName, validators] of Object.entries(rules)) {
+  for (const [fieldName, validators] of ruleEntries) {
     if (!validators) continue;
 
-    const value = dto[fieldName as keyof T];
+    const value = dtoRecord[fieldName];
 
     for (const validator of validators) {
       const error = validator(value);
@@ -64,7 +69,7 @@ export function validateDto<T extends Record<string, unknown>>(
 /**
  * Versión que retorna booleano (para uso en condicionales)
  */
-export function isValidDto<T extends Record<string, unknown>>(
+export function isValidDto<T extends object>(
   dto: T,
   rules: ValidationRules<T>,
 ): boolean {
@@ -79,7 +84,7 @@ export function isValidDto<T extends Record<string, unknown>>(
 /**
  * Validación segura que retorna errores en lugar de lanzar
  */
-export function validateDtoSafe<T extends Record<string, unknown>>(
+export function validateDtoSafe<T extends object>(
   dto: T,
   rules: ValidationRules<T>,
 ): { valid: boolean; errors?: Record<string, string> } {

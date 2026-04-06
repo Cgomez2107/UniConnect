@@ -1,16 +1,6 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import { JWTService } from "../../infrastructure/jwt/JWTService.js";
-
-// Helper function simple
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
-  const body = JSON.stringify(payload);
-  const contentLength = new TextEncoder().encode(body).byteLength;
-  res.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": contentLength.toString(),
-  });
-  res.end(body);
-}
+import { sendError } from "../../../../../shared/http/sendJson.js";
 
 export class JWTMiddleware {
   constructor(private jwtService: JWTService) {}
@@ -20,7 +10,7 @@ export class JWTMiddleware {
     const authString = Array.isArray(auth) ? auth[0] : auth;
     
     if (!authString?.startsWith("Bearer ")) {
-      sendJson(res, 401, { error: "Missing or invalid Authorization header" });
+      sendError(res, 401, "Missing or invalid Authorization header");
       return null;
     }
 
@@ -28,7 +18,7 @@ export class JWTMiddleware {
     const payload = this.jwtService.verifyAccessToken(token);
 
     if (!payload) {
-      sendJson(res, 401, { error: "Invalid or expired token" });
+      sendError(res, 401, "Invalid or expired token");
       return null;
     }
 

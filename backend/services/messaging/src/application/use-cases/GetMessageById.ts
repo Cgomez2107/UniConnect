@@ -1,18 +1,14 @@
 import type { Message } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
+import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 export class GetMessageById {
   constructor(private readonly repository: IMessagingRepository) {}
 
   async execute(messageId: string, actorUserId: string): Promise<Message | null> {
-    if (!messageId.trim()) {
-      throw new Error("messageId es obligatorio.");
-    }
+    const normalizedMessageId = requireTrimmed(messageId, "messageId");
+    const normalizedActorUserId = requireTrimmed(actorUserId, "actorUserId");
 
-    if (!actorUserId.trim()) {
-      throw new Error("Token de autenticacion requerido.");
-    }
-
-    return this.repository.getMessageById(messageId, actorUserId);
+    return this.repository.getMessageById(normalizedMessageId, normalizedActorUserId);
   }
 }

@@ -14,44 +14,8 @@ import type { CreateConversationDto } from "../dto/CreateConversationDto.js";
 import type { CreateMessageDto } from "../dto/CreateMessageDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
-
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
-  const body = JSON.stringify(payload);
-  const contentLength = new TextEncoder().encode(body).byteLength;
-
-  res.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": contentLength.toString(),
-  });
-
-  res.end(body);
-}
-
-function mapApplicationError(error: unknown): { statusCode: number; message: string } {
-  if (!(error instanceof Error)) {
-    return { statusCode: 500, message: "Error interno del servicio." };
-  }
-
-  const message = error.message;
-
-  if (/token de autenticacion requerido/i.test(message)) {
-    return { statusCode: 401, message };
-  }
-
-  if (/no tienes permisos|sin permisos/i.test(message)) {
-    return { statusCode: 403, message };
-  }
-
-  if (/obligatorio|invalido|maximo|no puedes iniciar/i.test(message)) {
-    return { statusCode: 400, message };
-  }
-
-  if (/no encontrada|no encontrado/i.test(message)) {
-    return { statusCode: 404, message };
-  }
-
-  return { statusCode: 500, message };
-}
+import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
+import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
 function toApiConversation(conversation: ConversationSummary) {
   return {
@@ -107,15 +71,15 @@ export class MessagingController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticacion requerido." });
+        sendError(res, 401, "Token de autenticacion requerido.");
         return;
       }
 
       const conversations = await this.getConversationsUseCase.execute(actorUserId);
-      sendJson(res, 200, { data: conversations.map(toApiConversation) });
+      sendData(res, 200, conversations.map(toApiConversation));
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -123,20 +87,20 @@ export class MessagingController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticacion requerido." });
+        sendError(res, 401, "Token de autenticacion requerido.");
         return;
       }
 
       const conversation = await this.getConversationByIdUseCase.execute(conversationId, actorUserId);
       if (!conversation) {
-        sendJson(res, 404, { error: "Conversacion no encontrada." });
+        sendError(res, 404, "Conversacion no encontrada.");
         return;
       }
 
-      sendJson(res, 200, { data: toApiConversation(conversation) });
+      sendData(res, 200, toApiConversation(conversation));
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -144,7 +108,7 @@ export class MessagingController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticacion requerido." });
+        sendError(res, 401, "Token de autenticacion requerido.");
         return;
       }
 
@@ -154,10 +118,10 @@ export class MessagingController {
         body.participantB ?? "",
       );
 
-      sendJson(res, 201, { data: toApiConversation(conversation) });
+      sendData(res, 201, toApiConversation(conversation));
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -165,15 +129,15 @@ export class MessagingController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticacion requerido." });
+        sendError(res, 401, "Token de autenticacion requerido.");
         return;
       }
 
       await this.touchConversationUseCase.execute(conversationId, actorUserId);
-      sendJson(res, 200, { message: "Conversacion actualizada." });
+      sendData(res, 200, { message: "Conversacion actualizada." });
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -181,20 +145,20 @@ export class MessagingController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticacion requerido." });
+        sendError(res, 401, "Token de autenticacion requerido.");
         return;
       }
 
       const message = await this.getMessageByIdUseCase.execute(messageId, actorUserId);
       if (!message) {
-        sendJson(res, 404, { error: "Mensaje no encontrado." });
+        sendError(res, 404, "Mensaje no encontrado.");
         return;
       }
 
-      sendJson(res, 200, { data: toApiMessage(message) });
+      sendData(res, 200, toApiMessage(message));
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -202,7 +166,7 @@ export class MessagingController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticacion requerido." });
+        sendError(res, 401, "Token de autenticacion requerido.");
         return;
       }
 
@@ -212,10 +176,10 @@ export class MessagingController {
       const offset = Number(requestUrl.searchParams.get("offset") ?? "0");
 
       const messages = await this.listMessagesUseCase.execute(conversationId, actorUserId, limit, offset);
-      sendJson(res, 200, { data: messages.map(toApiMessage) });
+      sendData(res, 200, messages.map(toApiMessage));
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -223,7 +187,7 @@ export class MessagingController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticacion requerido." });
+        sendError(res, 401, "Token de autenticacion requerido.");
         return;
       }
 
@@ -241,10 +205,10 @@ export class MessagingController {
         },
       );
 
-      sendJson(res, 201, { data: toApiMessage(message) });
+      sendData(res, 201, toApiMessage(message));
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -252,20 +216,20 @@ export class MessagingController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticacion requerido." });
+        sendError(res, 401, "Token de autenticacion requerido.");
         return;
       }
 
       const updated = await this.markMessageAsReadUseCase.execute(messageId, actorUserId);
       if (!updated) {
-        sendJson(res, 404, { error: "Mensaje no encontrado." });
+        sendError(res, 404, "Mensaje no encontrado.");
         return;
       }
 
-      sendJson(res, 200, { message: "Mensaje actualizado." });
+      sendData(res, 200, { message: "Mensaje actualizado." });
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 }

@@ -3,16 +3,9 @@ import type { SearchStudentsBySubject } from "../../../application/use-cases/Sea
 import type { GetStudentPublicProfile } from "../../../application/use-cases/GetStudentPublicProfile.js";
 import type { GetPrograms } from "../../../application/use-cases/GetPrograms.js";
 import type { GetSubjectsByProgram } from "../../../application/use-cases/GetSubjectsByProgram.js";
-
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
-  const body = JSON.stringify(payload);
-  const contentLength = new TextEncoder().encode(body).byteLength;
-  res.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": contentLength.toString(),
-  });
-  res.end(body);
-}
+import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
+import { DtoValidationError, Validators, validateDto } from "../../../../../../shared/libs/validation/index.js";
+import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
 
 /**
  * Controlador HTTP del dominio profiles-catalog
@@ -32,22 +25,30 @@ export class ProfilesCatalogController {
     const subjectId = requestUrl.searchParams.get("subjectId");
     const search = requestUrl.searchParams.get("search");
 
-    if (!subjectId) {
-      sendJson(res, 400, { error: "subjectId query parameter is required" });
-      return;
-    }
-
     try {
+      validateDto(
+        { subjectId, search },
+        {
+          subjectId: [(value) => Validators.required(value, "subjectId")],
+        },
+      );
+
+      const validatedSubjectId = subjectId ?? "";
+
       const result = await this.searchStudentsUC.execute({
-        subjectId,
+        subjectId: validatedSubjectId,
         search: search ?? undefined,
       });
 
-      sendJson(res, 200, { data: result, meta: { total: result.length } });
+      sendData(res, 200, result, { total: result.length });
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      if (error instanceof DtoValidationError) {
+        sendJson(res, 400, { error: error.message, fields: error.fields });
+        return;
+      }
+
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -60,15 +61,14 @@ export class ProfilesCatalogController {
       const result = await this.getPublicProfile.execute(studentId);
 
       if (!result) {
-        sendJson(res, 404, { error: "Student not found" });
+        sendError(res, 404, "Student not found");
         return;
       }
 
-      sendJson(res, 200, { data: result });
+      sendData(res, 200, result);
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -78,11 +78,10 @@ export class ProfilesCatalogController {
 
     try {
       const result = await this.getProgramsUC.execute(facultyId ?? undefined);
-      sendJson(res, 200, { data: result, meta: { total: result.length } });
+      sendData(res, 200, result, { total: result.length });
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -93,11 +92,10 @@ export class ProfilesCatalogController {
   ): Promise<void> {
     try {
       const result = await this.getSubjectsByProgramUC.execute(programId);
-      sendJson(res, 200, { data: result, meta: { total: result.length } });
+      sendData(res, 200, result, { total: result.length });
     } catch (error) {
-      sendJson(res, 400, {
-        error: error instanceof Error ? error.message : "Invalid request",
-      });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 }

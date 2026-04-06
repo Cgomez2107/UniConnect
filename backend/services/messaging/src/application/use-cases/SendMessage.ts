@@ -1,5 +1,6 @@
 import type { Message } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
+import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 export class SendMessage {
   constructor(private readonly repository: IMessagingRepository) {}
@@ -19,13 +20,8 @@ export class SendMessage {
       replyPreview?: string;
     },
   ): Promise<Message> {
-    if (!conversationId.trim()) {
-      throw new Error("conversationId es obligatorio.");
-    }
-
-    if (!senderId.trim()) {
-      throw new Error("Token de autenticacion requerido.");
-    }
+    const normalizedConversationId = requireTrimmed(conversationId, "conversationId");
+    const normalizedSenderId = requireTrimmed(senderId, "senderId");
 
     const normalizedContent = content.trim();
     const normalizedMediaUrl = media?.mediaUrl?.trim() ?? "";
@@ -35,12 +31,12 @@ export class SendMessage {
     }
 
     if (normalizedContent.length > 5000) {
-      throw new Error("content excede el maximo de 5000 caracteres.");
+      throw new Error("content excede el máximo de 5000 caracteres.");
     }
 
     return this.repository.createMessage({
-      conversationId: conversationId.trim(),
-      senderId: senderId.trim(),
+      conversationId: normalizedConversationId,
+      senderId: normalizedSenderId,
       content: normalizedContent,
       mediaUrl: normalizedMediaUrl || undefined,
       mediaType: media?.mediaType?.trim() || undefined,

@@ -2,23 +2,7 @@ import bcryptjs from "bcryptjs";
 import { IAuthRepository } from "../../domain/repositories/IAuthRepository.js";
 import { ITokenRepository } from "../../domain/repositories/ITokenRepository.js";
 import { SignUpRequest, SignUpResponse } from "../dtos/index.js";
-
-// Error classes simples para esta fase
-class ValidationError extends Error {
-  statusCode = 400;
-  constructor(message: string) {
-    super(message);
-    this.name = "ValidationError";
-  }
-}
-
-class ConflictError extends Error {
-  statusCode = 409;
-  constructor(message: string) {
-    super(message);
-    this.name = "ConflictError";
-  }
-}
+import { ConflictError, ValidationError } from "../../../../../shared/libs/errors/index.js";
 
 export class SignUpUseCase {
   constructor(

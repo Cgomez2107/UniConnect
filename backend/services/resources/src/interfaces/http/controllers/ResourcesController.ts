@@ -9,38 +9,8 @@ import type { CreateResourceDto } from "../dto/CreateResourceDto.js";
 import type { UpdateResourceDto } from "../dto/UpdateResourceDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
-
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
-  const body = JSON.stringify(payload);
-  const contentLength = new TextEncoder().encode(body).byteLength;
-  res.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": contentLength.toString(),
-  });
-  res.end(body);
-}
-
-function mapApplicationError(error: unknown): { statusCode: number; message: string } {
-  if (!(error instanceof Error)) {
-    return { statusCode: 500, message: "Error interno del servicio." };
-  }
-
-  const message = error.message ?? "Error interno del servicio.";
-
-  if (/token de autenticacion requerido/i.test(message)) {
-    return { statusCode: 401, message };
-  }
-
-  if (/solo el autor puede/i.test(message)) {
-    return { statusCode: 403, message };
-  }
-
-  if (/obligatorio|debes enviar al menos/i.test(message)) {
-    return { statusCode: 400, message };
-  }
-
-  return { statusCode: 500, message: "Error interno del servicio." };
-}
+import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
+import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
 export class ResourcesController {
   constructor(
@@ -69,13 +39,10 @@ export class ResourcesController {
         pageSize,
       });
 
-      sendJson(res, 200, {
-        data: result,
-        meta: { total: result.length, page, pageSize },
-      });
+      sendData(res, 200, result, { total: result.length, page, pageSize });
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -84,14 +51,14 @@ export class ResourcesController {
       const result = await this.getStudyResourceById.execute(id);
 
       if (!result) {
-        sendJson(res, 404, { error: "Recurso no encontrado." });
+        sendError(res, 404, "Recurso no encontrado.");
         return;
       }
 
-      sendJson(res, 200, { data: result });
+      sendData(res, 200, result);
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -99,7 +66,7 @@ export class ResourcesController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticación requerido." });
+        sendError(res, 401, "Token de autenticación requerido.");
         return;
       }
 
@@ -117,10 +84,10 @@ export class ResourcesController {
         fileSizeKb: body.fileSizeKb,
       });
 
-      sendJson(res, 201, { data: created });
+      sendData(res, 201, created);
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -128,21 +95,21 @@ export class ResourcesController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticación requerido." });
+        sendError(res, 401, "Token de autenticación requerido.");
         return;
       }
 
       const deleted = await this.deleteStudyResource.execute(id, actorUserId);
 
       if (!deleted) {
-        sendJson(res, 404, { error: "Recurso no encontrado." });
+        sendError(res, 404, "Recurso no encontrado.");
         return;
       }
 
-      sendJson(res, 200, { message: "Recurso eliminado correctamente." });
+      sendData(res, 200, { message: "Recurso eliminado correctamente." });
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
@@ -150,7 +117,7 @@ export class ResourcesController {
     try {
       const actorUserId = getActorUserId(req);
       if (!actorUserId) {
-        sendJson(res, 401, { error: "Token de autenticación requerido." });
+        sendError(res, 401, "Token de autenticación requerido.");
         return;
       }
 
@@ -161,14 +128,14 @@ export class ResourcesController {
       });
 
       if (!updated) {
-        sendJson(res, 404, { error: "Recurso no encontrado." });
+        sendError(res, 404, "Recurso no encontrado.");
         return;
       }
 
-      sendJson(res, 200, { data: updated });
+      sendData(res, 200, updated);
     } catch (error) {
-      const mapped = mapApplicationError(error);
-      sendJson(res, mapped.statusCode, { error: mapped.message });
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
   }
 }
