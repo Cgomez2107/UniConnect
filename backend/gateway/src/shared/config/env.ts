@@ -1,3 +1,5 @@
+import { requireEnv } from "../../../../shared/libs/config/requiredEnv.js";
+
 export interface GatewayEnv {
   readonly port: number;
   readonly nodeEnv: string;
@@ -24,51 +26,24 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
     // Ignore if file doesn't exist
   }
 
-  const portRaw = source.PORT ?? "3000";
-  const studyGroupsBaseUrl = source.STUDY_GROUPS_BASE_URL;
-  const resourcesBaseUrl = source.RESOURCES_BASE_URL;
-  const messagingBaseUrl = source.MESSAGING_BASE_URL;
+  const portRaw = requireEnv(source, "PORT");
+  const studyGroupsBaseUrl = requireEnv(source, "STUDY_GROUPS_BASE_URL");
+  const resourcesBaseUrl = requireEnv(source, "RESOURCES_BASE_URL");
+  const messagingBaseUrl = requireEnv(source, "MESSAGING_BASE_URL");
 
   const port = Number(portRaw);
   if (!Number.isInteger(port) || port <= 0) {
     throw new Error(`Invalid PORT value: ${portRaw}`);
   }
 
-  if (!studyGroupsBaseUrl) {
-    throw new Error("STUDY_GROUPS_BASE_URL is required");
-  }
-
-  if (!resourcesBaseUrl) {
-    throw new Error("RESOURCES_BASE_URL is required");
-  }
-
-  if (!messagingBaseUrl) {
-    throw new Error("MESSAGING_BASE_URL is required");
-  }
-
-  const profilesCatalogBaseUrl = source.PROFILES_CATALOG_BASE_URL;
-  if (!profilesCatalogBaseUrl) {
-    throw new Error("PROFILES_CATALOG_BASE_URL is required");
-  }
-
-  const eventsBaseUrl = source.EVENTS_BASE_URL;
-  if (!eventsBaseUrl) {
-    throw new Error("EVENTS_BASE_URL is required");
-  }
-
-  const authBaseUrl = source.AUTH_BASE_URL;
-  if (!authBaseUrl) {
-    throw new Error("AUTH_BASE_URL is required");
-  }
-
-  const jwtAccessSecret = source.JWT_ACCESS_SECRET;
-  if (!jwtAccessSecret) {
-    throw new Error("JWT_ACCESS_SECRET is required");
-  }
+  const profilesCatalogBaseUrl = requireEnv(source, "PROFILES_CATALOG_BASE_URL");
+  const eventsBaseUrl = requireEnv(source, "EVENTS_BASE_URL");
+  const authBaseUrl = requireEnv(source, "AUTH_BASE_URL");
+  const jwtAccessSecret = requireEnv(source, "JWT_ACCESS_SECRET");
 
   return {
     port,
-    nodeEnv: source.NODE_ENV ?? "development",
+    nodeEnv: requireEnv(source, "NODE_ENV"),
     studyGroupsBaseUrl,
     resourcesBaseUrl,
     messagingBaseUrl,

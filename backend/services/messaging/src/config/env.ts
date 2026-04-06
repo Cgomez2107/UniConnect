@@ -1,3 +1,5 @@
+import { requireEnv } from "../../../../shared/libs/config/requiredEnv.js";
+
 export interface MessagingEnv {
   readonly port: number;
   readonly nodeEnv: string;
@@ -18,7 +20,7 @@ export function loadMessagingEnv(source: NodeJS.ProcessEnv = process.env): Messa
     // Ignore missing .env file
   }
 
-  const portRaw = source.PORT ?? "3104";
+  const portRaw = requireEnv(source, "PORT");
   const port = Number(portRaw);
 
   if (!Number.isInteger(port) || port <= 0) {
@@ -37,7 +39,7 @@ export function loadMessagingEnv(source: NodeJS.ProcessEnv = process.env): Messa
 
   return {
     port,
-    nodeEnv: source.NODE_ENV ?? "development",
+    nodeEnv: requireEnv(source, "NODE_ENV"),
     dbHost: source.DB_HOST,
     dbPort: parsedDbPort,
     dbName: source.DB_NAME,

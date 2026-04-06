@@ -21,8 +21,7 @@ function sendJsonError(statusCode: number, message: string): string {
 }
 
 function createRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IStudyRequestRepository {
-  const hasDatabaseConfig =
-    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword && env.dbPassword !== "replace_me";
+  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
 
   if (hasDatabaseConfig) {
     return new PostgresStudyRequestRepository(env);
@@ -40,8 +39,7 @@ function createRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IStudyReq
 }
 
 function createApplicationRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IApplicationRepository {
-  const hasDatabaseConfig =
-    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword && env.dbPassword !== "replace_me";
+  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
 
   if (hasDatabaseConfig) {
     return new PostgresApplicationRepository(env);

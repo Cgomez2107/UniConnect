@@ -1,3 +1,5 @@
+import { requireEnv } from "../../../../shared/libs/config/requiredEnv.js";
+
 export interface ResourcesEnv {
   readonly port: number;
   readonly nodeEnv: string;
@@ -20,7 +22,7 @@ export function loadResourcesEnv(source: NodeJS.ProcessEnv = process.env): Resou
     // Ignore missing .env file
   }
 
-  const portRaw = source.PORT ?? "3103";
+  const portRaw = requireEnv(source, "PORT");
   const port = Number(portRaw);
 
   if (!Number.isInteger(port) || port <= 0) {
@@ -39,7 +41,7 @@ export function loadResourcesEnv(source: NodeJS.ProcessEnv = process.env): Resou
 
   return {
     port,
-    nodeEnv: source.NODE_ENV ?? "development",
+    nodeEnv: requireEnv(source, "NODE_ENV"),
     dbHost: source.DB_HOST,
     dbPort: parsedDbPort,
     dbName: source.DB_NAME,

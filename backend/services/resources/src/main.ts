@@ -23,8 +23,7 @@ function createRepository(env: ReturnType<typeof loadResourcesEnv>): IStudyResou
     !!env.dbPort &&
     !!env.dbName &&
     !!env.dbUser &&
-    !!env.dbPassword &&
-    env.dbPassword !== "replace_me";
+    !!env.dbPassword;
 
   if (hasDatabaseConfig) {
     return new PostgresStudyResourceRepository(env);

@@ -9,6 +9,7 @@
     "test/**/*.ts",
     "../../shared/http/sendJson.ts",
     "../../shared/libs/errors/ApplicationError.ts",
-    "../../shared/libs/errors/mapHttpStatus.ts"
+    "../../shared/libs/errors/mapHttpStatus.ts",
+    "../../shared/libs/config/requiredEnv.ts"
   ]
 }

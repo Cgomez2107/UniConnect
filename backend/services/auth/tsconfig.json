@@ -16,6 +16,7 @@
     "../../shared/libs/errors/ConflictError.ts",
     "../../shared/libs/errors/mapHttpStatus.ts",
     "../../shared/libs/errors/index.ts",
+    "../../shared/libs/config/requiredEnv.ts",
     "../../shared/libs/validation/ValidationError.ts",
     "../../shared/libs/validation/validators.ts",
     "../../shared/libs/validation/validateDto.ts",

@@ -6,6 +6,7 @@ import { SignUpUseCase } from "./application/use-cases/SignUpUseCase.js";
 import { SignInUseCase } from "./application/use-cases/SignInUseCase.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshTokenUseCase.js";
 import { AuthController } from "./interfaces/http/AuthController.js";
+import { requireEnv } from "../../../shared/libs/config/requiredEnv.js";
 
 try {
   if (typeof process.loadEnvFile === "function") {
@@ -15,8 +16,13 @@ try {
   // Ignore missing .env on environments where vars are injected externally.
 }
 
-const portRaw = process.env.PORT ?? process.env.AUTH_SERVICE_PORT ?? "3001";
+const portRaw = process.env.PORT ?? process.env.AUTH_SERVICE_PORT;
+if (!portRaw) {
+  throw new Error("PORT or AUTH_SERVICE_PORT is required");
+}
 const PORT = Number(portRaw);
+
+const nodeEnv = requireEnv(process.env, "NODE_ENV");
 
 if (!Number.isInteger(PORT) || PORT <= 0) {
   throw new Error(`Invalid auth service PORT value: ${portRaw}`);
@@ -71,7 +77,7 @@ async function main() {
         level: "info",
         message: "Service listening",
         port: PORT,
-        nodeEnv: process.env.NODE_ENV ?? "development",
+        nodeEnv,
       }),
     );
   });

@@ -14,7 +14,11 @@ export interface JWTPayload {
 export class JWTMiddleware {
   private readonly accessTokenSecret: string;
 
-  constructor(accessTokenSecret: string = process.env.JWT_ACCESS_SECRET || "access-secret") {
+  constructor(accessTokenSecret: string) {
+    if (!accessTokenSecret) {
+      throw new Error("JWT_ACCESS_SECRET is required");
+    }
+
     this.accessTokenSecret = accessTokenSecret;
   }
 

@@ -13,9 +13,13 @@ export class JWTService {
   private readonly refreshTokenExpiry = 7 * 24 * 60 * 60; // 7 days
 
   constructor(
-    accessTokenSecret: string = process.env.JWT_ACCESS_SECRET || "access-secret",
-    refreshTokenSecret: string = process.env.JWT_REFRESH_SECRET || "refresh-secret"
+    accessTokenSecret: string = process.env.JWT_ACCESS_SECRET ?? "",
+    refreshTokenSecret: string = process.env.JWT_REFRESH_SECRET ?? ""
   ) {
+    if (!accessTokenSecret || !refreshTokenSecret) {
+      throw new Error("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET are required");
+    }
+
     this.accessTokenSecret = accessTokenSecret;
     this.refreshTokenSecret = refreshTokenSecret;
   }

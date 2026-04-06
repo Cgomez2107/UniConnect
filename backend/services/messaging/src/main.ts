@@ -25,8 +25,7 @@ function createRepository(env: ReturnType<typeof loadMessagingEnv>): IMessagingR
 		!!env.dbPort &&
 		!!env.dbName &&
 		!!env.dbUser &&
-		!!env.dbPassword &&
-		env.dbPassword !== "replace_me";
+		!!env.dbPassword;
 
 	if (hasDatabaseConfig) {
 		return new PostgresMessagingRepository(env);

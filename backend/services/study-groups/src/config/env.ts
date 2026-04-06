@@ -1,3 +1,5 @@
+import { requireEnv } from "../../../../shared/libs/config/requiredEnv.js";
+
 export interface StudyGroupsEnv {
   readonly port: number;
   readonly nodeEnv: string;
@@ -19,7 +21,7 @@ export function loadStudyGroupsEnv(source: NodeJS.ProcessEnv = process.env): Stu
     // Ignore if file doesn't exist
   }
 
-  const portRaw = source.PORT ?? "3101";
+  const portRaw = requireEnv(source, "PORT");
   const port = Number(portRaw);
 
   if (!Number.isInteger(port) || port <= 0) {
@@ -35,12 +37,12 @@ export function loadStudyGroupsEnv(source: NodeJS.ProcessEnv = process.env): Stu
 
   return {
     port,
-    nodeEnv: source.NODE_ENV ?? "development",
-    dbHost: source.DB_HOST,
+    nodeEnv: requireEnv(source, "NODE_ENV"),
+    dbHost: requireEnv(source, "DB_HOST"),
     dbPort: parsedDbPort,
-    dbName: source.DB_NAME,
-    dbUser: source.DB_USER,
-    dbPassword: source.DB_PASSWORD,
+    dbName: requireEnv(source, "DB_NAME"),
+    dbUser: requireEnv(source, "DB_USER"),
+    dbPassword: requireEnv(source, "DB_PASSWORD"),
     dbSsl: source.DB_SSL === "true",
   };
 }
