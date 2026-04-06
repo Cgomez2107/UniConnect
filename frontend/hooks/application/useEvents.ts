@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 export type EventFilter = EventCategory | "todos" | "pasados"
 
 export function useEvents() {
-  const container = DIContainer.getInstance()
+  const container = useMemo(() => DIContainer.getInstance(), [])
   const [events, setEvents] = useState<CampusEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)

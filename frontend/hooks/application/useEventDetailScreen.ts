@@ -3,7 +3,7 @@ import type { CampusEvent } from "@/types";
 import { useEffect, useMemo, useState } from "react";
 
 export function useEventDetailScreen(id?: string) {
-  const container = DIContainer.getInstance();
+  const container = useMemo(() => DIContainer.getInstance(), []);
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<CampusEvent | null>(null);
 

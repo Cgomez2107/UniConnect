@@ -2,7 +2,7 @@ import { DIContainer } from "@/lib/services/di/container"
 import { useAuthStore } from "@/store/useAuthStore"
 import type { Conversation } from "@/types"
 import { useFocusEffect } from "expo-router"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 interface UseConversationsReturn {
 	conversations: Conversation[]
@@ -13,7 +13,7 @@ interface UseConversationsReturn {
 }
 
 export function useConversations(): UseConversationsReturn {
-	const container = DIContainer.getInstance()
+	const container = useMemo(() => DIContainer.getInstance(), [])
 	const user = useAuthStore((s) => s.user)
 	const isHydrating = useAuthStore((s) => s.isHydrating)
 	const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -37,7 +37,8 @@ export function useConversations(): UseConversationsReturn {
 				return
 			}
 
-			isRefresh ? setRefreshing(true) : setLoading(true)
+			if (isRefresh) setRefreshing(true)
+			else setLoading(true)
 			setError(null)
 			try {
 				const useCase = container.getGetConversations()

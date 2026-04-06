@@ -1,7 +1,7 @@
 import { DIContainer } from "@/lib/services/di/container"
 import { useAuthStore } from "@/store/useAuthStore"
 import type { StudentSearchResult } from "@/types"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 const PAGE_SIZE = 20
 
@@ -19,7 +19,7 @@ interface UseStudentSearchReturn {
 }
 
 export function useStudentSearch(): UseStudentSearchReturn {
-	const container = DIContainer.getInstance()
+	const container = useMemo(() => DIContainer.getInstance(), [])
 	const user = useAuthStore((s) => s.user)
 	const [students, setStudents] = useState<StudentSearchResult[]>([])
 	const [userSubjects, setUserSubjects] = useState<{ id: string; name: string }[]>([])

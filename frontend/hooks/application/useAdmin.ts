@@ -85,8 +85,7 @@ const EVENT_MODAL_INIT: EventModalState = {
  * @returns API completa de datos, modales y acciones para la vista admin.
  */
 export function useAdmin(search: string) {
-  const container = DIContainer.getInstance()
-  const adminGateway = container.getAdminPanelGateway()
+  const adminGateway = useMemo(() => DIContainer.getInstance().getAdminPanelGateway(), [])
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)

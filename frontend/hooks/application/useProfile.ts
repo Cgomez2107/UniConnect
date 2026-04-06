@@ -2,7 +2,7 @@ import { DIContainer } from "@/lib/services/di/container"
 import { useAuthStore } from "@/store/useAuthStore"
 import type { StudyRequest, UserProgram, UserSubject } from "@/types"
 import { useFocusEffect } from "expo-router"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 interface UseProfileReturn {
 	avatarUrl: string | null
@@ -18,7 +18,7 @@ interface UseProfileReturn {
 }
 
 export function useProfile(): UseProfileReturn {
-	const container = DIContainer.getInstance()
+	const container = useMemo(() => DIContainer.getInstance(), [])
 	const user = useAuthStore((s) => s.user)
 
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null)

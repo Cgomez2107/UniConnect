@@ -1,7 +1,7 @@
 import { DIContainer } from "@/lib/services/di/container"
 import { useAuthStore } from "@/store/useAuthStore"
 import type { StudentPublicProfile } from "@/types"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 interface UseStudentProfileReturn {
 	profile: StudentPublicProfile | null
@@ -11,7 +11,7 @@ interface UseStudentProfileReturn {
 }
 
 export function useStudentProfile(studentId: string): UseStudentProfileReturn {
-	const container = DIContainer.getInstance()
+	const container = useMemo(() => DIContainer.getInstance(), [])
 	const user = useAuthStore((s) => s.user)
 	const [profile, setProfile] = useState<StudentPublicProfile | null>(null)
 	const [loading, setLoading] = useState(true)
