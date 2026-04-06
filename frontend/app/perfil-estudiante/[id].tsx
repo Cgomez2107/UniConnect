@@ -18,14 +18,10 @@ import { InfoRow } from "@/components/shared/InfoRow"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { SectionCard } from "@/components/shared/SectionCard"
 import { Colors } from "@/constants/Colors"
-import { useMessaging } from "@/hooks/application/useMessaging"
-import { useStudentProfile } from "@/hooks/application/useStudentProfile"
-import { useAuthStore } from "@/store/useAuthStore"
+import { useStudentProfileScreen } from "@/hooks/application/useStudentProfileScreen"
 import { router, useLocalSearchParams } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import { useState } from "react"
 import {
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -41,36 +37,15 @@ export default function StudentProfileScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
   const insets = useSafeAreaInsets()
-  const currentUser = useAuthStore((s) => s.user)
-  const { getOrCreateConversation } = useMessaging()
-  const [startingChat, setStartingChat] = useState(false)
-
-  const { profile, loading, error, refresh } = useStudentProfile(id)
-
-  // Iniciales del estudiante para el avatar por defecto
-  const initials = (profile?.full_name ?? "UC")
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-
-  // Iniciar conversación con el estudiante
-  const handleStartChat = async () => {
-    if (!currentUser?.id || !profile?.id) return
-    setStartingChat(true)
-    try {
-      const conversation = await getOrCreateConversation(
-        currentUser.id,
-        profile.id
-      )
-      router.push(`/chat/${conversation.id}` as any)
-    } catch {
-      Alert.alert("Error", "No se pudo iniciar la conversación.")
-    } finally {
-      setStartingChat(false)
-    }
-  }
+  const {
+    profile,
+    loading,
+    error,
+    refresh,
+    initials,
+    startingChat,
+    handleStartChat,
+  } = useStudentProfileScreen(id)
 
   // Estado de carga
   if (loading) {

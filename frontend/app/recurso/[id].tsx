@@ -13,18 +13,11 @@
  */
 
 import { Colors } from "@/constants/Colors"
-import { useResources } from "@/hooks/application/useResources"
-import { useDeleteResource } from "@/hooks/application/useDeleteResource"
-import { useAuthStore } from "@/store/useAuthStore"
-import type { StudyResource } from "@/types"
+import { useResourceDetail } from "@/hooks/application/useResourceDetail"
 import { router, useLocalSearchParams } from "expo-router"
-import * as FileSystem from "expo-file-system/legacy"
-import * as Sharing from "expo-sharing"
 import { StatusBar } from "expo-status-bar"
-import { useEffect, useState } from "react"
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -84,49 +77,28 @@ export default function RecursoDetailScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
   const insets = useSafeAreaInsets()
-  const user = useAuthStore((s) => s.user)
-
-  const [resource, setResource] = useState<StudyResource | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Edición
-  const [editing, setEditing] = useState(false)
-  const [editTitle, setEditTitle] = useState("")
-  const [editDescription, setEditDescription] = useState("")
-  const [saving, setSaving] = useState(false)
-
-  // Eliminación
-  const { deleting, remove } = useDeleteResource()
-  const { getResourceById, updateResource } = useResources()
-
-  // Descarga
-  const [downloading, setDownloading] = useState(false)
-
-  const isOwn = resource?.user_id === user?.id
-
-  // ── Cargar detalle ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!id) return
-
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await getResourceById(id)
-        if (!data) throw new Error("Recurso no encontrado.")
-        setResource(data)
-        setEditTitle(data.title)
-        setEditDescription(data.description ?? "")
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Error al cargar el recurso.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    load()
-  }, [getResourceById, id])
+  const {
+    resource,
+    loading,
+    error,
+    editing,
+    setEditing,
+    editTitle,
+    setEditTitle,
+    editDescription,
+    setEditDescription,
+    saving,
+    deleting,
+    downloading,
+    isOwn,
+    handleDownload,
+    handleSave,
+    handleDelete,
+    cancelEditing,
+  } = useResourceDetail({
+    resourceId: id,
+    onDeleted: () => router.back(),
+  })
 
   // ── Abrir archivo ───────────────────────────────────────────────────────
   const handleOpen = () => {
@@ -141,92 +113,6 @@ export default function RecursoDetailScreen() {
         },
       })
     }
-  }
-
-  // ── Descargar archivo ─────────────────────────────────────────────────
-  const handleDownload = async () => {
-    if (!resource) return
-    setDownloading(true)
-    try {
-      const fileUri = FileSystem.cacheDirectory + resource.file_name
-      const { uri } = await FileSystem.downloadAsync(resource.file_url, fileUri)
-      
-      const canShare = await Sharing.isAvailableAsync()
-      if (canShare) {
-        await Sharing.shareAsync(uri)
-      } else {
-        Alert.alert("Descargado", `Archivo guardado en: ${uri}`)
-      }
-    } catch {
-      Alert.alert("Error", "No se pudo descargar el archivo.")
-    } finally {
-      setDownloading(false)
-    }
-  }
-
-  // ── Guardar edición ─────────────────────────────────────────────────────
-  const handleSave = async () => {
-    if (!resource || !user?.id || editTitle.trim().length < 3) {
-      Alert.alert("Error", "El título debe tener al menos 3 caracteres.")
-      return
-    }
-
-    setSaving(true)
-    try {
-      const updated = await updateResource(resource.id, user.id, {
-        title: editTitle.trim(),
-        description: editDescription.trim() || null,
-      })
-      setResource(updated)
-      setEditing(false)
-      Alert.alert("Actualizado", "El recurso se actualizó correctamente.")
-    } catch (e: unknown) {
-      Alert.alert("Error", e instanceof Error ? e.message : "No se pudo actualizar.")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // ── Eliminar con doble confirmación ─────────────────────────────────────
-  const handleDelete = () => {
-    if (!resource) return
-
-    // Primera confirmación
-    Alert.alert(
-      "Eliminar recurso",
-      `¿Deseas eliminar "${resource.title}"?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Sí, eliminar",
-          style: "destructive",
-          onPress: () => {
-            // Segunda confirmación
-            Alert.alert(
-              "⚠️ Confirmar eliminación",
-              "Esta acción no se puede deshacer. El archivo se eliminará permanentemente.",
-              [
-                { text: "No, cancelar", style: "cancel" },
-                {
-                  text: "Eliminar definitivamente",
-                  style: "destructive",
-                  onPress: async () => {
-                    const success = await remove(resource.id, resource.file_url)
-                    if (success) {
-                      Alert.alert("Eliminado", "El recurso fue eliminado.", [
-                        { text: "OK", onPress: () => router.back() },
-                      ])
-                    } else {
-                      Alert.alert("Error", "No se pudo eliminar el recurso.")
-                    }
-                  },
-                },
-              ]
-            )
-          },
-        },
-      ]
-    )
   }
 
   // ── Estados de carga / error ────────────────────────────────────────────
@@ -447,11 +333,7 @@ export default function RecursoDetailScreen() {
             <View style={styles.ownerActions}>
               <TouchableOpacity
                 style={[styles.secondaryBtn, { borderColor: C.border }]}
-                onPress={() => {
-                  setEditing(false)
-                  setEditTitle(resource.title)
-                  setEditDescription(resource.description ?? "")
-                }}
+                onPress={cancelEditing}
                 activeOpacity={0.85}
               >
                 <Text style={[styles.secondaryBtnText, { color: C.textSecondary }]}>Cancelar</Text>

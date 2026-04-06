@@ -334,7 +334,7 @@ export default function AdminPanelScreen() {
         onSave={admin.saveFaculty}
         C={C}
       >
-        <FieldLabel text="Nombre de la facultad *" C={C} />
+        <FieldLabel text="Nombre de la facultad *" />
         <TextInput
           style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
           placeholder="Ej: Ingenieria"
@@ -357,7 +357,7 @@ export default function AdminPanelScreen() {
         onSave={admin.saveProgram}
         C={C}
       >
-        <FieldLabel text="Nombre del programa *" C={C} />
+        <FieldLabel text="Nombre del programa *" />
         <TextInput
           style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
           placeholder="Ej: Ingenieria de Sistemas"
@@ -369,7 +369,7 @@ export default function AdminPanelScreen() {
             admin.setProgramModal((p: any) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
           }
         />
-        <FieldLabel text="Facultad *" C={C} style={{ marginTop: 14 }} />
+        <FieldLabel text="Facultad *" style={{ marginTop: 14 }} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 2 }}>
           {admin.faculties.map((f: any) => (
             <TouchableOpacity
@@ -406,7 +406,7 @@ export default function AdminPanelScreen() {
         onSave={admin.saveSubject}
         C={C}
       >
-        <FieldLabel text="Nombre de la materia *" C={C} />
+        <FieldLabel text="Nombre de la materia *" />
         <TextInput
           style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
           placeholder="Ej: Calculo Diferencial"
@@ -418,7 +418,7 @@ export default function AdminPanelScreen() {
             admin.setSubjectModal((p: any) => ({ ...p, form: { ...p.form, name: v }, error: "" }))
           }
         />
-        <FieldLabel text="Programas vinculados * (seleccion multiple)" C={C} style={{ marginTop: 14 }} />
+        <FieldLabel text="Programas vinculados * (seleccion multiple)" style={{ marginTop: 14 }} />
         <View style={styles.chipsWrap}>
           {admin.programs.map((prog: any) => {
             const selected = admin.subjectModal.form.program_ids.includes(prog.id)
@@ -474,7 +474,7 @@ export default function AdminPanelScreen() {
         onSave={admin.saveEvent}
         C={C}
       >
-        <FieldLabel text="Título *" C={C} />
+        <FieldLabel text="Título *" />
         <TextInput
           style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
           placeholder="Ej: Semana de la Ingeniería"
@@ -487,7 +487,7 @@ export default function AdminPanelScreen() {
           }
         />
 
-        <FieldLabel text="Descripción (opcional)" C={C} style={{ marginTop: 14 }} />
+        <FieldLabel text="Descripción (opcional)" style={{ marginTop: 14 }} />
         <TextInput
           style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary, height: 80 }]}
           placeholder="Breve descripción del evento..."
@@ -500,7 +500,7 @@ export default function AdminPanelScreen() {
           }
         />
 
-        <FieldLabel text="Fecha y hora * (AAAA-MM-DDTHH:mm)" C={C} style={{ marginTop: 14 }} />
+        <FieldLabel text="Fecha y hora * (AAAA-MM-DDTHH:mm)" style={{ marginTop: 14 }} />
         <TextInput
           style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
           placeholder="2025-06-15T10:00"
@@ -513,7 +513,7 @@ export default function AdminPanelScreen() {
           }
         />
 
-        <FieldLabel text="Lugar (opcional)" C={C} style={{ marginTop: 14 }} />
+        <FieldLabel text="Lugar (opcional)" style={{ marginTop: 14 }} />
         <TextInput
           style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
           placeholder="Ej: Auditorio Central"
@@ -525,7 +525,7 @@ export default function AdminPanelScreen() {
           }
         />
 
-        <FieldLabel text="Categoría *" C={C} style={{ marginTop: 14 }} />
+        <FieldLabel text="Categoría *" style={{ marginTop: 14 }} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 2 }}>
           {(["academico", "cultural", "deportivo", "otro"] as const).map((cat) => (
             <TouchableOpacity

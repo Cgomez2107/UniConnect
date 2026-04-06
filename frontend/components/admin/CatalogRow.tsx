@@ -4,7 +4,7 @@ import { Colors } from "@/constants/Colors"
 import type { AdminEvent, AdminRequest, AdminResource, AdminUser, EventCategory, Faculty, Program, Subject } from "@/types"
 import * as Haptics from "expo-haptics"
 import { useEffect, useRef } from "react"
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Animated, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native"
 
 // Helper: tiempo relativo
 
@@ -38,13 +38,15 @@ function useEntryAnim() {
 interface RowActionsProps {
   onEdit: () => void
   onDelete: () => void
-  C: typeof Colors["light"]
 }
 
 /**
  * Renderiza las acciones estándar de edición y eliminación para una fila del catálogo.
  */
-export function RowActions({ onEdit, onDelete, C }: RowActionsProps) {
+export function RowActions({ onEdit, onDelete }: RowActionsProps) {
+  const scheme = useColorScheme() ?? "light"
+  const C = Colors[scheme]
+
   return (
     <View style={styles.actions}>
       <TouchableOpacity
@@ -96,7 +98,7 @@ export function FacultyRow({ item, index, programsCount, onEdit, onDelete, C }: 
             {programsCount} programa{programsCount !== 1 ? "s" : ""}
           </Text>
         </View>
-        <RowActions onEdit={onEdit} onDelete={onDelete} C={C} />
+        <RowActions onEdit={onEdit} onDelete={onDelete} />
       </View>
     </Animated.View>
   )
@@ -137,7 +139,7 @@ export function ProgramRow({ item, index, subjectsCount, onEdit, onDelete, C }: 
             </Text>
           </View>
         </View>
-        <RowActions onEdit={onEdit} onDelete={onDelete} C={C} />
+        <RowActions onEdit={onEdit} onDelete={onDelete} />
       </View>
     </Animated.View>
   )
@@ -175,7 +177,7 @@ export function SubjectRow({ item, programs, onEdit, onDelete, C }: SubjectRowPr
             )}
           </View>
         </View>
-        <RowActions onEdit={onEdit} onDelete={onDelete} C={C} />
+        <RowActions onEdit={onEdit} onDelete={onDelete} />
       </View>
     </Animated.View>
   )

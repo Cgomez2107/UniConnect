@@ -16,6 +16,7 @@ import {
   Text,
   TextStyle,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from "react-native"
 
@@ -102,13 +103,14 @@ export function CrudModal({
 /** Etiqueta de campo del formulario */
 export function FieldLabel({
   text,
-  C,
   style,
 }: {
   text: string
-  C: typeof Colors["light"]
   style?: StyleProp<TextStyle>
 }) {
+  const scheme = useColorScheme() ?? "light"
+  const C = Colors[scheme]
+
   return (
     <Text
       style={[{ fontSize: 13, fontWeight: "500", marginBottom: 8, color: C.textSecondary }, style]}

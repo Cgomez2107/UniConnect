@@ -7,15 +7,11 @@
  */
 
 import { Colors } from "@/constants/Colors";
-import { useApplications } from "@/hooks/application/useApplications";
-import { useStudyRequests } from "@/hooks/application/useStudyRequests";
-import { useAuthStore } from "@/store/useAuthStore";
+import { usePostulationForm } from "@/hooks/application/usePostulationForm";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -28,78 +24,24 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface RequestSummary {
-  title: string;
-  author_name: string;
-  subject_name: string;
-  status: string;
-  is_active: boolean;
-}
-
 export default function PostularScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
-  const user = useAuthStore((s) => s.user);
-  const { applyToRequest, getMyApplicationStatus } = useApplications();
-  const { getRequestById } = useStudyRequests();
-
-  const [request, setRequest] = useState<RequestSummary | null>(null);
-  const [loadingRequest, setLoadingRequest] = useState(true);
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-
-  // Cargar resumen de la solicitud
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      const baseRequest = await getRequestById(id);
-
-      if (baseRequest) {
-        setRequest({
-          title: baseRequest.title,
-          author_name: baseRequest.profiles?.full_name ?? "Usuario",
-          subject_name: baseRequest.subjects?.name ?? "Materia",
-          status: baseRequest.status,
-          is_active: baseRequest.is_active,
-        });
-      }
-      setLoadingRequest(false);
-    })();
-  }, [getRequestById, id]);
-
-  const handlePostular = async () => {
-    if (!user || !id) return;
-    if (!request || request.status !== "abierta" || !request.is_active) {
-      Alert.alert("Convocatoria cerrada", "Esta convocatoria ya no esta activa.");
-      return;
-    }
-
-    if (message.trim().length < 10) {
-      Alert.alert("Mensaje muy corto", "Escribe al menos 10 caracteres para presentarte.");
-      return;
-    }
-    setSending(true);
-    try {
-      const existingStatus = await getMyApplicationStatus(id, user.id);
-      if (existingStatus) {
-        Alert.alert("Postulación existente", "Ya te postulaste a esta solicitud.");
-        return;
-      }
-
-      await applyToRequest(id, user.id, message.trim());
-      Alert.alert(
-        "¡Postulación enviada! 🎉",
-        "El creador del grupo recibirá tu mensaje y te notificará pronto.",
-        [{ text: "Entendido", onPress: () => router.back() }]
-      );
-    } catch (e: any) {
-      Alert.alert("Error", e.message ?? "No se pudo enviar la postulación.");
-    } finally {
-      setSending(false);
-    }
-  };
+  const {
+    request,
+    loadingRequest,
+    message,
+    setMessage,
+    sending,
+    isClosed,
+    isSubmitDisabled,
+    handlePostular,
+  } = usePostulationForm({
+    requestId: id,
+    onApplied: () => router.back(),
+  });
 
   if (loadingRequest) {
     return (
@@ -151,7 +93,7 @@ export default function PostularScreen() {
             <Text style={[styles.cardMeta, { color: C.textSecondary }]}>
               📚 {request.subject_name} · por {request.author_name}
             </Text>
-            {request.status !== "abierta" || !request.is_active ? (
+            {isClosed ? (
               <Text style={[styles.closedNotice, { color: C.error }]}>Convocatoria cerrada</Text>
             ) : null}
           </View>
@@ -205,23 +147,13 @@ export default function PostularScreen() {
             styles.sendBtn,
             {
               backgroundColor:
-                sending ||
-                message.trim().length < 10 ||
-                !request ||
-                request.status !== "abierta" ||
-                !request.is_active
+                isSubmitDisabled
                   ? C.border
                   : C.primary,
             },
           ]}
           onPress={handlePostular}
-          disabled={
-            sending ||
-            message.trim().length < 10 ||
-            !request ||
-            request.status !== "abierta" ||
-            !request.is_active
-          }
+          disabled={isSubmitDisabled}
           activeOpacity={0.85}
         >
           {sending ? (

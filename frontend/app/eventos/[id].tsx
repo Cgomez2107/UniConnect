@@ -5,12 +5,11 @@
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
-import { DIContainer } from "@/lib/services/di/container"
+import { useEventDetailScreen } from "@/hooks/application/useEventDetailScreen"
 import type { CampusEvent, EventCategory } from "@/types"
 import { Ionicons } from "@expo/vector-icons"
 import { router, useLocalSearchParams } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import { useEffect, useState } from "react"
 import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -39,49 +38,8 @@ export default function EventDetail() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
   const insets = useSafeAreaInsets()
-  const container = DIContainer.getInstance()
   const { id } = useLocalSearchParams<{ id?: string }>()
-
-  const [loading, setLoading] = useState(true)
-  const [event, setEvent] = useState<CampusEvent | null>(null)
-
-  useEffect(() => {
-    const eventId = typeof id === "string" ? id : ""
-    if (!eventId) {
-      setLoading(false)
-      setEvent(null)
-      return
-    }
-
-    const load = async () => {
-      setLoading(true)
-      try {
-        const useCase = container.getGetEventById()
-        const result = await useCase.execute(eventId)
-        setEvent(result)
-      } catch {
-        setEvent(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    load().catch(() => {
-      setLoading(false)
-      setEvent(null)
-    })
-  }, [container, id])
-
-  const formattedDate =
-    event?.event_date
-      ? new Date(event.event_date).toLocaleString("es-CO", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : ""
+  const { loading, event, formattedDate } = useEventDetailScreen(id)
 
   const category = event?.category ?? "otro"
   const categoryColor = CATEGORY_COLOR[category]

@@ -4,18 +4,11 @@
  */
 
 import { Colors } from "@/constants/Colors";
-import {
-  createStudyRequest,
-  getAvailableSubjectsForCurrentUser,
-  type Subject,
-} from "@/hooks/application/useStudyRequestsCatalog";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCreateStudyRequestForm } from "@/hooks/application/useCreateStudyRequestForm";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -29,69 +22,27 @@ import {
 export default function NuevaSolicitudScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
-  const role = useAuthStore((s) => s.user?.role);
-
-  // Formulario
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [maxMembers, setMaxMembers] = useState("4");
-
-  // Estado remoto
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  // Carga inicial
-  const loadData = async () => {
-    setLoadingData(true);
-    setFetchError(null);
-    try {
-      const subs = await getAvailableSubjectsForCurrentUser();
-      setSubjects(subs);
-    } catch (e: any) {
-      setFetchError(e?.message ?? "No se pudieron cargar las materias disponibles.");
-    } finally {
-      setLoadingData(false);
-    }
-  };
-
-  useEffect(() => { loadData(); }, []);
-
-  // Validación
-  const isValid =
-    title.trim().length >= 5 &&
-    description.trim().length >= 10 &&
-    !!selectedSubject;
-
-  // Envío
-  const handleCreate = async () => {
-    if (!isValid || !selectedSubject) return;
-    setIsSubmitting(true);
-    try {
-      await createStudyRequest({
-        title: title.trim(),
-        description: description.trim(),
-        subject_id: selectedSubject,
-        max_members: Math.max(2, Math.min(10, parseInt(maxMembers) || 4)),
-      });
-      Alert.alert(
-        "¡Solicitud creada! 🎉",
-        "Tu grupo de estudio ya está visible en el feed.",
-        [{ text: "Ver feed", onPress: () => router.back() }]
-      );
-    } catch (e: any) {
-      // Mensaje amigable para el constraint de solicitud duplicada
-      const msg = e?.message ?? "";
-      const friendlyMsg = msg.includes("unique_open_request_per_subject")
-        ? "Ya tienes una solicitud abierta para esta materia. Ciérrala antes de crear una nueva."
-        : msg || "Intenta de nuevo.";
-      Alert.alert("Error al crear", friendlyMsg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const {
+    role,
+    title,
+    setTitle,
+    description,
+    setDescription,
+    selectedSubject,
+    setSelectedSubject,
+    maxMembers,
+    subjects,
+    loadingData,
+    isSubmitting,
+    fetchError,
+    loadData,
+    isValid,
+    handleCreate,
+    decrementMembers,
+    incrementMembers,
+  } = useCreateStudyRequestForm({
+    onCreated: () => router.back(),
+  });
 
   // Estados de carga / error / vacío
   if (loadingData) {
@@ -237,14 +188,14 @@ export default function NuevaSolicitudScreen() {
         <View style={styles.counterRow}>
           <TouchableOpacity
             style={[styles.counterBtn, { borderColor: C.border, backgroundColor: C.surface }]}
-            onPress={() => setMaxMembers((prev) => String(Math.max(2, parseInt(prev) - 1)))}
+            onPress={decrementMembers}
           >
             <Text style={[styles.counterBtnText, { color: C.textPrimary }]}>−</Text>
           </TouchableOpacity>
           <Text style={[styles.counterValue, { color: C.textPrimary }]}>{maxMembers}</Text>
           <TouchableOpacity
             style={[styles.counterBtn, { borderColor: C.border, backgroundColor: C.surface }]}
-            onPress={() => setMaxMembers((prev) => String(Math.min(10, parseInt(prev) + 1)))}
+            onPress={incrementMembers}
           >
             <Text style={[styles.counterBtnText, { color: C.textPrimary }]}>+</Text>
           </TouchableOpacity>

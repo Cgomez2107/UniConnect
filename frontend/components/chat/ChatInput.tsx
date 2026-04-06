@@ -21,42 +21,67 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface Props {
+interface ChatInputTextState {
   value: string;
   onChangeText: (v: string) => void;
   onTyping: (v: string) => void;
-  onSend: () => void;
-  onVoicePress: () => void;
-  onPickImage: () => void;
-  onRemoveImage: () => void;
-  replyPreview: string | null;
-  onClearReply: () => void;
-  imagePreviewUri: string | null;
+}
+
+interface ChatInputReplyState {
+  preview: string | null;
+  onClear: () => void;
+}
+
+interface ChatInputMediaState {
+  previewUri: string | null;
+  picking: boolean;
+  onPick: () => void;
+  onRemove: () => void;
+}
+
+interface ChatInputSendState {
   sending: boolean;
-  pickingImage: boolean;
-  voiceRecording: boolean;
-  voiceElapsedSec: number;
+  onSend: () => void;
+}
+
+interface ChatInputVoiceState {
+  recording: boolean;
+  elapsedSec: number;
+  onPress: () => void;
+}
+
+interface Props {
+  text: ChatInputTextState;
+  reply: ChatInputReplyState;
+  media: ChatInputMediaState;
+  send: ChatInputSendState;
+  voice: ChatInputVoiceState;
 }
 
 export function ChatInput({
-  value,
-  onChangeText,
-  onTyping,
-  onSend,
-  onVoicePress,
-  onPickImage,
-  onRemoveImage,
-  replyPreview,
-  onClearReply,
-  imagePreviewUri,
-  sending,
-  pickingImage,
-  voiceRecording,
-  voiceElapsedSec,
+  text,
+  reply,
+  media,
+  send,
+  voice,
 }: Props) {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
+  const { value, onChangeText, onTyping } = text;
+  const { preview: replyPreview, onClear: onClearReply } = reply;
+  const {
+    previewUri: imagePreviewUri,
+    picking: pickingImage,
+    onPick: onPickImage,
+    onRemove: onRemoveImage,
+  } = media;
+  const { sending, onSend } = send;
+  const {
+    recording: voiceRecording,
+    elapsedSec: voiceElapsedSec,
+    onPress: onVoicePress,
+  } = voice;
   const hasMedia = !!imagePreviewUri;
   const canSend = (value.trim().length > 0 || hasMedia) && !sending;
   const canQuickAction = !sending && !pickingImage;
