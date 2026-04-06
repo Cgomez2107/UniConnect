@@ -22,8 +22,8 @@ export class ApiStudentRepository implements IStudentRepository {
                 limit: pageSize.toString()
             });
 
-            const data = await fetchApi<any>(`/students?${params.toString()}`);
-            return (data.data ?? []).map(mapStudentSearchResultFromApi);
+            const data = await fetchApi<any[]>(`/students?${params.toString()}`);
+            return (data ?? []).map(mapStudentSearchResultFromApi);
         } catch (error) {
             return this.fallback.searchBySubject(subjectId, currentUserId, page, pageSize);
         }

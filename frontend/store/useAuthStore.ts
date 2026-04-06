@@ -17,6 +17,15 @@ export interface UserSession {
   bio?: string | null;
 }
 
+function normalizeRole(role: unknown): UserRole {
+  const value = String(role ?? "").trim().toLowerCase();
+  if (value === "admin" || value === "administrador") {
+    return "admin";
+  }
+
+  return "estudiante";
+}
+
 interface AuthState {
   user: UserSession | null;
   isLoading: boolean;
@@ -36,7 +45,7 @@ const buildFallbackUser = (sessionUser: any): UserSession => ({
   fullName: sessionUser.user_metadata?.full_name ?? "Estudiante",
   avatarUrl: sessionUser.user_metadata?.avatar_url ?? null,
   phoneNumber: null,
-  role: "estudiante",
+  role: normalizeRole(sessionUser.user_metadata?.role),
   semester: null,
   bio: null,
 });
@@ -110,32 +119,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             return;
           }
 
-          // Entramos rápido con datos de sesión y completamos perfil luego.
+          // Resolvemos el rol antes de salir de hidratación para evitar
+          // el salto visual tabs -> admin en cuentas administrativas.
+          let resolvedUser = fallbackUser;
+          try {
+            const profile = await withTimeout(getMyAuthProfile.execute(), PROFILE_TIMEOUT_MS);
+            if (profile) {
+              resolvedUser = {
+                ...fallbackUser,
+                fullName: profile.full_name,
+                avatarUrl: profile.avatar_url,
+                role: normalizeRole(profile.role),
+                semester: profile.semester,
+                bio: profile.bio,
+              };
+            }
+          } catch {
+            // Si el perfil falla o vence timeout, continuamos con fallback.
+          }
+
           set({
-            user: fallbackUser,
+            user: resolvedUser,
             isAuthenticated: true,
             isHydrating: false,
           });
-
-          withTimeout(getMyAuthProfile.execute(), PROFILE_TIMEOUT_MS)
-            .then((profile) => {
-              if (!profile) return;
-              set((state) => ({
-                user: state.user
-                  ? {
-                      ...state.user,
-                      fullName: profile.full_name,
-                      avatarUrl: profile.avatar_url,
-                      role: profile.role,
-                      semester: profile.semester,
-                      bio: profile.bio,
-                    }
-                  : null,
-              }));
-            })
-            .catch(() => {
-              // Falla de perfil no bloquea la UI.
-            });
 
           registerAndSavePushToken(session.user.id).catch(() => {});
         } catch (error) {

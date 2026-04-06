@@ -16,7 +16,6 @@ export function useLoginScreen() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [formError, setFormError] = useState("");
-  const hasNavigatedRef = useRef(false);
   const lastRedirectKeyRef = useRef<string | null>(null);
 
   const {
@@ -28,9 +27,6 @@ export function useLoginScreen() {
   useEffect(() => {
     if (isHydrating) return;
     if (!isAuthenticated || !user) return;
-    if (hasNavigatedRef.current) return;
-
-    hasNavigatedRef.current = true;
 
     const redirectKey = `${user.id}:${user.role}`;
     if (lastRedirectKeyRef.current === redirectKey) {
@@ -47,7 +43,6 @@ export function useLoginScreen() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      hasNavigatedRef.current = false;
       lastRedirectKeyRef.current = null;
     }
   }, [isAuthenticated]);
@@ -75,7 +70,6 @@ export function useLoginScreen() {
     try {
       await signIn(email, password);
     } catch (error: any) {
-      hasNavigatedRef.current = false;
       const msg: string = error?.message ?? "";
       if (msg.includes("Email not confirmed")) {
         setFormError("Confirma tu correo institucional antes de ingresar.");
