@@ -11,7 +11,7 @@
 import { Colors } from "@/constants/Colors"
 import { router } from "expo-router"
 import * as Haptics from "expo-haptics"
-import { useRef } from "react"
+import { memo, useCallback, useRef } from "react"
 import { Animated, Image, Pressable, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 
 interface Props {
@@ -23,7 +23,7 @@ interface Props {
   hasPrimaryProgram: boolean
 }
 
-export function ProfileHero({
+export const ProfileHero = memo(function ProfileHero({
   fullName,
   email,
   initials,
@@ -35,13 +35,17 @@ export function ProfileHero({
   const C = Colors[scheme]
   const avatarScale = useRef(new Animated.Value(1)).current
 
-  const handleAvatarPress = () => {
+  const handleAvatarPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     Animated.sequence([
       Animated.spring(avatarScale, { toValue: 1.12, speed: 30, bounciness: 10, useNativeDriver: true }),
       Animated.spring(avatarScale, { toValue: 1, speed: 20, bounciness: 6, useNativeDriver: true }),
     ]).start()
-  }
+  }, [avatarScale])
+
+  const openEditProfile = useCallback(() => {
+    router.push("/editar-perfil")
+  }, [])
 
   return (
     <View
@@ -97,7 +101,7 @@ export function ProfileHero({
 
       <TouchableOpacity
         style={[styles.editBtn, { borderColor: C.primary }]}
-        onPress={() => router.push("/editar-perfil")}
+        onPress={openEditProfile}
         activeOpacity={0.8}
       >
         <Text style={[styles.editBtnText, { color: C.primary }]}>
@@ -106,7 +110,7 @@ export function ProfileHero({
       </TouchableOpacity>
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   hero: {

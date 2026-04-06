@@ -3,6 +3,7 @@
 import { Colors } from "@/constants/Colors"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
+import { memo } from "react"
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 export type ActiveTab = "facultades" | "programas" | "materias" | "usuarios" | "solicitudes" | "recursos" | "metricas" | "eventos"
@@ -24,7 +25,7 @@ interface Props {
 /**
  * Navegación por pestañas del catálogo académico en el panel admin.
  */
-export function AdminTabs({ tabs, activeTab, onTabChange, C }: Props) {
+export const AdminTabs = memo(function AdminTabs({ tabs, activeTab, onTabChange, C }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
       <ScrollView
@@ -82,7 +83,7 @@ export function AdminTabs({ tabs, activeTab, onTabChange, C }: Props) {
       </ScrollView>
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   container: {

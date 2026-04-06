@@ -5,8 +5,8 @@
 
 import { Colors } from "@/constants/Colors"
 import { Ionicons } from "@expo/vector-icons"
-import { useEffect, useRef, useState } from "react"
-import { Animated, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
+import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { Animated, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 
 export type SearchMode = "solicitudes" | "compañeros" | "recursos"
 
@@ -22,12 +22,16 @@ interface Props {
   onChangeMode: (mode: SearchMode) => void
 }
 
-export function SearchModeToggle({ mode, onChangeMode }: Props) {
+export const SearchModeToggle = memo(function SearchModeToggle({ mode, onChangeMode }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
   const activeIndex = MODES.indexOf(mode)
   const anim = useRef(new Animated.Value(activeIndex)).current
   const [tabWidth, setTabWidth] = useState(0)
+
+  const handleLayout = useCallback((e: LayoutChangeEvent) => {
+    setTabWidth(e.nativeEvent.layout.width / 3)
+  }, [])
 
   useEffect(() => {
     Animated.spring(anim, {
@@ -48,7 +52,7 @@ export function SearchModeToggle({ mode, onChangeMode }: Props) {
   return (
     <View
       style={[styles.container, { backgroundColor: C.surface, borderColor: C.border }]}
-      onLayout={(e) => setTabWidth(e.nativeEvent.layout.width / 3)}
+      onLayout={handleLayout}
     >
       {/* Pill deslizante */}
       {tabWidth > 0 && translateX && (
@@ -86,7 +90,7 @@ export function SearchModeToggle({ mode, onChangeMode }: Props) {
       ))}
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   container: {

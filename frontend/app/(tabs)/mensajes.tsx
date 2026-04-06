@@ -12,6 +12,7 @@ import { useConversations } from "@/hooks/application/useConversations";
 import type { Conversation } from "@/types";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { memo, useCallback, useMemo } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -53,13 +54,16 @@ interface ItemProps {
   C: (typeof Colors)["light"];
 }
 
-function ConversationItem({ item, onPress, C }: ItemProps) {
+const ConversationItem = memo(function ConversationItem({ item, onPress, C }: ItemProps) {
   const hasUnread = item.unread_count > 0;
+  const handlePress = useCallback(() => {
+    onPress(item);
+  }, [onPress, item]);
 
   return (
     <TouchableOpacity
       style={[styles.item, { backgroundColor: C.surface, borderBottomColor: C.border }]}
-      onPress={() => onPress(item)}
+      onPress={handlePress}
       activeOpacity={0.7}
     >
       {/* Avatar con iniciales */}
@@ -107,7 +111,7 @@ function ConversationItem({ item, onPress, C }: ItemProps) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 // ── Pantalla principal ────────────────────────────────────────────────────────
 
@@ -118,7 +122,7 @@ export default function MensajesScreen() {
 
   const { conversations, loading, refreshing, error, refresh } = useConversations();
 
-  function handlePress(conv: Conversation) {
+  const handlePress = useCallback((conv: Conversation) => {
     router.push({
       pathname: "/chat/[conversationId]",
       params: {
@@ -126,7 +130,31 @@ export default function MensajesScreen() {
         otherUserName: conv.other_user_name,
       },
     });
-  }
+  }, []);
+
+  const renderConversationItem = useCallback(
+    ({ item }: { item: Conversation }) => <ConversationItem item={item} onPress={handlePress} C={C} />,
+    [handlePress, C],
+  );
+
+  const keyExtractor = useCallback((item: Conversation) => item.id, []);
+
+  const listContentStyle = useMemo(
+    () => ({ paddingBottom: insets.bottom + 16 }),
+    [insets.bottom],
+  );
+
+  const refreshControl = useMemo(
+    () => (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={refresh}
+        colors={[C.primary]}
+        tintColor={C.primary}
+      />
+    ),
+    [refreshing, refresh, C.primary],
+  );
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
@@ -160,19 +188,10 @@ export default function MensajesScreen() {
       ) : (
         <FlatList
           data={conversations}
-          keyExtractor={(c) => c.id}
-          renderItem={({ item }) => (
-            <ConversationItem item={item} onPress={handlePress} C={C} />
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={refresh}
-              colors={[C.primary]}
-              tintColor={C.primary}
-            />
-          }
-          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+          keyExtractor={keyExtractor}
+          renderItem={renderConversationItem}
+          refreshControl={refreshControl}
+          contentContainerStyle={listContentStyle}
         />
       )}
     </View>

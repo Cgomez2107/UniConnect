@@ -11,8 +11,8 @@
 import { Colors } from "@/constants/Colors";
 import type { Message } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
-import { Audio } from "expo-av";
-import { memo, useEffect, useState } from "react";
+import { Audio, type AVPlaybackStatus } from "expo-av";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { Image } from "expo-image";
@@ -88,6 +88,18 @@ export const MessageBubble = memo(function MessageBubble({
   const [audioLoading, setAudioLoading] = useState(false);
   const progressPct = playbackDurMs > 0 ? Math.min(100, (playbackPosMs / playbackDurMs) * 100) : 0;
 
+  const handleReply = useCallback(() => {
+    onReply(message);
+  }, [onReply, message]);
+
+  const handleOpenImage = useCallback(() => {
+    if (message.media_url) onOpenMedia(message.media_url);
+  }, [message.media_url, onOpenMedia]);
+
+  const handleRetry = useCallback(() => {
+    onRetry(message);
+  }, [onRetry, message]);
+
   useEffect(() => {
     return () => {
       if (sound) {
@@ -96,7 +108,7 @@ export const MessageBubble = memo(function MessageBubble({
     };
   }, [sound]);
 
-  const onPlaybackStatus = (status: any) => {
+  const onPlaybackStatus = useCallback((status: AVPlaybackStatus) => {
     if (!status?.isLoaded) return;
 
     setIsPlaying(Boolean(status.isPlaying));
@@ -107,9 +119,9 @@ export const MessageBubble = memo(function MessageBubble({
       setIsPlaying(false);
       setPlaybackPosMs(0);
     }
-  };
+  }, []);
 
-  const toggleAudio = async () => {
+  const toggleAudio = useCallback(async () => {
     if (!message.media_url || audioLoading) return;
 
     setAudioLoading(true);
@@ -147,12 +159,12 @@ export const MessageBubble = memo(function MessageBubble({
     } finally {
       setAudioLoading(false);
     }
-  };
+  }, [audioLoading, message.media_url, onPlaybackStatus, sound]);
 
   return (
     <Pressable
       style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}
-      onLongPress={() => onReply(message)}
+      onLongPress={handleReply}
       delayLongPress={180}
     >
       <View
@@ -176,9 +188,7 @@ export const MessageBubble = memo(function MessageBubble({
 
         {hasImage && (
           <Pressable
-            onPress={() => {
-              if (message.media_url) onOpenMedia(message.media_url);
-            }}
+            onPress={handleOpenImage}
             style={styles.mediaWrap}
           >
             <Image source={{ uri: message.media_url ?? "" }} style={styles.mediaImage} contentFit="cover" />
@@ -276,7 +286,7 @@ export const MessageBubble = memo(function MessageBubble({
 
         {isOwn && message.client_status === "failed" && (
           <Pressable
-            onPress={() => onRetry(message)}
+            onPress={handleRetry}
             style={[styles.retryBtn, { borderColor: C.error }]}
           >
             <Text style={[styles.retryText, { color: C.error }]}>Reintentar</Text>

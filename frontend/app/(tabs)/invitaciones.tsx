@@ -1,13 +1,12 @@
 import { ResourceCard } from "@/components/feed/ResourceCard";
 import { Colors } from "@/constants/Colors";
 import {
-  type MainTab,
   type RequestWithApplications,
-  type SentFilter,
   useInvitationsHub,
 } from "@/hooks/application/useInvitationsHub";
 import type { Application, StudyResource } from "@/types";
 import { router } from "expo-router";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -72,12 +71,63 @@ export default function SolicitudesHubScreen() {
     handleReview,
   } = useInvitationsHub();
 
-  const openApplicantProfile = (applicantId: string) => {
+  const openApplicantProfile = useCallback((applicantId: string) => {
     if (!applicantId) return;
     router.push(`/perfil-estudiante/${applicantId}` as any);
-  };
+  }, []);
 
-  const renderRequestCard = ({ item }: { item: RequestWithApplications }) => {
+  const openRequest = useCallback((requestId: string) => {
+    router.push(`/solicitud/${requestId}` as any);
+  }, []);
+
+  const openResource = useCallback((resourceId: string) => {
+    router.push(`/recurso/${resourceId}` as any);
+  }, []);
+
+  const openUploadResource = useCallback(() => {
+    router.push("/subir-recurso" as any);
+  }, []);
+
+  const openNewRequest = useCallback(() => {
+    router.push("/nueva-solicitud" as any);
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    loadHub(true);
+  }, [loadHub]);
+
+  const sentCounts = useMemo(() => {
+    return sentApplications.reduce<Record<SentFilter, number>>(
+      (acc, app) => {
+        if (app.status === "pendiente" || app.status === "aceptada" || app.status === "rechazada") {
+          acc[app.status] += 1;
+        }
+        return acc;
+      },
+      { pendiente: 0, aceptada: 0, rechazada: 0 },
+    );
+  }, [sentApplications]);
+
+  const keyExtractor = useCallback((item: any) => item.id ?? item.request?.id, []);
+
+  const listContentStyle = useMemo(
+    () => [styles.list, { paddingBottom: insets.bottom + 80 }, listData.length === 0 ? styles.listEmpty : null],
+    [insets.bottom, listData.length],
+  );
+
+  const refreshControl = useMemo(
+    () => (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        colors={[C.primary]}
+        tintColor={C.primary}
+      />
+    ),
+    [refreshing, onRefresh, C.primary],
+  );
+
+  const renderRequestCard = useCallback(({ item }: { item: RequestWithApplications }) => {
     const pending = item.applications.filter((a) => a.status === "pendiente").length;
     const accepted = item.applications.filter((a) => a.status === "aceptada").length;
     const rejected = item.applications.filter((a) => a.status === "rechazada").length;
@@ -85,7 +135,7 @@ export default function SolicitudesHubScreen() {
     return (
       <View style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
         <TouchableOpacity
-          onPress={() => router.push(`/solicitud/${item.request.id}` as any)}
+          onPress={() => openRequest(item.request.id)}
           activeOpacity={0.8}
         >
           <Text style={[styles.cardTitle, { color: C.textPrimary }]} numberOfLines={2}>
@@ -189,9 +239,9 @@ export default function SolicitudesHubScreen() {
         )}
       </View>
     );
-  };
+  }, [C, actionId, handleReview, openApplicantProfile, openRequest]);
 
-  const renderSentCard = ({ item }: { item: Application }) => {
+  const renderSentCard = useCallback(({ item }: { item: Application }) => {
     const reqTitle = item.study_requests?.title ?? "Solicitud";
     const subject = item.study_requests?.subjects?.name ?? "Sin materia";
 
@@ -245,7 +295,7 @@ export default function SolicitudesHubScreen() {
 
           <TouchableOpacity
             style={[styles.linkBtn, { borderColor: C.border }]}
-            onPress={() => router.push(`/solicitud/${item.request_id}` as any)}
+            onPress={() => openRequest(item.request_id)}
             activeOpacity={0.8}
           >
             <Text style={[styles.linkBtnText, { color: C.textPrimary }]}>Ver solicitud</Text>
@@ -253,16 +303,24 @@ export default function SolicitudesHubScreen() {
         </View>
       </View>
     );
-  };
+  }, [C, openRequest]);
 
-  const renderResourcesCard = ({ item }: { item: StudyResource }) => (
-    <View style={{ paddingHorizontal: 12 }}>
-      <ResourceCard
-        item={item}
-        isOwn
-        onOpen={(resource) => router.push(`/recurso/${resource.id}` as any)}
-      />
-    </View>
+  const renderResourcesCard = useCallback(
+    ({ item }: { item: StudyResource }) => (
+      <View style={{ paddingHorizontal: 12 }}>
+        <ResourceCard item={item} isOwn onOpen={(resource) => openResource(resource.id)} />
+      </View>
+    ),
+    [openResource],
+  );
+
+  const renderListItem = useCallback(
+    (args: any) => {
+      if (activeTab === "mis-solicitudes") return renderRequestCard(args);
+      if (activeTab === "mis-postulaciones") return renderSentCard(args);
+      return renderResourcesCard(args);
+    },
+    [activeTab, renderRequestCard, renderSentCard, renderResourcesCard],
   );
 
   return (
@@ -299,7 +357,7 @@ export default function SolicitudesHubScreen() {
         <View style={[styles.sentTabsWrap, { borderBottomColor: C.border }]}> 
           {SENT_TABS.map((tab) => {
             const active = sentFilter === tab.key;
-            const count = sentApplications.filter((a) => a.status === tab.key).length;
+            const count = sentCounts[tab.key];
             return (
               <TouchableOpacity
                 key={tab.key}
@@ -320,7 +378,7 @@ export default function SolicitudesHubScreen() {
         <View style={styles.resourcesActions}> 
           <TouchableOpacity
             style={[styles.primaryAction, { backgroundColor: C.primary }]}
-            onPress={() => router.push("/subir-recurso" as any)}
+            onPress={openUploadResource}
             activeOpacity={0.85}
           >
             <Text style={[styles.primaryActionText, { color: C.textOnPrimary }]}>+ Subir recurso</Text>
@@ -335,25 +393,10 @@ export default function SolicitudesHubScreen() {
       ) : (
         <FlatList
           data={listData as any[]}
-          keyExtractor={(item: any) => item.id ?? item.request?.id}
-          renderItem={(args: any) => {
-            if (activeTab === "mis-solicitudes") return renderRequestCard(args);
-            if (activeTab === "mis-postulaciones") return renderSentCard(args);
-            return renderResourcesCard(args);
-          }}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: insets.bottom + 80 },
-            listData.length === 0 ? styles.listEmpty : null,
-          ]}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => loadHub(true)}
-              colors={[C.primary]}
-              tintColor={C.primary}
-            />
-          }
+          keyExtractor={keyExtractor}
+          renderItem={renderListItem}
+          contentContainerStyle={listContentStyle}
+          refreshControl={refreshControl}
           ListEmptyComponent={
             <View style={styles.center}> 
               <Text style={{ fontSize: 44 }}>
@@ -376,7 +419,7 @@ export default function SolicitudesHubScreen() {
               {activeTab === "mis-solicitudes" && (
                 <TouchableOpacity
                   style={[styles.primaryAction, { backgroundColor: C.primary }]}
-                  onPress={() => router.push("/nueva-solicitud" as any)}
+                  onPress={openNewRequest}
                   activeOpacity={0.85}
                 >
                   <Text style={[styles.primaryActionText, { color: C.textOnPrimary }]}>+ Nueva solicitud</Text>

@@ -7,7 +7,7 @@ import { useEvents, type EventFilter } from "@/hooks/application/useEvents"
 import { Ionicons } from "@expo/vector-icons"
 import type { CampusEvent, EventCategory } from "@/types"
 import { router } from "expo-router"
-import { useEffect, useRef } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef } from "react"
 import {
   Animated,
   FlatList,
@@ -43,7 +43,7 @@ const FILTERS: { key: EventFilter; label: string; icon: keyof typeof Ionicons.gl
 
 // Tarjeta de evento
 
-function EventCard({ item, C }: { item: CampusEvent; C: typeof Colors["light"] }) {
+const EventCard = memo(function EventCard({ item, C, onOpen }: { item: CampusEvent; C: typeof Colors["light"]; onOpen: (eventId: string) => void }) {
   const fadeAnim  = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(14)).current
 
@@ -60,12 +60,16 @@ function EventCard({ item, C }: { item: CampusEvent; C: typeof Colors["light"] }
   const time      = date.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })
   const catColor  = CATEGORY_COLOR[item.category] ?? C.primary
 
+  const handleOpen = useCallback(() => {
+    onOpen(item.id)
+  }, [onOpen, item.id])
+
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       <TouchableOpacity
         style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}
         activeOpacity={0.9}
-        onPress={() => router.push(`/eventos/${item.id}` as any)}
+        onPress={handleOpen}
       >
 
         <View style={[styles.dateBlock, { backgroundColor: catColor + "18" }]}>
@@ -106,7 +110,7 @@ function EventCard({ item, C }: { item: CampusEvent; C: typeof Colors["light"] }
       </TouchableOpacity>
     </Animated.View>
   )
-}
+})
 
 // Pantalla principal
 
@@ -116,6 +120,38 @@ export default function EventosScreen() {
   const insets = useSafeAreaInsets()
 
   const { filteredEvents, isLoading, isRefreshing, activeFilter, setActiveFilter, refresh } = useEvents()
+
+  const keyExtractor = useCallback((item: CampusEvent) => item.id, [])
+
+  const openEvent = useCallback((eventId: string) => {
+    router.push(`/eventos/${eventId}` as any)
+  }, [])
+
+  const renderEventItem = useCallback(
+    ({ item }: { item: CampusEvent }) => <EventCard item={item} C={C} onOpen={openEvent} />, 
+    [C, openEvent],
+  )
+
+  const handleSetFilter = useCallback(
+    (filter: EventFilter) => {
+      setActiveFilter(filter)
+    },
+    [setActiveFilter],
+  )
+
+  const emptyTitle = activeFilter === "pasados" ? "No hay eventos pasados" : "No hay eventos próximos"
+
+  const emptyBody = useMemo(() => {
+    if (activeFilter === "todos") {
+      return "El administrador aún no ha publicado eventos del campus."
+    }
+
+    if (activeFilter === "pasados") {
+      return "No se han registrado eventos en el pasado."
+    }
+
+    return `No hay eventos de tipo "${CATEGORY_LABEL[activeFilter as EventCategory] ?? activeFilter}".`
+  }, [activeFilter])
 
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
@@ -148,7 +184,7 @@ export default function EventosScreen() {
                     borderColor:     active ? C.primary : C.border,
                   },
                 ]}
-                onPress={() => setActiveFilter(f.key)}
+                onPress={() => handleSetFilter(f.key)}
                 activeOpacity={0.85}
               >
                 <View style={styles.filterInline}>
@@ -168,7 +204,7 @@ export default function EventosScreen() {
       ) : (
         <FlatList
           data={filteredEvents}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -179,19 +215,13 @@ export default function EventosScreen() {
               colors={[C.primary]}
             />
           }
-          renderItem={({ item }) => <EventCard item={item} C={C} />}
+          renderItem={renderEventItem}
           ListEmptyComponent={
             <EmptyState
               emoji="📅"
               iconName="calendar-outline"
-              title={activeFilter === "pasados" ? "No hay eventos pasados" : "No hay eventos próximos"}
-              body={
-                activeFilter === "todos"
-                  ? "El administrador aún no ha publicado eventos del campus."
-                  : activeFilter === "pasados"
-                  ? "No se han registrado eventos en el pasado."
-                  : `No hay eventos de tipo "${CATEGORY_LABEL[activeFilter as EventCategory] ?? activeFilter}".`
-              }
+              title={emptyTitle}
+              body={emptyBody}
             />
           }
         />

@@ -5,7 +5,7 @@ import { FeedFilterModal } from "@/components/feed/FeedFilterModal";
 import { FeedHeader } from "@/components/feed/FeedHeader";
 import { ResourceCard } from "@/components/feed/ResourceCard";
 import { SearchBar } from "@/components/feed/SearchBar";
-import { SearchModeToggle, SearchMode } from "@/components/feed/SearchModeToggle";
+import { SearchModeToggle } from "@/components/feed/SearchModeToggle";
 import { StudentCard } from "@/components/feed/StudentCard";
 import { SubjectSelector } from "@/components/feed/SubjectSelector";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -13,9 +13,11 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { CardSolicitud } from "@/components/ui/CardSolicitud";
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import { useFeedScreen, type SearchMode } from "@/hooks/application/useFeedScreen";
+import { useFeedScreen } from "@/hooks/application/useFeedScreen";
+import type { StudyRequest, StudentSearchResult, StudyResource } from "@/types";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useCallback, useMemo } from "react";
 import { useColorScheme } from "react-native";
 import {
   ActivityIndicator,
@@ -61,12 +63,101 @@ export default function FeedScreen() {
     refreshingResources,
   } = useFeedScreen();
 
+  const headerCount = useMemo(() => {
+    if (searchMode === "solicitudes") return requests.length;
+    if (searchMode === "recursos") return resources.length;
+    return studentSearch.students.length;
+  }, [searchMode, requests.length, resources.length, studentSearch.students.length]);
+
+  const openFilters = useCallback(() => {
+    setShowFilters(true);
+  }, [setShowFilters]);
+
+  const closeFilters = useCallback(() => {
+    setShowFilters(false);
+  }, [setShowFilters]);
+
+  const clearSearch = useCallback(() => {
+    setSearch("");
+  }, [setSearch]);
+
+  const openRequest = useCallback((requestId: string) => {
+    router.push(`/solicitud/${requestId}` as any);
+  }, []);
+
+  const openStudentProfile = useCallback((studentId: string) => {
+    router.push(`/perfil-estudiante/${studentId}` as any);
+  }, []);
+
+  const openResource = useCallback((resourceId: string) => {
+    router.push(`/recurso/${resourceId}` as any);
+  }, []);
+
+  const openUploadResource = useCallback(() => {
+    router.push("/subir-recurso" as any);
+  }, []);
+
+  const requestKeyExtractor = useCallback((item: { id: string }) => item.id, []);
+  const studentKeyExtractor = useCallback((item: { id: string }) => item.id, []);
+  const resourceKeyExtractor = useCallback((item: { id: string }) => item.id, []);
+
+  const requestListContentStyle = useMemo(
+    () => ({ paddingTop: 8, paddingBottom: insets.bottom + 80 }),
+    [insets.bottom],
+  );
+
+  const resourceListContentStyle = useMemo(
+    () => ({ paddingHorizontal: 16, paddingTop: 8, paddingBottom: insets.bottom + 80 }),
+    [insets.bottom],
+  );
+
+  const renderRequestItem = useCallback(
+    ({ item }: { item: StudyRequest }) => (
+      <CardSolicitud
+        item={item}
+        isOwnPost={item.author_id === user?.id}
+        onPress={() => openRequest(item.id)}
+        onPostulate={() => handlePostulateFromFeed(item.id)}
+      />
+    ),
+    [user?.id, openRequest, handlePostulateFromFeed],
+  );
+
+  const renderStudentItem = useCallback(
+    ({ item }: { item: StudentSearchResult }) => (
+      <StudentCard student={item} onViewProfile={openStudentProfile} />
+    ),
+    [openStudentProfile],
+  );
+
+  const renderResourceItem = useCallback(
+    ({ item }: { item: StudyResource }) => (
+      <ResourceCard item={item} isOwn={item.user_id === user?.id} onOpen={(it) => openResource(it.id)} />
+    ),
+    [user?.id, openResource],
+  );
+
+  const requestsRefreshControl = useMemo(
+    () => <RefreshControl refreshing={refreshingSolicitudes} onRefresh={fetchRequests} colors={[C.primary]} />,
+    [refreshingSolicitudes, fetchRequests, C.primary],
+  );
+
+  const studentsRefreshControl = useMemo(
+    () => <RefreshControl refreshing={false} onRefresh={studentSearch.refresh} colors={[C.primary]} />,
+    [studentSearch.refresh, C.primary],
+  );
+
+  const resourcesRefreshControl = useMemo(
+    () => <RefreshControl refreshing={refreshingResources} onRefresh={refreshResources} colors={[C.primary]} />,
+    [refreshingResources, refreshResources, C.primary],
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
 
       <FeedHeader
-        count={searchMode === "solicitudes" ? requests.length : searchMode === "recursos" ? resources.length : studentSearch.students.length}
+        count={headerCount}
         loading={requestsLoading || resourcesLoading || studentSearch.loading}
         mode={searchMode}
       />
@@ -79,9 +170,9 @@ export default function FeedScreen() {
           <SearchBar
             value={search}
             onChangeText={setSearch}
-            onClear={() => setSearch("")}
+            onClear={clearSearch}
             activeFilters={selectedSubjects.length}
-            onOpenFilters={() => setShowFilters(true)}
+            onOpenFilters={openFilters}
           />
 
           {isFirstLoad && !requests.length ? (
@@ -89,19 +180,12 @@ export default function FeedScreen() {
           ) : (
             <FlatList
               data={requests}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <CardSolicitud
-                  item={item}
-                  isOwnPost={item.author_id === user?.id}
-                  onPress={() => router.push(`/solicitud/${item.id}` as any)}
-                  onPostulate={() => handlePostulateFromFeed(item.id)}
-                />
-              )}
-              contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 80 }}
+              keyExtractor={requestKeyExtractor}
+              renderItem={renderRequestItem}
+              contentContainerStyle={requestListContentStyle}
               onEndReached={loadMoreRequests}
               onEndReachedThreshold={0.3}
-              refreshControl={<RefreshControl refreshing={refreshingSolicitudes} onRefresh={fetchRequests} colors={[C.primary]} />}
+              refreshControl={requestsRefreshControl}
               ListEmptyComponent={
                 requestsError ? (
                   <EmptyState emoji="⚠️" title="Error de conexión" body={requestsError} action="Reintentar" onAction={fetchRequests} />
@@ -115,7 +199,7 @@ export default function FeedScreen() {
 
           <FeedFilterModal
             visible={showFilters}
-            onClose={() => setShowFilters(false)}
+            onClose={closeFilters}
             selectedSubjects={selectedSubjects}
             onSelectSubjects={setSelectedSubjects}
             subjects={userSubjects}
@@ -140,13 +224,11 @@ export default function FeedScreen() {
           ) : (
             <FlatList
               data={studentSearch.students}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <StudentCard student={item} onViewProfile={(id) => router.push(`/perfil-estudiante/${id}` as any)} />
-              )}
-              contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 80 }}
+              keyExtractor={studentKeyExtractor}
+              renderItem={renderStudentItem}
+              contentContainerStyle={requestListContentStyle}
               onEndReached={studentSearch.loadMore}
-              refreshControl={<RefreshControl refreshing={false} onRefresh={studentSearch.refresh} colors={[C.primary]} />}
+              refreshControl={studentsRefreshControl}
               ListEmptyComponent={<EmptyState emoji="🔍" title="Sin compañeros" body="No hay otros estudiantes en esta materia." />}
             />
           )}
@@ -162,7 +244,7 @@ export default function FeedScreen() {
             onSelect={setResourceSubjectId}
           />
 
-          <TouchableOpacity style={[styles.uploadFab, { backgroundColor: C.primary }]} onPress={() => router.push("/subir-recurso" as any)}>
+          <TouchableOpacity style={[styles.uploadFab, { backgroundColor: C.primary }]} onPress={openUploadResource}>
             <View style={styles.uploadFabInline}>
               <Ionicons name="cloud-upload-outline" size={17} color={C.textOnPrimary} />
               <Text style={[styles.uploadFabText, { color: C.textOnPrimary }]}>Subir recurso</Text>
@@ -176,12 +258,10 @@ export default function FeedScreen() {
           ) : (
             <FlatList
               data={resources}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <ResourceCard item={item} isOwn={item.user_id === user?.id} onOpen={(it) => router.push(`/recurso/${it.id}` as any)} />
-              )}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: insets.bottom + 80 }}
-              refreshControl={<RefreshControl refreshing={refreshingResources} onRefresh={refreshResources} colors={[C.primary]} />}
+              keyExtractor={resourceKeyExtractor}
+              renderItem={renderResourceItem}
+              contentContainerStyle={resourceListContentStyle}
+              refreshControl={resourcesRefreshControl}
               ListEmptyComponent={<EmptyState emoji="📭" title="Sin recursos" body="Sé el primero en compartir algo aquí." />}
             />
           )}

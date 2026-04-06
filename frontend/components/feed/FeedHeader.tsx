@@ -6,6 +6,7 @@
 
 import { Colors } from "@/constants/Colors"
 import { router } from "expo-router"
+import { memo, useCallback } from "react"
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 
 type SearchMode = "solicitudes" | "compañeros" | "recursos"
@@ -22,9 +23,13 @@ interface Props {
   mode?: SearchMode
 }
 
-export function FeedHeader({ count, loading, mode = "solicitudes" }: Props) {
+export const FeedHeader = memo(function FeedHeader({ count, loading, mode = "solicitudes" }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
+
+  const openNewRequest = useCallback(() => {
+    router.push("/nueva-solicitud")
+  }, [])
 
   return (
     <View style={[styles.header, { borderBottomColor: C.border }]}>
@@ -37,7 +42,7 @@ export function FeedHeader({ count, loading, mode = "solicitudes" }: Props) {
       {mode === "solicitudes" && (
         <TouchableOpacity
           style={[styles.btn, { backgroundColor: C.accent }]}
-          onPress={() => router.push("/nueva-solicitud")}
+          onPress={openNewRequest}
           activeOpacity={0.85}
         >
           <Text style={[styles.btnText, { color: C.primary }]}>+ Nueva</Text>
@@ -45,7 +50,7 @@ export function FeedHeader({ count, loading, mode = "solicitudes" }: Props) {
       )}
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   header: {

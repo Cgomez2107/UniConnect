@@ -9,11 +9,12 @@ import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
 import { useAdmin } from "@/hooks/application/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
+import type { AdminEvent, AdminRequest, AdminResource, AdminUser, Faculty, Program, Subject } from "@/types"
 import { Ionicons } from "@expo/vector-icons"
 import { router } from "expo-router"
 import * as Haptics from "expo-haptics"
 import { StatusBar } from "expo-status-bar"
-import { useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import {
   Alert,
   FlatList,
@@ -27,6 +28,8 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+const TABS_WITH_ADD: ActiveTab[] = ["facultades", "programas", "materias", "eventos"]
+
 export default function AdminPanelScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
@@ -39,22 +42,59 @@ export default function AdminPanelScreen() {
 
   const admin = useAdmin(search)
 
-  // Tabs config
-  const TABS: { key: ActiveTab; icon: keyof typeof Ionicons.glyphMap; label: string; count: number }[] = [
-    { key: "facultades"  as ActiveTab, icon: "business-outline", label: "Facultades",  count: admin.faculties.length  },
-    { key: "programas"   as ActiveTab, icon: "school-outline",   label: "Programas",   count: admin.programs.length   },
-    { key: "materias"    as ActiveTab, icon: "book-outline",     label: "Materias",    count: admin.subjects.length   },
-    { key: "usuarios"    as ActiveTab, icon: "people-outline",   label: "Usuarios",    count: admin.users.length      },
-    { key: "solicitudes" as ActiveTab, icon: "document-text-outline", label: "Solicitudes", count: admin.requests.length   },
-    { key: "recursos"    as ActiveTab, icon: "folder-open-outline",   label: "Recursos",    count: admin.resources.length  },
-    { key: "eventos"     as ActiveTab, icon: "calendar-outline",       label: "Eventos",     count: admin.events.length     },
-    { key: "metricas"    as ActiveTab, icon: "stats-chart-outline",    label: "Métricas",    count: 0                       },
-  ]
+  const tabs = useMemo(
+    () => [
+      { key: "facultades" as ActiveTab, icon: "business-outline" as const, label: "Facultades", count: admin.faculties.length },
+      { key: "programas" as ActiveTab, icon: "school-outline" as const, label: "Programas", count: admin.programs.length },
+      { key: "materias" as ActiveTab, icon: "book-outline" as const, label: "Materias", count: admin.subjects.length },
+      { key: "usuarios" as ActiveTab, icon: "people-outline" as const, label: "Usuarios", count: admin.users.length },
+      { key: "solicitudes" as ActiveTab, icon: "document-text-outline" as const, label: "Solicitudes", count: admin.requests.length },
+      { key: "recursos" as ActiveTab, icon: "folder-open-outline" as const, label: "Recursos", count: admin.resources.length },
+      { key: "eventos" as ActiveTab, icon: "calendar-outline" as const, label: "Eventos", count: admin.events.length },
+      { key: "metricas" as ActiveTab, icon: "stats-chart-outline" as const, label: "Métricas", count: 0 },
+    ],
+    [
+      admin.faculties.length,
+      admin.programs.length,
+      admin.subjects.length,
+      admin.users.length,
+      admin.requests.length,
+      admin.resources.length,
+      admin.events.length,
+    ],
+  )
 
-  // Tabs que tienen botón + Nuevo
-  const TABS_WITH_ADD = ["facultades", "programas", "materias", "eventos"]
+  const listContentStyle = useMemo(
+    () => [styles.list, { paddingBottom: insets.bottom + 80 }],
+    [insets.bottom],
+  )
 
-  const handleSignOut = () => {
+  const metricsContentStyle = useMemo(
+    () => [styles.metricsContainer, { paddingBottom: insets.bottom + 80 }],
+    [insets.bottom],
+  )
+
+  const searchPlaceholder = useMemo(() => {
+    if (activeTab === "facultades") return "Buscar facultad..."
+    if (activeTab === "programas") return "Buscar programa o facultad..."
+    if (activeTab === "materias") return "Buscar materia..."
+    if (activeTab === "usuarios") return "Buscar usuario o email..."
+    if (activeTab === "solicitudes") return "Buscar solicitud o autor..."
+    if (activeTab === "recursos") return "Buscar recurso o autor..."
+    if (activeTab === "eventos") return "Buscar evento o lugar..."
+    return "Métricas globales"
+  }, [activeTab])
+
+  const handleTabChange = useCallback((tab: ActiveTab) => {
+    setActiveTab(tab)
+    setSearch("")
+  }, [])
+
+  const clearSearch = useCallback(() => {
+    setSearch("")
+  }, [])
+
+  const handleSignOut = useCallback(() => {
     Alert.alert("Cerrar sesión", "¿Seguro que quieres salir?", [
       { text: "Cancelar", style: "cancel" },
       { text: "Salir", style: "destructive", onPress: async () => {
@@ -62,9 +102,9 @@ export default function AdminPanelScreen() {
         router.replace("/login")
       }},
     ])
-  }
+  }, [signOut])
 
-  const handleAddPress = () => {
+  const handleAddPress = useCallback(() => {
     if (activeTab === "facultades") {
       admin.openCreateFaculty()
     } else if (activeTab === "programas") {
@@ -74,7 +114,102 @@ export default function AdminPanelScreen() {
     } else {
       admin.openCreateSubject()
     }
-  }
+  }, [activeTab, admin])
+
+  const handleAddPressWithHaptic = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    handleAddPress()
+  }, [handleAddPress])
+
+  const keyExtractor = useCallback((i: { id: string }) => i.id, [])
+
+  const renderFacultyItem = useCallback(
+    ({ item, index }: { item: Faculty; index: number }) => (
+      <FacultyRow
+        item={item}
+        index={index}
+        programsCount={admin.programsCountForFaculty(item.id)}
+        onEdit={() => admin.openEditFaculty(item)}
+        onDelete={() => admin.deleteFaculty(item)}
+        C={C}
+      />
+    ),
+    [admin, C],
+  )
+
+  const renderProgramItem = useCallback(
+    ({ item, index }: { item: Program; index: number }) => (
+      <ProgramRow
+        item={item}
+        index={index}
+        subjectsCount={admin.subjectsCountForProgram(item.id)}
+        onEdit={() => admin.openEditProgram(item)}
+        onDelete={() => admin.deleteProgram(item)}
+        C={C}
+      />
+    ),
+    [admin, C],
+  )
+
+  const renderSubjectItem = useCallback(
+    ({ item }: { item: Subject }) => (
+      <SubjectRow
+        item={item}
+        programs={admin.programsForSubject(item.id)}
+        onEdit={() => admin.openEditSubject(item)}
+        onDelete={() => admin.deleteSubject(item)}
+        C={C}
+      />
+    ),
+    [admin, C],
+  )
+
+  const renderUserItem = useCallback(
+    ({ item }: { item: AdminUser }) => (
+      <UserRow
+        item={item}
+        onToggleRole={() => admin.handleToggleUserRole(item)}
+        onToggleActive={() => admin.handleToggleUserActive(item)}
+        C={C}
+      />
+    ),
+    [admin, C],
+  )
+
+  const renderRequestItem = useCallback(
+    ({ item }: { item: AdminRequest }) => (
+      <RequestRow
+        item={item}
+        onClose={() => admin.handleCloseRequest(item)}
+        onDelete={() => admin.handleDeleteRequest(item)}
+        C={C}
+      />
+    ),
+    [admin, C],
+  )
+
+  const renderResourceItem = useCallback(
+    ({ item }: { item: AdminResource }) => (
+      <ResourceRow
+        item={item}
+        onDelete={() => admin.handleDeleteResource(item)}
+        C={C}
+      />
+    ),
+    [admin, C],
+  )
+
+  const renderEventItem = useCallback(
+    ({ item }: { item: AdminEvent }) => (
+      <EventRow
+        item={item}
+        onEdit={() => admin.openEditEvent(item)}
+        onDelete={() => admin.handleDeleteEvent(item)}
+        C={C}
+      />
+    ),
+    [admin, C],
+  )
 
   // Render
   return (
@@ -84,9 +219,9 @@ export default function AdminPanelScreen() {
       <AdminHeader userName={user?.fullName ?? "Admin"} onSignOut={handleSignOut} C={C} />
 
       <AdminTabs
-        tabs={TABS}
+        tabs={tabs}
         activeTab={activeTab}
-        onTabChange={(tab) => { setActiveTab(tab); setSearch("") }}
+        onTabChange={handleTabChange}
         C={C}
       />
 
@@ -96,23 +231,14 @@ export default function AdminPanelScreen() {
           <Ionicons name="search-outline" size={16} color={C.textPlaceholder} style={{ marginRight: 6 }} />
           <TextInput
             style={[styles.searchInput, { color: C.textPrimary }]}
-            placeholder={
-              activeTab === "facultades"  ? "Buscar facultad..." :
-              activeTab === "programas"   ? "Buscar programa o facultad..." :
-              activeTab === "materias"    ? "Buscar materia..." :
-              activeTab === "usuarios"    ? "Buscar usuario o email..." :
-              activeTab === "solicitudes" ? "Buscar solicitud o autor..." :
-              activeTab === "recursos"    ? "Buscar recurso o autor..." :
-              activeTab === "eventos"     ? "Buscar evento o lugar..." :
-              "Métricas globales"
-            }
+            placeholder={searchPlaceholder}
             placeholderTextColor={C.textPlaceholder}
             value={search}
             onChangeText={setSearch}
             editable
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="close" size={18} color={C.textSecondary} />
             </TouchableOpacity>
           )}
@@ -120,10 +246,7 @@ export default function AdminPanelScreen() {
         {TABS_WITH_ADD.includes(activeTab) && (
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: C.primary }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-              handleAddPress()
-            }}
+            onPress={handleAddPressWithHaptic}
             activeOpacity={0.85}
           >
             <Text style={styles.addBtnText}>+ Nuevo</Text>
@@ -140,19 +263,10 @@ export default function AdminPanelScreen() {
           {activeTab === "facultades" && (
             <FlatList
               data={admin.filteredFaculties}
-              keyExtractor={(i) => i.id}
-              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
-              renderItem={({ item, index }) => (
-                <FacultyRow
-                  item={item}
-                  index={index}
-                  programsCount={admin.programsCountForFaculty(item.id)}
-                  onEdit={() => admin.openEditFaculty(item)}
-                  onDelete={() => admin.deleteFaculty(item)}
-                  C={C}
-                />
-              )}
+              renderItem={renderFacultyItem}
               ListEmptyComponent={<EmptyState emoji="📭" iconName="business-outline" title="No hay facultades" body="" />}
             />
           )}
@@ -160,19 +274,10 @@ export default function AdminPanelScreen() {
           {activeTab === "programas" && (
             <FlatList
               data={admin.filteredPrograms}
-              keyExtractor={(i) => i.id}
-              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
-              renderItem={({ item, index }) => (
-                <ProgramRow
-                  item={item}
-                  index={index}
-                  subjectsCount={admin.subjectsCountForProgram(item.id)}
-                  onEdit={() => admin.openEditProgram(item)}
-                  onDelete={() => admin.deleteProgram(item)}
-                  C={C}
-                />
-              )}
+              renderItem={renderProgramItem}
               ListEmptyComponent={<EmptyState emoji="📭" iconName="school-outline" title="No hay programas" body="" />}
             />
           )}
@@ -180,18 +285,10 @@ export default function AdminPanelScreen() {
           {activeTab === "materias" && (
             <FlatList
               data={admin.filteredSubjects}
-              keyExtractor={(i) => i.id}
-              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <SubjectRow
-                  item={item}
-                  programs={admin.programsForSubject(item.id)}
-                  onEdit={() => admin.openEditSubject(item)}
-                  onDelete={() => admin.deleteSubject(item)}
-                  C={C}
-                />
-              )}
+              renderItem={renderSubjectItem}
               ListEmptyComponent={<EmptyState emoji="📭" iconName="book-outline" title="No hay materias" body="" />}
             />
           )}
@@ -199,17 +296,10 @@ export default function AdminPanelScreen() {
           {activeTab === "usuarios" && (
             <FlatList
               data={admin.filteredUsers}
-              keyExtractor={(i) => i.id}
-              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <UserRow
-                  item={item}
-                  onToggleRole={() => admin.handleToggleUserRole(item)}
-                  onToggleActive={() => admin.handleToggleUserActive(item)}
-                  C={C}
-                />
-              )}
+              renderItem={renderUserItem}
               ListEmptyComponent={<EmptyState emoji="📭" iconName="people-outline" title="No hay usuarios" body="" />}
             />
           )}
@@ -217,17 +307,10 @@ export default function AdminPanelScreen() {
           {activeTab === "solicitudes" && (
             <FlatList
               data={admin.filteredRequests}
-              keyExtractor={(i) => i.id}
-              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <RequestRow
-                  item={item}
-                  onClose={() => admin.handleCloseRequest(item)}
-                  onDelete={() => admin.handleDeleteRequest(item)}
-                  C={C}
-                />
-              )}
+              renderItem={renderRequestItem}
               ListEmptyComponent={<EmptyState emoji="📭" iconName="document-text-outline" title="No hay solicitudes" body="" />}
             />
           )}
@@ -235,16 +318,10 @@ export default function AdminPanelScreen() {
           {activeTab === "recursos" && (
             <FlatList
               data={admin.filteredResources}
-              keyExtractor={(i) => i.id}
-              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <ResourceRow
-                  item={item}
-                  onDelete={() => admin.handleDeleteResource(item)}
-                  C={C}
-                />
-              )}
+              renderItem={renderResourceItem}
               ListEmptyComponent={<EmptyState emoji="📭" iconName="folder-open-outline" title="No hay recursos" body="" />}
             />
           )}
@@ -252,23 +329,16 @@ export default function AdminPanelScreen() {
           {activeTab === "eventos" && (
             <FlatList
               data={admin.filteredEvents}
-              keyExtractor={(i) => i.id}
-              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <EventRow
-                  item={item}
-                  onEdit={() => admin.openEditEvent(item)}
-                  onDelete={() => admin.handleDeleteEvent(item)}
-                  C={C}
-                />
-              )}
+              renderItem={renderEventItem}
               ListEmptyComponent={<EmptyState emoji="📅" iconName="calendar-outline" title="No hay eventos" body="Crea el primer evento del campus" />}
             />
           )}
 
           {activeTab === "metricas" && (
-            <ScrollView contentContainerStyle={[styles.metricsContainer, { paddingBottom: insets.bottom + 80 }]}>
+            <ScrollView contentContainerStyle={metricsContentStyle}>
               {admin.metrics ? (
                 <>
                   <View style={[styles.metricCard, { backgroundColor: C.surface, borderColor: C.border }]}>

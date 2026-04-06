@@ -15,7 +15,7 @@ import { useMessaging } from "@/hooks/application/useMessaging";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -83,7 +83,7 @@ export default function ChatScreen() {
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
-  const flatListRef = useRef<FlatList<Message>>(null);
+  const flatListRef = useRef<FlatList<ChatListItem>>(null);
 
   const {
     messages,
@@ -155,6 +155,11 @@ export default function ChatScreen() {
     ? decodeURIComponent(otherUserName)
     : "Chat";
 
+  const displayFirstName = useMemo(
+    () => displayName.split(" ")[0],
+    [displayName],
+  );
+
   function getInitials(name: string): string {
     return name
       .split(" ")
@@ -163,6 +168,58 @@ export default function ChatScreen() {
       .join("")
       .toUpperCase();
   }
+
+  const handleBack = useCallback(() => {
+    router.back();
+  }, []);
+
+  const openMediaViewer = useCallback((url: string) => {
+    router.push({
+      pathname: "/viewer",
+      params: {
+        url,
+        title: "Imagen del chat",
+        fileName: "imagen-chat.jpg",
+        fileType: "jpg",
+      },
+    });
+  }, []);
+
+  const keyExtractor = useCallback((item: ChatListItem) => item.id, []);
+
+  const listContentStyle = useMemo(
+    () => [styles.list, messages.length === 0 && styles.listEmpty],
+    [messages.length],
+  );
+
+  const handleContentSizeChange = useCallback(() => {
+    flatListRef.current?.scrollToEnd({ animated: false });
+  }, []);
+
+  const renderChatItem = useCallback(
+    ({ item }: { item: ChatListItem }) => {
+      if (item.type === "day") {
+        return (
+          <View style={styles.dayDividerWrap}>
+            <View style={[styles.dayDivider, { backgroundColor: C.surface }]}>
+              <Text style={[styles.dayDividerText, { color: C.textSecondary }]}>{item.label}</Text>
+            </View>
+          </View>
+        );
+      }
+
+      return (
+        <MessageBubble
+          message={item.message}
+          isOwn={item.message.sender_id === user?.id}
+          onReply={handleReply}
+          onRetry={handleRetry}
+          onOpenMedia={openMediaViewer}
+        />
+      );
+    },
+    [C.surface, C.textSecondary, user?.id, handleReply, handleRetry, openMediaViewer],
+  );
 
   return (
     <KeyboardAvoidingView
@@ -183,7 +240,7 @@ export default function ChatScreen() {
         ]}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={handleBack}
           style={styles.backBtn}
           activeOpacity={0.75}
         >
@@ -216,42 +273,9 @@ export default function ChatScreen() {
         <FlatList
           ref={flatListRef as any}
           data={chatItems}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            if (item.type === "day") {
-              return (
-                <View style={styles.dayDividerWrap}>
-                  <View style={[styles.dayDivider, { backgroundColor: C.surface }]}>
-                    <Text style={[styles.dayDividerText, { color: C.textSecondary }]}>{item.label}</Text>
-                  </View>
-                </View>
-              );
-            }
-
-            return (
-              <MessageBubble
-                message={item.message}
-                isOwn={item.message.sender_id === user?.id}
-                onReply={handleReply}
-                onRetry={handleRetry}
-                onOpenMedia={(url) => {
-                  router.push({
-                    pathname: "/viewer",
-                    params: {
-                      url,
-                      title: "Imagen del chat",
-                      fileName: "imagen-chat.jpg",
-                      fileType: "jpg",
-                    },
-                  });
-                }}
-              />
-            );
-          }}
-          contentContainerStyle={[
-            styles.list,
-            messages.length === 0 && styles.listEmpty,
-          ]}
+          keyExtractor={keyExtractor}
+          renderItem={renderChatItem}
+          contentContainerStyle={listContentStyle}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={{ fontSize: 44 }}>💬</Text>
@@ -259,15 +283,13 @@ export default function ChatScreen() {
                 Aún no hay mensajes
               </Text>
               <Text style={[styles.emptyBody, { color: C.textSecondary }]}>
-                Saluda a {displayName.split(" ")[0]} para empezar a coordinar.
+                Saluda a {displayFirstName} para empezar a coordinar.
               </Text>
             </View>
           }
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: false })
-          }
+          onContentSizeChange={handleContentSizeChange}
         />
       )}
 

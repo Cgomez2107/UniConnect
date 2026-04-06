@@ -6,7 +6,7 @@
 import { Colors } from "@/constants/Colors";
 import { StudyRequest } from "@/types";
 import * as Haptics from "expo-haptics";
-import { useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import {
     Animated,
     StyleSheet,
@@ -23,7 +23,7 @@ interface CardSolicitudProps {
   isOwnPost?: boolean;
 }
 
-export function CardSolicitud({
+export const CardSolicitud = memo(function CardSolicitud({
   item,
   onPress,
   onPostulate,
@@ -54,11 +54,20 @@ export function CardSolicitud({
     .join("")
     .toUpperCase();
 
+  const handleOpen = useCallback(() => {
+    onPress(item);
+  }, [onPress, item]);
+
+  const handlePostulatePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onPostulate?.(item);
+  }, [onPostulate, item]);
+
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
     <TouchableOpacity
       style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}
-      onPress={() => onPress(item)}
+      onPress={handleOpen}
       activeOpacity={0.92}
     >
       {/* ── Header: avatar + autor + tiempo ──────────────────────────── */}
@@ -112,10 +121,7 @@ export function CardSolicitud({
         {!isOwnPost && item.status === "abierta" && (
           <TouchableOpacity
             style={[styles.postulateBtn, { backgroundColor: C.primary }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              onPostulate?.(item);
-            }}
+            onPress={handlePostulatePress}
             activeOpacity={0.85}
           >
             <Text style={[styles.postulateBtnText, { color: C.textOnPrimary }]}>
@@ -133,7 +139,7 @@ export function CardSolicitud({
     </TouchableOpacity>
     </Animated.View>
   );
-}
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getTimeAgo(dateStr: string): string {

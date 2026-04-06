@@ -19,6 +19,7 @@ import { useProfile } from "@/hooks/application/useProfile";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useCallback, useMemo } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -43,7 +44,7 @@ export default function PerfilScreen() {
     isLoading,
   } = useProfile();
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     Alert.alert("Cerrar sesión", "¿Estás seguro de que quieres salir?", [
       { text: "Cancelar", style: "cancel" },
       {
@@ -55,7 +56,20 @@ export default function PerfilScreen() {
         },
       },
     ]);
-  };
+  }, [signOut]);
+
+  const openEditProfile = useCallback(() => {
+    router.push("/editar-perfil");
+  }, []);
+
+  const openNewRequest = useCallback(() => {
+    router.push("/nueva-solicitud");
+  }, []);
+
+  const scrollContentStyle = useMemo(
+    () => ({ paddingBottom: insets.bottom + 80 }),
+    [insets.bottom],
+  );
 
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
@@ -63,7 +77,7 @@ export default function PerfilScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        contentContainerStyle={scrollContentStyle}
       >
         <ProfileHero
           fullName={user?.fullName ?? "Estudiante"}
@@ -113,7 +127,7 @@ export default function PerfilScreen() {
             <SectionCard
               title="Materias actuales"
               actionLabel="Editar"
-              onAction={() => router.push("/editar-perfil")}
+              onAction={openEditProfile}
             >
               {userSubjects.length === 0 ? (
                 <Text style={{ fontSize: 13, color: C.textPlaceholder, textAlign: "center", paddingVertical: 12 }}>
@@ -136,7 +150,7 @@ export default function PerfilScreen() {
             <SectionCard
               title="Contacto"
               actionLabel="Editar"
-              onAction={() => router.push("/editar-perfil")}
+              onAction={openEditProfile}
             >
               {phoneNumber ? (
                 <InfoRow emoji="📱" label="Teléfono" value={phoneNumber} />
@@ -151,7 +165,7 @@ export default function PerfilScreen() {
             <SectionCard
               title="Sobre mi"
               actionLabel="Editar"
-              onAction={() => router.push("/editar-perfil")}
+              onAction={openEditProfile}
             >
               <Text style={{ fontSize: 14, lineHeight: 22, color: C.textSecondary }}>
                 {user?.bio?.trim()
@@ -164,7 +178,7 @@ export default function PerfilScreen() {
             <SectionCard
               title="Mis publicaciones"
               actionLabel="+ Nueva"
-              onAction={() => router.push("/nueva-solicitud")}
+              onAction={openNewRequest}
             >
               {myRequests.length === 0 ? (
                 <View style={styles.emptySmall}>

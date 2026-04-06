@@ -13,6 +13,7 @@
 
 import { Colors } from "@/constants/Colors"
 import type { StudentSearchResult } from "@/types"
+import { memo, useCallback } from "react"
 import {
   Image,
   StyleSheet,
@@ -27,9 +28,13 @@ interface Props {
   onViewProfile: (studentId: string) => void
 }
 
-export function StudentCard({ student, onViewProfile }: Props) {
+export const StudentCard = memo(function StudentCard({ student, onViewProfile }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
+
+  const handleViewProfile = useCallback(() => {
+    onViewProfile(student.id)
+  }, [onViewProfile, student.id])
 
   // Iniciales del nombre para el avatar por defecto
   const initials = (student.full_name ?? "UC")
@@ -42,7 +47,7 @@ export function StudentCard({ student, onViewProfile }: Props) {
   return (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}
-      onPress={() => onViewProfile(student.id)}
+      onPress={handleViewProfile}
       activeOpacity={0.92}
     >
       {/* Header: avatar + info */}
@@ -95,7 +100,7 @@ export function StudentCard({ student, onViewProfile }: Props) {
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.profileBtn, { backgroundColor: C.primary }]}
-          onPress={() => onViewProfile(student.id)}
+          onPress={handleViewProfile}
           activeOpacity={0.85}
         >
           <Text style={[styles.profileBtnText, { color: C.textOnPrimary }]}>
@@ -105,7 +110,7 @@ export function StudentCard({ student, onViewProfile }: Props) {
       </View>
     </TouchableOpacity>
   )
-}
+})
 
 const styles = StyleSheet.create({
   card: {

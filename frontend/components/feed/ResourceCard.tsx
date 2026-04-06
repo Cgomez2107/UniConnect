@@ -8,6 +8,7 @@
 
 import { Colors } from "@/constants/Colors"
 import type { StudyResource } from "@/types"
+import { memo, useCallback } from "react"
 import {
   StyleSheet,
   Text,
@@ -55,9 +56,13 @@ function getTimeAgo(dateStr: string): string {
   return `${Math.floor(days / 7)}sem`
 }
 
-export function ResourceCard({ item, isOwn = false, onOpen }: Props) {
+export const ResourceCard = memo(function ResourceCard({ item, isOwn = false, onOpen }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
+
+  const handleOpen = useCallback(() => {
+    onOpen(item)
+  }, [onOpen, item])
 
   const fileType = item.file_type?.toUpperCase() ?? "?"
   const icon = FILE_ICONS[fileType] ?? "📎"
@@ -67,7 +72,7 @@ export function ResourceCard({ item, isOwn = false, onOpen }: Props) {
   return (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}
-      onPress={() => onOpen(item)}
+      onPress={handleOpen}
       activeOpacity={0.92}
     >
       {/* ── Header: icono + info ──────────────────────────────────────── */}
@@ -122,7 +127,7 @@ export function ResourceCard({ item, isOwn = false, onOpen }: Props) {
 
           <TouchableOpacity
             style={[styles.openBtn, { backgroundColor: C.primary }]}
-            onPress={() => onOpen(item)}
+            onPress={handleOpen}
             activeOpacity={0.85}
           >
             <Text style={[styles.openBtnText, { color: C.textOnPrimary }]}>Ver</Text>
@@ -131,7 +136,7 @@ export function ResourceCard({ item, isOwn = false, onOpen }: Props) {
       </View>
     </TouchableOpacity>
   )
-}
+})
 
 const styles = StyleSheet.create({
   card: {
