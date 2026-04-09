@@ -45,7 +45,6 @@ export function useFeedScreen() {
   const studentSearch = useStudentSearch();
 
   const hasMountedRef = useRef(false);
-  const isFirstFocusRef = useRef(true);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeSubjectIds = useMemo(() => {
@@ -67,12 +66,23 @@ export function useFeedScreen() {
   );
 
   const fetchRequests = useCallback(
-    async (overrideSearch?: unknown) => {
+    async (overrideSearch?: unknown, overrideSubjectIds?: string[]) => {
       if (!subjectsLoaded || enrolledSubjectIds === null) return;
+
+      // Regla de negocio: sin materias inscritas, no hay solicitudes para mostrar.
+      if (enrolledSubjectIds.length === 0) {
+        setRequests([]);
+        setRequestsPage(0);
+        setHasMoreRequests(false);
+        setIsFirstLoad(false);
+        return;
+      }
+
       try {
+        const effectiveSubjectIds = overrideSubjectIds ?? activeSubjectIds;
         const result = await getRequests(
           {
-            subjectIds: activeSubjectIds.length > 0 ? activeSubjectIds : undefined,
+            subjectIds: effectiveSubjectIds,
             search: normalizeSearch(overrideSearch),
           } as any,
           0,
@@ -87,6 +97,26 @@ export function useFeedScreen() {
     },
     [activeSubjectIds, enrolledSubjectIds, getRequests, normalizeSearch, subjectsLoaded],
   );
+
+  const refreshEnrolledSubjects = useCallback(async (): Promise<string[]> => {
+    try {
+      const subjects = await getEnrolledSubjectsForUser();
+      const ids = subjects.map((s) => s.id);
+
+      setUserSubjects(subjects);
+      setEnrolledSubjectIds(ids);
+      setSelectedSubjects((prev) => prev.filter((id) => ids.includes(id)));
+
+      return ids;
+    } catch {
+      setUserSubjects([]);
+      setEnrolledSubjectIds([]);
+      setSelectedSubjects([]);
+      return [];
+    } finally {
+      setSubjectsLoaded(true);
+    }
+  }, []);
 
   const fetchResources = useCallback(
     async (subjectId: string) => {
@@ -103,17 +133,8 @@ export function useFeedScreen() {
   );
 
   useEffect(() => {
-    getEnrolledSubjectsForUser()
-      .then((subjects) => {
-        setUserSubjects(subjects);
-        setEnrolledSubjectIds(subjects.map((s) => s.id));
-      })
-      .catch(() => {
-        setUserSubjects([]);
-        setEnrolledSubjectIds([]);
-      })
-      .finally(() => setSubjectsLoaded(true));
-  }, []);
+    refreshEnrolledSubjects().catch(() => undefined);
+  }, [refreshEnrolledSubjects]);
 
   useEffect(() => {
     if (!subjectsLoaded || enrolledSubjectIds === null) return;
@@ -142,22 +163,36 @@ export function useFeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!hasMountedRef.current || isFirstFocusRef.current) {
-        isFirstFocusRef.current = false;
-        return;
-      }
-      if (searchMode === "solicitudes") fetchRequests().catch(() => undefined);
-    }, [fetchRequests, searchMode]),
+      if (!hasMountedRef.current) return;
+
+      if (searchMode !== "solicitudes") return;
+
+      refreshEnrolledSubjects()
+        .then((ids) => {
+          if (ids.length === 0) {
+            setRequests([]);
+            setRequestsPage(0);
+            setHasMoreRequests(false);
+            setIsFirstLoad(false);
+            return;
+          }
+
+          return fetchRequests(undefined, ids);
+        })
+        .catch(() => undefined);
+    }, [fetchRequests, refreshEnrolledSubjects, searchMode]),
   );
 
   const loadMoreRequests = useCallback(async () => {
     if (!subjectsLoaded || !hasMoreRequests || loadingMoreRequests || requestsLoading || !!requestsError) return;
+    if (!enrolledSubjectIds || enrolledSubjectIds.length === 0) return;
+
     setLoadingMoreRequests(true);
     try {
       const nextPage = requestsPage + 1;
       const result = await getRequests(
         {
-          subjectIds: activeSubjectIds.length > 0 ? activeSubjectIds : undefined,
+          subjectIds: activeSubjectIds,
           search: normalizeSearch(undefined),
         } as any,
         nextPage,
@@ -173,7 +208,7 @@ export function useFeedScreen() {
     } finally {
       setLoadingMoreRequests(false);
     }
-  }, [activeSubjectIds, getRequests, hasMoreRequests, loadingMoreRequests, normalizeSearch, requestsError, requestsLoading, requestsPage, subjectsLoaded]);
+  }, [activeSubjectIds, enrolledSubjectIds, getRequests, hasMoreRequests, loadingMoreRequests, normalizeSearch, requestsError, requestsLoading, requestsPage, subjectsLoaded]);
 
   const handlePostulateFromFeed = useCallback(
     async (requestId: string) => {

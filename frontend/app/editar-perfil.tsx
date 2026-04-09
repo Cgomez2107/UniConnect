@@ -62,6 +62,14 @@ export default function EditarPerfilScreen() {
     onSaved: () => router.back(),
   });
 
+  const primaryUserProgram = userPrograms.find((p) => p.is_primary) ?? null;
+  const selectedProgram = allPrograms.find((program) => program.id === selectedProgramId) ?? null;
+  const selectedProgramLabel = selectedProgram
+    ? `${selectedProgram.name} — ${selectedProgram.faculties?.name ?? selectedProgram.faculty_name ?? "Sin facultad"}`
+    : primaryUserProgram
+      ? `${primaryUserProgram.name} — ${primaryUserProgram.faculty_name}`
+      : "Sin programa asignado";
+
   if (isLoadingData) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
@@ -125,18 +133,64 @@ export default function EditarPerfilScreen() {
           </View>
         </Field>
 
-        {/* ── Programa (SOLO LECTURA) ── */}
+        {/* ── Programa ── */}
         <Field label="Programa académico" C={C}>
-          <View style={[styles.readOnlyInput, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <Text style={[styles.readOnlyText, { color: C.textPrimary }]}>
-              {userPrograms.find((p) => p.is_primary)
-                ? `${userPrograms.find((p) => p.is_primary)!.name} — ${userPrograms.find((p) => p.is_primary)!.faculty_name}`
-                : "Sin programa asignado"}
+          <Text style={[styles.inputHint, { color: C.textSecondary }]}>
+            Puedes cambiar tu programa principal y después ajustar las materias.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.selectorBtn, { backgroundColor: C.surface, borderColor: C.border }]}
+            onPress={() => setShowProgramSelector((prev) => !prev)}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.selectorBtnText, { color: C.textPrimary }]} numberOfLines={1}>
+              {selectedProgramLabel}
             </Text>
-            <Text style={[styles.readOnlyHint, { color: C.textSecondary }]}>
-              No se puede editar desde aquí
+            <Text style={{ color: C.textSecondary, marginLeft: 12 }}>
+              {showProgramSelector ? "▴" : "▾"}
             </Text>
-          </View>
+          </TouchableOpacity>
+
+          {showProgramSelector && (
+            <View style={[styles.programList, { borderColor: C.border, backgroundColor: C.surface }]}>
+              {allPrograms.length === 0 ? (
+                <Text style={{ color: C.textSecondary, padding: 14, textAlign: "center" }}>
+                  No hay programas disponibles
+                </Text>
+              ) : (
+                allPrograms.map((program) => {
+                  const isSelected = program.id === selectedProgramId;
+                  return (
+                    <TouchableOpacity
+                      key={program.id}
+                      style={[
+                        styles.programOption,
+                        {
+                          borderBottomColor: C.border,
+                          backgroundColor: isSelected ? C.primaryLight : "transparent",
+                        },
+                      ]}
+                      onPress={() => {
+                        void handleSelectProgram(program.id);
+                        setShowProgramSelector(false);
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: C.textPrimary, fontSize: 14, fontWeight: "600" }}>
+                          {program.name}
+                        </Text>
+                        <Text style={{ color: C.textSecondary, fontSize: 12, marginTop: 2 }}>
+                          {program.faculties?.name ?? program.faculty_name ?? "Sin facultad"}
+                        </Text>
+                      </View>
+                      {isSelected && <Text style={{ color: C.primary, fontSize: 18 }}>✓</Text>}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </View>
+          )}
         </Field>
 
         {/* ── Teléfono (EDITABLE) ── */}

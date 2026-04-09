@@ -1,4 +1,6 @@
+import { DIContainer } from "@/lib/services/di/container";
 import { useAuthStore } from "@/store/useAuthStore";
+import { router } from "expo-router";
 import type { Program, Subject } from "@/types";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -28,6 +30,9 @@ interface UseEditProfileFormParams {
 }
 
 export function useEditProfileForm({ onSaved }: UseEditProfileFormParams) {
+  const container = useMemo(() => DIContainer.getInstance(), []);
+  const clearLocalSession = useMemo(() => container.getClearLocalSession(), [container]);
+
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
 
@@ -49,6 +54,33 @@ export function useEditProfileForm({ onSaved }: UseEditProfileFormParams) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+
+  const isSessionExpiredError = useCallback((error: unknown): boolean => {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    const normalized = message.toLowerCase();
+    return (
+      normalized.includes("invalid refresh token")
+      || normalized.includes("refresh token not found")
+      || normalized.includes("jwt expired")
+      || normalized.includes("session expired")
+    );
+  }, []);
+
+  const handleSessionExpired = useCallback(async () => {
+    try {
+      await clearLocalSession.execute();
+    } catch {
+      // No bloqueamos el flujo si falla la limpieza local.
+    }
+
+    setUser(null);
+    Alert.alert("Sesion expirada", "Tu sesion ya no es valida. Inicia sesion nuevamente.", [
+      {
+        text: "OK",
+        onPress: () => router.replace("/login"),
+      },
+    ]);
+  }, [clearLocalSession, setUser]);
 
   const loadInitialData = useCallback(async () => {
     try {
@@ -82,12 +114,17 @@ export function useEditProfileForm({ onSaved }: UseEditProfileFormParams) {
       const programs = await getPrograms();
       setAllPrograms(programs);
     } catch (error) {
+      if (isSessionExpiredError(error)) {
+        await handleSessionExpired();
+        return;
+      }
+
       console.error("Error loading initial data:", error);
       Alert.alert("Error", "No se pudieron cargar los datos del perfil.");
     } finally {
       setIsLoadingData(false);
     }
-  }, [user?.id]);
+  }, [handleSessionExpired, isSessionExpiredError, user?.id]);
 
   useEffect(() => {
     loadInitialData();
@@ -174,7 +211,12 @@ export function useEditProfileForm({ onSaved }: UseEditProfileFormParams) {
       await setPrimaryProgram(user.id, programId);
       setSelectedProgramId(programId);
       setUserSubjects([]);
-    } catch {
+    } catch (error) {
+      if (isSessionExpiredError(error)) {
+        await handleSessionExpired();
+        return;
+      }
+
       Alert.alert("Error", "No se pudo actualizar el programa. Intenta de nuevo.");
     }
   };
@@ -234,6 +276,11 @@ export function useEditProfileForm({ onSaved }: UseEditProfileFormParams) {
         { text: "OK", onPress: () => onSaved?.() },
       ]);
     } catch (error) {
+      if (isSessionExpiredError(error)) {
+        await handleSessionExpired();
+        return;
+      }
+
       const message = (error as any)?.message || "No se pudo actualizar el perfil.";
       Alert.alert("Error", message);
       console.error(error);

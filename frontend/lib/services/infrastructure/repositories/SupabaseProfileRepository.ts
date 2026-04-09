@@ -6,6 +6,18 @@ import type { Profile, UserProgram, UserSubject } from "@/types"
 import type { IProfileRepository } from "../../domain/repositories/IProfileRepository"
 
 export class SupabaseProfileRepository implements IProfileRepository {
+  private isMissingSetPrimaryProgramRpc(error: unknown): boolean {
+    if (!error || typeof error !== "object") return false
+
+    const maybeCode = (error as { code?: string }).code ?? ""
+    const maybeMessage = ((error as { message?: string }).message ?? "").toLowerCase()
+
+    return (
+      maybeCode === "PGRST202"
+      || (maybeMessage.includes("set_primary_program") && maybeMessage.includes("could not find"))
+    )
+  }
+
   async getProfile(userId: string): Promise<Profile | null> {
     return apiGetOne<Profile>("profiles", (q) => q.select("*").eq("id", userId).single())
   }
@@ -26,9 +38,15 @@ export class SupabaseProfileRepository implements IProfileRepository {
     })
 
     const arrayBuffer = decode(base64)
-    const uriParts = imageUri.split(".")
-    const fileExt = uriParts[uriParts.length - 1]?.toLowerCase() ?? "jpg"
-    const mimeType = fileExt === "png" ? "image/png" : "image/jpeg"
+    // En Android algunos URIs pueden no tener extensión válida (content://...).
+    // Forzamos una extensión segura para evitar llaves inválidas en Storage.
+    const rawExt = imageUri.split(".").pop()?.toLowerCase() ?? ""
+    const fileExt = ["jpg", "jpeg", "png", "webp"].includes(rawExt) ? rawExt : "jpg"
+    const mimeType = fileExt === "png"
+      ? "image/png"
+      : fileExt === "webp"
+        ? "image/webp"
+        : "image/jpeg"
     const filePath = `${userId}/avatar.${fileExt}`
 
     const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, arrayBuffer, {
@@ -36,7 +54,19 @@ export class SupabaseProfileRepository implements IProfileRepository {
       upsert: true,
     })
 
-    if (uploadError) throw new Error(`Error al subir imagen: ${uploadError.message}`)
+    if (uploadError) {
+      const msg = uploadError.message.toLowerCase()
+
+      if (msg.includes("bucket") && msg.includes("not found")) {
+        throw new Error("No existe el bucket 'avatars' en Supabase. Ejecuta la migración de storage para avatares.")
+      }
+
+      if (msg.includes("row-level security") || msg.includes("policy")) {
+        throw new Error("No tienes permisos para subir avatar. Revisa las políticas del bucket 'avatars'.")
+      }
+
+      throw new Error(`Error al subir imagen: ${uploadError.message}`)
+    }
 
     const { data } = supabase.storage.from("avatars").getPublicUrl(filePath)
     const publicUrl = `${data.publicUrl}?t=${Date.now()}`
@@ -57,12 +87,38 @@ export class SupabaseProfileRepository implements IProfileRepository {
   }
 
   async setPrimaryProgram(userId: string, programId: string): Promise<void> {
-    await supabase.from("user_programs").delete().eq("user_id", userId)
-    const { error } = await supabase
-      .from("user_programs")
-      .insert({ user_id: userId, program_id: programId, is_primary: true })
+    const { error } = await supabase.rpc("set_primary_program", {
+      p_user_id: userId,
+      p_program_id: programId,
+    })
 
-    if (error) throw error
+    if (!error) return
+
+    if (!this.isMissingSetPrimaryProgramRpc(error)) {
+      throw error
+    }
+
+    const { error: deleteError } = await supabase
+      .from("user_programs")
+      .delete()
+      .eq("user_id", userId)
+
+    if (deleteError) {
+      throw new Error(`No se pudo actualizar programa (fallback-delete): ${deleteError.message}`)
+    }
+
+    const { error: insertError } = await supabase
+      .from("user_programs")
+      .insert({
+        user_id: userId,
+        program_id: programId,
+        is_primary: true,
+        enrolled_at: new Date().toISOString(),
+      })
+
+    if (insertError) {
+      throw new Error(`No se pudo actualizar programa (fallback-insert): ${insertError.message}`)
+    }
   }
 
   async getMySubjects(userId: string): Promise<UserSubject[]> {

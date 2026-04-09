@@ -37,6 +37,8 @@ interface RequestDetailViewModel {
 interface Props {
   C: (typeof Colors)["light"];
   request: RequestDetailViewModel;
+  currentUserId?: string;
+  chatLoading: boolean;
   insetsBottom: number;
   canManageRequest: boolean;
   isEditingDescription: boolean;
@@ -56,11 +58,14 @@ interface Props {
   onSetAdmin: (userId: string, makeAdmin: boolean) => void;
   onReviewApplication: (applicationId: string, status: "aceptada" | "rechazada") => void;
   onOpenApplicantProfile: (applicantId: string) => void;
+  onOpenMemberChat: (userId: string, userName: string) => void;
 }
 
 export function RequestDetailContent({
   C,
   request,
+  currentUserId,
+  chatLoading,
   insetsBottom,
   canManageRequest,
   isEditingDescription,
@@ -80,6 +85,7 @@ export function RequestDetailContent({
   onSetAdmin,
   onReviewApplication,
   onOpenApplicantProfile,
+  onOpenMemberChat,
 }: Props) {
   return (
     <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insetsBottom + 260 }]} showsVerticalScrollIndicator={false}>
@@ -196,10 +202,27 @@ export function RequestDetailContent({
             <Text style={[styles.memberName, { color: C.textPrimary }]}>{request.author_name}</Text>
             <Text style={[styles.memberRole, { color: C.primary }]}>Creador · Administrador</Text>
           </View>
+
+          {request.author_id !== currentUserId && (
+            <TouchableOpacity
+              style={[styles.chatMemberBtn, { borderColor: C.primary }]}
+              onPress={() => onOpenMemberChat(request.author_id, request.author_name)}
+              disabled={chatLoading}
+              activeOpacity={0.85}
+            >
+              {chatLoading ? (
+                <ActivityIndicator size="small" color={C.primary} />
+              ) : (
+                <Text style={[styles.chatMemberBtnText, { color: C.primary }]}>Chatear</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         {acceptedMembers.map((member) => {
           const name = member.profiles?.full_name ?? "Integrante";
+          const canChatWithMember = member.applicant_id !== currentUserId;
+
           return (
             <View key={member.id} style={[styles.memberCard, { backgroundColor: C.surface, borderColor: C.border }]}> 
               <View style={[styles.memberAvatar, { backgroundColor: C.success + "20" }]}> 
@@ -211,6 +234,21 @@ export function RequestDetailContent({
                   {isExtraAdmin(member.applicant_id) ? "Administrador" : "Participante aceptado"}
                 </Text>
               </View>
+
+              {canChatWithMember && (
+                <TouchableOpacity
+                  style={[styles.chatMemberBtn, { borderColor: C.primary }]}
+                  onPress={() => onOpenMemberChat(member.applicant_id, name)}
+                  disabled={chatLoading}
+                  activeOpacity={0.85}
+                >
+                  {chatLoading ? (
+                    <ActivityIndicator size="small" color={C.primary} />
+                  ) : (
+                    <Text style={[styles.chatMemberBtnText, { color: C.primary }]}>Chatear</Text>
+                  )}
+                </TouchableOpacity>
+              )}
 
               {canManageRequest && (
                 <TouchableOpacity
@@ -396,6 +434,19 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   adminToggleText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  chatMemberBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    minWidth: 78,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatMemberBtnText: {
     fontSize: 12,
     fontWeight: "700",
   },

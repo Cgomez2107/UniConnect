@@ -1,5 +1,6 @@
 import { useApplications } from "@/hooks/application/useApplications";
 import { useStudyRequests } from "@/hooks/application/useStudyRequests";
+import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Application } from "@/types";
 import { Alert } from "react-native";
@@ -60,6 +61,44 @@ export function useRequestDetail({ requestId, onRequestCanceled }: UseRequestDet
     "pendiente" | "aceptada" | "rechazada" | null
   >(null);
 
+  const enrichApplicationsWithProfiles = async (apps: Application[]): Promise<Application[]> => {
+    if (!apps.length) return apps;
+
+    const needProfileIds = apps
+      .filter((app) => !app.profiles?.full_name)
+      .map((app) => app.applicant_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+    if (needProfileIds.length === 0) return apps;
+
+    const uniqueIds = Array.from(new Set(needProfileIds));
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .in("id", uniqueIds);
+
+    if (error) return apps;
+
+    const profileMap = new Map<string, { full_name: string; avatar_url: string | null }>();
+    for (const row of data ?? []) {
+      if (!row?.id) continue;
+      profileMap.set(row.id, {
+        full_name: row.full_name ?? "Integrante",
+        avatar_url: row.avatar_url ?? null,
+      });
+    }
+
+    return apps.map((app) => {
+      if (app.profiles?.full_name) return app;
+      const profile = profileMap.get(app.applicant_id);
+      if (!profile) return app;
+      return {
+        ...app,
+        profiles: profile,
+      };
+    });
+  };
+
   useEffect(() => {
     if (!requestId) return;
 
@@ -86,16 +125,31 @@ export function useRequestDetail({ requestId, onRequestCanceled }: UseRequestDet
         });
         setDescriptionDraft(baseRequest.description ?? "");
 
-        const apps = await getApplicationsByRequest(baseRequest.id);
-        setApplications(apps);
+        const isAuthor = user?.id ? baseRequest.author_id === user.id : false;
+        const canAdmin = user?.id && !isAuthor
+          ? await checkIsAdmin(baseRequest.id, user.id)
+          : false;
 
-        if (user?.id) {
-          const [canAdmin, admins] = await Promise.all([
-            checkIsAdmin(baseRequest.id, user.id),
-            getAdmins(baseRequest.id),
-          ]);
-          setIsRequestAdminRole(canAdmin);
-          setRequestAdmins((admins ?? []).map((a) => a.user_id));
+        setIsRequestAdminRole(!!canAdmin);
+
+        if (isAuthor || canAdmin) {
+          try {
+            const [rawApps, admins] = await Promise.all([
+              getApplicationsByRequest(baseRequest.id),
+              getAdmins(baseRequest.id),
+            ]);
+
+            const apps = await enrichApplicationsWithProfiles(rawApps);
+            setApplications(apps);
+            setRequestAdmins((admins ?? []).map((a) => a.user_id));
+          } catch {
+            // Si falla la carga de datos de gestión, no bloqueamos la vista pública de la solicitud.
+            setApplications([]);
+            setRequestAdmins([]);
+          }
+        } else {
+          setApplications([]);
+          setRequestAdmins([]);
         }
 
         if (user?.id && baseRequest.author_id !== user.id) {
