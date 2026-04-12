@@ -21,15 +21,7 @@ import { Colors } from "@/constants/Colors"
 import { useStudentProfileScreen } from "@/hooks/application/useStudentProfileScreen"
 import { router, useLocalSearchParams } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from "react-native"
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export default function StudentProfileScreen() {
@@ -168,18 +160,6 @@ export default function StudentProfileScreen() {
               </Text>
             </View>
           )}
-
-          {/* Botón enviar mensaje */}
-          <TouchableOpacity
-            style={[styles.chatBtn, { backgroundColor: C.primary }]}
-            onPress={handleStartChat}
-            activeOpacity={0.85}
-            disabled={startingChat}
-          >
-            <Text style={[styles.chatBtnText, { color: C.textOnPrimary }]}>
-              {startingChat ? "Abriendo chat..." : "💬 Enviar mensaje"}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* ── Información académica ───────────────────────────────────── */}
@@ -255,6 +235,33 @@ export default function StudentProfileScreen() {
           </Text>
         </SectionCard>
       </ScrollView>
+
+      {/* ── FAB: Botón flotante de chat ── */}
+      <TouchableOpacity
+        style={[
+          styles.fab,
+          {
+            backgroundColor: C.primary,
+            bottom: insets.bottom + 16,
+            right: 16,
+          },
+        ]}
+        onPress={handleStartChat}
+        activeOpacity={0.8}
+        disabled={startingChat}
+        accessibilityLabel="Enviar mensaje"
+        accessibilityHint={`Inicia una conversación con ${profile?.full_name || "este estudiante"}`}
+        accessibilityRole="button"
+      >
+        {startingChat ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <>
+            <Text style={styles.fabIcon}>💬</Text>
+            <Text style={[styles.fabText, { color: C.textOnPrimary }]}>Chat</Text>
+          </>
+        )}
+      </TouchableOpacity>
     </View>
   )
 }
@@ -333,4 +340,22 @@ const styles = StyleSheet.create({
   },
   retryBtnText: { fontSize: 14, fontWeight: "600" },
   backLink: { fontSize: 14, fontWeight: "500", marginTop: 8 },
+
+  // Floating Action Button
+  fab: {
+    position: "absolute",
+    borderRadius: 50,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabIcon: { fontSize: 20 },
+  fabText: { fontSize: 14, fontWeight: "600" },
 })

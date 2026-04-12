@@ -7,6 +7,7 @@
  */
 
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ConversationSkeletonLoader } from "@/components/shared/SkeletonLoader";
 import { Colors } from "@/constants/Colors";
 import { useConversations } from "@/hooks/application/useConversations";
 import type { Conversation } from "@/types";
@@ -172,7 +173,12 @@ export default function MensajesScreen() {
 
       {/* Contenido */}
       {loading ? (
-        <LoadingState />
+        <FlatList
+          data={[1, 2, 3, 4, 5]}
+          keyExtractor={(item) => String(item)}
+          renderItem={() => <ConversationSkeletonLoader />}
+          scrollEnabled={false}
+        />
       ) : error ? (
         <View style={styles.center}>
           <Text style={[styles.errorText, { color: C.error }]}>{error}</Text>

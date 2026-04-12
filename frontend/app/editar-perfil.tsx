@@ -8,11 +8,15 @@
 import { Colors } from "@/constants/Colors";
 import { useEditProfileForm } from "@/hooks/application/useEditProfileForm";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Animated,
   Image,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,6 +33,16 @@ export default function EditarPerfilScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
   const [showProgramSelector, setShowProgramSelector] = useState(false);
+  const scrollOffsetY = useRef(new Animated.Value(0)).current;
+  const [scrollPosition, setScrollPosition] = useState(0);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setScrollPosition(offsetY);
+    Animated.event([{ nativeEvent: { contentOffset: { y: scrollOffsetY } } }], {
+      useNativeDriver: false,
+    })(event);
+  };
   const {
     user,
     bio,
@@ -62,6 +76,34 @@ export default function EditarPerfilScreen() {
     onSaved: () => router.back(),
   });
 
+  const handleProgramChange = (programId: string) => {
+    const oldProgram = allPrograms.find((p) => p.id === selectedProgramId);
+    const newProgram = allPrograms.find((p) => p.id === programId);
+    
+    if (selectedProgramId && selectedProgramId !== programId && userSubjects.length > 0) {
+      Alert.alert(
+        "Cambiar programa",
+        `Al cambiar a "${newProgram?.name}", se limpiarán las materias seleccionadas. ¿Deseas continuar?`,
+        [
+          {
+            text: "Cancelar",
+            onPress: () => setShowProgramSelector(false),
+          },
+          {
+            text: "Continuar",
+            onPress: async () => {
+              await handleSelectProgram(programId);
+              setShowProgramSelector(false);
+            },
+          },
+        ]
+      );
+    } else {
+      void handleSelectProgram(programId);
+      setShowProgramSelector(false);
+    }
+  };
+
   const primaryUserProgram = userPrograms.find((p) => p.is_primary) ?? null;
   const selectedProgram = allPrograms.find((program) => program.id === selectedProgramId) ?? null;
   const selectedProgramLabel = selectedProgram
@@ -82,9 +124,12 @@ export default function EditarPerfilScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={true}
       >
         {/* ── Foto de perfil ── */}
         <View style={styles.avatarContainer}>
@@ -172,8 +217,7 @@ export default function EditarPerfilScreen() {
                         },
                       ]}
                       onPress={() => {
-                        void handleSelectProgram(program.id);
-                        setShowProgramSelector(false);
+                        handleProgramChange(program.id);
                       }}
                     >
                       <View style={{ flex: 1 }}>
@@ -198,21 +242,31 @@ export default function EditarPerfilScreen() {
           <Text style={[styles.inputHint, { color: C.textSecondary }]}>
             Formato: +57 3001234567
           </Text>
-          <TextInput
-            style={[
-              styles.input,
-              { 
-                backgroundColor: C.surface, 
-                borderColor: !isPhoneValid(phoneNumber) ? C.error : C.border, 
-                color: C.textPrimary 
-              }
-            ]}
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            placeholder="+57 300 1234567"
-            placeholderTextColor={C.textPlaceholder}
-            keyboardType="phone-pad"
-          />
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[
+                styles.input,
+                { 
+                  backgroundColor: C.surface, 
+                  borderColor: phoneNumber && !isPhoneValid(phoneNumber) ? C.error : phoneNumber && isPhoneValid(phoneNumber) ? C.success : C.border, 
+                  color: C.textPrimary,
+                  flex: 1,
+                }
+              ]}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              placeholder="+57 300 1234567"
+              placeholderTextColor={C.textPlaceholder}
+              keyboardType="phone-pad"
+              accessibilityLabel="Número de teléfono"
+              accessibilityHint="Ingresa tu número de teléfono en formato internacional"
+            />
+            {phoneNumber && isPhoneValid(phoneNumber) && (
+              <View style={[styles.validationIcon, { backgroundColor: C.success }]}>
+                <Text style={styles.validationIconText}>✓</Text>
+              </View>
+            )}
+          </View>
         </Field>
 
         {/* ── Materias ── */}
@@ -220,6 +274,9 @@ export default function EditarPerfilScreen() {
           <TouchableOpacity
             style={[styles.button, { backgroundColor: C.primary }]}
             onPress={() => setShowAddSubjects(!showAddSubjects)}
+            accessibilityLabel="Agregar materias"
+            accessibilityHint={`Actualmente tienes ${userSubjects.length} materias seleccionadas`}
+            accessibilityRole="button"
           >
             <Text style={[styles.buttonText, { color: C.textOnPrimary }]}>
               {userSubjects.length > 0 ? `${userSubjects.length} materias` : "Agregar materias"}
@@ -342,7 +399,35 @@ export default function EditarPerfilScreen() {
             </Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* ── Botón flotante: Guardar ── Visible si hay cambios */}
+      {scrollPosition > 100 && (
+        <Animated.View
+          style={[
+            styles.fab,
+            {
+              backgroundColor: isFormValid && isPhoneValid(phoneNumber) ? C.primary : C.border,
+              bottom: 20,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={!isFormValid || isLoading || !isPhoneValid(phoneNumber)}
+            activeOpacity={0.8}
+            style={styles.fabInner}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={[styles.fabText, { color: isFormValid && isPhoneValid(phoneNumber) ? C.textOnPrimary : C.textSecondary }]}>
+                ✓ Guardar
+              </Text>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+      )}
 
       {/* ── Modal: opciones de foto ── */}
       <Modal
@@ -524,5 +609,48 @@ const styles = StyleSheet.create({
   modalCancelText: {
     fontSize: 15,
     fontWeight: "500",
+  },
+
+  // Floating Action Button
+  fab: {
+    position: "absolute",
+    right: 16,
+    borderRadius: 50,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fabText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  // Input wrapper with validation icon
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  validationIcon: {
+    width: 40,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: -1,
+  },
+  validationIconText: {
+    fontSize: 18,
+    color: "#fff",
+    fontWeight: "600",
   },
 });

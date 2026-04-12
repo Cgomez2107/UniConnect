@@ -6,13 +6,14 @@
 import { Colors } from "@/constants/Colors";
 import { SplashLoader } from "@/components/ui/SplashLoader";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useUnreadCount } from "@/hooks/application/useUnreadCount";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Tabs } from "expo-router";
 import { useRef, useEffect } from "react";
-import { Animated, useColorScheme } from "react-native";
+import { Animated, useColorScheme, View, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-function AnimatedTabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
+function AnimatedTabIcon({ name, color, focused, badge }: { name: any; color: string; focused: boolean; badge?: number }) {
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -25,9 +26,31 @@ function AnimatedTabIcon({ name, color, focused }: { name: any; color: string; f
   }, [focused, scale]);
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Ionicons name={name} size={22} color={color} />
-    </Animated.View>
+    <View>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Ionicons name={name} size={22} color={color} />
+      </Animated.View>
+      {badge !== undefined && badge > 0 && (
+        <View
+          style={{
+            position: "absolute",
+            top: -6,
+            right: -8,
+            backgroundColor: "#dc3545",
+            borderRadius: 12,
+            minWidth: 24,
+            height: 24,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 6,
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>
+            {badge > 99 ? "99+" : badge}
+          </Text>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -37,6 +60,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets(); // ✅ altura real del home indicator
   const role = useAuthStore((s) => s.user?.role);
   const isHydrating = useAuthStore((s) => s.isHydrating);
+  const { unreadCount } = useUnreadCount();
 
   useEffect(() => {
     if (role === "admin") {
@@ -93,7 +117,12 @@ export default function TabLayout() {
         options={{
           title: "Mensajes",
           tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon name={focused ? "chatbubble" : "chatbubble-outline"} color={color} focused={focused} />
+            <AnimatedTabIcon 
+              name={focused ? "chatbubble" : "chatbubble-outline"} 
+              color={color} 
+              focused={focused}
+              badge={unreadCount}
+            />
           ),
         }}
       />
