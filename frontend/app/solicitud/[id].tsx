@@ -67,6 +67,21 @@ export default function SolicitudDetailScreen() {
     onRequestCanceled: () => router.replace("/(tabs)/invitaciones" as any),
   });
 
+  const openChatWith = async (targetUserId: string, targetUserName: string) => {
+    if (!user?.id || !targetUserId || targetUserId === user.id) return;
+
+    setChatLoading(true);
+    try {
+      const conversation = await getOrCreateConversation(user.id, targetUserId);
+      router.push(`/chat/${conversation.id}?otherUserName=${encodeURIComponent(targetUserName)}` as any);
+    } catch (e: any) {
+      console.error("Error abriendo chat:", e.message);
+      Alert.alert("Error", e.message ?? "No se pudo abrir el chat.");
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const openChat = async () => {
     if (!user || !request) return;
     setChatLoading(true);
@@ -152,6 +167,8 @@ export default function SolicitudDetailScreen() {
       <RequestDetailContent
         C={C}
         request={request}
+        currentUserId={user?.id}
+        chatLoading={chatLoading}
         insetsBottom={insets.bottom}
         canManageRequest={canManageRequest}
         isEditingDescription={isEditingDescription}
@@ -171,6 +188,7 @@ export default function SolicitudDetailScreen() {
         onSetAdmin={handleSetAdmin}
         onReviewApplication={handleReviewApplication}
         onOpenApplicantProfile={openApplicantProfile}
+        onOpenMemberChat={openChatWith}
       />
 
       <RequestDetailActionBar

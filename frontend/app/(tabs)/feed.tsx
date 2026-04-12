@@ -69,6 +69,24 @@ export default function FeedScreen() {
     return studentSearch.students.length;
   }, [searchMode, requests.length, resources.length, studentSearch.students.length]);
 
+  const headerLoading = useMemo(() => {
+    if (searchMode === "solicitudes") {
+      return isFirstLoad && requestsLoading;
+    }
+    if (searchMode === "recursos") {
+      return resourcesLoading && resources.length === 0;
+    }
+    return studentSearch.loading && studentSearch.students.length === 0;
+  }, [
+    isFirstLoad,
+    requestsLoading,
+    resources.length,
+    resourcesLoading,
+    searchMode,
+    studentSearch.loading,
+    studentSearch.students.length,
+  ]);
+
   const openFilters = useCallback(() => {
     setShowFilters(true);
   }, [setShowFilters]);
@@ -158,7 +176,7 @@ export default function FeedScreen() {
 
       <FeedHeader
         count={headerCount}
-        loading={requestsLoading || resourcesLoading || studentSearch.loading}
+        loading={headerLoading}
         mode={searchMode}
       />
 

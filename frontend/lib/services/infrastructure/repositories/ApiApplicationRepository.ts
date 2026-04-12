@@ -21,7 +21,7 @@ export class ApiApplicationRepository implements IApplicationRepository {
         const data = await fetchApi<Application[]>(
             `/study-groups/${requestId}/applications`,
         );
-        return data ?? [];
+        return (data ?? []).map(mapApplicationFromApi);
     }
 
     async create(
@@ -36,7 +36,7 @@ export class ApiApplicationRepository implements IApplicationRepository {
                 body: JSON.stringify({ message }),
             },
         );
-        return data;
+        return mapApplicationFromApi(data);
     }
 
     async update(
@@ -79,4 +79,31 @@ export class ApiApplicationRepository implements IApplicationRepository {
     async cancel(requestId: string, userId: string): Promise<void> {
         return this.fallback.cancel(requestId, userId);
     }
+}
+
+function mapApplicationFromApi(raw: any): Application {
+    return {
+        id: raw.id,
+        request_id: raw.requestId ?? raw.request_id,
+        applicant_id: raw.applicantId ?? raw.applicant_id,
+        message: raw.message,
+        status: raw.status,
+        reviewed_at: raw.reviewedAt ?? raw.reviewed_at ?? null,
+        created_at: raw.createdAt ?? raw.created_at,
+        profiles: raw.profiles
+            ? {
+                full_name: raw.profiles.full_name ?? raw.profiles.fullName ?? "Integrante",
+                avatar_url: raw.profiles.avatar_url ?? raw.profiles.avatarUrl ?? null,
+            }
+            : undefined,
+        study_requests: raw.study_requests
+            ? {
+                title: raw.study_requests.title,
+                status: raw.study_requests.status,
+                subjects: raw.study_requests.subjects
+                    ? { name: raw.study_requests.subjects.name }
+                    : undefined,
+            }
+            : undefined,
+    } as Application;
 }

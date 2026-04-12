@@ -282,10 +282,19 @@ export function useFeed(): UseFeedReturn {
     pageRef.current = 0
     hasMoreRef.current = true
 
+    // Regla de negocio: si no hay materias inscritas, el feed de solicitudes debe quedar vacío.
+    if (userSubjectIds.length === 0) {
+      setRequests([])
+      hasMoreRef.current = false
+      setLoading(false)
+      setRefreshing(false)
+      return
+    }
+
     try {
       const filters: FeedFilters = {
         search: search.trim(),
-        subjectIds: userSubjectIds.length > 0 ? userSubjectIds : undefined,
+        subjectIds: userSubjectIds,
       }
       const data = await getFeedRequests(filters, 0, PAGE_SIZE)
       setRequests(data)
@@ -302,13 +311,15 @@ export function useFeed(): UseFeedReturn {
 
   const loadMore = useCallback(async () => {
     if (!subjectsResolved || loadingMore || !hasMoreRef.current || loading) return
+    if (userSubjectIds.length === 0) return
+
     setLoadingMore(true)
 
     try {
       const nextPage = pageRef.current + 1
       const filters: FeedFilters = {
         search: search.trim(),
-        subjectIds: userSubjectIds.length > 0 ? userSubjectIds : undefined,
+        subjectIds: userSubjectIds,
       }
       const data = await getFeedRequests(filters, nextPage, PAGE_SIZE)
       if (data.length > 0) {
