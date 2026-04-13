@@ -4,3 +4,29 @@
 
 expo-env.d.ts
 # @end expo-cli
+
+# Environment variables - Local configuration and credentials
+.env.local
+.env.local.backup
+.env.*.local
+.env
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production
+/build
+/dist
+/.expo
+/.expo-shared
+
+# Testing
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
