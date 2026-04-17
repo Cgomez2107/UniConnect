@@ -28,7 +28,7 @@ export function useUnreadCount() {
 
       setIsLoading(true);
       // Obtener todas las conversaciones con sus unread_count
-      const conversations = await getConversations.execute();
+      const conversations = await getConversations.execute(user.id);
       
       // Contar el total de unread_count de todas
       const total = conversations.reduce((sum, conv) => sum + (conv.unread_count ?? 0), 0);
