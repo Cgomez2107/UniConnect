@@ -31,8 +31,12 @@ export function StatsRow({
       ]}
     >
       <StatBox label="Publicaciones" value={String(requestsCount)} />
-      <View style={[styles.divider, { backgroundColor: C.border }]} />
-      <StatBox label="Grupos" value={String(groupsCount)} />
+      {groupsCount > 0 && (
+        <>
+          <View style={[styles.divider, { backgroundColor: C.border }]} />
+          <StatBox label="Grupos" value={String(groupsCount)} />
+        </>
+      )}
       <View style={[styles.divider, { backgroundColor: C.border }]} />
       <StatBox label="Materias" value={String(subjectsCount)} />
     </View>

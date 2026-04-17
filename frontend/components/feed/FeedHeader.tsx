@@ -6,35 +6,51 @@
 
 import { Colors } from "@/constants/Colors"
 import { router } from "expo-router"
+import { memo, useCallback } from "react"
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
+
+type SearchMode = "solicitudes" | "compañeros" | "recursos"
+
+const MODE_TITLE: Record<SearchMode, string> = {
+  solicitudes: "Solicitudes",
+  "compañeros": "Compañeros",
+  recursos: "Recursos",
+}
 
 interface Props {
   count: number
   loading: boolean
+  mode?: SearchMode
 }
 
-export function FeedHeader({ count, loading }: Props) {
+export const FeedHeader = memo(function FeedHeader({ count, loading, mode = "solicitudes" }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
+
+  const openNewRequest = useCallback(() => {
+    router.push("/nueva-solicitud")
+  }, [])
 
   return (
     <View style={[styles.header, { borderBottomColor: C.border }]}>
       <View>
-        <Text style={[styles.title, { color: C.textPrimary }]}>Solicitudes</Text>
+        <Text style={[styles.title, { color: C.textPrimary }]}>{MODE_TITLE[mode]}</Text>
         <Text style={[styles.sub, { color: C.textSecondary }]}>
           {loading ? "Cargando..." : `${count} publicaciones activas`}
         </Text>
       </View>
-      <TouchableOpacity
-        style={[styles.btn, { backgroundColor: C.accent }]}
-        onPress={() => router.push("/nueva-solicitud")}
-        activeOpacity={0.85}
-      >
-        <Text style={[styles.btnText, { color: C.primary }]}>+ Nueva</Text>
-      </TouchableOpacity>
+      {mode === "solicitudes" && (
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: C.accent }]}
+          onPress={openNewRequest}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.btnText, { color: C.primary }]}>+ Nueva</Text>
+        </TouchableOpacity>
+      )}
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   header: {

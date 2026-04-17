@@ -15,10 +15,11 @@ import { InfoRow } from "@/components/shared/InfoRow";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Colors } from "@/constants/Colors";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/hooks/application/useProfile";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useCallback, useMemo } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -32,6 +33,7 @@ export default function PerfilScreen() {
 
   const {
     avatarUrl,
+    phoneNumber,
     userPrograms,
     userSubjects,
     myRequests,
@@ -42,8 +44,8 @@ export default function PerfilScreen() {
     isLoading,
   } = useProfile();
 
-  const handleSignOut = () => {
-    Alert.alert("Cerrar sesion", "Estas seguro de que quieres salir?", [
+  const handleSignOut = useCallback(() => {
+    Alert.alert("Cerrar sesión", "¿Estás seguro de que quieres salir?", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Salir",
@@ -54,7 +56,20 @@ export default function PerfilScreen() {
         },
       },
     ]);
-  };
+  }, [signOut]);
+
+  const openEditProfile = useCallback(() => {
+    router.push("/editar-perfil");
+  }, []);
+
+  const openNewRequest = useCallback(() => {
+    router.push("/nueva-solicitud");
+  }, []);
+
+  const scrollContentStyle = useMemo(
+    () => ({ paddingBottom: insets.bottom + 80 }),
+    [insets.bottom],
+  );
 
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
@@ -62,7 +77,7 @@ export default function PerfilScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        contentContainerStyle={scrollContentStyle}
       >
         <ProfileHero
           fullName={user?.fullName ?? "Estudiante"}
@@ -77,12 +92,11 @@ export default function PerfilScreen() {
           <LoadingState message="Cargando perfil..." />
         ) : (
           <>
-            {/* Informacion academica */}
-            <SectionCard title="Informacion academica">
+            <SectionCard title="Información académica">
               {user?.semester ? (
-                <InfoRow emoji="Calendar" label="Semestre" value={`${user.semester} semestre`} />
+                <InfoRow emoji="📅" label="Semestre" value={`${user.semester}° semestre`} />
               ) : null}
-              <InfoRow emoji="Graduate" label={`Programa${userPrograms.length > 1 ? "s" : ""}`}>
+              <InfoRow emoji="🎓" label={`Programa${userPrograms.length > 1 ? "s" : ""}`}>
                 {userPrograms.length === 0 ? (
                   <Text style={{ fontSize: 14, color: C.textPlaceholder }}>
                     Sin programa registrado
@@ -113,7 +127,7 @@ export default function PerfilScreen() {
             <SectionCard
               title="Materias actuales"
               actionLabel="Editar"
-              onAction={() => router.push("/editar-perfil")}
+              onAction={openEditProfile}
             >
               {userSubjects.length === 0 ? (
                 <Text style={{ fontSize: 13, color: C.textPlaceholder, textAlign: "center", paddingVertical: 12 }}>
@@ -132,16 +146,31 @@ export default function PerfilScreen() {
               )}
             </SectionCard>
 
+            {/* Contacto */}
+            <SectionCard
+              title="Contacto"
+              actionLabel="Editar"
+              onAction={openEditProfile}
+            >
+              {phoneNumber ? (
+                <InfoRow emoji="📱" label="Teléfono" value={phoneNumber} />
+              ) : (
+                <Text style={{ fontSize: 13, color: C.textPlaceholder, textAlign: "center", paddingVertical: 12 }}>
+                  Aún no has agregado un teléfono de contacto
+                </Text>
+              )}
+            </SectionCard>
+
             {/* Sobre mi */}
             <SectionCard
               title="Sobre mi"
               actionLabel="Editar"
-              onAction={() => router.push("/editar-perfil")}
+              onAction={openEditProfile}
             >
               <Text style={{ fontSize: 14, lineHeight: 22, color: C.textSecondary }}>
                 {user?.bio?.trim()
                   ? user.bio
-                  : "Aun no has escrito una biografia. Toca Editar para agregar una."}
+                  : "Aún no has escrito una biografía. Toca Editar para agregar una."}
               </Text>
             </SectionCard>
 
@@ -149,13 +178,13 @@ export default function PerfilScreen() {
             <SectionCard
               title="Mis publicaciones"
               actionLabel="+ Nueva"
-              onAction={() => router.push("/nueva-solicitud")}
+              onAction={openNewRequest}
             >
               {myRequests.length === 0 ? (
                 <View style={styles.emptySmall}>
-                  <Text style={{ fontSize: 28 }}>Empty</Text>
+                  <Text style={{ fontSize: 28 }}>📭</Text>
                   <Text style={{ fontSize: 13, color: C.textSecondary, textAlign: "center" }}>
-                    Aun no tienes solicitudes publicadas
+                    Aún no tienes solicitudes publicadas
                   </Text>
                 </View>
               ) : (
@@ -177,7 +206,7 @@ export default function PerfilScreen() {
           onPress={handleSignOut}
           activeOpacity={0.8}
         >
-          <Text style={[styles.signOutText, { color: C.error }]}>Cerrar sesion</Text>
+          <Text style={[styles.signOutText, { color: C.error }]}>Cerrar sesión</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

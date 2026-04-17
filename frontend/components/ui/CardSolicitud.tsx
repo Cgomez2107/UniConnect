@@ -5,7 +5,10 @@
 
 import { Colors } from "@/constants/Colors";
 import { StudyRequest } from "@/types";
+import * as Haptics from "expo-haptics";
+import { memo, useCallback, useEffect, useRef } from "react";
 import {
+    Animated,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -20,13 +23,7 @@ interface CardSolicitudProps {
   isOwnPost?: boolean;
 }
 
-const MODALITY_LABEL = {
-  presencial: "📍 Presencial",
-  virtual: "💻 Virtual",
-  híbrido: "🔄 Híbrido",
-};
-
-export function CardSolicitud({
+export const CardSolicitud = memo(function CardSolicitud({
   item,
   onPress,
   onPostulate,
@@ -35,8 +32,21 @@ export function CardSolicitud({
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
 
+  // Animación de entrada
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   const timeAgo = getTimeAgo(item.created_at);
-  const authorName = item.profiles?.full_name ?? "Estudiante";
+  const authorName = item.profiles?.full_name ?? (item as any).author?.full_name ?? "Estudiante";
+  const authorCareer = (item as any).author?.career ?? "";
+  const occupiedSlots = Math.max(1, Math.min(item.applications_count ?? 1, item.max_members));
   const initials = authorName
     .split(" ")
     .slice(0, 2)
@@ -44,10 +54,20 @@ export function CardSolicitud({
     .join("")
     .toUpperCase();
 
+  const handleOpen = useCallback(() => {
+    onPress(item);
+  }, [onPress, item]);
+
+  const handlePostulatePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onPostulate?.(item);
+  }, [onPostulate, item]);
+
   return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
     <TouchableOpacity
       style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}
-      onPress={() => onPress(item)}
+      onPress={handleOpen}
       activeOpacity={0.92}
     >
       {/* ── Header: avatar + autor + tiempo ──────────────────────────── */}
@@ -61,7 +81,7 @@ export function CardSolicitud({
             {authorName}
           </Text>
           <Text style={[styles.authorMeta, { color: C.textSecondary }]}>
-            Estudiante · {timeAgo}
+            {authorCareer || "Estudiante"} · {timeAgo}
           </Text>
         </View>
 
@@ -90,22 +110,18 @@ export function CardSolicitud({
         {item.description}
       </Text>
 
-      {/* ── Footer: modalidad + miembros + botón ─────────────────────── */}
+      {/* ── Footer: miembros + botón ─────────────────────────────────── */}
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
           <Text style={[styles.footerMeta, { color: C.textSecondary }]}>
-            {MODALITY_LABEL[item.modality]}
-          </Text>
-          <Text style={[styles.footerDot, { color: C.border }]}>·</Text>
-          <Text style={[styles.footerMeta, { color: C.textSecondary }]}>
-            👥 {item.applications_count ?? 0}/{item.max_members}
+            👥 {occupiedSlots}/{item.max_members}
           </Text>
         </View>
 
         {!isOwnPost && item.status === "abierta" && (
           <TouchableOpacity
             style={[styles.postulateBtn, { backgroundColor: C.primary }]}
-            onPress={() => onPostulate?.(item)}
+            onPress={handlePostulatePress}
             activeOpacity={0.85}
           >
             <Text style={[styles.postulateBtnText, { color: C.textOnPrimary }]}>
@@ -121,13 +137,15 @@ export function CardSolicitud({
         )}
       </View>
     </TouchableOpacity>
+    </Animated.View>
   );
-}
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "ahora mismo";
   if (mins < 60) return `hace ${mins}m`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `hace ${hrs}h`;
@@ -200,10 +218,9 @@ const styles = StyleSheet.create({
   footerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 0,
   },
   footerMeta: { fontSize: 12 },
-  footerDot: { fontSize: 12 },
 
   postulateBtn: {
     paddingHorizontal: 16,

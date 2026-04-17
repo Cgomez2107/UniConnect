@@ -1,24 +1,16 @@
-/**
- * app/(tabs)/invitaciones.tsx
- * Bandeja de postulaciones recibidas — US-010
- *
- * El autor de una solicitud puede:
- *   - Ver quién se postuló a sus grupos
- *   - Leer el mensaje de presentación
- *   - Aceptar o Rechazar cada postulación pendiente
- *
- * Tabs internos: Pendientes / Aceptadas / Rechazadas
- */
-
+import { OwnResourceCard, RequestApplicationsCard, SentApplicationCard } from "@/components/invitaciones/HubCards";
 import { Colors } from "@/constants/Colors";
-import { getReceivedApplications, reviewApplication } from "@/lib/services/careerService";
-import { useAuthStore } from "@/store/useAuthStore";
-import type { Application } from "@/types";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import {
+  type MainTab,
+  type RequestWithApplications,
+  type SentFilter,
+  useInvitationsHub,
+} from "@/hooks/application/useInvitationsHub";
+import type { Application, StudyResource } from "@/types";
+import { router } from "expo-router";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -29,272 +21,230 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type FilterTab = "pendiente" | "aceptada" | "rechazada";
+const MAIN_TABS: { key: MainTab; label: string; emoji: string }[] = [
+  { key: "mis-solicitudes", label: "Mis solicitudes", emoji: "🧩" },
+  { key: "mis-postulaciones", label: "Mis postulaciones", emoji: "📬" },
+  { key: "mis-recursos", label: "Mis recursos", emoji: "📚" },
+];
 
-const TABS: { key: FilterTab; label: string; emoji: string }[] = [
+const SENT_TABS: { key: SentFilter; label: string; emoji: string }[] = [
   { key: "pendiente", label: "Pendientes", emoji: "🕐" },
-  { key: "aceptada",  label: "Aceptadas",  emoji: "✅" },
+  { key: "aceptada", label: "Aceptadas", emoji: "✅" },
   { key: "rechazada", label: "Rechazadas", emoji: "❌" },
 ];
 
-function getInitials(name: string): string {
-  return name.split(" ").slice(0, 2).map((n) => n[0] ?? "").join("").toUpperCase();
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `hace ${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `hace ${hrs}h`;
-  return `hace ${Math.floor(hrs / 24)}d`;
-}
-
-// ── Tarjeta de postulación ────────────────────────────────────────────────────
-
-interface CardProps {
-  app: Application;
-  onAccept: (id: string) => void;
-  onReject: (id: string) => void;
-  loading: boolean;
-  C: (typeof Colors)["light"];
-}
-
-function ApplicationCard({ app, onAccept, onReject, loading, C }: CardProps) {
-  const applicantName = app.profiles?.full_name ?? "Estudiante";
-  const requestTitle  = (app as any).study_requests?.title ?? "Solicitud";
-  const subjectName   = (app as any).study_requests?.subjects?.name ?? "";
-
-  return (
-    <View style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
-      {/* Cabecera */}
-      <View style={styles.cardHeader}>
-        <View style={[styles.avatar, { backgroundColor: C.primary + "20" }]}>
-          <Text style={[styles.avatarText, { color: C.primary }]}>{getInitials(applicantName)}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.applicantName, { color: C.textPrimary }]} numberOfLines={1}>
-            {applicantName}
-          </Text>
-          <Text style={[styles.requestTitle, { color: C.textSecondary }]} numberOfLines={1}>
-            {requestTitle}{subjectName ? ` · ${subjectName}` : ""}
-          </Text>
-        </View>
-        <Text style={[styles.timeAgo, { color: C.textPlaceholder }]}>{timeAgo(app.created_at)}</Text>
-      </View>
-
-      {/* Mensaje */}
-      <Text style={[styles.message, { color: C.textSecondary }]} numberOfLines={3}>
-        "{app.message}"
-      </Text>
-
-      {/* Botones si pendiente */}
-      {app.status === "pendiente" && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.btn, styles.btnReject, { borderColor: C.error }]}
-            onPress={() => onReject(app.id)}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.btnText, { color: C.error }]}>Rechazar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.btn, styles.btnAccept, { backgroundColor: loading ? C.border : C.primary }]}
-            onPress={() => onAccept(app.id)}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={[styles.btnText, { color: C.textOnPrimary }]}>Aceptar</Text>
-            }
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Badge estado */}
-      {app.status !== "pendiente" && (
-        <View style={[
-          styles.badge,
-          { backgroundColor: app.status === "aceptada" ? C.success + "20" : C.error + "15" },
-        ]}>
-          <Text style={[styles.badgeText, { color: app.status === "aceptada" ? C.success : C.error }]}>
-            {app.status === "aceptada" ? "✅ Aceptada" : "❌ Rechazada"}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ── Pantalla principal ────────────────────────────────────────────────────────
-
-export default function InvitacionesScreen() {
+export default function SolicitudesHubScreen() {
   const scheme = useColorScheme() ?? "light";
-  const C      = Colors[scheme];
+  const C = Colors[scheme];
   const insets = useSafeAreaInsets();
-  const user   = useAuthStore((s) => s.user);
+  const {
+    activeTab,
+    setActiveTab,
+    sentFilter,
+    setSentFilter,
+    loading,
+    refreshing,
+    actionId,
+    sentApplications,
+    counts,
+    listData,
+    loadHub,
+    handleReview,
+  } = useInvitationsHub();
 
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [refreshing, setRefreshing]     = useState(false);
-  const [actionId, setActionId]         = useState<string | null>(null);
-  const [activeTab, setActiveTab]       = useState<FilterTab>("pendiente");
+  const openApplicantProfile = useCallback((applicantId: string) => {
+    if (!applicantId) return;
+    router.push(`/perfil-estudiante/${applicantId}` as any);
+  }, []);
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (!user?.id) return;
-    isRefresh ? setRefreshing(true) : setLoading(true);
-    try {
-      const data = await getReceivedApplications(user.id);
-      setApplications(data);
-    } catch (e: any) {
-      Alert.alert("Error", e.message ?? "No se pudieron cargar las postulaciones.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user?.id]);
+  const openRequest = useCallback((requestId: string) => {
+    router.push(`/solicitud/${requestId}` as any);
+  }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  const openResource = useCallback((resourceId: string) => {
+    router.push(`/recurso/${resourceId}` as any);
+  }, []);
 
-  const handleAccept = (appId: string) => {
-    Alert.alert("Aceptar postulación", "¿Confirmas que quieres aceptar a este estudiante?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Aceptar",
-        onPress: async () => {
-          setActionId(appId);
-          try {
-            await reviewApplication(appId, "aceptada");
-            setApplications((prev) =>
-              prev.map((a) => a.id === appId ? { ...a, status: "aceptada" } : a)
-            );
-          } catch (e: any) {
-            Alert.alert("Error", e.message);
-          } finally {
-            setActionId(null);
-          }
-        },
+  const openUploadResource = useCallback(() => {
+    router.push("/subir-recurso" as any);
+  }, []);
+
+  const openNewRequest = useCallback(() => {
+    router.push("/nueva-solicitud" as any);
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    loadHub(true);
+  }, [loadHub]);
+
+  const sentCounts = useMemo(() => {
+    return sentApplications.reduce<Record<SentFilter, number>>(
+      (acc, app) => {
+        if (app.status === "pendiente" || app.status === "aceptada" || app.status === "rechazada") {
+          acc[app.status] += 1;
+        }
+        return acc;
       },
-    ]);
-  };
+      { pendiente: 0, aceptada: 0, rechazada: 0 },
+    );
+  }, [sentApplications]);
 
-  const handleReject = (appId: string) => {
-    Alert.alert("Rechazar postulación", "¿Confirmas que quieres rechazar esta postulación?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Rechazar",
-        style: "destructive",
-        onPress: async () => {
-          setActionId(appId);
-          try {
-            await reviewApplication(appId, "rechazada");
-            setApplications((prev) =>
-              prev.map((a) => a.id === appId ? { ...a, status: "rechazada" } : a)
-            );
-          } catch (e: any) {
-            Alert.alert("Error", e.message);
-          } finally {
-            setActionId(null);
-          }
-        },
-      },
-    ]);
-  };
+  const keyExtractor = useCallback((item: any) => item.id ?? item.request?.id, []);
 
-  const filtered     = applications.filter((a) => a.status === activeTab);
-  const pendingCount = applications.filter((a) => a.status === "pendiente").length;
+  const listContentStyle = useMemo(
+    () => [styles.list, { paddingBottom: insets.bottom + 80 }, listData.length === 0 ? styles.listEmpty : null],
+    [insets.bottom, listData.length],
+  );
+
+  const refreshControl = useMemo(
+    () => (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        colors={[C.primary]}
+        tintColor={C.primary}
+      />
+    ),
+    [refreshing, onRefresh, C.primary],
+  );
+
+  const renderRequestCard = useCallback(
+    ({ item }: { item: RequestWithApplications }) => (
+      <RequestApplicationsCard
+        item={item}
+        C={C}
+        actionId={actionId}
+        onOpenRequest={openRequest}
+        onOpenApplicantProfile={openApplicantProfile}
+        onReview={handleReview}
+      />
+    ),
+    [C, actionId, handleReview, openApplicantProfile, openRequest],
+  );
+
+  const renderSentCard = useCallback(
+    ({ item }: { item: Application }) => (
+      <SentApplicationCard item={item} C={C} onOpenRequest={openRequest} />
+    ),
+    [C, openRequest],
+  );
+
+  const renderResourcesCard = useCallback(
+    ({ item }: { item: StudyResource }) => <OwnResourceCard item={item} onOpenResource={openResource} />,
+    [openResource],
+  );
+
+  const renderListItem = useCallback(
+    (args: any) => {
+      if (activeTab === "mis-solicitudes") return renderRequestCard(args);
+      if (activeTab === "mis-postulaciones") return renderSentCard(args);
+      return renderResourcesCard(args);
+    },
+    [activeTab, renderRequestCard, renderSentCard, renderResourcesCard],
+  );
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background, paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: C.border }]}>
-        <View>
-          <Text style={[styles.title, { color: C.textPrimary }]}>Postulaciones</Text>
-          <Text style={[styles.sub, { color: C.textSecondary }]}>
-            {loading
-              ? "Cargando..."
-              : `${applications.length} recibidas${pendingCount > 0 ? ` · ${pendingCount} pendientes` : ""}`}
-          </Text>
-        </View>
+      <View style={[styles.header, { borderBottomColor: C.border }]}> 
+        <Text style={[styles.title, { color: C.textPrimary }]}>Solicitudes</Text>
+        <Text style={[styles.subTitle, { color: C.textSecondary }]}> 
+          {counts.acceptedSent} aceptadas · {counts.pendingSent} pendientes · {counts.pendingReceived} por revisar
+        </Text>
       </View>
 
-      {/* Tabs de filtro */}
-      <View style={[styles.tabs, { borderBottomColor: C.border }]}>
-        {TABS.map((tab) => {
-          const count  = applications.filter((a) => a.status === tab.key).length;
+      <View style={[styles.mainTabsWrap, { borderBottomColor: C.border }]}> 
+        {MAIN_TABS.map((tab) => {
           const active = activeTab === tab.key;
           return (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.tab, active && { borderBottomColor: C.primary, borderBottomWidth: 2 }]}
+              style={[
+                styles.mainTab,
+                { borderBottomColor: active ? C.primary : "transparent" },
+              ]}
               onPress={() => setActiveTab(tab.key)}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
             >
-              <Text style={[styles.tabText, { color: active ? C.primary : C.textSecondary }]}>
+              <Text style={[styles.mainTabText, { color: active ? C.primary : C.textSecondary }]}> 
                 {tab.emoji} {tab.label}
               </Text>
-              {count > 0 && (
-                <View style={[styles.tabBadge, { backgroundColor: active ? C.primary : C.border }]}>
-                  <Text style={[styles.tabBadgeText, { color: active ? "#fff" : C.textSecondary }]}>
-                    {count}
-                  </Text>
-                </View>
-              )}
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Lista */}
+      {activeTab === "mis-postulaciones" && (
+        <View style={[styles.sentTabsWrap, { borderBottomColor: C.border }]}> 
+          {SENT_TABS.map((tab) => {
+            const active = sentFilter === tab.key;
+            const count = sentCounts[tab.key];
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.sentTab, { backgroundColor: active ? C.primary + "15" : "transparent", borderColor: C.border }]}
+                onPress={() => setSentFilter(tab.key)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.sentTabText, { color: active ? C.primary : C.textSecondary }]}> 
+                  {tab.emoji} {tab.label} {count > 0 ? `(${count})` : ""}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      {activeTab === "mis-recursos" && (
+        <View style={styles.resourcesActions}> 
+          <TouchableOpacity
+            style={[styles.primaryAction, { backgroundColor: C.primary }]}
+            onPress={openUploadResource}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.primaryActionText, { color: C.textOnPrimary }]}>+ Subir recurso</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {loading ? (
-        <View style={styles.center}>
+        <View style={styles.center}> 
           <ActivityIndicator size="large" color={C.primary} />
         </View>
       ) : (
         <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ApplicationCard
-              app={item}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              loading={actionId === item.id}
-              C={C}
-            />
-          )}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: insets.bottom + 80 },
-            filtered.length === 0 && styles.listEmpty,
-          ]}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => load(true)}
-              colors={[C.primary]}
-              tintColor={C.primary}
-            />
-          }
+          data={listData as any[]}
+          keyExtractor={keyExtractor}
+          renderItem={renderListItem}
+          contentContainerStyle={listContentStyle}
+          refreshControl={refreshControl}
           ListEmptyComponent={
-            <View style={styles.center}>
+            <View style={styles.center}> 
               <Text style={{ fontSize: 44 }}>
-                {activeTab === "pendiente" ? "🔔" : activeTab === "aceptada" ? "✅" : "❌"}
+                {activeTab === "mis-solicitudes" ? "🧩" : activeTab === "mis-postulaciones" ? "📭" : "📚"}
               </Text>
-              <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>
-                {activeTab === "pendiente"
-                  ? "Sin postulaciones pendientes"
-                  : activeTab === "aceptada"
-                  ? "Ninguna aceptada aún"
-                  : "Ninguna rechazada"}
+              <Text style={[styles.emptyTitle, { color: C.textPrimary }]}> 
+                {activeTab === "mis-solicitudes"
+                  ? "Aun no tienes solicitudes publicadas"
+                  : activeTab === "mis-postulaciones"
+                  ? "Sin postulaciones en este estado"
+                  : "Aun no has subido recursos"}
               </Text>
-              <Text style={[styles.emptyBody, { color: C.textSecondary }]}>
-                {activeTab === "pendiente"
-                  ? "Cuando alguien se postule a tus grupos aparecerá aquí."
-                  : "Las postulaciones que gestiones aparecerán aquí."}
+              <Text style={[styles.emptyBody, { color: C.textSecondary }]}> 
+                {activeTab === "mis-solicitudes"
+                  ? "Crea una solicitud para empezar a recibir postulantes."
+                  : activeTab === "mis-postulaciones"
+                  ? "Tus postulaciones aceptadas, pendientes o rechazadas apareceran aqui."
+                  : "Desde aqui podras gestionar los recursos que compartas."}
               </Text>
+              {activeTab === "mis-solicitudes" && (
+                <TouchableOpacity
+                  style={[styles.primaryAction, { backgroundColor: C.primary }]}
+                  onPress={openNewRequest}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.primaryActionText, { color: C.textOnPrimary }]}>+ Nueva solicitud</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -303,47 +253,71 @@ export default function InvitacionesScreen() {
   );
 }
 
-// ── Estilos ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: {
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
   },
-  title: { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
-  sub:   { fontSize: 12, marginTop: 2 },
+  title: { fontSize: 30, fontWeight: "800", letterSpacing: -0.5 },
+  subTitle: { fontSize: 13, marginTop: 2 },
 
-  tabs: { flexDirection: "row", borderBottomWidth: 1, paddingHorizontal: 4 },
-  tab: {
-    flex: 1, flexDirection: "row", alignItems: "center",
-    justifyContent: "center", paddingVertical: 10, gap: 4,
+  mainTabsWrap: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
   },
-  tabText:      { fontSize: 12, fontWeight: "600" },
-  tabBadge:     { borderRadius: 10, paddingHorizontal: 5, paddingVertical: 1, minWidth: 18, alignItems: "center" },
-  tabBadgeText: { fontSize: 10, fontWeight: "700" },
+  mainTab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+  },
+  mainTabText: { fontSize: 12, fontWeight: "700", textAlign: "center" },
 
-  list:      { padding: 12, gap: 12 },
+  sentTabsWrap: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  sentTab: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 7,
+    alignItems: "center",
+  },
+  sentTabText: { fontSize: 12, fontWeight: "700" },
+
+  resourcesActions: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  list: {
+    padding: 12,
+    gap: 12,
+  },
   listEmpty: { flex: 1 },
-  center:    { flex: 1, alignItems: "center", justifyContent: "center", padding: 40, gap: 12 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 30,
+    gap: 12,
+  },
   emptyTitle: { fontSize: 17, fontWeight: "700", textAlign: "center" },
-  emptyBody:  { fontSize: 14, textAlign: "center", lineHeight: 20 },
+  emptyBody: { fontSize: 14, textAlign: "center", lineHeight: 20, maxWidth: 320 },
 
-  card:          { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
-  cardHeader:    { flexDirection: "row", alignItems: "center", gap: 10 },
-  avatar:        { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
-  avatarText:    { fontSize: 16, fontWeight: "700" },
-  applicantName: { fontSize: 14, fontWeight: "700" },
-  requestTitle:  { fontSize: 12, marginTop: 1 },
-  timeAgo:       { fontSize: 11 },
-  message:       { fontSize: 13, lineHeight: 19, fontStyle: "italic" },
-
-  actions:   { flexDirection: "row", gap: 8 },
-  btn:       { flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: "center" },
-  btnReject: { borderWidth: 1, backgroundColor: "transparent" },
-  btnAccept: {},
-  btnText:   { fontSize: 14, fontWeight: "700" },
-
-  badge:     { borderRadius: 8, paddingVertical: 6, alignItems: "center" },
-  badgeText: { fontSize: 13, fontWeight: "600" },
+  primaryAction: {
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignSelf: "center",
+  },
+  primaryActionText: { fontSize: 14, fontWeight: "700" },
 });

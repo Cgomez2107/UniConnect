@@ -1,85 +1,105 @@
-/**
- * components/admin/AdminTabs.tsx
- * Fila de pestañas: Facultades / Programas / Materias con sus conteos.
- */
+// Barra de pestañas del panel de administración con scroll horizontal.
 
 import { Colors } from "@/constants/Colors"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Ionicons } from "@expo/vector-icons"
+import * as Haptics from "expo-haptics"
+import { memo } from "react"
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
-export type ActiveTab = "facultades" | "programas" | "materias"
+export type ActiveTab = "facultades" | "programas" | "materias" | "usuarios" | "solicitudes" | "recursos" | "metricas" | "eventos"
 
-interface Tab {
+export interface AdminTabItem {
   key: ActiveTab
-  emoji: string
+  icon: keyof typeof Ionicons.glyphMap
   label: string
   count: number
 }
 
 interface Props {
-  tabs: Tab[]
+  tabs: AdminTabItem[]
   activeTab: ActiveTab
   onTabChange: (tab: ActiveTab) => void
   C: typeof Colors["light"]
 }
 
-export function AdminTabs({ tabs, activeTab, onTabChange, C }: Props) {
+/**
+ * Navegación por pestañas del catálogo académico en el panel admin.
+ */
+export const AdminTabs = memo(function AdminTabs({ tabs, activeTab, onTabChange, C }: Props) {
   return (
-    <View style={[styles.row, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-      {tabs.map((tab) => (
-        <TouchableOpacity
-          key={tab.key}
-          style={[
-            styles.tab,
-            activeTab === tab.key && [styles.tabActive, { borderBottomColor: C.primary }],
-          ]}
-          onPress={() => onTabChange(tab.key)}
-          activeOpacity={0.8}
-        >
-          <Text style={{ fontSize: 14 }}>{tab.emoji}</Text>
-          <Text
+    <View style={[styles.container, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+        bounces={false}
+      >
+        {tabs.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
             style={[
-              styles.label,
-              { color: activeTab === tab.key ? C.primary : C.textSecondary },
+              styles.tab,
+              activeTab === tab.key && [styles.tabActive, { borderBottomColor: C.primary }],
             ]}
+            onPress={() => {
+              Haptics.selectionAsync()
+              onTabChange(tab.key)
+            }}
+            activeOpacity={0.8}
           >
-            {tab.label}
-          </Text>
-          <View
-            style={[
-              styles.badge,
-              {
-                backgroundColor:
-                  activeTab === tab.key ? C.primary + "20" : C.border,
-              },
-            ]}
-          >
+            <Ionicons
+              name={tab.icon}
+              size={16}
+              color={activeTab === tab.key ? C.primary : C.textSecondary}
+            />
             <Text
               style={[
-                styles.badgeText,
+                styles.label,
                 { color: activeTab === tab.key ? C.primary : C.textSecondary },
               ]}
             >
-              {tab.count}
+              {tab.label}
             </Text>
-          </View>
-        </TouchableOpacity>
-      ))}
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor:
+                    activeTab === tab.key ? C.primary + "20" : C.border,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: activeTab === tab.key ? C.primary : C.textSecondary },
+                ]}
+              >
+                {tab.count}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
+  container: {
     borderBottomWidth: 1,
   },
+  row: {
+    flexDirection: "row",
+    paddingHorizontal: 4,
+  },
   tab: {
-    flex: 1,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     gap: 5,
     paddingVertical: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },

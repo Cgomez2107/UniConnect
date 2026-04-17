@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "../../",
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*",
+    "../../shared/http/sendJson.ts",
+    "../../shared/libs/errors/ApplicationError.ts",
+    "../../shared/libs/errors/AuthenticationError.ts",
+    "../../shared/libs/errors/AuthorizationError.ts",
+    "../../shared/libs/errors/ValidationError.ts",
+    "../../shared/libs/errors/NotFoundError.ts",
+    "../../shared/libs/errors/ConflictError.ts",
+    "../../shared/libs/errors/mapHttpStatus.ts",
+    "../../shared/libs/errors/index.ts",
+    "../../shared/libs/config/requiredEnv.ts",
+    "../../shared/libs/validation/ValidationError.ts",
+    "../../shared/libs/validation/validators.ts",
+    "../../shared/libs/validation/validateDto.ts",
+    "../../shared/libs/validation/index.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

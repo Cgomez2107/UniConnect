@@ -33,10 +33,29 @@ Crea `frontend/.env.local`:
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
-EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB=<web-client-id>
-EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS=<ios-client-id>
-EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID=<android-client-id>
 ```
+
+Notas:
+- Para el flujo actual de Google OAuth via Supabase, solo se usan `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+- Los Client IDs de Google se configuran en Supabase (`Auth > Providers > Google`) y no se leen desde el frontend.
+
+## Prueba local para el equipo
+
+1. Clonar el repo y entrar a `frontend/`.
+2. Crear `frontend/.env.local` con la URL y `anon key` del mismo proyecto de Supabase.
+3. Ejecutar `npm install`.
+4. Levantar Expo con `npx expo start --tunnel`.
+5. Abrir Expo Go y escanear el QR.
+6. Probar login con un correo `@ucaldas.edu.co`.
+
+Checklist de backend para que funcione en todos los equipos:
+- En Supabase, `Auth > Providers > Google` debe estar habilitado.
+- En Supabase, `Auth > URL Configuration > Redirect URLs` debe incluir:
+  - `exp://*/--/oauth-callback`
+  - `exp://*/--/*`
+  - `com.juanse108.uniconnet://oauth-callback`
+  - `com.juanse108.uniconnet://*`
+- `Site URL` debe ser estable (por ejemplo `https://example.com`), no un `exp://...` temporal.
 
 ---
 
@@ -150,7 +169,6 @@ components/
   feed/                Componentes del feed de solicitudes
     FeedHeader.tsx     Cabecera con título y botón de filtros
     SearchBar.tsx      Barra de búsqueda por texto
-    ModalityChips.tsx  Chips de filtro: Presencial / Virtual / Híbrido
     FeedFilterModal.tsx Modal con filtros avanzados (facultad, materia)
   perfil/              Componentes de la pantalla de perfil
     ProfileHero.tsx    Avatar, nombre, semestre y bio del usuario
@@ -221,7 +239,7 @@ Tipos TypeScript del dominio. **Fuente única de verdad**: todos los servicios y
 types/
   index.ts   UserRole, AuthProfile, Profile, UserProgram, UserSubject,
              Faculty, Program, Subject,
-             Modality, RequestStatus, ApplicationStatus,
+             RequestStatus, ApplicationStatus,
              StudyRequest, CreateStudyRequestPayload, Application
 ```
 

@@ -7,15 +7,11 @@
  */
 
 import { Colors } from "@/constants/Colors";
-import { applyToRequest } from "@/lib/services/careerService";
-import { supabase } from "@/lib/supabase";
-import { useAuthStore } from "@/store/useAuthStore";
+import { usePostulationForm } from "@/hooks/application/usePostulationForm";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -28,66 +24,24 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface RequestSummary {
-  title: string;
-  author_name: string;
-  subject_name: string;
-}
-
 export default function PostularScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
-  const user = useAuthStore((s) => s.user);
-
-  const [request, setRequest] = useState<RequestSummary | null>(null);
-  const [loadingRequest, setLoadingRequest] = useState(true);
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-
-  // Cargar resumen de la solicitud
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      const { data } = await supabase
-        .from("study_requests")
-        .select("title, profiles ( full_name ), subjects ( name )")
-        .eq("id", id)
-        .single();
-
-      if (data) {
-        const d = data as any;
-        setRequest({
-          title: d.title,
-          author_name: d.profiles?.full_name ?? "Usuario",
-          subject_name: d.subjects?.name ?? "Materia",
-        });
-      }
-      setLoadingRequest(false);
-    })();
-  }, [id]);
-
-  const handlePostular = async () => {
-    if (!user || !id) return;
-    if (message.trim().length < 10) {
-      Alert.alert("Mensaje muy corto", "Escribe al menos 10 caracteres para presentarte.");
-      return;
-    }
-    setSending(true);
-    try {
-      await applyToRequest(id, user.id, message.trim());
-      Alert.alert(
-        "¡Postulación enviada! 🎉",
-        "El creador del grupo recibirá tu mensaje y te notificará pronto.",
-        [{ text: "Entendido", onPress: () => router.back() }]
-      );
-    } catch (e: any) {
-      Alert.alert("Error", e.message ?? "No se pudo enviar la postulación.");
-    } finally {
-      setSending(false);
-    }
-  };
+  const {
+    request,
+    loadingRequest,
+    message,
+    setMessage,
+    sending,
+    isClosed,
+    isSubmitDisabled,
+    handlePostular,
+  } = usePostulationForm({
+    requestId: id,
+    onApplied: () => router.back(),
+  });
 
   if (loadingRequest) {
     return (
@@ -139,6 +93,9 @@ export default function PostularScreen() {
             <Text style={[styles.cardMeta, { color: C.textSecondary }]}>
               📚 {request.subject_name} · por {request.author_name}
             </Text>
+            {isClosed ? (
+              <Text style={[styles.closedNotice, { color: C.error }]}>Convocatoria cerrada</Text>
+            ) : null}
           </View>
         )}
 
@@ -188,10 +145,15 @@ export default function PostularScreen() {
         <TouchableOpacity
           style={[
             styles.sendBtn,
-            { backgroundColor: sending || message.trim().length < 10 ? C.border : C.primary },
+            {
+              backgroundColor:
+                isSubmitDisabled
+                  ? C.border
+                  : C.primary,
+            },
           ]}
           onPress={handlePostular}
-          disabled={sending || message.trim().length < 10}
+          disabled={isSubmitDisabled}
           activeOpacity={0.85}
         >
           {sending ? (
@@ -234,6 +196,7 @@ const styles = StyleSheet.create({
   cardLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   cardTitle: { fontSize: 17, fontWeight: "700", lineHeight: 24 },
   cardMeta: { fontSize: 13 },
+  closedNotice: { fontSize: 12, marginTop: 4, fontWeight: "700" },
 
   section: { gap: 8 },
   label: { fontSize: 15, fontWeight: "700" },

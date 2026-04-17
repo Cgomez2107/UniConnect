@@ -1,0 +1,9 @@
+packages:
+  - "gateway"
+  - "services/auth"
+  - "services/study-groups"
+  - "services/resources"
+  - "services/messaging"
+  - "services/profiles-catalog"
+  - "services/events"
+  - "shared/*"

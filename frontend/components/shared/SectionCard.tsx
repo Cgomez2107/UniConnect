@@ -22,7 +22,7 @@ export function SectionCard({ title, actionLabel, onAction, children }: Props) {
 
   return (
     <View style={[styles.section, { backgroundColor: C.surface, borderColor: C.border }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: C.border }]}>
         <Text style={[styles.title, { color: C.textPrimary }]}>{title}</Text>
         {actionLabel && onAction && (
           <TouchableOpacity onPress={onAction} activeOpacity={0.7}>
@@ -48,6 +48,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
   },
   title: { fontSize: 15, fontWeight: "700" },
   action: { fontSize: 13, fontWeight: "600" },

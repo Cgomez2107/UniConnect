@@ -1,0 +1,16 @@
+{
+  "name": "@uniconnect/shared-types",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo shared-types build scaffold",
+    "lint": "echo shared-types lint scaffold",
+    "typecheck": "tsc --noEmit",
+    "test": "echo shared-types tests scaffold"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.1"
+  }
+}

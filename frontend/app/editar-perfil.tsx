@@ -1,32 +1,22 @@
 /**
  * app/editar-perfil.tsx
- * Modal para editar el perfil — US-004
- * Permite editar: nombre, programa, materias, biografía y foto de perfil
- * Foto: galería o cámara en tiempo real
+ * 
+ * Pantalla de edición de perfil — US-004: Completar perfil público
+ * 
  */
 
 import { Colors } from "@/constants/Colors";
-import type { Program, Subject } from "@/types";
-import { getPrograms, getSubjectsByProgram } from "@/lib/services/facultyService";
-import {
-  addMySubject,
-  getMyPrograms,
-  getMySubjects,
-  getProfile,
-  removeMySubject,
-  setPrimaryProgram,
-  updateProfile,
-  uploadAvatar,
-} from "@/lib/services/profileService";
-import { useAuthStore } from "@/store/useAuthStore";
-import * as ImagePicker from "expo-image-picker";
+import { useEditProfileForm } from "@/hooks/application/useEditProfileForm";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -39,225 +29,88 @@ import {
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
-interface UserProgram {
-  id: string;
-  name: string;
-  faculty_name: string;
-  is_primary: boolean;
-}
-
 export default function EditarPerfilScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
-  const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
-
-  // Form state
-  const [fullName, setFullName] = useState(user?.fullName ?? "");
-  const [bio, setBio] = useState("");
-
-  // Avatar state
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [showAvatarOptions, setShowAvatarOptions] = useState(false);
-
-  // Program state
-  const [allPrograms, setAllPrograms] = useState<Program[]>([]);
-  const [userPrograms, setUserPrograms] = useState<UserProgram[]>([]);
-  const [selectedProgramId, setSelectedProgramId] = useState<string>("");
   const [showProgramSelector, setShowProgramSelector] = useState(false);
+  const scrollOffsetY = useRef(new Animated.Value(0)).current;
+  const [scrollPosition, setScrollPosition] = useState(0);
 
-  // Subjects state
-  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
-  const [userSubjects, setUserSubjects] = useState<string[]>([]);
-  const [showAddSubjects, setShowAddSubjects] = useState(false);
-
-  // Loading states
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-
-  const loadInitialData = useCallback(async () => {
-    try {
-      setIsLoadingData(true);
-      if (!user?.id) return;
-
-      const profile = await getProfile(user.id);
-      if (profile) {
-        setFullName(profile.full_name);
-        setBio(profile.bio ?? "");
-        setAvatarUri(profile.avatar_url ?? null);
-      }
-
-      const myPrograms = await getMyPrograms(user.id);
-      const programsList = myPrograms.map((up) => ({
-        id: up.program_id,
-        name: up.programs?.name ?? "",
-        faculty_name: up.programs?.faculties?.name ?? "",
-        is_primary: up.is_primary,
-      }));
-      setUserPrograms(programsList);
-
-      const primaryProgram = programsList.find((p) => p.is_primary);
-      if (primaryProgram) {
-        setSelectedProgramId(primaryProgram.id);
-      }
-
-      const mySubjects = await getMySubjects(user.id);
-      setUserSubjects(mySubjects.map((us) => us.subject_id));
-
-      const programs = await getPrograms();
-      setAllPrograms(programs);
-    } catch (error) {
-      console.error("Error loading initial data:", error);
-      Alert.alert("Error", "No se pudieron cargar los datos del perfil.");
-    } finally {
-      setIsLoadingData(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
-
-  const loadAvailableSubjects = useCallback(async (programId: string) => {
-    try {
-      if (!programId) {
-        setAllSubjects([]);
-        return;
-      }
-      const subjects = await getSubjectsByProgram(programId);
-      setAllSubjects(subjects);
-    } catch (error) {
-      console.error("Error loading subjects:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selectedProgramId) {
-      loadAvailableSubjects(selectedProgramId);
-    }
-  }, [selectedProgramId, loadAvailableSubjects]);
-
-  // ── Foto de perfil ────────────────────────────────────────────────────────
-  const processAndUpload = async (uri: string) => {
-    try {
-      setUploadingAvatar(true);
-      const publicUrl = await uploadAvatar(user!.id, uri);
-      setAvatarUri(publicUrl);
-    } catch (error) {
-      Alert.alert("Error", "No se pudo subir la foto. Intenta de nuevo.");
-      console.error(error);
-    } finally {
-      setUploadingAvatar(false);
-    }
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setScrollPosition(offsetY);
+    Animated.event([{ nativeEvent: { contentOffset: { y: scrollOffsetY } } }], {
+      useNativeDriver: false,
+    })(event);
   };
+  const {
+    user,
+    bio,
+    setBio,
+    phoneNumber,
+    setPhoneNumber,
+    avatarUri,
+    uploadingAvatar,
+    showAvatarOptions,
+    setShowAvatarOptions,
+    userPrograms,
+    selectedProgramId,
+    handleSelectProgram,
+    allPrograms,
+    allSubjects,
+    userSubjects,
+    showAddSubjects,
+    setShowAddSubjects,
+    subjectSearch,
+    setSubjectSearch,
+    isLoading,
+    isLoadingData,
+    isPhoneValid,
+    handleTakePhoto,
+    handlePickFromGallery,
+    handleToggleSubject,
+    handleSave,
+    filteredAvailableSubjects,
+    isFormValid,
+  } = useEditProfileForm({
+    onSaved: () => router.back(),
+  });
 
-  const handlePickFromGallery = async () => {
-    setShowAvatarOptions(false);
-
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permiso requerido", "Necesitamos acceso a tu galería para cambiar la foto.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-
-    if (result.canceled || !result.assets[0]) return;
-    await processAndUpload(result.assets[0].uri);
-  };
-
-  const handleTakePhoto = async () => {
-    setShowAvatarOptions(false);
-
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permiso requerido", "Necesitamos acceso a tu cámara para tomar la foto.");
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-
-    if (result.canceled || !result.assets[0]) return;
-    await processAndUpload(result.assets[0].uri);
-  };
-
-  // ── Programa ──────────────────────────────────────────────────────────────
-  const handleAddProgram = (programId: string) => {
-    setSelectedProgramId(programId);
-    setShowProgramSelector(false);
-    loadAvailableSubjects(programId);
-  };
-
-  // ── Materias ──────────────────────────────────────────────────────────────
-  const handleToggleSubject = (subjectId: string, isSelected: boolean) => {
-    if (isSelected) {
-      setUserSubjects((prev) => prev.filter((s) => s !== subjectId));
+  const handleProgramChange = (programId: string) => {
+    const oldProgram = allPrograms.find((p) => p.id === selectedProgramId);
+    const newProgram = allPrograms.find((p) => p.id === programId);
+    
+    if (selectedProgramId && selectedProgramId !== programId && userSubjects.length > 0) {
+      Alert.alert(
+        "Cambiar programa",
+        `Al cambiar a "${newProgram?.name}", se limpiarán las materias seleccionadas. ¿Deseas continuar?`,
+        [
+          {
+            text: "Cancelar",
+            onPress: () => setShowProgramSelector(false),
+          },
+          {
+            text: "Continuar",
+            onPress: async () => {
+              await handleSelectProgram(programId);
+              setShowProgramSelector(false);
+            },
+          },
+        ]
+      );
     } else {
-      setUserSubjects((prev) => [...prev, subjectId]);
+      void handleSelectProgram(programId);
+      setShowProgramSelector(false);
     }
   };
 
-  // ── Guardar ───────────────────────────────────────────────────────────────
-  const handleSave = async () => {
-    if (!fullName.trim()) return;
-
-    setIsLoading(true);
-    try {
-      if (!user?.id) return;
-
-      await updateProfile(user.id, {
-        full_name: fullName,
-        bio: bio.trim() || undefined,
-      });
-
-      const primaryProgram = userPrograms.find((p) => p.is_primary);
-      if (primaryProgram?.id !== selectedProgramId && selectedProgramId) {
-        await setPrimaryProgram(user.id, selectedProgramId);
-      }
-
-      const currentSubjects = await getMySubjects(user.id);
-      const oldSubjectIds = new Set(currentSubjects.map((s) => s.subject_id));
-      const newSubjectIds = new Set(userSubjects);
-
-      for (const oldId of oldSubjectIds) {
-        if (!newSubjectIds.has(oldId)) {
-          await removeMySubject(user.id, oldId);
-        }
-      }
-
-      for (const newId of newSubjectIds) {
-        if (!oldSubjectIds.has(newId)) {
-          await addMySubject(user.id, newId);
-        }
-      }
-
-      setUser({
-        ...user,
-        fullName: fullName,
-        bio: bio.trim() || undefined,
-      });
-
-      Alert.alert("Perfil actualizado", "Los cambios se guardaron correctamente.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    } catch (error) {
-      const message = (error as any)?.message || "No se pudo actualizar el perfil.";
-      Alert.alert("Error", message);
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const primaryUserProgram = userPrograms.find((p) => p.is_primary) ?? null;
+  const selectedProgram = allPrograms.find((program) => program.id === selectedProgramId) ?? null;
+  const selectedProgramLabel = selectedProgram
+    ? `${selectedProgram.name} — ${selectedProgram.faculties?.name ?? selectedProgram.faculty_name ?? "Sin facultad"}`
+    : primaryUserProgram
+      ? `${primaryUserProgram.name} — ${primaryUserProgram.faculty_name}`
+      : "Sin programa asignado";
 
   if (isLoadingData) {
     return (
@@ -269,16 +122,14 @@ export default function EditarPerfilScreen() {
     );
   }
 
-  const currentSelected = allPrograms.find((p) => p.id === selectedProgramId);
-  const programName = currentSelected
-    ? `${currentSelected.name} — ${currentSelected.faculty_name}`
-    : "Sin programa";
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={true}
       >
         {/* ── Foto de perfil ── */}
         <View style={styles.avatarContainer}>
@@ -315,58 +166,107 @@ export default function EditarPerfilScreen() {
           </Text>
         </View>
 
-        {/* ── Nombre ── */}
+        {/* ── Nombre (SOLO LECTURA) ── */}
         <Field label="Nombre completo" C={C}>
-          <TextInput
-            style={[styles.input, { backgroundColor: C.surface, borderColor: C.border, color: C.textPrimary }]}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Tu nombre completo"
-            placeholderTextColor={C.textPlaceholder}
-            autoCapitalize="words"
-          />
+          <View style={[styles.readOnlyInput, { backgroundColor: C.surface, borderColor: C.border }]}>
+            <Text style={[styles.readOnlyText, { color: C.textPrimary }]}>
+              {user?.fullName || "No disponible"}
+            </Text>
+            <Text style={[styles.readOnlyHint, { color: C.textSecondary }]}>
+              No se puede editar desde aquí
+            </Text>
+          </View>
         </Field>
 
         {/* ── Programa ── */}
-        <Field label="Programa" C={C}>
+        <Field label="Programa académico" C={C}>
+          <Text style={[styles.inputHint, { color: C.textSecondary }]}>
+            Puedes cambiar tu programa principal y después ajustar las materias.
+          </Text>
+
           <TouchableOpacity
-            style={[styles.programButton, { backgroundColor: C.surface, borderColor: C.border }]}
-            onPress={() => setShowProgramSelector(!showProgramSelector)}
+            style={[styles.selectorBtn, { backgroundColor: C.surface, borderColor: C.border }]}
+            onPress={() => setShowProgramSelector((prev) => !prev)}
+            activeOpacity={0.85}
           >
-            <Text style={{ color: currentSelected ? C.textPrimary : C.textPlaceholder }}>
-              {programName}
+            <Text style={[styles.selectorBtnText, { color: C.textPrimary }]} numberOfLines={1}>
+              {selectedProgramLabel}
+            </Text>
+            <Text style={{ color: C.textSecondary, marginLeft: 12 }}>
+              {showProgramSelector ? "▴" : "▾"}
             </Text>
           </TouchableOpacity>
 
           {showProgramSelector && (
-            <View style={[styles.programList, { backgroundColor: C.background, borderColor: C.border }]}>
-              {allPrograms.map((program) => (
-                <TouchableOpacity
-                  key={program.id}
-                  style={[
-                    styles.programItem,
-                    {
-                      borderBottomColor: C.border,
-                      backgroundColor: selectedProgramId === program.id ? C.primaryLight : C.surface,
-                    },
-                  ]}
-                  onPress={() => handleAddProgram(program.id)}
-                >
-                  <View>
-                    <Text style={[styles.programItemName, { color: C.textPrimary }]}>
-                      {program.name}
-                    </Text>
-                    <Text style={[styles.programItemFaculty, { color: C.textSecondary }]}>
-                      {program.faculty_name}
-                    </Text>
-                  </View>
-                  {selectedProgramId === program.id && (
-                    <Text style={{ color: C.primary, fontSize: 18 }}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
+            <View style={[styles.programList, { borderColor: C.border, backgroundColor: C.surface }]}>
+              {allPrograms.length === 0 ? (
+                <Text style={{ color: C.textSecondary, padding: 14, textAlign: "center" }}>
+                  No hay programas disponibles
+                </Text>
+              ) : (
+                allPrograms.map((program) => {
+                  const isSelected = program.id === selectedProgramId;
+                  return (
+                    <TouchableOpacity
+                      key={program.id}
+                      style={[
+                        styles.programOption,
+                        {
+                          borderBottomColor: C.border,
+                          backgroundColor: isSelected ? C.primaryLight : "transparent",
+                        },
+                      ]}
+                      onPress={() => {
+                        handleProgramChange(program.id);
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: C.textPrimary, fontSize: 14, fontWeight: "600" }}>
+                          {program.name}
+                        </Text>
+                        <Text style={{ color: C.textSecondary, fontSize: 12, marginTop: 2 }}>
+                          {program.faculties?.name ?? program.faculty_name ?? "Sin facultad"}
+                        </Text>
+                      </View>
+                      {isSelected && <Text style={{ color: C.primary, fontSize: 18 }}>✓</Text>}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </View>
           )}
+        </Field>
+
+        {/* ── Teléfono (EDITABLE) ── */}
+        <Field label="Teléfono de contacto" C={C}>
+          <Text style={[styles.inputHint, { color: C.textSecondary }]}>
+            Formato: +57 3001234567
+          </Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[
+                styles.input,
+                { 
+                  backgroundColor: C.surface, 
+                  borderColor: phoneNumber && !isPhoneValid(phoneNumber) ? C.error : phoneNumber && isPhoneValid(phoneNumber) ? C.success : C.border, 
+                  color: C.textPrimary,
+                  flex: 1,
+                }
+              ]}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              placeholder="+57 300 1234567"
+              placeholderTextColor={C.textPlaceholder}
+              keyboardType="phone-pad"
+              accessibilityLabel="Número de teléfono"
+              accessibilityHint="Ingresa tu número de teléfono en formato internacional"
+            />
+            {phoneNumber && isPhoneValid(phoneNumber) && (
+              <View style={[styles.validationIcon, { backgroundColor: C.success }]}>
+                <Text style={styles.validationIconText}>✓</Text>
+              </View>
+            )}
+          </View>
         </Field>
 
         {/* ── Materias ── */}
@@ -374,11 +274,69 @@ export default function EditarPerfilScreen() {
           <TouchableOpacity
             style={[styles.button, { backgroundColor: C.primary }]}
             onPress={() => setShowAddSubjects(!showAddSubjects)}
+            accessibilityLabel="Agregar materias"
+            accessibilityHint={`Actualmente tienes ${userSubjects.length} materias seleccionadas`}
+            accessibilityRole="button"
           >
             <Text style={[styles.buttonText, { color: C.textOnPrimary }]}>
               {userSubjects.length > 0 ? `${userSubjects.length} materias` : "Agregar materias"}
             </Text>
           </TouchableOpacity>
+
+          {showAddSubjects && selectedProgramId && (
+            <View style={[styles.subjectsSelector, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <TextInput
+                style={[
+                  styles.subjectSearchInput,
+                  { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary },
+                ]}
+                value={subjectSearch}
+                onChangeText={setSubjectSearch}
+                placeholder="Buscar materia..."
+                placeholderTextColor={C.textPlaceholder}
+              />
+
+              <ScrollView
+                style={styles.subjectsSelectorScroll}
+                contentContainerStyle={styles.subjectsSelectorContent}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
+                {allSubjects.length === 0 ? (
+                  <Text style={{ color: C.textSecondary, textAlign: "center", padding: 15 }}>
+                    No hay materias disponibles para este programa
+                  </Text>
+                ) : filteredAvailableSubjects.length === 0 ? (
+                  <Text style={{ color: C.textSecondary, textAlign: "center", padding: 15 }}>
+                    No hay materias que coincidan con la búsqueda
+                  </Text>
+                ) : (
+                  filteredAvailableSubjects.map((subject) => {
+                    const isSelected = userSubjects.includes(subject.id);
+                    return (
+                      <TouchableOpacity
+                        key={subject.id}
+                        style={[
+                          styles.subjectCheckbox,
+                          {
+                            backgroundColor: isSelected ? C.primaryLight : "transparent",
+                            borderColor: C.border,
+                          },
+                        ]}
+                        onPress={() => handleToggleSubject(subject.id, isSelected)}
+                      >
+                        <Text style={{ color: C.textPrimary, fontSize: 18, marginRight: 10 }}>
+                          {isSelected ? "☑" : "☐"}
+                        </Text>
+                        <Text style={{ color: C.textPrimary, flex: 1 }}>{subject.name}</Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
+            </View>
+          )}
 
           {userSubjects.length > 0 && (
             <View style={[styles.subjectsList, { borderColor: C.border }]}>
@@ -401,41 +359,9 @@ export default function EditarPerfilScreen() {
             </View>
           )}
 
-          {showAddSubjects && selectedProgramId && (
-            <View style={[styles.subjectsSelector, { backgroundColor: C.surface, borderColor: C.border }]}>
-              {allSubjects.length > 0 ? (
-                allSubjects.map((subject) => {
-                  const isSelected = userSubjects.includes(subject.id);
-                  return (
-                    <TouchableOpacity
-                      key={subject.id}
-                      style={[
-                        styles.subjectCheckbox,
-                        {
-                          backgroundColor: isSelected ? C.primaryLight : "transparent",
-                          borderColor: C.border,
-                        },
-                      ]}
-                      onPress={() => handleToggleSubject(subject.id, isSelected)}
-                    >
-                      <Text style={{ color: C.textPrimary, fontSize: 18, marginRight: 10 }}>
-                        {isSelected ? "☑" : "☐"}
-                      </Text>
-                      <Text style={{ color: C.textPrimary, flex: 1 }}>{subject.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })
-              ) : (
-                <Text style={{ color: C.textSecondary, textAlign: "center", padding: 15 }}>
-                  No hay materias disponibles para este programa
-                </Text>
-              )}
-            </View>
-          )}
-
           {showAddSubjects && !selectedProgramId && (
             <Text style={{ color: C.error, padding: 10, textAlign: "center" }}>
-              Selecciona un programa primero
+              Asigna un programa primero
             </Text>
           )}
         </Field>
@@ -460,20 +386,48 @@ export default function EditarPerfilScreen() {
 
         {/* ── Guardar ── */}
         <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: fullName.trim() ? C.primary : C.border }]}
+          style={[styles.saveBtn, { backgroundColor: isFormValid && isPhoneValid(phoneNumber) ? C.primary : C.border }]}
           onPress={handleSave}
-          disabled={!fullName.trim() || isLoading}
+          disabled={!isFormValid || isLoading || !isPhoneValid(phoneNumber)}
           activeOpacity={0.85}
         >
           {isLoading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={[styles.saveBtnText, { color: fullName.trim() ? C.textOnPrimary : C.textSecondary }]}>
+            <Text style={[styles.saveBtnText, { color: isFormValid && isPhoneValid(phoneNumber) ? C.textOnPrimary : C.textSecondary }]}>
               Guardar cambios
             </Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* ── Botón flotante: Guardar ── Visible si hay cambios */}
+      {scrollPosition > 100 && (
+        <Animated.View
+          style={[
+            styles.fab,
+            {
+              backgroundColor: isFormValid && isPhoneValid(phoneNumber) ? C.primary : C.border,
+              bottom: 20,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={!isFormValid || isLoading || !isPhoneValid(phoneNumber)}
+            activeOpacity={0.8}
+            style={styles.fabInner}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={[styles.fabText, { color: isFormValid && isPhoneValid(phoneNumber) ? C.textOnPrimary : C.textSecondary }]}>
+                ✓ Guardar
+              </Text>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+      )}
 
       {/* ── Modal: opciones de foto ── */}
       <Modal
@@ -550,7 +504,19 @@ const styles = StyleSheet.create({
   field: { marginBottom: 20 },
   label: { fontSize: 13, fontWeight: "500", marginBottom: 8 },
   input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, height: 48, fontSize: 15 },
+  inputHint: { fontSize: 12, marginBottom: 6 },
   textArea: { borderWidth: 1, borderRadius: 8, padding: 14, fontSize: 14, minHeight: 100 },
+
+  // Read-only fields
+  readOnlyInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, minHeight: 48, justifyContent: "center", opacity: 0.6 },
+  readOnlyText: { fontSize: 15, fontWeight: "500" },
+  readOnlyHint: { fontSize: 11, marginTop: 4, fontStyle: "italic" },
+
+  // Program selector
+  selectorBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  selectorBtnText: { fontSize: 15, flex: 1 },
+  programList: { borderWidth: 1, borderRadius: 8, marginTop: 4, overflow: "hidden" },
+  programOption: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1 },
 
   // Avatar
   avatarContainer: { alignItems: "center", marginBottom: 28 },
@@ -587,58 +553,104 @@ const styles = StyleSheet.create({
   avatarEditIcon: { fontSize: 14 },
   avatarHint: { fontSize: 12, marginTop: 8 },
 
-  // Program selector
-  programButton: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, height: 48, justifyContent: "center" },
-  programList: { borderWidth: 1, borderRadius: 8, marginTop: 8, maxHeight: 300 },
-  programItem: { padding: 14, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  programItemName: { fontSize: 14, fontWeight: "600", marginBottom: 2 },
-  programItemFaculty: { fontSize: 12 },
-
   // Subjects
   button: { borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14, alignItems: "center" },
   buttonText: { fontSize: 14, fontWeight: "600" },
   subjectsList: { borderWidth: 1, borderRadius: 8, padding: 8, marginTop: 10, gap: 8 },
-  subjectItem: { flexDirection: "row", borderWidth: 1, borderRadius: 6, padding: 10, justifyContent: "space-between", alignItems: "center" },
-  subjectName: { flex: 1, fontSize: 13, fontWeight: "500" },
-  subjectsSelector: { borderWidth: 1, borderRadius: 8, marginTop: 8, padding: 8, gap: 4 },
-  subjectCheckbox: { flexDirection: "row", borderWidth: 1, borderRadius: 6, padding: 12, alignItems: "center" },
+  subjectItem: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  subjectName: { fontSize: 14, fontWeight: "500", flex: 1 },
+  subjectsSelector: { borderWidth: 1, borderRadius: 8, marginTop: 8, maxHeight: 300, overflow: "hidden" },
+  subjectSearchInput: { borderWidth: 1, borderRadius: 8, margin: 10, paddingHorizontal: 12, height: 42, fontSize: 14 },
+  subjectsSelectorScroll: { maxHeight: 220 },
+  subjectsSelectorContent: { paddingBottom: 6 },
+  subjectCheckbox: { padding: 14, borderBottomWidth: 1, flexDirection: "row", alignItems: "center", borderBottomColor: "transparent" },
 
   // Save button
-  saveBtn: { borderRadius: 10, paddingVertical: 14, alignItems: "center", marginTop: 16 },
-  saveBtnText: { fontSize: 15, fontWeight: "700" },
+  saveBtn: { borderRadius: 8, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center", justifyContent: "center", marginTop: 20 },
+  saveBtnText: { fontSize: 16, fontWeight: "600" },
 
-  // Modal opciones avatar
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalSheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
-    paddingBottom: 36,
-    paddingHorizontal: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingVertical: 16,
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 16,
+    fontWeight: "600",
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
   modalOption: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    gap: 14,
   },
-  modalOptionIcon: { fontSize: 22 },
-  modalOptionText: { fontSize: 15, fontWeight: "500" },
+  modalOptionIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  modalOptionText: {
+    fontSize: 15,
+    flex: 1,
+  },
   modalCancel: {
-    marginTop: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: "center",
-    paddingVertical: 12,
   },
-  modalCancelText: { fontSize: 15 },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: "500",
+  },
+
+  // Floating Action Button
+  fab: {
+    position: "absolute",
+    right: 16,
+    borderRadius: 50,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fabText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  // Input wrapper with validation icon
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  validationIcon: {
+    width: 40,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: -1,
+  },
+  validationIconText: {
+    fontSize: 18,
+    color: "#fff",
+    fontWeight: "600",
+  },
 });

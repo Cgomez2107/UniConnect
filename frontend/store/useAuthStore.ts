@@ -1,21 +1,9 @@
-/**
- * store/useAuthStore.ts
- * Estado global de autenticación con Zustand
- * Conectado a Supabase real via authService
- * Soporta login con email/password y Google OAuth
- */
-
 import {
-  getMyProfile,
-  onAuthStateChange,
-  signIn as sbSignIn,
-  signOut as sbSignOut,
-  signUp as sbSignUp,
-} from "@/lib/services/authService";
+  DIContainer,
+} from "@/lib/services/di/container";
 import { registerAndSavePushToken } from "@/lib/services/pushService";
 import { create } from "zustand";
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
 export type UserRole = "estudiante" | "admin";
 
 export interface UserSession {
@@ -23,15 +11,26 @@ export interface UserSession {
   email: string;
   fullName: string;
   avatarUrl?: string | null;
+  phoneNumber?: string | null;
   role: UserRole;
   semester?: number | null;
   bio?: string | null;
+}
+
+function normalizeRole(role: unknown): UserRole {
+  const value = String(role ?? "").trim().toLowerCase();
+  if (value === "admin" || value === "administrador") {
+    return "admin";
+  }
+
+  return "estudiante";
 }
 
 interface AuthState {
   user: UserSession | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isHydrating: boolean;
 
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
@@ -40,112 +39,232 @@ interface AuthState {
   initialize: () => () => void;
 }
 
-// ── Store ─────────────────────────────────────────────────────────────────────
-export const useAuthStore = create<AuthState>((set) => ({
+const buildFallbackUser = (sessionUser: any): UserSession => ({
+  id: sessionUser.id,
+  email: sessionUser.email!,
+  fullName: sessionUser.user_metadata?.full_name ?? "Estudiante",
+  avatarUrl: sessionUser.user_metadata?.avatar_url ?? null,
+  phoneNumber: null,
+  role: normalizeRole(sessionUser.user_metadata?.role),
+  semester: null,
+  bio: null,
+});
+
+const HYDRATION_TIMEOUT_MS = 6000;
+const SESSION_TIMEOUT_MS = 3500;
+const PROFILE_TIMEOUT_MS = 2500;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error("Auth timeout")), ms);
+    }),
+  ]);
+}
+
+function isAuthTimeoutError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.toLowerCase().includes("auth timeout");
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: false,
   isAuthenticated: false,
+  isHydrating: true,
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
 
-  // ── Inicializar: escucha cambios de sesión de Supabase ─────────────────────
   initialize: () => {
-    const { data: { subscription } } = onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        try {
-          // Intentar obtener perfil completo de la tabla profiles
-          const profile = await getMyProfile();
-          set({
-            user: {
-              id: session.user.id,
-              email: session.user.email!,
-              // Si hay perfil en DB úsalo, si no usa los datos de Google
-              fullName: profile?.full_name
-                ?? session.user.user_metadata?.full_name
-                ?? "Estudiante",
-              avatarUrl: profile?.avatar_url
-                ?? session.user.user_metadata?.avatar_url
-                ?? null,
-              role: (profile?.role as UserRole) ?? "estudiante",
-              semester: profile?.semester ?? null,
-              bio: profile?.bio ?? null,
-            },
-            isAuthenticated: true,
-          });
-          // Registrar push token tras login exitoso (no bloquea)
-          registerAndSavePushToken(session.user.id).catch(() => {});
-        } catch (error) {
-          // Fallback: si no hay perfil todavía (usuario nuevo con Google)
-          // guardamos los datos básicos del token de Google
-          console.warn("Perfil no encontrado, usando datos de sesión:", error);
-          set({
-            user: {
-              id: session.user.id,
-              email: session.user.email!,
-              fullName: session.user.user_metadata?.full_name ?? "Estudiante",
-              avatarUrl: session.user.user_metadata?.avatar_url ?? null,
-              role: "estudiante",
-              semester: null,
-              bio: null,
-            },
-            isAuthenticated: true,
-          });
-        }
+    const container = DIContainer.getInstance()
+    const getCurrentSession = container.getGetCurrentSession()
+    const getMyAuthProfile = container.getGetMyAuthProfile()
+    const subscribeAuthStateChanges = container.getSubscribeAuthStateChanges()
+    const clearLocalSessionUseCase = container.getClearLocalSession()
+
+    const hydrationWatchdog = setTimeout(() => {
+      if (get().isHydrating) {
+        console.warn("[authStore] Hydration timeout. Forzando salida de estado de carga.");
+        set({ isHydrating: false });
+      }
+    }, HYDRATION_TIMEOUT_MS);
+
+    const isInvalidRefreshTokenError = (error: unknown) => {
+      const message =
+        error instanceof Error ? error.message : String(error ?? "");
+      return message.toLowerCase().includes("invalid refresh token");
+    };
+
+    const clearCorruptedSession = async () => {
+      try {
+        await clearLocalSessionUseCase.execute()
+      } catch {
+        // Si falla la limpieza remota/local, igual forzamos estado no autenticado.
       }
 
+      set({ user: null, isAuthenticated: false, isHydrating: false });
+    };
+
+    const processSession = async (session: any) => {
+      if (session?.user) {
+        const fallbackUser = buildFallbackUser(session.user);
+        try {
+          const email = session.user.email?.toLowerCase();
+
+          if (!email?.endsWith('@ucaldas.edu.co')) {
+            console.warn("[authStore] Usuario rechazado: no es de ucaldas.edu.co -", email);
+            await clearLocalSessionUseCase.execute()
+            set({ user: null, isAuthenticated: false, isHydrating: false });
+            return;
+          }
+
+          // Resolvemos el rol antes de salir de hidratación para evitar
+          // el salto visual tabs -> admin en cuentas administrativas.
+          let resolvedUser = fallbackUser;
+          try {
+            const profile = await withTimeout(getMyAuthProfile.execute(), PROFILE_TIMEOUT_MS);
+            if (profile) {
+              resolvedUser = {
+                ...fallbackUser,
+                fullName: profile.full_name,
+                avatarUrl: profile.avatar_url,
+                role: normalizeRole(profile.role),
+                semester: profile.semester,
+                bio: profile.bio,
+              };
+            }
+          } catch {
+            // Si el perfil falla o vence timeout, continuamos con fallback.
+          }
+
+          set({
+            user: resolvedUser,
+            isAuthenticated: true,
+            isHydrating: false,
+          });
+
+          registerAndSavePushToken(session.user.id).catch(() => {});
+        } catch (error) {
+          if (isInvalidRefreshTokenError(error)) {
+            console.warn("[authStore] Refresh token invalido durante hidratacion. Cerrando sesion local.");
+            await clearCorruptedSession();
+            return;
+          }
+
+          if (!isAuthTimeoutError(error)) {
+            console.warn("[authStore] Error al procesar sesión:", error);
+          }
+          set({
+            user: fallbackUser,
+            isAuthenticated: true,
+            isHydrating: false,
+          });
+        }
+      } else {
+        set({ user: null, isAuthenticated: false, isHydrating: false });
+      }
+    };
+
+    (async () => {
+      try {
+        const session = await withTimeout(getCurrentSession.execute(), SESSION_TIMEOUT_MS);
+        await processSession(session);
+      } catch (error) {
+        if (isInvalidRefreshTokenError(error)) {
+          console.warn("[authStore] Refresh token invalido en getSession inicial. Limpiando sesion local.");
+          await clearCorruptedSession();
+          return;
+        }
+
+        if (isAuthTimeoutError(error)) {
+          console.warn("[authStore] Timeout inicial de sesión. Reintentando en background...");
+          set((state) => ({
+            ...state,
+            isHydrating: false,
+          }));
+
+          getCurrentSession
+            .execute()
+            .then((sessionRetry) => processSession(sessionRetry))
+            .catch((retryError) => {
+              console.error("[authStore] Error en reintento de sesión:", retryError);
+              set({ user: null, isAuthenticated: false, isHydrating: false });
+            });
+
+          return;
+        }
+
+        console.error("[authStore] Error al verificar sesión inicial:", error);
+        set({ user: null, isAuthenticated: false, isHydrating: false });
+      }
+    })();
+
+    const { data: { subscription } } = subscribeAuthStateChanges.execute(async (event, session) => {
       if (event === "SIGNED_OUT") {
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false, isHydrating: false });
+        return;
+      }
+
+      if (event === "SIGNED_IN") {
+        await processSession(session);
+        return;
+      }
+
+      // En OAuth (Google) pueden llegar eventos distintos a SIGNED_IN
+      // como INITIAL_SESSION o TOKEN_REFRESHED con sesión ya válida.
+      if (session?.user) {
+        await processSession(session);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(hydrationWatchdog);
+      subscription.unsubscribe();
+    };
   },
 
-  // ── Sign In email/password ─────────────────────────────────────────────────
   signIn: async (email, password) => {
-    set({ isLoading: true });
+    const container = DIContainer.getInstance()
+    const signInWithPassword = container.getSignInWithPassword()
+
+    const normalizedEmail = email.trim().toLowerCase();
+    set({ isLoading: true, isHydrating: true });
+
     try {
-      const { user } = await sbSignIn({ email, password });
+      const { user } = await signInWithPassword.execute({
+        email: normalizedEmail,
+        password,
+      })
       if (!user) throw new Error("No se pudo iniciar sesión");
-
-      const profile = await getMyProfile();
-      if (!profile) throw new Error("No se encontró el perfil del usuario");
-
-      set({
-        user: {
-          id: profile.id,
-          email: user.email!,
-          fullName: profile.full_name,
-          avatarUrl: profile.avatar_url,
-          role: profile.role as UserRole,
-          semester: profile.semester,
-          bio: profile.bio,
-        },
-        isAuthenticated: true,
-      });
-      // Registrar push token tras login exitoso (no bloquea)
-      registerAndSavePushToken(profile.id).catch(() => {});
+    } catch (error) {
+      set({ user: null, isAuthenticated: false, isHydrating: false });
+      throw error;
     } finally {
       set({ isLoading: false });
     }
   },
 
-  // ── Sign Up ────────────────────────────────────────────────────────────────
   signUp: async (email, password, fullName) => {
+    const container = DIContainer.getInstance()
+    const signUpWithPassword = container.getSignUpWithPassword()
+
     set({ isLoading: true });
     try {
-      await sbSignUp({ email, password, fullName });
+      await signUpWithPassword.execute({ email, password, fullName })
     } finally {
       set({ isLoading: false });
     }
   },
 
-  // ── Sign Out ───────────────────────────────────────────────────────────────
   signOut: async () => {
+    const container = DIContainer.getInstance()
+    const signOutUser = container.getSignOutUser()
+
     set({ isLoading: true });
     try {
-      await sbSignOut();
-      set({ user: null, isAuthenticated: false });
+      await signOutUser.execute()
+      set({ user: null, isAuthenticated: false, isHydrating: false });
     } finally {
       set({ isLoading: false });
     }

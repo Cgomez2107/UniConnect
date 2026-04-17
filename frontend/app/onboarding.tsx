@@ -47,13 +47,22 @@ export default function OnboardingScreen() {
 
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 });
 
-  const goNext = () => {
+  const goToLogin = useCallback(() => {
+    router.replace("/login" as any);
+  }, []);
+
+  const goNext = useCallback(() => {
     if (activeIndex < ONBOARDING_SLIDES.length - 1) {
       flatRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
     } else {
-      router.replace("/login" as any);
+      goToLogin();
     }
-  };
+  }, [activeIndex, goToLogin]);
+
+  const renderSlide = useCallback(
+    ({ item }: { item: (typeof ONBOARDING_SLIDES)[number] }) => <SlideItem slide={item} />,
+    [],
+  );
 
   const isLast = activeIndex === ONBOARDING_SLIDES.length - 1;
 
@@ -61,15 +70,15 @@ export default function OnboardingScreen() {
     <View style={[styles.container, { backgroundColor: C.background }]}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
 
-      {!isLast && (
+      <View style={[styles.skipBtn, { opacity: isLast ? 0 : 1 }]}
+            pointerEvents={isLast ? "none" : "auto"}>
         <TouchableOpacity
-          style={styles.skipBtn}
-          onPress={() => router.replace("/login" as any)}
+          onPress={goToLogin}
           activeOpacity={0.7}
         >
           <Text style={[styles.skipText, { color: C.textSecondary }]}>Saltar</Text>
         </TouchableOpacity>
-      )}
+      </View>
 
       <FlatList
         ref={flatRef}
@@ -81,7 +90,7 @@ export default function OnboardingScreen() {
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig.current}
         scrollEventThrottle={16}
-        renderItem={({ item }) => <SlideItem slide={item} />}
+        renderItem={renderSlide}
       />
 
       <View style={styles.footer}>

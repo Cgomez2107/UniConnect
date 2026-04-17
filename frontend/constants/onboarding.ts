@@ -1,10 +1,3 @@
-/**
- * constants/onboarding.ts
- *
- * Datos de los slides del onboarding separados de la lógica de UI.
- * Si en el futuro se traen de una API (A/B testing, contenido dinámico),
- * solo se cambia este archivo — ningún componente se toca.
- */
 
 export interface OnboardingSlide {
   id: string

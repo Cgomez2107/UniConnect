@@ -7,7 +7,6 @@
 
 import { Link, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -23,136 +22,27 @@ import { AuthInput } from "@/components/ui/AuthInput";
 import { ErrorBanner } from "@/components/ui/Errorbanner";
 import { PrimaryButton } from "@/components/ui/Primarybutton";
 import { Colors } from "@/constants/Colors";
-import { supabase } from "@/lib/supabase";
-
-// ── Validación ────────────────────────────────────────────────────────────────
-const UCALDAS_REGEX = /^[a-zA-Z0-9._%+-]+@ucaldas\.edu\.co$/;
-const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+import { useRegisterScreen } from "@/hooks/application/useRegisterScreen";
 
 export default function RegisterScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
-
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [registered, setRegistered] = useState(false);
-  const [formError, setFormError] = useState("");
-
-  const [errors, setErrors] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleNameChange = (v: string) => {
-    setFullName(v);
-    setErrors((p) => ({
-      ...p,
-      fullName:
-        v.length > 0 && v.trim().split(" ").filter(Boolean).length < 2
-          ? "Escribe tu nombre y apellido"
-          : "",
-    }));
-  };
-
-  const handleEmailChange = (v: string) => {
-    setEmail(v);
-    setErrors((p) => ({
-      ...p,
-      email:
-        v.length > 0 && !UCALDAS_REGEX.test(v)
-          ? "Debe ser un correo @ucaldas.edu.co"
-          : "",
-    }));
-  };
-
-  const handlePasswordChange = (v: string) => {
-    setPassword(v);
-    setErrors((p) => ({
-      ...p,
-      password:
-        v.length > 0 && !PASSWORD_REGEX.test(v)
-          ? "Mín. 8 caracteres, 1 mayúscula y 1 número"
-          : "",
-      confirmPassword:
-        confirmPassword.length > 0 && v !== confirmPassword
-          ? "Las contraseñas no coinciden"
-          : "",
-    }));
-  };
-
-  const handleConfirmChange = (v: string) => {
-    setConfirmPassword(v);
-    setErrors((p) => ({
-      ...p,
-      confirmPassword:
-        v.length > 0 && v !== password ? "Las contraseñas no coinciden" : "",
-    }));
-  };
-
-  // ── Submit ────────────────────────────────────────────────────────────────
-  const handleRegister = async () => {
-    setFormError("");
-
-    const next = {
-      fullName:
-        fullName.trim().split(" ").filter(Boolean).length < 2
-          ? "Escribe tu nombre y apellido"
-          : "",
-      email: !UCALDAS_REGEX.test(email)
-        ? "Debe ser un correo @ucaldas.edu.co"
-        : "",
-      password: !PASSWORD_REGEX.test(password)
-        ? "Mín. 8 caracteres, 1 mayúscula y 1 número"
-        : "",
-      confirmPassword:
-        password !== confirmPassword ? "Las contraseñas no coinciden" : "",
-    };
-
-    setErrors(next);
-    if (Object.values(next).some(Boolean)) return;
-
-    setIsLoading(true);
-    try {
-      // Registrar usuario
-      const { error: signUpError } = await supabase.auth.signUp({
-        email, password,
-        options: { data: { full_name: fullName } },
-      });
-      if (signUpError) throw signUpError;
-
-      // Auto-login inmediatamente después del registro
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (signInError) throw signInError;
-
-      // Redirigir al home
-      router.replace("/(tabs)");
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      const msg: string = error?.message ?? "";
-      if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("user already registered")) {
-        setErrors((p) => ({ ...p, email: "Este correo ya está registrado" }));
-      } else {
-        setFormError(`Error: ${msg || "Ocurrió un error al registrarte. Intenta de nuevo."}`);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const isValid =
-    fullName.trim().split(" ").filter(Boolean).length >= 2 &&
-    UCALDAS_REGEX.test(email) &&
-    PASSWORD_REGEX.test(password) &&
-    password === confirmPassword;
+  const {
+    fullName,
+    email,
+    password,
+    confirmPassword,
+    isLoading,
+    registered,
+    formError,
+    errors,
+    handleNameChange,
+    handleEmailChange,
+    handlePasswordChange,
+    handleConfirmChange,
+    handleRegister,
+    isValid,
+  } = useRegisterScreen();
 
   // ── Pantalla de éxito ─────────────────────────────────────────────────────
   if (registered) {

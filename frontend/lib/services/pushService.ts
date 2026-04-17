@@ -10,20 +10,13 @@
  *
  * Importante: los push tokens físicos solo funcionan en dispositivos reales
  * (no en simuladores). En simulador el token se obtiene pero no llega el push.
+ *
+ * NOTA: expo-notifications se importa dinámicamente para evitar que el
+ * side-effect del módulo lance un error en Expo Go (SDK 53+).
  */
 
 import { supabase } from "@/lib/supabase";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-
-// Cómo se muestra la notificación cuando la app está en primer plano
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
 
 // Detectar Expo Go para no intentar obtener push token remoto
 function isExpoGo(): boolean {
@@ -35,6 +28,24 @@ function isExpoGo(): boolean {
   } catch {
     return false;
   }
+}
+
+/** Carga expo-notifications de forma lazy y configura el handler */
+let _notificationsModule: typeof import("expo-notifications") | null = null;
+async function getNotifications() {
+  if (!_notificationsModule) {
+    _notificationsModule = await import("expo-notifications");
+    _notificationsModule.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }
+  return _notificationsModule;
 }
 
 /**
@@ -52,6 +63,8 @@ export async function registerAndSavePushToken(userId: string): Promise<void> {
   }
 
   try {
+    const Notifications = await getNotifications();
+
     // Verificar / solicitar permiso
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;

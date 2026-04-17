@@ -40,7 +40,7 @@ export function AuthInput({
 
   return (
     <View style={styles.wrapper}>
-      <Text style={[styles.label, { color: C.textSecondary }]}>{label}</Text>
+      <Text style={[styles.label, { color: isFocused ? C.borderFocus : C.textSecondary }]}>{label}</Text>
 
       <View
         style={[
@@ -68,7 +68,7 @@ export function AuthInput({
             activeOpacity={0.7}
           >
             <Text style={[styles.eyeText, { color: C.textSecondary }]}>
-              {showText ? "Ocultar" : "Ver"}
+              {showText ? "👁‍🗨" : "👁"}
             </Text>
           </TouchableOpacity>
         )}

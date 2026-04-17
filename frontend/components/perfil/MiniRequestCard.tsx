@@ -7,20 +7,28 @@
 import { Colors } from "@/constants/Colors"
 import { StudyRequest } from "@/types"
 import { router } from "expo-router"
+import { memo, useCallback } from "react"
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 
 interface Props {
   request: StudyRequest
 }
 
-export function MiniRequestCard({ request }: Props) {
+export const MiniRequestCard = memo(function MiniRequestCard({ request }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
+
+  const openRequest = useCallback(() => {
+    router.push(`/solicitud/${request.id}` as any)
+  }, [request.id])
+
+  const occupied = Math.max(1, Math.min(request.applications_count ?? 1, request.max_members))
+  const available = Math.max(request.max_members - occupied, 0)
 
   return (
     <TouchableOpacity
       style={[styles.card, { borderColor: C.border }]}
-      onPress={() => router.push(`/solicitud/${request.id}` as any)}
+      onPress={openRequest}
       activeOpacity={0.85}
     >
       <View style={[styles.tag, { backgroundColor: C.primary + "12" }]}>
@@ -29,10 +37,10 @@ export function MiniRequestCard({ request }: Props) {
         </Text>
       </View>
       <Text style={[styles.title, { color: C.textPrimary }]}>{request.title}</Text>
-      <Text style={[styles.meta, { color: C.textSecondary }]}>{request.modality}</Text>
+      <Text style={[styles.meta, { color: C.textSecondary }]}>👥 Cupos disponibles: {available}</Text>
     </TouchableOpacity>
   )
-}
+})
 
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 8, padding: 12, marginBottom: 8 },

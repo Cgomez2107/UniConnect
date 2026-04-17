@@ -1,0 +1,168 @@
+﻿openapi: 3.1.0
+info:
+  title: UniConnect Backend API
+  version: 1.0.0-draft
+  description: Configuration-only contract skeleton for Node microservices migration.
+servers:
+  - url: https://api.uniconnect.local
+
+tags:
+  - name: study-groups
+  - name: resources
+  - name: messaging
+  - name: profiles-catalog
+  - name: events
+
+paths:
+  /health:
+    get:
+      summary: Healthcheck endpoint
+      responses:
+        "200":
+          description: Service healthy
+
+  /api/v1/study-groups:
+    get:
+      tags: [study-groups]
+      summary: List study requests feed (subject filter + search + pagination)
+      responses: {"200": {description: OK}}
+    post:
+      tags: [study-groups]
+      summary: Create study request (author_id from token)
+      responses: {"201": {description: Created}}
+
+  /api/v1/study-groups/{id}:
+    get:
+      tags: [study-groups]
+      summary: Get study request detail
+      responses: {"200": {description: OK}, "404": {description: Not found}}
+
+  /api/v1/study-groups/{id}/applications:
+    get:
+      tags: [study-groups]
+      summary: List applications for request (request admin only)
+      responses: {"200": {description: OK}, "403": {description: Forbidden}}
+
+  /api/v1/study-groups/{id}/apply:
+    post:
+      tags: [study-groups]
+      summary: Apply to a request (prevent duplicate)
+      responses: {"201": {description: Created}, "409": {description: Duplicate application}}
+
+  /api/v1/study-groups/applications/{id}/review:
+    put:
+      tags: [study-groups]
+      summary: Accept or reject application
+      responses: {"200": {description: Updated}, "403": {description: Forbidden}, "409": {description: Capacity reached}}
+
+  /api/v1/resources:
+    get:
+      tags: [resources]
+      summary: List resources by subject or owner
+      responses: {"200": {description: OK}}
+    post:
+      tags: [resources]
+      summary: Create resource (metadata + file)
+      responses: {"201": {description: Created}}
+
+  /api/v1/resources/{id}:
+    get:
+      tags: [resources]
+      summary: Get resource by id
+      responses: {"200": {description: OK}, "404": {description: Not found}}
+    patch:
+      tags: [resources]
+      summary: Update resource metadata
+      responses: {"200": {description: Updated}}
+    delete:
+      tags: [resources]
+      summary: Delete resource (owner only)
+      responses: {"204": {description: Deleted}, "403": {description: Forbidden}}
+
+  /api/v1/conversations:
+    get:
+      tags: [messaging]
+      summary: List user conversations with unread_count
+      responses: {"200": {description: OK}}
+
+  /api/v1/conversations/get-or-create:
+    post:
+      tags: [messaging]
+      summary: Get or create 1:1 conversation
+      responses: {"200": {description: OK}, "201": {description: Created}}
+
+  /api/v1/conversations/{conversationId}/messages:
+    get:
+      tags: [messaging]
+      summary: List messages by conversation
+      responses: {"200": {description: OK}, "403": {description: Forbidden}}
+    post:
+      tags: [messaging]
+      summary: Send message as participant
+      responses: {"201": {description: Created}, "403": {description: Forbidden}}
+
+  /api/v1/profiles/me:
+    get:
+      tags: [profiles-catalog]
+      summary: Get own profile
+      responses: {"200": {description: OK}}
+    patch:
+      tags: [profiles-catalog]
+      summary: Partially update own profile
+      responses: {"200": {description: Updated}}
+
+  /api/v1/profiles/{id}/public:
+    get:
+      tags: [profiles-catalog]
+      summary: Get public profile by id
+      responses: {"200": {description: OK}, "404": {description: Not found}}
+
+  /api/v1/students/search:
+    get:
+      tags: [profiles-catalog]
+      summary: Search students by subject with pagination
+      responses: {"200": {description: OK}}
+
+  /api/v1/events:
+    get:
+      tags: [events]
+      summary: List upcoming events
+      responses: {"200": {description: OK}}
+    post:
+      tags: [events]
+      summary: Create event with admin authorization
+      responses: {"201": {description: Created}}
+
+  /api/v1/events/{id}:
+    get:
+      tags: [events]
+      summary: Get event detail
+      responses: {"200": {description: OK}, "404": {description: Not found}}
+    patch:
+      tags: [events]
+      summary: Update event with admin authorization
+      responses: {"200": {description: Updated}}
+    delete:
+      tags: [events]
+      summary: Delete event with admin authorization
+      responses: {"204": {description: Deleted}}
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+      required: [code, message]
+    PaginationMeta:
+      type: object
+      properties:
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+        total: {type: integer, minimum: 0}
+      required: [page, page_size, total]

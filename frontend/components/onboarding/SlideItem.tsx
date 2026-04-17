@@ -1,10 +1,3 @@
-/**
- * components/onboarding/SlideItem.tsx
- *
- * Slide individual del onboarding.
- * Recibe los datos como props — sin lógica interna, puro presentacional.
- */
-
 import { OnboardingSlide } from "@/constants/onboarding"
 import { Colors } from "@/constants/Colors"
 import { Dimensions, StyleSheet, Text, useColorScheme, View } from "react-native"
@@ -21,10 +14,8 @@ export function SlideItem({ slide }: Props) {
 
   return (
     <View style={[styles.slide, { width: SCREEN_W }]}>
-      {/* Círculo decorativo de fondo */}
       <View style={[styles.circle, { backgroundColor: C.primary + "12" }]} />
 
-      {/* Emoji / ícono */}
       <View
         style={[
           styles.emojiBox,
@@ -37,7 +28,6 @@ export function SlideItem({ slide }: Props) {
         <Text style={styles.emoji}>{slide.emoji}</Text>
       </View>
 
-      {/* Franja dorada decorativa */}
       <View style={[styles.goldBar, { backgroundColor: C.accent }]} />
 
       <Text style={[styles.title, { color: C.textPrimary }]}>{slide.title}</Text>

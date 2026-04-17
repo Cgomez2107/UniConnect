@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../../",
+    "outDir": "dist",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "../../shared/http/sendJson.ts",
+    "../../shared/libs/errors/ApplicationError.ts",
+    "../../shared/libs/errors/mapHttpStatus.ts",
+    "../../shared/libs/config/requiredEnv.ts"
+  ]
+}

@@ -1,12 +1,5 @@
-/**
- * app/login.tsx
- * Login con splash diferenciado por rol y redirección robusta
- * Incluye autenticación con Google (@ucaldas.edu.co)
- */
-
 import { Link, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,98 +15,26 @@ import {
 import { AuthInput } from "@/components/ui/AuthInput";
 import { ErrorBanner } from "@/components/ui/Errorbanner";
 import { PrimaryButton } from "@/components/ui/Primarybutton";
-import { SplashLoader } from "@/components/ui/SplashLoader";
 import { Colors } from "@/constants/Colors";
-import { useGoogleAuth } from "@/lib/services/googleAuthService";
-import type { UserRole } from "@/store/useAuthStore";
-import { useAuthStore } from "@/store/useAuthStore";
-
-const UCALDAS_REGEX = /^[a-zA-Z0-9._%+-]+@ucaldas\.edu\.co$/;
+import { useLoginScreen } from "@/hooks/application/useLoginScreen";
 
 export default function LoginScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
-
-  const signIn = useAuthStore((s) => s.signIn);
-  const isLoading = useAuthStore((s) => s.isLoading);
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [formError, setFormError] = useState("");
-  const [splashRole, setSplashRole] = useState<UserRole | null>(null);
-
-  // ── Google Auth ─────────────────────────────────────────────────────────────
   const {
-    request: googleRequest,
-    loading: googleLoading,
-    error: googleError,
+    email,
+    password,
+    emailError,
+    formError,
+    handleEmailChange,
+    handleLogin,
+    isValid,
+    isLoading,
+    googleLoading,
+    googleError,
     signInWithGoogle,
-  } = useGoogleAuth();
-
-  // ── Login con email/password ────────────────────────────────────────────────
-  const handleEmailChange = (value: string) => {
-    setEmail(value);
-    setEmailError(
-      value.length > 0 && !UCALDAS_REGEX.test(value)
-        ? "Debe ser un correo @ucaldas.edu.co"
-        : ""
-    );
-  };
-
-  const handleLogin = async () => {
-    setFormError("");
-    if (!email || !password) {
-      setFormError("Completa todos los campos.");
-      return;
-    }
-    if (!UCALDAS_REGEX.test(email)) {
-      setEmailError("Debe ser un correo @ucaldas.edu.co");
-      return;
-    }
-
-    try {
-      await signIn(email, password);
-
-      const role = useAuthStore.getState().user?.role ?? "estudiante";
-      setSplashRole(role);
-
-      setTimeout(() => {
-        if (role === "admin") {
-          router.replace("/(admin)" as any);
-        } else {
-          router.replace("/(tabs)" as any);
-        }
-      }, 1200);
-
-    } catch (error: any) {
-      setSplashRole(null);
-      const msg: string = error?.message ?? "";
-      if (msg.includes("Email not confirmed")) {
-        setFormError("Confirma tu correo institucional antes de ingresar.");
-      } else if (msg.includes("Invalid login credentials")) {
-        setFormError("Correo o contraseña incorrectos.");
-      } else {
-        setFormError("Ocurrió un error. Intenta de nuevo.");
-      }
-    }
-  };
-
-  // ── Splash mientras navega ──────────────────────────────────────────────────
-  if (splashRole !== null) {
-    return (
-      <SplashLoader
-        role={splashRole}
-        message={
-          splashRole === "admin"
-            ? "Cargando panel de administración..."
-            : "Cargando tu feed de estudio..."
-        }
-      />
-    );
-  }
-
-  const isValid = UCALDAS_REGEX.test(email) && password.length >= 6;
+    setPassword,
+  } = useLoginScreen();
 
   return (
     <KeyboardAvoidingView
@@ -127,7 +48,6 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Logo ── */}
         <View style={styles.header}>
           <View style={[styles.logoBox, { borderColor: C.primary }]}>
             <Text style={[styles.logoText, { color: C.primary }]}>UC</Text>
@@ -139,7 +59,6 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        {/* ── Card ── */}
         <View style={[styles.card, { backgroundColor: C.surface }]}>
           <Text style={[styles.cardTitle, { color: C.textPrimary }]}>
             Inicia sesión
@@ -164,12 +83,6 @@ export default function LoginScreen() {
             isPassword
           />
 
-          <TouchableOpacity style={styles.forgotBtn} activeOpacity={0.7}>
-            <Text style={[styles.forgotText, { color: C.primary }]}>
-              ¿Olvidaste tu contraseña?
-            </Text>
-          </TouchableOpacity>
-
           <PrimaryButton
             label="Ingresar"
             onPress={handleLogin}
@@ -178,7 +91,6 @@ export default function LoginScreen() {
             style={styles.submitBtn}
           />
 
-          {/* ── Divider ── */}
           <View style={styles.divider}>
             <View style={[styles.dividerLine, { backgroundColor: C.border }]} />
             <Text style={[styles.dividerText, { color: C.textPlaceholder }]}>
@@ -187,7 +99,6 @@ export default function LoginScreen() {
             <View style={[styles.dividerLine, { backgroundColor: C.border }]} />
           </View>
 
-          {/* ── Botón Google ── */}
           {googleError ? (
             <Text style={[styles.googleError, { color: C.error }]}>
               {googleError}
@@ -198,10 +109,10 @@ export default function LoginScreen() {
             style={[
               styles.googleBtn,
               { borderColor: C.border, backgroundColor: C.surface },
-              (!googleRequest || googleLoading) && styles.googleBtnDisabled,
+              googleLoading && styles.googleBtnDisabled,
             ]}
             onPress={signInWithGoogle}
-            disabled={!googleRequest || googleLoading}
+            disabled={googleLoading}
             activeOpacity={0.85}
           >
             {googleLoading ? (
@@ -221,7 +132,6 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* ── Registro ── */}
           <View style={[styles.registerRow, { marginTop: 20 }]}>
             <Text style={[styles.registerText, { color: C.textSecondary }]}>
               ¿No tienes cuenta?{" "}
@@ -236,9 +146,6 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        <Text style={[styles.footer, { color: C.textPlaceholder }]}>
-          Solo accesible con correo @ucaldas.edu.co
-        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -272,8 +179,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 12, elevation: 3,
   },
   cardTitle: { fontSize: 20, fontWeight: "700", marginBottom: 20 },
-  forgotBtn: { alignSelf: "flex-end", marginBottom: 4, marginTop: -8 },
-  forgotText: { fontSize: 13, fontWeight: "500" },
   submitBtn: { marginTop: 16 },
   divider: { flexDirection: "row", alignItems: "center", marginVertical: 20 },
   dividerLine: { flex: 1, height: 1 },
