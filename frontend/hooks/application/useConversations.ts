@@ -1,5 +1,6 @@
 import { DIContainer } from "@/lib/services/di/container"
 import { useAuthStore } from "@/store/useAuthStore"
+import { useConversationsStore } from "@/store/useConversationsStore"
 import { useUnreadCountStore } from "@/store/unreadCountStore"
 import type { Conversation } from "@/types"
 import { useFocusEffect } from "expo-router"
@@ -7,6 +8,7 @@ import { useCallback, useMemo, useState } from "react"
 
 interface UseConversationsReturn {
 	conversations: Conversation[]
+	hasHydrated: boolean
 	loading: boolean
 	refreshing: boolean
 	error: string | null
@@ -18,8 +20,10 @@ export function useConversations(): UseConversationsReturn {
 	const user = useAuthStore((s) => s.user)
 	const isHydrating = useAuthStore((s) => s.isHydrating)
 	const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+	const conversations = useConversationsStore((s) => s.conversations)
+	const hasHydrated = useConversationsStore((s) => s.hasHydrated)
+	const setConversations = useConversationsStore((s) => s.setConversations)
 
-	const [conversations, setConversations] = useState<Conversation[]>([])
 	const [loading, setLoading] = useState(true)
 	const [refreshing, setRefreshing] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -53,7 +57,7 @@ export function useConversations(): UseConversationsReturn {
 				setRefreshing(false)
 			}
 		},
-		[container, isAuthenticated, isHydrating, user?.id]
+		[container, isAuthenticated, isHydrating, setConversations, user?.id]
 	)
 
 	useFocusEffect(
@@ -64,6 +68,7 @@ export function useConversations(): UseConversationsReturn {
 
 	return {
 		conversations,
+		hasHydrated,
 		loading,
 		refreshing,
 		error,

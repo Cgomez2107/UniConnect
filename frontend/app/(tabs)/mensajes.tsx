@@ -6,8 +6,7 @@
  * Navega a → app/chat/[conversationId].tsx
  */
 
-import { LoadingState } from "@/components/shared/LoadingState";
-import { ConversationSkeletonLoader } from "@/components/shared/SkeletonLoader";
+import { ConversationSkeleton } from "@/components/chat/ConversationSkeleton";
 import { Colors } from "@/constants/Colors";
 import { useConversations } from "@/hooks/application/useConversations";
 import type { Conversation } from "@/types";
@@ -121,7 +120,9 @@ export default function MensajesScreen() {
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
 
-  const { conversations, loading, refreshing, error, refresh } = useConversations();
+  const { conversations, hasHydrated, loading, refreshing, error, refresh } = useConversations();
+  const isInitialLoading = hasHydrated && loading && conversations.length === 0;
+  const isHydratingState = !hasHydrated && conversations.length === 0;
 
   const handlePress = useCallback((conv: Conversation) => {
     router.push({
@@ -172,18 +173,18 @@ export default function MensajesScreen() {
       </View>
 
       {/* Contenido */}
-      {loading ? (
+      {isHydratingState || isInitialLoading ? (
         <FlatList
-          data={[1, 2, 3, 4, 5]}
+          data={[1, 2, 3, 4, 5, 6]}
           keyExtractor={(item) => String(item)}
-          renderItem={() => <ConversationSkeletonLoader />}
+          renderItem={() => <ConversationSkeleton />}
           scrollEnabled={false}
         />
       ) : error ? (
         <View style={styles.center}>
           <Text style={[styles.errorText, { color: C.error }]}>{error}</Text>
         </View>
-      ) : conversations.length === 0 ? (
+      ) : hasHydrated && conversations.length === 0 ? (
         <View style={styles.center}>
           <Text style={{ fontSize: 40 }}>💬</Text>
           <Text style={[styles.emptyTitle, { color: C.text }]}>Sin conversaciones</Text>
