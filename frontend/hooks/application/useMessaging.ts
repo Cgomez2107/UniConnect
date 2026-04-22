@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react"
 import { DIContainer } from "@/lib/services/di/container"
+import { useUnreadCountStore } from "@/store/useUnreadCountStore"
 import type { Message, Conversation } from "@/types"
 import type { CreateMessagePayload } from "@/lib/services/domain/repositories/IMessageRepository"
 
@@ -249,6 +250,24 @@ export function useMessaging() {
     [container]
   )
 
+  const handleMarkAsRead = useCallback(
+    async (conversationId: string) => {
+      try {
+        const useCase = container.getMarkConversationAsRead()
+        await useCase.execute(conversationId)
+
+        // Total refetch strategy to keep badge in sync
+        await useUnreadCountStore.getState().refreshUnreadCount()
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "Error al marcar como leído"
+        setState((prev) => ({ ...prev, error: errorMsg }))
+        // Don't throw - let the screen continue even if marking as read fails
+        console.warn("handleMarkAsRead error:", errorMsg)
+      }
+    },
+    [container]
+  )
+
   return {
     ...state,
     getConversations,
@@ -256,5 +275,6 @@ export function useMessaging() {
     sendMessage,
     retryMessage,
     getOrCreateConversation,
+    handleMarkAsRead,
   }
 }

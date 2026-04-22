@@ -101,6 +101,7 @@ Base path: `/api/v1`
 		- `mediaFilename`
 		- `replyToMessageId`
 		- `replyPreview`
+- `PATCH /api/v1/conversations/:id/read` — Marcar todos los mensajes no leidos de una conversacion como leidos (solo emisarios de otros usuarios)
 - `PATCH /api/v1/messages/:id/read`
 
 ### Health

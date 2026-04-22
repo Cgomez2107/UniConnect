@@ -5,7 +5,9 @@ import { GetConversations } from "./application/use-cases/GetConversations.js";
 import { GetMessageById } from "./application/use-cases/GetMessageById.js";
 import { GetOrCreateConversation } from "./application/use-cases/GetOrCreateConversation.js";
 import { ListMessages } from "./application/use-cases/ListMessages.js";
+import { GetUnreadCount } from "./application/use-cases/GetUnreadCount.js";
 import { MarkMessageAsRead } from "./application/use-cases/MarkMessageAsRead.js";
+import { MarkConversationAsRead } from "./application/use-cases/MarkConversationAsRead.js";
 import { SendMessage } from "./application/use-cases/SendMessage.js";
 import { TouchConversation } from "./application/use-cases/TouchConversation.js";
 import { loadMessagingEnv } from "./config/env.js";
@@ -52,8 +54,10 @@ function bootstrap(): void {
 	const touchConversation = new TouchConversation(repository);
 	const getMessageById = new GetMessageById(repository);
 	const listMessages = new ListMessages(repository);
+	const getUnreadCount = new GetUnreadCount(repository);
 	const sendMessage = new SendMessage(repository);
 	const markMessageAsRead = new MarkMessageAsRead(repository);
+	const markConversationAsRead = new MarkConversationAsRead(repository);
 
 	const controller = new MessagingController(
 		getConversations,
@@ -62,8 +66,10 @@ function bootstrap(): void {
 		touchConversation,
 		getMessageById,
 		listMessages,
+		getUnreadCount,
 		sendMessage,
 		markMessageAsRead,
+		markConversationAsRead,
 	);
 
 	const server = createServer((req, res) => {

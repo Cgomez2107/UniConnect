@@ -13,7 +13,7 @@ import { Colors } from "@/constants/Colors";
 import { useChatComposer } from "@/hooks/application/useChatComposer";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import { useAuthStore } from "@/store/useAuthStore";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
@@ -92,6 +92,7 @@ export default function ChatScreen() {
     getMessages,
     sendMessage,
     retryMessage,
+    handleMarkAsRead,
   } = useMessaging();
 
   const conversationIdValue = typeof conversationId === "string" ? conversationId : "";
@@ -138,6 +139,17 @@ export default function ChatScreen() {
       sub.remove();
     };
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Mark all messages in this conversation as read when the screen is focused
+      if (conversationIdValue) {
+        handleMarkAsRead(conversationIdValue).catch(() => {
+          // Silent error - don't interrupt user experience if marking as read fails
+        });
+      }
+    }, [conversationIdValue, handleMarkAsRead])
+  );
 
   const {
     typing,
