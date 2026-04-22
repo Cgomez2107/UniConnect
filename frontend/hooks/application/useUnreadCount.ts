@@ -4,7 +4,7 @@
  */
 
 import { useAuthStore } from "@/store/useAuthStore";
-import { useUnreadCountStore } from "@/store/useUnreadCountStore";
+import { useUnreadCountStore } from "@/store/unreadCountStore";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 

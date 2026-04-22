@@ -1,5 +1,6 @@
 import { DIContainer } from "@/lib/services/di/container"
 import { useAuthStore } from "@/store/useAuthStore"
+import { useUnreadCountStore } from "@/store/unreadCountStore"
 import type { Conversation } from "@/types"
 import { useFocusEffect } from "expo-router"
 import { useCallback, useMemo, useState } from "react"
@@ -44,6 +45,7 @@ export function useConversations(): UseConversationsReturn {
 				const useCase = container.getGetConversations()
 				const data = await useCase.execute(user.id)
 				setConversations(data)
+				await useUnreadCountStore.getState().refreshUnreadCount()
 			} catch (e) {
 				setError(e instanceof Error ? e.message : "Error al cargar mensajes")
 			} finally {

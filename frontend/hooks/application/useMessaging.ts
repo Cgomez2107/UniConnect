@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react"
 import { DIContainer } from "@/lib/services/di/container"
-import { useUnreadCountStore } from "@/store/useUnreadCountStore"
+import { useUnreadCountStore } from "@/store/unreadCountStore"
 import type { Message, Conversation } from "@/types"
 import type { CreateMessagePayload } from "@/lib/services/domain/repositories/IMessageRepository"
 
@@ -34,6 +34,7 @@ export function useMessaging() {
         const useCase = container.getGetConversations()
         const result = await useCase.execute(userId)
         setState((prev) => ({ ...prev, loading: false, error: null, conversations: result }))
+        await useUnreadCountStore.getState().refreshUnreadCount()
         return result
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Error al cargar conversaciones"
