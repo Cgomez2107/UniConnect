@@ -13,7 +13,8 @@ import { Colors } from "@/constants/Colors";
 import { useChatComposer } from "@/hooks/application/useChatComposer";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import { useAuthStore } from "@/store/useAuthStore";
-import { router, useLocalSearchParams } from "expo-router";
+import { useUnreadCountStore } from "@/store/unreadCountStore";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
@@ -84,6 +85,7 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const flatListRef = useRef<FlatList<ChatListItem>>(null);
+  const refreshUnreadCount = useUnreadCountStore((s) => s.refreshUnreadCount);
 
   const {
     messages,
@@ -92,6 +94,7 @@ export default function ChatScreen() {
     getMessages,
     sendMessage,
     retryMessage,
+    handleMarkAsRead,
   } = useMessaging();
 
   const conversationIdValue = typeof conversationId === "string" ? conversationId : "";
@@ -138,6 +141,29 @@ export default function ChatScreen() {
       sub.remove();
     };
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+
+      const markAsRead = async () => {
+        if (!conversationIdValue) return;
+        try {
+          await handleMarkAsRead(conversationIdValue);
+        } catch {
+          if (!isMounted) return;
+          // Silent error - don't interrupt user experience if marking as read fails
+        }
+      };
+
+      void markAsRead();
+
+      return () => {
+        isMounted = false;
+        void refreshUnreadCount();
+      };
+    }, [conversationIdValue, handleMarkAsRead, refreshUnreadCount])
+  );
 
   const {
     typing,

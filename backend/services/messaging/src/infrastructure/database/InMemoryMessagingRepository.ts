@@ -185,6 +185,57 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
     return true;
   }
 
+  async markConversationAsRead(conversationId: string, currentUserId: string): Promise<number> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error("Conversacion no encontrada.");
+    }
+
+    if (!this.isParticipant(conversation, currentUserId)) {
+      throw new Error("No tienes permisos para actualizar esta conversacion.");
+    }
+
+    const messagesToUpdate = [...this.messages.values()].filter(
+      (msg) => msg.conversationId === conversationId && msg.senderId !== currentUserId && !msg.readAt
+    );
+
+    let markedCount = 0;
+    const now = new Date().toISOString();
+
+    for (const message of messagesToUpdate) {
+      const updated: Message = {
+        ...message,
+        readAt: now,
+      };
+      this.messages.set(message.id, updated);
+      markedCount++;
+    }
+
+    conversation.updatedAt = now;
+    this.conversations.set(conversation.id, conversation);
+
+    return markedCount;
+  }
+
+  async getUnreadCountForUser(currentUserId: string): Promise<number> {
+    const conversationIds = new Set(
+      [...this.conversations.values()]
+        .filter((conversation) => this.isParticipant(conversation, currentUserId))
+        .map((conversation) => conversation.id),
+    );
+
+    if (conversationIds.size === 0) {
+      return 0;
+    }
+
+    return [...this.messages.values()].filter(
+      (message) =>
+        conversationIds.has(message.conversationId) &&
+        message.senderId !== currentUserId &&
+        !message.readAt,
+    ).length;
+  }
+
   private isParticipant(conversation: StoredConversation, userId: string): boolean {
     return conversation.participantA === userId || conversation.participantB === userId;
   }

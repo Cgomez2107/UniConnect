@@ -116,4 +116,16 @@ export class ApiMessageRepository implements IMessageRepository {
       method: "PATCH",
     });
   }
+
+  async markConversationAsRead(conversationId: string): Promise<number> {
+    const response = await fetchApi<{ count: number }>(`/conversations/${conversationId}/read`, {
+      method: "PATCH",
+    });
+    return response?.count ?? 0;
+  }
+
+  async getTotalUnreadCount(): Promise<number> {
+    const response = await fetchApi<{ count: number }>("/messages/unread-count");
+    return response?.count ?? 0;
+  }
 }

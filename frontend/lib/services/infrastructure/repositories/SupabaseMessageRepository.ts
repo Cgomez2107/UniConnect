@@ -64,4 +64,55 @@ export class SupabaseMessageRepository implements IMessageRepository {
   async markAsRead(messageId: string): Promise<void> {
     await apiPatch<Message>("messages", { read_at: new Date().toISOString() }, (q) => q.eq("id", messageId))
   }
+
+  async markConversationAsRead(conversationId: string): Promise<number> {
+    // Get current user ID for comparison
+    const currentUser = (await supabase.auth.getUser()).data.user;
+    if (!currentUser) {
+      throw new Error("No authenticated user");
+    }
+
+    // Update all unread messages in the conversation where sender_id != currentUserId
+    const { data, error } = await supabase
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", conversationId)
+      .neq("sender_id", currentUser.id)
+      .is("read_at", null)
+      .select();
+
+    if (error) throw error;
+
+    // Return count of marked messages
+    return (data ?? []).length;
+  }
+
+  async getTotalUnreadCount(): Promise<number> {
+    const currentUser = (await supabase.auth.getUser()).data.user;
+    if (!currentUser) {
+      return 0;
+    }
+
+    const { data: conversations, error: convError } = await supabase
+      .from("conversations")
+      .select("id")
+      .or(`participant_a.eq.${currentUser.id},participant_b.eq.${currentUser.id}`);
+
+    if (convError) throw convError;
+
+    const conversationIds = (conversations ?? []).map((c) => c.id);
+    if (conversationIds.length === 0) {
+      return 0;
+    }
+
+    const { count, error } = await supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .in("conversation_id", conversationIds)
+      .neq("sender_id", currentUser.id)
+      .is("read_at", null);
+
+    if (error) throw error;
+    return count ?? 0;
+  }
 }

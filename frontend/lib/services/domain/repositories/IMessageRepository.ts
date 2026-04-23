@@ -22,4 +22,6 @@ export interface IMessageRepository {
     payload: string | CreateMessagePayload
   ): Promise<Message>
   markAsRead(messageId: string): Promise<void>
+  markConversationAsRead(conversationId: string): Promise<number>
+  getTotalUnreadCount(): Promise<number>
 }

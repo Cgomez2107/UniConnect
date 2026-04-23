@@ -22,8 +22,10 @@ export async function handleMessagingRoutes(
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   const conversationDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/conversations\/([^/]+)$/);
   const conversationTouchMatch = requestUrl.pathname.match(/^\/api\/v1\/conversations\/([^/]+)\/touch$/);
+  const conversationReadMatch = requestUrl.pathname.match(/^\/api\/v1\/conversations\/([^/]+)\/read$/);
   const messageDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)$/);
   const messageReadMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/read$/);
+  const unreadCountMatch = requestUrl.pathname === "/api/v1/messages/unread-count";
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
@@ -51,6 +53,16 @@ export async function handleMessagingRoutes(
 
   if (req.method === "PATCH" && conversationTouchMatch) {
     await controller.touchConversation(req, res, conversationTouchMatch[1]);
+    return true;
+  }
+
+  if (req.method === "PATCH" && conversationReadMatch) {
+    await controller.markConversationAsRead(req, res, conversationReadMatch[1]);
+    return true;
+  }
+
+  if (req.method === "GET" && unreadCountMatch) {
+    await controller.getUnreadCount(req, res);
     return true;
   }
 

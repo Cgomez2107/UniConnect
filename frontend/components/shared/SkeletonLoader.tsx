@@ -69,30 +69,6 @@ export function SkeletonLoader({
 }
 
 /**
- * Skeleton para un elemento de conversación (chat list)
- */
-export function ConversationSkeletonLoader() {
-  const scheme = useColorScheme() ?? "light";
-  const C = Colors[scheme];
-
-  return (
-    <View style={[styles.conversationSkeleton, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-      {/* Avatar placeholder */}
-      <SkeletonLoader width={48} height={48} borderRadius={24} />
-
-      {/* Content */}
-      <View style={styles.skeletonContent}>
-        <SkeletonLoader width="60%" height={16} borderRadius={4} style={{ marginBottom: 8 }} />
-        <SkeletonLoader width="90%" height={12} borderRadius={4} />
-      </View>
-
-      {/* Timestamp placeholder */}
-      <SkeletonLoader width={40} height={12} borderRadius={4} />
-    </View>
-  );
-}
-
-/**
  * Skeleton para un item del feed (publication card)
  */
 export function FeedItemSkeletonLoader() {
@@ -191,18 +167,6 @@ export function ProfileSkeletonLoader() {
 const styles = StyleSheet.create({
   skeleton: {
     // Shimmer effect is applied via Animated parent
-  },
-
-  conversationSkeleton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    gap: 12,
-  },
-  skeletonContent: {
-    flex: 1,
   },
 
   feedItemSkeleton: {

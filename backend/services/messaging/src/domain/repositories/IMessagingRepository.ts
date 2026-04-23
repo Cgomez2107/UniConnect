@@ -16,4 +16,6 @@ export interface IMessagingRepository {
   ): Promise<Message[]>;
   createMessage(input: CreateMessageInput): Promise<Message>;
   markMessageAsRead(messageId: string, currentUserId: string): Promise<boolean>;
+  markConversationAsRead(conversationId: string, currentUserId: string): Promise<number>;
+  getUnreadCountForUser(currentUserId: string): Promise<number>;
 }

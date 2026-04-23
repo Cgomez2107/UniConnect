@@ -57,6 +57,8 @@ import { GetConversations } from "../domain/use-cases/messaging/GetConversations
 import { GetMessages } from "../domain/use-cases/messaging/GetMessages";
 import { SendMessage } from "../domain/use-cases/messaging/SendMessage";
 import { GetOrCreateConversation } from "../domain/use-cases/messaging/GetOrCreateConversation";
+import { MarkConversationAsRead } from "../domain/use-cases/messaging/MarkConversationAsRead";
+import { GetTotalUnreadCount } from "../domain/use-cases/messaging/GetTotalUnreadCount";
 import { SignInWithPassword } from "../domain/use-cases/auth/SignInWithPassword";
 import { SignUpWithPassword } from "../domain/use-cases/auth/SignUpWithPassword";
 import { SignOutUser } from "../domain/use-cases/auth/SignOutUser";
@@ -148,6 +150,8 @@ export class DIContainer {
   private getMessages?: GetMessages;
   private sendMessage?: SendMessage;
   private getOrCreateConversation?: GetOrCreateConversation;
+  private markConversationAsRead?: MarkConversationAsRead;
+  private getTotalUnreadCount?: GetTotalUnreadCount;
   private signInWithPassword?: SignInWithPassword;
   private signUpWithPassword?: SignUpWithPassword;
   private signOutUser?: SignOutUser;
@@ -503,6 +507,20 @@ export class DIContainer {
       this.getOrCreateConversation = new GetOrCreateConversation(this.getConversationRepository());
     }
     return this.getOrCreateConversation;
+  }
+
+  getMarkConversationAsRead(): MarkConversationAsRead {
+    if (!this.markConversationAsRead) {
+      this.markConversationAsRead = new MarkConversationAsRead(this.getMessageRepository());
+    }
+    return this.markConversationAsRead;
+  }
+
+  getGetTotalUnreadCount(): GetTotalUnreadCount {
+    if (!this.getTotalUnreadCount) {
+      this.getTotalUnreadCount = new GetTotalUnreadCount(this.getMessageRepository());
+    }
+    return this.getTotalUnreadCount;
   }
 
   getSignInWithPassword(): SignInWithPassword {

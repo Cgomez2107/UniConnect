@@ -487,4 +487,54 @@ export class PostgresMessagingRepository implements IMessagingRepository {
 
     return !!exists.rows[0];
   }
+
+  async markConversationAsRead(conversationId: string, currentUserId: string): Promise<number> {
+    // First, verify the user is a participant in this conversation
+    const conversationCheck = await this.pool.query<{ id: string }>(
+      `
+        SELECT c.id
+        FROM conversations c
+        WHERE c.id = $1
+          AND (c.participant_a = $2 OR c.participant_b = $2)
+        LIMIT 1
+      `,
+      [conversationId, currentUserId],
+    );
+
+    if (!conversationCheck.rows[0]) {
+      throw new Error("No tienes permisos para acceder a esta conversacion.");
+    }
+
+    // Update all unread messages in this conversation where sender_id != currentUserId
+    const updated = await this.pool.query(
+      `
+        UPDATE messages m
+        SET read_at = now()
+        FROM conversations c
+        WHERE c.id = $1
+          AND m.conversation_id = c.id
+          AND m.sender_id <> $2
+          AND m.read_at IS NULL
+      `,
+      [conversationId, currentUserId],
+    );
+
+    return updated.rowCount ?? 0;
+  }
+
+  async getUnreadCountForUser(currentUserId: string): Promise<number> {
+    const result = await this.pool.query<{ count: string }>(
+      `
+        SELECT COUNT(*) AS count
+        FROM messages m
+        JOIN conversations c ON c.id = m.conversation_id
+        WHERE (c.participant_a = $1 OR c.participant_b = $1)
+          AND m.sender_id <> $1
+          AND m.read_at IS NULL
+      `,
+      [currentUserId],
+    );
+
+    return parseInt(result.rows[0]?.count ?? "0", 10);
+  }
 }

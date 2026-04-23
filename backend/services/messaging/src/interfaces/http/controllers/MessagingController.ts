@@ -5,7 +5,9 @@ import { GetConversations } from "../../../application/use-cases/GetConversation
 import { GetMessageById } from "../../../application/use-cases/GetMessageById.js";
 import { GetOrCreateConversation } from "../../../application/use-cases/GetOrCreateConversation.js";
 import { ListMessages } from "../../../application/use-cases/ListMessages.js";
+import { GetUnreadCount } from "../../../application/use-cases/GetUnreadCount.js";
 import { MarkMessageAsRead } from "../../../application/use-cases/MarkMessageAsRead.js";
+import { MarkConversationAsRead } from "../../../application/use-cases/MarkConversationAsRead.js";
 import { SendMessage } from "../../../application/use-cases/SendMessage.js";
 import { TouchConversation } from "../../../application/use-cases/TouchConversation.js";
 import type { ConversationSummary } from "../../../domain/entities/Conversation.js";
@@ -63,8 +65,10 @@ export class MessagingController {
     private readonly touchConversationUseCase: TouchConversation,
     private readonly getMessageByIdUseCase: GetMessageById,
     private readonly listMessagesUseCase: ListMessages,
+    private readonly getUnreadCountUseCase: GetUnreadCount,
     private readonly sendMessageUseCase: SendMessage,
     private readonly markMessageAsReadUseCase: MarkMessageAsRead,
+    private readonly markConversationAsReadUseCase: MarkConversationAsRead,
   ) {}
 
   async listConversations(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -183,6 +187,22 @@ export class MessagingController {
     }
   }
 
+  async getUnreadCount(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const count = await this.getUnreadCountUseCase.execute(actorUserId);
+      sendData(res, 200, { count });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async createMessage(req: IncomingMessage, res: ServerResponse): Promise<void> {
     try {
       const actorUserId = getActorUserId(req);
@@ -227,6 +247,22 @@ export class MessagingController {
       }
 
       sendData(res, 200, { message: "Mensaje actualizado." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async markConversationAsRead(req: IncomingMessage, res: ServerResponse, conversationId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const count = await this.markConversationAsReadUseCase.execute(conversationId, actorUserId);
+      sendData(res, 200, { count, message: "Conversacion actualizada." });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
