@@ -1,0 +1,82 @@
+# ============================================================================
+# .dockerignore - Excluir archivos innecesarios del contexto Docker
+# ============================================================================
+
+# Control de versiones
+.git
+.gitignore
+.gitattributes
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencias locales (se instalarán en builder)
+node_modules
+.pnpm-store
+
+# Caché de pnpm
+.pnpm/
+pnpm-lock.backup
+
+# Directorio dist (excepto si existe, se genera en builder)
+dist
+build
+
+# Testing
+test
+tests
+*.test.ts
+*.spec.ts
+coverage
+.nyc_output
+jest.config.js
+vitest.config.ts
+
+# Configuración local
+.env.local
+.env.*.local
+.env.development
+.env.test
+
+# IDE y editores
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+.editorconfig
+
+# Turbo y build cache
+.turbo
+.next
+.cache
+
+# Documentación local
+docs
+README.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.gitpod.yml
+
+# Otros
+*.md
+LICENSE
+.renovaterc
+tsconfig.json
+turbo.json
+.npmrc
+.prettierrc
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+docker-compose*.yaml
