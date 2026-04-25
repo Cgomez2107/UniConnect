@@ -72,7 +72,6 @@ README.md
 LICENSE
 .renovaterc
 tsconfig.json
-turbo.json
 .npmrc
 .prettierrc
 

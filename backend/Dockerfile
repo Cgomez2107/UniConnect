@@ -14,11 +14,11 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 # Instalar pnpm globalmente
 RUN npm install -g pnpm@9.12.0
 
-# Instalar dependencias (incluye dev para compilar)
-RUN pnpm install --frozen-lockfile
-
 # Copiar todo el código fuente
 COPY . .
+
+# Instalar dependencias (incluye dev para compilar)
+RUN pnpm install --frozen-lockfile
 
 # Compilar TypeScript con turbo (genera dist en cada servicio)
 RUN pnpm build
@@ -57,4 +57,4 @@ USER nodejs
 EXPOSE ${PORT}
 
 # Por defecto, iniciar gateway
-CMD ["node", "gateway/dist/main.js"]
+CMD ["node", "gateway/dist/app/gateway/src/main.js"]
