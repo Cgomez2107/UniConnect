@@ -3,6 +3,7 @@
  * Layout minimalista del panel admin — sin redirecciones en useEffect
  */
 
+import { SessionGuard } from "@/components/auth/SessionGuard";
 import { useAuthStore } from "@/store/useAuthStore";
 import { router, Stack } from "expo-router";
 import { useEffect } from "react";
@@ -17,8 +18,10 @@ export default function AdminLayout() {
   }, [role]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-    </Stack>
+    <SessionGuard allowedRoles={["admin"]}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+      </Stack>
+    </SessionGuard>
   );
 }

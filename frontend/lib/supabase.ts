@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 // En desarrollo usamos AsyncStorage (más rápido con Tunnel)
 // En producción usamos SecureStore (más seguro)
@@ -35,9 +36,13 @@ const AsyncStorageAdapter = {
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
+const isWeb = Platform.OS === 'web';
+const authStorage = isWeb ? undefined : (isDevelopment ? AsyncStorageAdapter : ExpoSecureStoreAdapter);
+
 export const supabase = createClient(url, key, {
   auth: {
-    storage: isDevelopment ? AsyncStorageAdapter : ExpoSecureStoreAdapter,
+    // En web dejamos la persistencia gestionada por el navegador/supabase-js.
+    storage: authStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

@@ -1,7 +1,7 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Conversation } from "@/types";
+import { zustandPlatformStorage } from "@/lib/storage/zustandStorage";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware.js";
 
 interface ConversationsStoreState {
   conversations: Conversation[];
@@ -22,7 +22,7 @@ export const useConversationsStore = create<ConversationsStoreState>()(
     }),
     {
       name: "conversations-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandPlatformStorage),
       partialize: (state) => ({ conversations: state.conversations }),
       onRehydrateStorage: () => (state, error) => {
         if (error) {

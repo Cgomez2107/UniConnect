@@ -1,26 +1,12 @@
 import { DIContainer } from "@/lib/services/di/container"
 import { useCallback, useState } from "react"
-import * as WebBrowser from "expo-web-browser"
-import * as AuthSession from "expo-auth-session"
-import Constants from "expo-constants"
-
-WebBrowser.maybeCompleteAuthSession()
+import { usePlatformAuth } from "@/hooks/application/usePlatformAuth"
 
 const ALLOWED_DOMAIN = "ucaldas.edu.co"
 
-function getOAuthRedirectUrl() {
-	if (Constants.appOwnership === "expo" || Constants.appOwnership === "guest") {
-		return AuthSession.makeRedirectUri({ path: "oauth-callback" })
-	}
-
-	return AuthSession.makeRedirectUri({
-		scheme: "com.juanse108.uniconnet",
-		path: "oauth-callback",
-	})
-}
-
 export function useGoogleAuth() {
 	const container = DIContainer.getInstance()
+	const { getOAuthRedirectUrl, startOAuthSignIn } = usePlatformAuth()
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
@@ -47,19 +33,19 @@ export function useGoogleAuth() {
 				redirectTo: redirectUrl,
 				allowedDomain: ALLOWED_DOMAIN,
 			})
+			const result = await startOAuthSignIn(authUrl, redirectUrl)
 
-			const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl)
-
-			if (result.type === "success" && result.url) {
+			if (result.type === "callback") {
 				await resolveSessionFromUrl(result.url)
-			} else {
-				setLoading(false)
+				return
 			}
+
+			setLoading(false)
 		} catch (e: any) {
 			setError(`Error: ${e.message}`)
 			setLoading(false)
 		}
-	}, [container, resolveSessionFromUrl])
+	}, [container, getOAuthRedirectUrl, resolveSessionFromUrl, startOAuthSignIn])
 
 	return { loading, error, signInWithGoogle }
 }

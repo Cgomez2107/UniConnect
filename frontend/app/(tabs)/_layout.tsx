@@ -4,6 +4,7 @@
  */
 
 import { Colors } from "@/constants/Colors";
+import { SessionGuard } from "@/components/auth/SessionGuard";
 import { SplashLoader } from "@/components/ui/SplashLoader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUnreadCountStore } from "@/store/unreadCountStore";
@@ -56,81 +57,83 @@ export default function TabLayout() {
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: C.primary,
-        tabBarInactiveTintColor: C.tabIconDefault,
-        tabBarStyle: {
-          backgroundColor: C.surface,
-          borderTopColor: C.border,
-          borderTopWidth: 1,
-          // altura que suma el home indicator del teléfono
-          height: 56 + insets.bottom,
-          paddingBottom: insets.bottom,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-          marginBottom: 2,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Feed",
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon name={focused ? "home" : "home-outline"} color={color} focused={focused} />
-          ),
+    <SessionGuard allowedRoles={["estudiante", "admin"]}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: C.primary,
+          tabBarInactiveTintColor: C.tabIconDefault,
+          tabBarStyle: {
+            backgroundColor: C.surface,
+            borderTopColor: C.border,
+            borderTopWidth: 1,
+            // altura que suma el home indicator del teléfono
+            height: 56 + insets.bottom,
+            paddingBottom: insets.bottom,
+            paddingTop: 6,
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: "600",
+            marginBottom: 2,
+          },
         }}
-      />
-      <Tabs.Screen
-        name="invitaciones"
-        options={{
-          title: "Solicitudes",
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon name={focused ? "notifications" : "notifications-outline"} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="mensajes"
-        options={{
-          title: "Mensajes",
-          tabBarBadge: messagesBadge,
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon 
-              name={focused ? "chatbubble" : "chatbubble-outline"} 
-              color={color} 
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="eventos"
-        options={{
-          title: "Eventos",
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon name={focused ? "calendar" : "calendar-outline"} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="perfil"
-        options={{
-          title: "Perfil",
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon name={focused ? "person" : "person-outline"} color={color} focused={focused} />
-          ),
-        }}
-      />
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Feed",
+            tabBarIcon: ({ color, focused }) => (
+              <AnimatedTabIcon name={focused ? "home" : "home-outline"} color={color} focused={focused} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="invitaciones"
+          options={{
+            title: "Solicitudes",
+            tabBarIcon: ({ color, focused }) => (
+              <AnimatedTabIcon name={focused ? "notifications" : "notifications-outline"} color={color} focused={focused} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="mensajes"
+          options={{
+            title: "Mensajes",
+            tabBarBadge: messagesBadge,
+            tabBarIcon: ({ color, focused }) => (
+              <AnimatedTabIcon
+                name={focused ? "chatbubble" : "chatbubble-outline"}
+                color={color}
+                focused={focused}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="eventos"
+          options={{
+            title: "Eventos",
+            tabBarIcon: ({ color, focused }) => (
+              <AnimatedTabIcon name={focused ? "calendar" : "calendar-outline"} color={color} focused={focused} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="perfil"
+          options={{
+            title: "Perfil",
+            tabBarIcon: ({ color, focused }) => (
+              <AnimatedTabIcon name={focused ? "person" : "person-outline"} color={color} focused={focused} />
+            ),
+          }}
+        />
 
-      {/* Ocultar del tab bar */}
-      <Tabs.Screen name="feed" options={{ href: null }} />
-      <Tabs.Screen name="register" options={{ href: null }} />
-    </Tabs>
+        {/* Ocultar del tab bar */}
+        <Tabs.Screen name="feed" options={{ href: null }} />
+        <Tabs.Screen name="register" options={{ href: null }} />
+      </Tabs>
+    </SessionGuard>
   );
 }
