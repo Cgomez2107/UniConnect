@@ -14,14 +14,17 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 # Instalar pnpm globalmente
 RUN npm install -g pnpm@9.12.0
 
-# Instalar dependencias (solo prod, dev se excluirá en runner)
-RUN pnpm install --frozen-lockfile --prod
+# Instalar dependencias (incluye dev para compilar)
+RUN pnpm install --frozen-lockfile
 
 # Copiar todo el código fuente
 COPY . .
 
 # Compilar TypeScript con turbo (genera dist en cada servicio)
 RUN pnpm build
+
+# Limpiar dependencias de desarrollo para runtime
+RUN pnpm prune --prod
 
 # ============================================================================
 # STAGE 2: RUNTIME - Imagen mínima en Alpine
@@ -45,17 +48,13 @@ COPY --from=builder --chown=nodejs:nodejs /app/pnpm-workspace.yaml ./
 
 # Copiar solo dist compilado (sin source .ts)
 COPY --from=builder --chown=nodejs:nodejs /app/gateway/dist ./gateway/dist
-COPY --from=builder --chown=nodejs:nodejs /app/services ./services
+COPY --from=builder --chown=nodejs:nodejs /app/services/*/dist ./services/
 
 # Cambiar a usuario no-root
 USER nodejs
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})" || exit 1
-
 # Exponer puerto
-EXPOSE 3000
+EXPOSE ${PORT}
 
 # Por defecto, iniciar gateway
 CMD ["node", "gateway/dist/main.js"]

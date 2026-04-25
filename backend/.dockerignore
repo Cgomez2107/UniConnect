@@ -38,6 +38,7 @@ jest.config.js
 vitest.config.ts
 
 # Configuración local
+.env
 .env.local
 .env.*.local
 .env.development
