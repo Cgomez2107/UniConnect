@@ -28,6 +28,25 @@ if (!Number.isInteger(PORT) || PORT <= 0) {
   throw new Error(`Invalid auth service PORT value: ${portRaw}`);
 }
 
+/**
+ * Genera la URL de autorización de Google con redirectTo dinámico
+ */
+function sendOAuthUrl(res: ServerResponse, redirectTo?: string): void {
+  const supabaseUrl = process.env.SUPABASE_URL || "https://becitrklvpadvjwdbmck.supabase.co";
+  const hd = "ucaldas.edu.co"; // restricción de dominio institucional
+  
+  // Construir URL base de Supabase
+  let authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&hd=${hd}`;
+  
+  // Si se proporciona redirectTo, agregarlo como parámetro
+  if (redirectTo) {
+    authUrl += `&redirect_to=${encodeURIComponent(redirectTo)}`;
+  }
+  
+  res.writeHead(200);
+  res.end(JSON.stringify({ url: authUrl }));
+}
+
 async function main() {
   // Inyección de dependencias
   const authRepository = new PostgreSQLAuthRepository();
@@ -81,14 +100,33 @@ async function main() {
         res.writeHead(401);
         res.end(JSON.stringify({ error: "No session found" }));
       }
-    } else if (method === "GET" && path === "/google") {
-      // Endpoint unificado para Google OAuth (Criterio 1 y 4)
-      // En una implementación real, esto iniciaría el flujo de Google
-      // o devolvería el URL de autorización con las restricciones de dominio.
-      res.writeHead(200);
-      res.end(JSON.stringify({ 
-        url: "https://becitrklvpadvjwdbmck.supabase.co/auth/v1/authorize?provider=google&hd=ucaldas.edu.co" 
-      }));
+    } else if ((method === "POST" || method === "GET") && path === "/google") {
+      // Endpoint unificado para Google OAuth
+      // Acepta POST con redirectTo en el body o GET con redirectTo como query param
+      let redirectTo: string | undefined;
+      
+      if (method === "POST") {
+        // Leer body para obtener redirectTo
+        let body = "";
+        req.on("data", (chunk) => {
+          body += chunk.toString();
+        });
+        req.on("end", () => {
+          try {
+            const parsed = JSON.parse(body);
+            redirectTo = parsed.redirectTo;
+            sendOAuthUrl(res, redirectTo);
+          } catch (error) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: "Invalid JSON body" }));
+          }
+        });
+      } else {
+        // GET: leer query parameter
+        const urlObj = new URL(req.url || "", "http://localhost");
+        redirectTo = urlObj.searchParams.get("redirectTo") || undefined;
+        sendOAuthUrl(res, redirectTo);
+      }
     } else {
       res.writeHead(404);
       res.end(JSON.stringify({ error: "Not found" }));

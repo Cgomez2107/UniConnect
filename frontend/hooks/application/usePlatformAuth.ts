@@ -28,7 +28,8 @@ export function usePlatformAuth() {
 
   const getOAuthRedirectUrl = useCallback(() => {
     if (isWeb) {
-      return AuthSession.makeRedirectUri({ path: "oauth-callback" });
+      // En web, usar dinámicamente window.location.origin para soportar localhost, ngrok, etc.
+      return `${window.location.origin}/oauth-callback`;
     }
 
     if (Constants.appOwnership === "expo" || Constants.appOwnership === "guest") {

@@ -115,8 +115,15 @@ export class ApiAuthRepository implements IAuthRepository {
 
   async getOAuthSignInUrl(input: OAuthSignInUrlInput): Promise<string> {
     try {
-      // Usamos el endpoint unificado del backend (Criterio 4)
-      const data = await fetchApi<{ url: string }>("/auth/google");
+      // Usamos el endpoint unificado del backend enviando el redirectTo dinámico
+      const data = await fetchApi<{ url: string }>("/auth/google", {
+        method: "POST",
+        body: JSON.stringify({
+          provider: input.provider,
+          redirectTo: input.redirectTo,
+          allowedDomain: input.allowedDomain,
+        }),
+      });
       return data.url;
     } catch (error) {
       console.warn("[ApiAuthRepository] Fallback a Supabase para OAuth URL:", error);
