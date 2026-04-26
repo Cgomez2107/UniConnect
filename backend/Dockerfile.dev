@@ -23,9 +23,6 @@ RUN pnpm install
 # Copiar código fuente
 COPY . .
 
-# Compilación inicial
-RUN pnpm build
-
 # ============================================================================
 # Comando de desarrollo con hot-reload
 # ============================================================================
