@@ -50,9 +50,9 @@ const buildFallbackUser = (sessionUser: any): UserSession => ({
   bio: null,
 });
 
-const HYDRATION_TIMEOUT_MS = 6000;
-const SESSION_TIMEOUT_MS = 3500;
-const PROFILE_TIMEOUT_MS = 2500;
+const HYDRATION_TIMEOUT_MS = 4000; // Bajado de 6s
+const SESSION_TIMEOUT_MS = 2500;   // Bajado de 3.5s (el repo ya tiene su propio timeout de 1.5s)
+const PROFILE_TIMEOUT_MS = 2000;   // Bajado de 2.5s
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([

@@ -25,9 +25,13 @@ import type { Session, User } from "@supabase/supabase-js";
  */
 export class ApiAuthRepository implements IAuthRepository {
   private readonly fallback = new SupabaseAuthRepository();
+  private _cachedSession: Session | null = null;
+  private _lastSessionFetch = 0;
+  private readonly SESSION_CACHE_TTL = 5000; // 5 segundos de cache para evitar ráfagas
 
   async signIn(input: SignInInput): Promise<SignInResult> {
     try {
+      this.clearCache();
       // Intentamos el login a través del Gateway
       const data = await fetchApi<any>("/auth/signin", {
         method: "POST",
@@ -53,6 +57,7 @@ export class ApiAuthRepository implements IAuthRepository {
 
   async signUp(input: SignUpInput): Promise<SignUpResult> {
     try {
+      this.clearCache();
       const data = await fetchApi<any>("/auth/signup", {
         method: "POST",
         body: JSON.stringify({
@@ -73,44 +78,59 @@ export class ApiAuthRepository implements IAuthRepository {
     }
   }
 
-  // Las siguientes operaciones delegan al fallback ya que el backend auth service
-  // actual es un draft que no maneja sesiones persistentes ni OAuth aún.
-
   async signOut(): Promise<void> {
+    this.clearCache();
     setManualToken(null);
     return this.fallback.signOut();
   }
 
   async signOutLocal(): Promise<void> {
+    this.clearCache();
     setManualToken(null);
     return this.fallback.signOutLocal();
   }
 
+  private clearCache() {
+    this._cachedSession = null;
+    this._lastSessionFetch = 0;
+  }
+
   async getSession(): Promise<Session | null> {
+    const now = Date.now();
+    if (this._cachedSession && now - this._lastSessionFetch < this.SESSION_CACHE_TTL) {
+      return this._cachedSession;
+    }
+
     try {
-      // Intentamos recuperar la sesión desde el backend basada en cookies (Criterio 2)
-      const data = await fetchApi<any>("/auth/session");
+      // Implementación Fail-Fast: compite contra un timeout de 1.5s
+      const fetchPromise = fetchApi<any>("/auth/session");
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Backend timeout")), 1500)
+      );
+
+      const data = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      
       if (data.session) {
         setManualToken(data.session.access_token);
-        return data.session as Session;
+        this._cachedSession = data.session as Session;
+        this._lastSessionFetch = now;
+        return this._cachedSession;
       }
       return null;
     } catch (error) {
-      // Si el backend no tiene sesión, intentamos Supabase por si acaso
-      return this.fallback.getSession();
+      // Si el backend es lento o falla, caemos a Supabase que es mucho más rápido (local storage)
+      const session = await this.fallback.getSession();
+      this._cachedSession = session;
+      this._lastSessionFetch = now;
+      return session;
     }
   }
 
   async getMyProfile(): Promise<AuthProfile | null> {
-    const session = await this.getSession();
-    if (!session?.user) return null;
-    
-    return {
-      id: session.user.id,
-      email: session.user.email ?? "",
-      fullName: (session.user as any).fullName || "Usuario Institucional",
-      role: (session.user as any).role || "student"
-    };
+    // IMPORTANTE: Delegamos al fallback (Supabase) para obtener el perfil real
+    // desde la base de datos (tabla 'profiles'), lo cual garantiza que el
+    // 'role' sea correcto (admin vs estudiante) y no un mock 'student'.
+    return this.fallback.getMyProfile();
   }
 
   async getOAuthSignInUrl(input: OAuthSignInUrlInput): Promise<string> {
@@ -132,6 +152,7 @@ export class ApiAuthRepository implements IAuthRepository {
   }
 
   async resolveSessionFromOAuthUrl(url: string): Promise<OAuthSessionResolutionMode> {
+    this.clearCache();
     return this.fallback.resolveSessionFromOAuthUrl(url);
   }
 
