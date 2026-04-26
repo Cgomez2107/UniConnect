@@ -27,6 +27,7 @@ export class AuthController {
             email: [
               (value) => Validators.required(value, "email"),
               (value) => Validators.email(String(value ?? ""), "email"),
+              (value) => Validators.institutionalDomain(String(value ?? ""), "email"),
             ],
             password: [
               (value) => Validators.required(value, "password"),
@@ -70,10 +71,20 @@ export class AuthController {
             email: [
               (value) => Validators.required(value, "email"),
               (value) => Validators.email(String(value ?? ""), "email"),
+              (value) => Validators.institutionalDomain(String(value ?? ""), "email"),
             ],
             password: [(value) => Validators.required(value, "password")],
           });
           const result = await this.signInUseCase.execute(request);
+          
+          // Establecer cookie httpOnly para persistencia segura en web
+          if (result.accessToken) {
+            res.setHeader("Set-Cookie", [
+              `auth_token=${result.accessToken}; HttpOnly; Path=/; Max-Age=3600; SameSite=Lax`,
+              `refresh_token=${result.refreshToken}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`
+            ]);
+          }
+
           sendData(res, 200, result);
         } catch (error) {
           if (error instanceof DtoValidationError) {

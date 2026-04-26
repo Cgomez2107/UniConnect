@@ -26,16 +26,44 @@ export class JWTMiddleware {
    * Valida el JWT token sin usar librerías externas (evita dependencias)
    * En producción, importar 'jsonwebtoken' para validación segura
    */
-  authenticate(req: IncomingMessage, res: ServerResponse): JWTPayload | null {
+  /**
+   * Extrae el token del header o de las cookies de forma silenciosa
+   */
+  getToken(req: IncomingMessage): string | null {
+    // 1. Intentar obtener del header Authorization
     const auth = req.headers.authorization;
     const authString = Array.isArray(auth) ? auth[0] : auth;
     
-    if (!authString?.startsWith("Bearer ")) {
-      sendJson(res, 401, { error: "Missing or invalid Authorization header" });
-      return null;
+    if (authString?.startsWith("Bearer ")) {
+      return authString.substring(7);
     }
 
-    const token = authString.substring(7);
+    // 2. Intentar obtener de las cookies (para web dashboard)
+    const cookieHeader = Array.isArray(req.headers.cookie) ? req.headers.cookie[0] : req.headers.cookie;
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(";").reduce((acc, c) => {
+        const [key, val] = c.trim().split("=");
+        if (key) acc[key] = val;
+        return acc;
+      }, {} as Record<string, string>);
+      
+      return cookies["auth_token"] || null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida el JWT token sin usar librerías externas (evita dependencias)
+   * En producción, importar 'jsonwebtoken' para validación segura
+   */
+  authenticate(req: IncomingMessage, res: ServerResponse): JWTPayload | null {
+    const token = this.getToken(req);
+
+    if (!token) {
+      sendJson(res, 401, { error: "Missing or invalid authentication (Token or Cookie)" });
+      return null;
+    }
     
     // NOTA: Implementación simplificada sin librería JWT
     // En producción, usar:

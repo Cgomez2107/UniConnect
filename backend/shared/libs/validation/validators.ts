@@ -101,4 +101,15 @@ export namespace Validators {
     }
     return null;
   }
+
+  /**
+   * Valida que sea un email institucional (@ucaldas.edu.co)
+   */
+  export function institutionalDomain(value: string, fieldName: string = "email"): string | null {
+    if (!value) return null;
+    if (!value.toLowerCase().endsWith("@ucaldas.edu.co")) {
+      return `${fieldName} must be an institutional email (@ucaldas.edu.co)`;
+    }
+    return null;
+  }
 }

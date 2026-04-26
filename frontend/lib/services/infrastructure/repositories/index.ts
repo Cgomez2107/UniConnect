@@ -1,3 +1,4 @@
+export { ApiAuthRepository } from "./ApiAuthRepository"
 export { SupabaseStudyRequestRepository } from "./SupabaseStudyRequestRepository"
 export { SupabaseEventRepository } from "./SupabaseEventRepository"
 export { SupabaseApplicationRepository } from "./SupabaseApplicationRepository"

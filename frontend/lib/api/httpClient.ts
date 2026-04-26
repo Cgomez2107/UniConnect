@@ -7,8 +7,21 @@ const TOKEN_CACHE_TTL_MS = 10_000;
 let cachedAccessToken: string | null = null;
 let cachedAccessTokenAt = 0;
 let inflightTokenPromise: Promise<string | null> | null = null;
+let manualToken: string | null = null;
+
+/**
+ * Permite establecer un token de forma manual (ej: desde el microservicio de auth).
+ * Si se establece, fetchApi priorizará este token sobre el de Supabase.
+ */
+export function setManualToken(token: string | null) {
+    manualToken = token;
+    cachedAccessToken = token;
+    cachedAccessTokenAt = token ? Date.now() : 0;
+}
 
 async function getAccessTokenFast(): Promise<string | null> {
+    if (manualToken) return manualToken;
+
     const now = Date.now();
     if (cachedAccessToken && now - cachedAccessTokenAt < TOKEN_CACHE_TTL_MS) {
         return cachedAccessToken;
@@ -71,6 +84,7 @@ export async function fetchApi<T>(
         ...options,
         method,
         headers,
+        credentials: "include",
         body: isPayloadMethod ? options.body : undefined,
     };
 

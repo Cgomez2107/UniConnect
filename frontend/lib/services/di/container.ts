@@ -8,6 +8,7 @@ import { ApiStudentRepository } from "../infrastructure/repositories/ApiStudentR
 import { ApiFacultyCatalogRepository } from "../infrastructure/repositories/ApiFacultyCatalogRepository";
 import { SupabaseStudyGroupRepository } from "../infrastructure/repositories/SupabaseStudyGroupRepository";
 import { SupabaseAuthRepository } from "../infrastructure/repositories/SupabaseAuthRepository";
+import { ApiAuthRepository } from "../infrastructure/repositories/ApiAuthRepository";
 import { SupabaseProfileRepository } from "../infrastructure/repositories/SupabaseProfileRepository";
 import { SupabaseResourceUploadRepository } from "../infrastructure/repositories/SupabaseResourceUploadRepository";
 import { SupabaseAdminPanelRepository } from "../infrastructure/repositories/SupabaseAdminPanelRepository";
@@ -111,7 +112,7 @@ export class DIContainer {
   private conversationRepo?: ApiConversationRepository;
   private eventRepo?: ApiEventRepository;
   private studyGroupRepo?: SupabaseStudyGroupRepository;
-  private authRepo?: SupabaseAuthRepository;
+  private authRepo?: IAuthRepository;
   private studentRepo?: ApiStudentRepository;
   private profileRepo?: SupabaseProfileRepository;
   private facultyCatalogRepo?: ApiFacultyCatalogRepository;
@@ -239,7 +240,7 @@ export class DIContainer {
 
   getAuthRepository(): IAuthRepository {
     if (!this.authRepo) {
-      this.authRepo = new SupabaseAuthRepository();
+      this.authRepo = new ApiAuthRepository();
     }
     return this.authRepo;
   }

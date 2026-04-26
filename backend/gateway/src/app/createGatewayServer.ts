@@ -41,6 +41,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, env: Gat
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
 
+  // Inyectar token desde cookies si no viene en el header (Criterio 2)
+  if (!req.headers.authorization) {
+    const token = jwtMiddleware.getToken(req);
+    if (token) {
+      req.headers.authorization = `Bearer ${token}`;
+    }
+  }
+
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
       service: "gateway",
