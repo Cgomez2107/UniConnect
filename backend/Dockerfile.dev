@@ -17,14 +17,11 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 # Instalar pnpm
 RUN npm install -g pnpm@9.12.0
 
-# Instalar TODAS las dependencias (incluyendo dev)
-RUN pnpm install
-
 # Copiar código fuente
 COPY . .
 
-# Compilación inicial
-RUN pnpm build
+# Instalar TODAS las dependencias (incluyendo dev)
+RUN pnpm install
 
 # ============================================================================
 # Comando de desarrollo con hot-reload

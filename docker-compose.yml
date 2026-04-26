@@ -3,8 +3,6 @@
 # Ubicacion: repo root
 # ============================================================================
 
-version: "3.9"
-
 services:
   db:
     image: postgres:16-alpine
@@ -32,6 +30,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: uniconnect-backend
+    command: sh -c "pnpm install && pnpm dev"
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -48,7 +47,6 @@ services:
       - ./backend/services:/app/services
       - ./backend/shared:/app/shared
       - ./backend/gateway:/app/gateway
-    command: pnpm dev
     depends_on:
       db:
         condition: service_healthy
@@ -61,11 +59,11 @@ services:
     working_dir: /app
     environment:
       EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://backend:3000/api/v1}
-      EXPO_PUBLIC_SUPABASE_URL: ${EXPO_PUBLIC_SUPABASE_URL}
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${EXPO_PUBLIC_SUPABASE_ANON_KEY}
-      EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: ${EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB}
-      EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS: ${EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS}
-      EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID: ${EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID}
+      EXPO_PUBLIC_SUPABASE_URL: ${EXPO_PUBLIC_SUPABASE_URL:-https://your-supabase-project.supabase.co}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${EXPO_PUBLIC_SUPABASE_ANON_KEY:-your_supabase_anon_key_here}
+      EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: ${EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB:-your_google_client_id_web.apps.googleusercontent.com}
+      EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS: ${EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS:-your_google_client_id_ios.apps.googleusercontent.com}
+      EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID: ${EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID:-your_google_client_id_android.apps.googleusercontent.com}
     volumes:
       - ./frontend:/app
     ports:
@@ -73,7 +71,7 @@ services:
       - "19000:19000"
       - "19001:19001"
       - "19002:19002"
-    command: sh -c "npm install && npm run start -- --host 0.0.0.0"
+    command: sh -c "npm install && npm run start -- --host lan"
     depends_on:
       - backend
     networks:
