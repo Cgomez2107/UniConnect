@@ -1,55 +1,226 @@
-﻿version: "3.9"
+﻿# ============================================================================
+# docker-compose.yml - Stack local: Backend + DB
+# Ubicación: backend/infra/docker/docker-compose.yml
+# ============================================================================
+# USO:
+#   docker-compose up          # Levanta todo
+#   docker-compose down        # Apaga todo
+#   docker-compose down -v     # Apaga y borra volúmenes
+#   docker-compose logs -f     # Ver logs en tiempo real
+# ============================================================================
+
+version: "3.9"
+
 services:
+  # ══════════════════════════════════════════════════════════════════════
+  # BASE DE DATOS: PostgreSQL 16
+  # ══════════════════════════════════════════════════════════════════════
+  db:
+    image: postgres:16-alpine
+    container_name: uniconnect-db
+    restart: unless-stopped
+    
+    # ── Variables de entorno ────────────────────────────────────────────
+    environment:
+      # BD a crear automáticamente
+      POSTGRES_DB: ${DB_NAME:-uniconnect_dev}
+      # Usuario root de PostgreSQL
+      POSTGRES_USER: ${DB_USER:-postgres}
+      # Contraseña (debe cambiar en producción)
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
+    
+    # ── Puerto ──────────────────────────────────────────────────────────
+    # 5432:5432 = puerto_interno:puerto_host
+    # Internamente (entre contenedores): db:5432
+    # Desde host (tu máquina): localhost:5432
+    ports:
+      - "5432:5432"
+    
+    # ── Volumen nombrado para persistencia ──────────────────────────────
+    volumes:
+      # dbdata: volumen que guarda /var/lib/postgresql/data
+      # Persiste incluso si haces `docker-compose down`
+      - dbdata:/var/lib/postgresql/data
+    
+    # ── Health check ───────────────────────────────────────────────────
+    # Verifica que PostgreSQL esté listo para aceptar conexiones
+    # Importante: backend espera a que DB esté "healthy"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s      # Revisar cada 10 segundos
+      timeout: 5s        # Timeout de 5 segundos por intento
+      retries: 5         # Reintentar hasta 5 veces
+      start_period: 10s  # Esperar 10s antes de primer check
+    
+    networks:
+      - uniconnect-network
+    
+    # Logs informativos
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  # ══════════════════════════════════════════════════════════════════════
+  # GATEWAY: Punto de entrada del backend
+  # ══════════════════════════════════════════════════════════════════════
   gateway:
-    image: node:20-alpine
-    working_dir: /app
-    command: ["sh", "-c", "echo gateway scaffold"]
+    # ── Construcción desde Dockerfile.dev (desarrollo) ──────────────────
+    build:
+      context: ../..           # Subir a la raíz de backend/
+      dockerfile: Dockerfile.dev  # IMPORTANTE: usa Dockerfile.dev para desarrollo
+      # SIN target: es imagen de una etapa (no multi-stage)
+    
+    container_name: uniconnect-gateway
+    
+    # restart: no (mejor para desarrollo - verás crasheos)
+    # Déjalo comentado en desarrollo para depuración manual
+    # restart: unless-stopped
+    
+    # ── Variables de entorno ────────────────────────────────────────────
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      
+      # Base de datos
+      DATABASE_HOST: db          # Nombre de servicio en compose
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DB_NAME:-uniconnect_dev}
+      DATABASE_USER: ${DB_USER:-postgres}
+      DATABASE_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
+      
+      # JWT Secrets (cambiar en producción)
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_secret_access}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_secret_refresh}
+    
+    # ── Puerto ──────────────────────────────────────────────────────────
     ports:
       - "3000:3000"
-    env_file:
-      - ../../gateway/.env.example
+    
+    # ── Volúmenes para hot-reload ────────────────────────────────────────
+    # Los cambios en estos directorios se reflejan INSTANTÁNEAMENTE
+    # en el contenedor, y pnpm dev reinicia el servidor automáticamente
+    volumes:
+      # Mapear código fuente completo (archivos .ts)
+      - ../../../services:/app/services
+      - ../../../shared:/app/shared
+      - ../../../gateway:/app/gateway
+      
+      # Opcional: mapear node_modules también para cambios en dependencias
+      # - node_modules:/app/node_modules
+    
+    # ── Comando de inicio ───────────────────────────────────────────────
+    # pnpm dev ejecuta: turbo run dev --parallel
+    # tsx con --watch detecta cambios y reinicia
+    command: pnpm dev
+    
+    # ── Dependencia ─────────────────────────────────────────────────────
+    # No iniciar gateway hasta que DB esté healthy
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    networks:
+      - uniconnect-network
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  # ══════════════════════════════════════════════════════════════════════
+  # OTROS SERVICIOS (scaffolds por ahora)
+  # Completaremos después en Bloque 3
+  # ══════════════════════════════════════════════════════════════════════
 
   study-groups:
     image: node:20-alpine
+    container_name: uniconnect-study-groups
+    restart: unless-stopped
     working_dir: /app
-    command: ["sh", "-c", "echo study-groups scaffold"]
+    command: ["sh", "-c", "echo '⏳ study-groups service - pending implementation'"]
     ports:
       - "3101:3101"
     env_file:
       - ../../services/study-groups/.env.example
+    networks:
+      - uniconnect-network
 
   resources:
     image: node:20-alpine
+    container_name: uniconnect-resources
+    restart: unless-stopped
     working_dir: /app
-    command: ["sh", "-c", "echo resources scaffold"]
+    command: ["sh", "-c", "echo '⏳ resources service - pending implementation'"]
     ports:
       - "3103:3103"
     env_file:
       - ../../services/resources/.env.example
+    networks:
+      - uniconnect-network
 
   messaging:
     image: node:20-alpine
+    container_name: uniconnect-messaging
+    restart: unless-stopped
     working_dir: /app
-    command: ["sh", "-c", "echo messaging scaffold"]
+    command: ["sh", "-c", "echo '⏳ messaging service - pending implementation'"]
     ports:
       - "3104:3104"
     env_file:
       - ../../services/messaging/.env.example
+    networks:
+      - uniconnect-network
 
   profiles-catalog:
     image: node:20-alpine
+    container_name: uniconnect-profiles-catalog
+    restart: unless-stopped
     working_dir: /app
-    command: ["sh", "-c", "echo profiles-catalog scaffold"]
+    command: ["sh", "-c", "echo '⏳ profiles-catalog service - pending implementation'"]
     ports:
       - "3105:3105"
     env_file:
       - ../../services/profiles-catalog/.env.example
+    networks:
+      - uniconnect-network
 
   events:
     image: node:20-alpine
+    container_name: uniconnect-events
+    restart: unless-stopped
     working_dir: /app
-    command: ["sh", "-c", "echo events scaffold"]
+    command: ["sh", "-c", "echo '⏳ events service - pending implementation'"]
     ports:
       - "3106:3106"
     env_file:
       - ../../services/events/.env.example
+    networks:
+      - uniconnect-network
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# VOLÚMENES NOMBRADOS
+# ════════════════════════════════════════════════════════════════════════════
+volumes:
+  dbdata:
+    driver: local
+    # Ubicación física en tu máquina: /var/lib/docker/volumes/uniconnect_dbdata/_data
+    # Los datos persisten entre `docker-compose down/up`
+    # Para borrar: `docker-compose down -v`
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# REDES
+# ════════════════════════════════════════════════════════════════════════════
+networks:
+  uniconnect-network:
+    driver: bridge
+    # Comunicación entre servicios dentro de la red:
+    # - gateway → db:5432
+    # - gateway → otros microservicios por nombre
+    # Desde tu máquina (host): localhost:3000, localhost:5432, etc.

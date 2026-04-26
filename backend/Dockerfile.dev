@@ -1,0 +1,32 @@
+# ============================================================================
+# Dockerfile.dev
+# Imagen ESPECÍFICA para desarrollo con hot-reload
+# Instala dev dependencies y usa tsx --watch
+# ============================================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependencias necesarias
+RUN apk add --no-cache python3 make g++
+
+# Copiar manifiestos
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+
+# Instalar pnpm
+RUN npm install -g pnpm@9.12.0
+
+# Copiar código fuente
+COPY . .
+
+# Instalar TODAS las dependencias (incluyendo dev)
+RUN pnpm install
+
+# ============================================================================
+# Comando de desarrollo con hot-reload
+# ============================================================================
+# tsx: ejecutor TypeScript que entiende ESM modules
+# --watch: reinicia cuando detecta cambios en archivos
+# gateway/src/main.ts: punto de entrada
+CMD ["pnpm", "dev"]
