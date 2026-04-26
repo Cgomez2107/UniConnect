@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+type OAuthLoginErrorType = "domain_rejected" | "oauth_cancelled" | "oauth_failed";
+
 const withTimeout = async <T,>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -39,8 +41,69 @@ export function useOAuthCallbackFlow() {
   const recoveringRef = useRef(false);
   const lastRoutedRoleRef = useRef<"estudiante" | "admin" | null>(null);
   const lastProcessedUrlRef = useRef<string | null>(null);
+  const pendingLoginErrorRef = useRef<OAuthLoginErrorType | null>(null);
   const [waitExpired, setWaitExpired] = useState(false);
   const [hardTimeoutExpired, setHardTimeoutExpired] = useState(false);
+
+  const getParamFromUrl = useCallback((url: string, key: string) => {
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(`[?#&]${escapedKey}=([^&#]*)`, "i");
+    const match = url.match(pattern);
+    if (!match?.[1]) return null;
+
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return match[1];
+    }
+  }, []);
+
+  const getOAuthErrorTypeFromUrl = useCallback((url: string): OAuthLoginErrorType | null => {
+    const rawError = getParamFromUrl(url, "error")?.toLowerCase() ?? "";
+    const rawDescription = getParamFromUrl(url, "error_description")?.toLowerCase() ?? "";
+
+    if (!rawError && !rawDescription) {
+      return null;
+    }
+
+    if (rawError.includes("access_denied") || rawDescription.includes("cancel")) {
+      return "oauth_cancelled";
+    }
+
+    return "oauth_failed";
+  }, [getParamFromUrl]);
+
+  const getEmailFromAccessToken = useCallback((url: string) => {
+    const accessToken = getParamFromUrl(url, "access_token");
+    if (!accessToken) return null;
+
+    const parts = accessToken.split(".");
+    if (parts.length < 2) return null;
+
+    const payload = parts[1];
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+
+    try {
+      if (typeof atob !== "function") return null;
+      const decoded = atob(padded);
+      const parsed = JSON.parse(decoded) as { email?: string };
+      return parsed.email?.toLowerCase() ?? null;
+    } catch {
+      return null;
+    }
+  }, [getParamFromUrl]);
+
+  const replaceLoginWithError = useCallback((errorType?: OAuthLoginErrorType | null) => {
+    const effectiveError = errorType ?? pendingLoginErrorRef.current;
+    if (effectiveError) {
+      pendingLoginErrorRef.current = effectiveError;
+      router.replace(`/login?error_type=${encodeURIComponent(effectiveError)}` as any);
+      return;
+    }
+
+    router.replace("/login" as any);
+  }, []);
 
   const getSessionUser = useCallback(async () => {
     const session = await withTimeout(getCurrentSession.execute(), 2500, null);
@@ -122,9 +185,20 @@ export function useOAuthCallbackFlow() {
     (async () => {
       if (incomingUrl && lastProcessedUrlRef.current !== incomingUrl) {
         lastProcessedUrlRef.current = incomingUrl;
+        pendingLoginErrorRef.current = getOAuthErrorTypeFromUrl(incomingUrl);
+
+        const oauthEmail = getEmailFromAccessToken(incomingUrl);
+        if (oauthEmail && !oauthEmail.endsWith("@ucaldas.edu.co")) {
+          pendingLoginErrorRef.current = "domain_rejected";
+          await signOutUser.execute();
+          replaceLoginWithError("domain_rejected");
+          return;
+        }
+
         try {
           await resolveOAuthSession.execute(incomingUrl);
         } catch {
+          pendingLoginErrorRef.current = pendingLoginErrorRef.current ?? "oauth_failed";
           // Continuamos con recuperación por sesión/store.
         }
       }
@@ -151,7 +225,7 @@ export function useOAuthCallbackFlow() {
             return;
           }
 
-          router.replace("/login" as any);
+          replaceLoginWithError(pendingLoginErrorRef.current);
           return;
         }
       }
@@ -159,7 +233,7 @@ export function useOAuthCallbackFlow() {
       const email = sessionUser.email?.toLowerCase() ?? "";
       if (!email.endsWith("@ucaldas.edu.co")) {
         await signOutUser.execute();
-        router.replace("/login" as any);
+        replaceLoginWithError("domain_rejected");
         return;
       }
 
@@ -193,12 +267,12 @@ export function useOAuthCallbackFlow() {
       routeByRole(roleForRoute);
     })()
       .catch(() => {
-        router.replace("/login" as any);
+        replaceLoginWithError(pendingLoginErrorRef.current ?? "oauth_failed");
       })
       .finally(() => {
         recoveringRef.current = false;
       });
-  }, [incomingUrl, isAuthenticated, isHydrating, user, waitExpired, setUser, resolveOAuthSession, signOutUser, getSessionUser, waitForSessionUser, resolveRoleForRouting, routeByRoleOptimistic, routeByRole, getMyAuthProfile]);
+  }, [incomingUrl, isAuthenticated, isHydrating, user, waitExpired, setUser, resolveOAuthSession, signOutUser, getSessionUser, waitForSessionUser, resolveRoleForRouting, routeByRoleOptimistic, routeByRole, getMyAuthProfile, getOAuthErrorTypeFromUrl, getEmailFromAccessToken, replaceLoginWithError]);
 
   useEffect(() => {
     if (!hardTimeoutExpired || isAuthenticated) return;
@@ -218,7 +292,7 @@ export function useOAuthCallbackFlow() {
         // Si no se puede leer sesión, continuamos a login.
       }
 
-      router.replace("/login" as any);
+      replaceLoginWithError(pendingLoginErrorRef.current);
     })();
-  }, [hardTimeoutExpired, isAuthenticated, isHydrating, getSessionUser, resolveRoleForRouting, routeByRole]);
+  }, [hardTimeoutExpired, isAuthenticated, isHydrating, getSessionUser, resolveRoleForRouting, routeByRole, replaceLoginWithError]);
 }

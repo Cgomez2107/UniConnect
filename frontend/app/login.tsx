@@ -1,5 +1,6 @@
-import { Link, router } from "expo-router";
+import { Link, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -21,6 +22,7 @@ import { useLoginScreen } from "@/hooks/application/useLoginScreen";
 export default function LoginScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
+  const { error_type } = useLocalSearchParams<{ error_type?: string | string[] }>();
   const {
     email,
     password,
@@ -35,6 +37,26 @@ export default function LoginScreen() {
     signInWithGoogle,
     setPassword,
   } = useLoginScreen();
+
+  const oauthErrorCode = useMemo(() => {
+    if (Array.isArray(error_type)) return error_type[0] ?? "";
+    return error_type ?? "";
+  }, [error_type]);
+
+  const oauthCallbackError = useMemo(() => {
+    if (oauthErrorCode === "domain_rejected") {
+      return "Debes usar tu correo institucional (@ucaldas.edu.co) para ingresar con Google.";
+    }
+    if (oauthErrorCode === "oauth_cancelled") {
+      return "La autenticación con Google fue cancelada.";
+    }
+    if (oauthErrorCode === "oauth_failed") {
+      return "La autenticación con Google falló. Intenta nuevamente.";
+    }
+    return "";
+  }, [oauthErrorCode]);
+
+  const topErrorMessage = oauthCallbackError || formError;
 
   return (
     <KeyboardAvoidingView
@@ -64,7 +86,7 @@ export default function LoginScreen() {
             Inicia sesión
           </Text>
 
-          <ErrorBanner message={formError} />
+          <ErrorBanner message={topErrorMessage} />
 
           <AuthInput
             label="Correo institucional"
