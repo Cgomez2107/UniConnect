@@ -1,6 +1,6 @@
 import { Link, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -56,7 +56,22 @@ export default function LoginScreen() {
     return "";
   }, [oauthErrorCode]);
 
-  const topErrorMessage = oauthCallbackError || formError;
+  const topErrorMessage = oauthCallbackError || googleError || formError;
+  const [dismissedErrorMessage, setDismissedErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (topErrorMessage && topErrorMessage !== dismissedErrorMessage) {
+      return;
+    }
+    if (!topErrorMessage) {
+      setDismissedErrorMessage("");
+    }
+  }, [topErrorMessage, dismissedErrorMessage]);
+
+  const visibleErrorMessage =
+    topErrorMessage && topErrorMessage !== dismissedErrorMessage
+      ? topErrorMessage
+      : "";
 
   return (
     <KeyboardAvoidingView
@@ -86,7 +101,10 @@ export default function LoginScreen() {
             Inicia sesión
           </Text>
 
-          <ErrorBanner message={topErrorMessage} />
+          <ErrorBanner
+            message={visibleErrorMessage}
+            onClose={() => setDismissedErrorMessage(visibleErrorMessage)}
+          />
 
           <AuthInput
             label="Correo institucional"
@@ -120,12 +138,6 @@ export default function LoginScreen() {
             </Text>
             <View style={[styles.dividerLine, { backgroundColor: C.border }]} />
           </View>
-
-          {googleError ? (
-            <Text style={[styles.googleError, { color: C.error }]}>
-              {googleError}
-            </Text>
-          ) : null}
 
           <TouchableOpacity
             style={[
@@ -221,7 +233,6 @@ const styles = StyleSheet.create({
   },
   googleBtnText: { fontSize: 15, fontWeight: "600" },
   googleDomain: { fontSize: 11, marginTop: 1 },
-  googleError: { fontSize: 13, textAlign: "center", marginBottom: 10 },
 
   registerRow: { flexDirection: "row", justifyContent: "center" },
   registerText: { fontSize: 14 },
