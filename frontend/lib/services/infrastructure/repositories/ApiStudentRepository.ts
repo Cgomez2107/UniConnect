@@ -21,6 +21,9 @@ export class ApiStudentRepository implements IStudentRepository {
                 page: (page + 1).toString(),
                 limit: pageSize.toString()
             });
+            if (currentUserId) {
+                params.set("currentUserId", currentUserId);
+            }
 
             const data = await fetchApi<any[]>(`/students?${params.toString()}`);
             return (data ?? []).map(mapStudentSearchResultFromApi);

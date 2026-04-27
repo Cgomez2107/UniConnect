@@ -63,13 +63,18 @@ export class PostgresStudentRepository implements IStudentRepository {
     this.pool = buildPool(env);
   }
 
-  async searchBySubject(subjectId: string, searchTerm?: string): Promise<Student[]> {
+  async searchBySubject(subjectId: string, searchTerm?: string, currentUserId?: string): Promise<Student[]> {
     const values: Array<string> = [subjectId];
     const conditions = ["us.subject_id = $1"];
 
     if (searchTerm) {
       values.push(`%${searchTerm}%`);
       conditions.push(`pr.full_name ILIKE $${values.length}`);
+    }
+
+    if (currentUserId && currentUserId.trim()) {
+      values.push(currentUserId.trim());
+      conditions.push(`pr.id != $${values.length}`);
     }
 
     const result = await this.pool.query<StudentRow>(
