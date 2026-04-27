@@ -53,12 +53,24 @@ export class ProfilesCatalogController {
   }
 
   async getStudentProfile(
-    _req: IncomingMessage,
+    req: IncomingMessage,
     res: ServerResponse,
     studentId: string,
   ): Promise<void> {
     try {
-      const result = await this.getPublicProfile.execute(studentId);
+      const requestUrl = new URL(req.url ?? "/", "http://localhost");
+      const currentUserIdParam = requestUrl.searchParams.get("currentUserId");
+      const currentUserIdHeader = req.headers["x-user-id"];
+      const currentUserId =
+        (typeof currentUserIdParam === "string" && currentUserIdParam.trim())
+          ? currentUserIdParam
+          : typeof currentUserIdHeader === "string"
+          ? currentUserIdHeader
+          : Array.isArray(currentUserIdHeader)
+          ? currentUserIdHeader[0]
+          : undefined;
+
+      const result = await this.getPublicProfile.execute(studentId, currentUserId);
 
       if (!result) {
         sendError(res, 404, "Student not found");

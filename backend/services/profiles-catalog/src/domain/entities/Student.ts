@@ -12,4 +12,5 @@ export interface Student {
   readonly programName?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly sharedSubjects?: { id: string; name: string }[];
 }
