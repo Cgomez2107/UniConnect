@@ -26,6 +26,12 @@ function normalizeRole(role: unknown): UserRole {
   return "estudiante";
 }
 
+const INSTITUTIONAL_DOMAIN = "@ucaldas.edu.co";
+
+function isInstitutionalEmail(email?: string | null): boolean {
+  return Boolean(email && email.toLowerCase().endsWith(INSTITUTIONAL_DOMAIN));
+}
+
 interface AuthState {
   user: UserSession | null;
   isLoading: boolean;
@@ -68,6 +74,51 @@ function isAuthTimeoutError(error: unknown): boolean {
   return message.toLowerCase().includes("auth timeout");
 }
 
+async function processSessionUser(
+  sessionUser: any,
+  deps: {
+    clearLocalSessionUseCase: { execute: () => Promise<void> };
+    getMyAuthProfile: { execute: () => Promise<any> };
+  },
+  setState: (partial: Partial<AuthState>) => void,
+): Promise<boolean> {
+  const fallbackUser = buildFallbackUser(sessionUser);
+  const email = sessionUser.email?.toLowerCase();
+
+  if (!isInstitutionalEmail(email)) {
+    console.warn("[authStore] Usuario rechazado: no es de ucaldas.edu.co -", email);
+    await deps.clearLocalSessionUseCase.execute();
+    setState({ user: null, isAuthenticated: false, isHydrating: false });
+    return false;
+  }
+
+  let resolvedUser = fallbackUser;
+  try {
+    const profile = await withTimeout(deps.getMyAuthProfile.execute(), PROFILE_TIMEOUT_MS);
+    if (profile) {
+      resolvedUser = {
+        ...fallbackUser,
+        fullName: profile.full_name,
+        avatarUrl: profile.avatar_url,
+        role: normalizeRole(profile.role),
+        semester: profile.semester,
+        bio: profile.bio,
+      };
+    }
+  } catch {
+    // Si el perfil falla o vence timeout, continuamos con fallback.
+  }
+
+  setState({
+    user: resolvedUser,
+    isAuthenticated: true,
+    isHydrating: false,
+  });
+
+  registerAndSavePushToken(sessionUser.id).catch(() => {});
+  return true;
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: false,
@@ -108,43 +159,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const processSession = async (session: any) => {
       if (session?.user) {
-        const fallbackUser = buildFallbackUser(session.user);
         try {
-          const email = session.user.email?.toLowerCase();
-
-          if (!email?.endsWith('@ucaldas.edu.co')) {
-            console.warn("[authStore] Usuario rechazado: no es de ucaldas.edu.co -", email);
-            await clearLocalSessionUseCase.execute()
-            set({ user: null, isAuthenticated: false, isHydrating: false });
-            return;
-          }
-
-          // Resolvemos el rol antes de salir de hidratación para evitar
-          // el salto visual tabs -> admin en cuentas administrativas.
-          let resolvedUser = fallbackUser;
-          try {
-            const profile = await withTimeout(getMyAuthProfile.execute(), PROFILE_TIMEOUT_MS);
-            if (profile) {
-              resolvedUser = {
-                ...fallbackUser,
-                fullName: profile.full_name,
-                avatarUrl: profile.avatar_url,
-                role: normalizeRole(profile.role),
-                semester: profile.semester,
-                bio: profile.bio,
-              };
-            }
-          } catch {
-            // Si el perfil falla o vence timeout, continuamos con fallback.
-          }
-
-          set({
-            user: resolvedUser,
-            isAuthenticated: true,
-            isHydrating: false,
-          });
-
-          registerAndSavePushToken(session.user.id).catch(() => {});
+          await processSessionUser(
+            session.user,
+            { clearLocalSessionUseCase, getMyAuthProfile },
+            set,
+          );
         } catch (error) {
           if (isInvalidRefreshTokenError(error)) {
             console.warn("[authStore] Refresh token invalido durante hidratacion. Cerrando sesion local.");
@@ -155,6 +175,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (!isAuthTimeoutError(error)) {
             console.warn("[authStore] Error al procesar sesión:", error);
           }
+          const fallbackUser = buildFallbackUser(session.user);
           set({
             user: fallbackUser,
             isAuthenticated: true,
@@ -227,6 +248,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signIn: async (email, password) => {
     const container = DIContainer.getInstance()
     const signInWithPassword = container.getSignInWithPassword()
+    const getMyAuthProfile = container.getGetMyAuthProfile()
+    const clearLocalSessionUseCase = container.getClearLocalSession()
 
     const normalizedEmail = email.trim().toLowerCase();
     set({ isLoading: true, isHydrating: true });
@@ -237,6 +260,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         password,
       })
       if (!user) throw new Error("No se pudo iniciar sesión");
+
+      const accepted = await processSessionUser(
+        user,
+        { clearLocalSessionUseCase, getMyAuthProfile },
+        set,
+      );
+      if (!accepted) {
+        throw new Error("Debes usar tu correo institucional");
+      }
     } catch (error) {
       set({ user: null, isAuthenticated: false, isHydrating: false });
       throw error;

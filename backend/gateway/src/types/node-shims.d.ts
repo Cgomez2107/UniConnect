@@ -7,6 +7,7 @@ declare module "node:http" {
   }
 
   export interface ServerResponse {
+    setHeader(name: string, value: string): this;
     writeHead(statusCode: number, headers?: Record<string, string>): this;
     end(data?: string): void;
   }

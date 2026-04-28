@@ -10,6 +10,23 @@ export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
 
   useEffect(() => {
+    const allowE2EBypass =
+      typeof window !== "undefined" &&
+      __DEV__ &&
+      process.env.EXPO_PUBLIC_E2E_AUTH_BYPASS === "true";
+
+    if (allowE2EBypass) {
+      const mockUser = (window as any).__E2E_MOCK_AUTH__;
+      if (mockUser) {
+        useAuthStore.setState({
+          user: mockUser,
+          isAuthenticated: true,
+          isHydrating: false,
+        });
+        return;
+      }
+    }
+
     const unsubscribe = initialize();
     return unsubscribe;
   }, [initialize]);
