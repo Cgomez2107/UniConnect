@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse as NodeServerResponse } from "node:http";
 
 import type { GatewayEnv } from "../shared/config/env.js";
 import { proxyRequest } from "../shared/http/proxyRequest.js";
@@ -37,9 +37,32 @@ function isAuthRoute(pathname: string): boolean {
   return pathname.startsWith("/api/v1/auth");
 }
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse, env: GatewayEnv): Promise<void> {
+const setHeader = (res: NodeServerResponse, name: string, value: string) => {
+  res.setHeader(name, value);
+};
+
+async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env: GatewayEnv): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
+  const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
+
+  if (origin) {
+    setHeader(res, "Access-Control-Allow-Origin", origin);
+    setHeader(res, "Access-Control-Allow-Credentials", "true");
+    setHeader(res, "Vary", "Origin");
+  }
+
+  if (req.method === "OPTIONS") {
+    setHeader(res, "Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    setHeader(
+      res,
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With",
+    );
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
   // Inyectar token desde cookies si no viene en el header (Criterio 2)
   if (!req.headers.authorization) {

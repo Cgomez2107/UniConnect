@@ -10,6 +10,7 @@ expo-env.d.ts
 .env.local.backup
 .env.*.local
 .env
+.env.e2e
 
 # Dependencies
 node_modules/
