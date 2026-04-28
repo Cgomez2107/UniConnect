@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import type { ServerResponse } from "node:http";
 import { PostgreSQLAuthRepository } from "./infrastructure/repositories/PostgreSQLAuthRepository.js";
 import { PostgreSQLTokenRepository } from "./infrastructure/repositories/PostgreSQLTokenRepository.js";
 import { JWTService } from "./infrastructure/jwt/JWTService.js";
@@ -133,13 +134,14 @@ async function main() {
     }
   });
 
-  server.listen(PORT, () => {
+  (server as any).listen({ port: PORT, host: "0.0.0.0" }, () => {
     console.log(
       JSON.stringify({
         service: "auth",
         level: "info",
         message: "Service listening",
         port: PORT,
+        host: "0.0.0.0",
         nodeEnv,
       }),
     );
