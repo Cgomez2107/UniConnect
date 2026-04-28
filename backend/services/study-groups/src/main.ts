@@ -6,8 +6,10 @@ import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById
 import { ListApplicationsByRequest } from "./application/use-cases/ListApplicationsByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
+import { StudyGroupSubject, NotificationObserver } from "./domain/events/index.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
 import type { IApplicationRepository } from "./domain/repositories/IApplicationRepository.js";
+import type { INotificationRepository } from "./domain/events/index.js";
 import { InMemoryStudyRequestRepository } from "./infrastructure/database/InMemoryStudyRequestRepository.js";
 import { InMemoryApplicationRepository } from "./infrastructure/database/InMemoryApplicationRepository.js";
 import { PostgresApplicationRepository } from "./infrastructure/database/PostgresApplicationRepository.js";
@@ -53,9 +55,33 @@ function bootstrap(): void {
 
   const repository = createRepository(env);
   const applicationRepository = createApplicationRepository(env);
+  
+  // ✅ Crear Subject (centro de eventos del dominio)
+  const subject = new StudyGroupSubject("study-groups-domain");
+  
+  // ✅ Registrar observers que escuchen eventos
+  // Ejemplo: Observer de notificaciones
+  const mockNotificationRepository: INotificationRepository = {
+    async create(notification) {
+      // TODO: Aquí iría la persitencia real en BD
+      console.log(
+        JSON.stringify({
+          service: "study-groups",
+          level: "info",
+          message: "Notificación creada",
+          notification,
+        }),
+      );
+      return crypto.randomUUID();
+    },
+  };
+  const notificationObserver = new NotificationObserver(mockNotificationRepository);
+  subject.subscribe(notificationObserver);
+  
+  // Instanciar casos de uso
   const listOpenStudyRequests = new ListOpenStudyRequests(repository);
   const getStudyRequestById = new GetStudyRequestById(repository);
-  const createStudyRequest = new CreateStudyRequest(repository);
+  const createStudyRequest = new CreateStudyRequest(repository, subject);
   const listApplicationsByRequest = new ListApplicationsByRequest(applicationRepository);
   const applyToStudyRequest = new ApplyToStudyRequest(applicationRepository);
   const reviewApplication = new ReviewApplication(applicationRepository);
