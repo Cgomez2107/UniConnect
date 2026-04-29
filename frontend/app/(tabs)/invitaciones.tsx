@@ -12,6 +12,7 @@ import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
@@ -58,7 +59,14 @@ export default function SolicitudesHubScreen() {
   }, []);
 
   const openRequest = useCallback((requestId: string) => {
-    router.push(`/solicitud/${requestId}` as any);
+    router.push(`/study-groups/${requestId}` as any);
+  }, []);
+
+  const openManageRequest = useCallback((requestId: string) => {
+    const route = Platform.OS === "web"
+      ? `/study-groups/${requestId}/admin`
+      : `/study-groups/${requestId}`;
+    router.push(route as any);
   }, []);
 
   const openResource = useCallback((resourceId: string) => {
@@ -114,12 +122,12 @@ export default function SolicitudesHubScreen() {
         item={item}
         C={C}
         actionId={actionId}
-        onOpenRequest={openRequest}
+        onOpenRequest={openManageRequest}
         onOpenApplicantProfile={openApplicantProfile}
         onReview={handleReview}
       />
     ),
-    [C, actionId, handleReview, openApplicantProfile, openRequest],
+    [C, actionId, handleReview, openApplicantProfile, openManageRequest],
   );
 
   const renderSentCard = useCallback(

@@ -100,7 +100,7 @@ export default function FeedScreen() {
   }, [setSearch]);
 
   const openRequest = useCallback((requestId: string) => {
-    router.push(`/solicitud/${requestId}` as any);
+    router.push(`/study-groups/${requestId}` as any);
   }, []);
 
   const openStudentProfile = useCallback((studentId: string) => {
