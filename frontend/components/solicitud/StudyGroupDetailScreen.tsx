@@ -4,6 +4,7 @@
  */
 
 import { AdminDashboardLayout } from "@/components/dashboard/AdminDashboardLayout";
+import { AdminTransferNotification } from "@/components/dashboard/AdminTransferNotification";
 import { MemberChatView } from "@/components/dashboard/MemberChatView";
 import { RequestDetailActionBar } from "@/components/solicitud/RequestDetailActionBar";
 import { RequestDetailContent } from "@/components/solicitud/RequestDetailContent";
@@ -68,9 +69,21 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
   });
 
   if (Platform.OS === "web" && request?.id) {
+    const adminNotif = (
+      <AdminTransferNotification 
+        requestId={request.id} 
+        onAccepted={() => window.location.reload()} 
+      />
+    );
+
     // Si es administrador, mostrar dashboard completo
     if (canManageRequest) {
-      return <AdminDashboardLayout requestId={request.id} />;
+      return (
+        <>
+          {adminNotif}
+          <AdminDashboardLayout requestId={request.id} />
+        </>
+      );
     }
     // Si es miembro aceptado, mostrar solo chat grupal
     else if (applicationStatus === "aceptada") {
@@ -81,11 +94,16 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
         : request.faculty_name ?? "Sin materia";
 
       return (
-        <MemberChatView
-          requestId={request.id}
-          groupTitle={request.title ?? "Grupo de estudio"}
-          groupSubtitle={groupSubtitle}
-        />
+        <>
+          {adminNotif}
+          <MemberChatView
+            requestId={request.id}
+            groupTitle={request.title ?? "Grupo de estudio"}
+            groupSubtitle={groupSubtitle}
+            groupDescription={request.description}
+            facultyName={request.faculty_name}
+          />
+        </>
       );
     }
   }

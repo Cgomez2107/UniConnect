@@ -325,6 +325,30 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     [pendingApplications]
   );
 
+  const updateDescription = useCallback(
+    async (description: string) => {
+      if (!activeRequestId) return;
+      try {
+        await fetchApi(`/study-groups/${activeRequestId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ description }),
+        });
+        setActiveRequest((prev) => (prev ? { ...prev, description } : null));
+        setToast({
+          title: "Descripción actualizada",
+          message: "Los cambios se guardaron correctamente.",
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "No se pudo actualizar la descripción.";
+        setToast({
+          title: "Error al actualizar",
+          message,
+        });
+      }
+    },
+    [activeRequestId]
+  );
+
   const dismissToast = useCallback(() => setToast(null), []);
 
   return {
@@ -346,5 +370,6 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     handleReviewApplication,
     handleSendMessage,
     requestAdminTransfer,
+    updateDescription,
   };
 }

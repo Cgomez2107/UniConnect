@@ -1,17 +1,16 @@
 /**
  * components/dashboard/AdminDashboardLayout.tsx
  * 
- * Panel de administración de grupos de estudio con diseño profesional.
- * Uso de Gris Antracita #121212, tipografía grande y layout responsive 60/40.
+ * Panel de administración de grupos de estudio con diseño premium.
+ * Reconstrucción integral con todas las funcionalidades de gestión.
  */
 
-import React, { useEffect, useMemo, useState } from "react";
-
-import { AdminTransferNotification } from "@/components/dashboard/AdminTransferNotification";
-import { GroupChatPanel } from "@/components/dashboard/GroupChatPanel";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
 import { useAuthStore } from "@/store/useAuthStore";
-import type { StudyGroupMember } from "@/types/adminDashboard";
+import type { StudyGroupMember, GroupMessage } from "@/types/adminDashboard";
+import { fetchApi } from "@/lib/api/httpClient";
+import { supabase } from "@/lib/supabase";
 
 const ROLE_LABELS: Record<StudyGroupMember["role"], string> = {
   autor: "Creador",
@@ -24,406 +23,463 @@ interface AdminDashboardLayoutProps {
 }
 
 export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
-  const userId = useAuthStore((s) => s.user?.id ?? "");
+  const { user } = useAuthStore();
+  const userId = user?.id ?? "";
+  
   const {
     activeRequest,
-    pendingCards,
+    activeRequestId,
+    applications,
     members,
     messages,
     stats,
     loading,
     error,
-    reviewingApplicationId,
     sendingMessage,
-    transferingAdmin,
-    toast,
-    dismissToast,
-    handleReviewApplication,
     handleSendMessage,
     requestAdminTransfer,
+    handleReviewApplication,
+    updateDescription,
   } = useStudyGroupDashboard({ requestId });
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => dismissToast(), 4200);
-    return () => clearTimeout(timer);
-  }, [toast, dismissToast]);
-
-  const groupTitle = activeRequest?.title ?? "Grupo de estudio";
-  const groupSubtitle = activeRequest?.subject_name ?? "";
-  const groupDescription =
-    activeRequest?.description ?? "Grupo de estudio colaborativo";
-  const facultyName = activeRequest?.faculty_name ?? "";
-
+  const [newMessage, setNewMessage] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Estados de UI
+  const [activeTab, setActiveTab] = useState<"pendientes" | "aceptadas" | "rechazadas">("pendientes");
   const [transferMode, setTransferMode] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [hasPendingTransfer, setHasPendingTransfer] = useState(false);
+  const [loadingTransferCheck, setLoadingTransferCheck] = useState(true);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showDelegateWarning, setShowDelegateWarning] = useState(false);
+  const [leavingGroup, setLeavingGroup] = useState(false);
+  
+  // Edición de descripción
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState("");
 
-  const currentUserRole = useMemo(() => {
-    if (!userId) return null;
-    return members.find((member) => member.userId === userId)?.role ?? null;
+  useEffect(() => {
+    if (activeRequest?.description) setDescDraft(activeRequest.description);
+  }, [activeRequest?.description]);
+
+  // Global click tracker for debugging
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      console.log("Global click at:", e.target);
+    };
+    window.addEventListener("click", handleGlobalClick);
+    return () => window.removeEventListener("click", handleGlobalClick);
+  }, []);
+
+  const isAdmin = useMemo(() => {
+    const member = members.find(m => m.userId === userId);
+    return member?.role === 'admin' || member?.role === 'autor';
   }, [members, userId]);
 
-  const canTransferAdmin = currentUserRole === "autor" || currentUserRole === "admin";
+  const isOnlyAdmin = useMemo(() => {
+    const adminCount = members.filter(m => m.role === 'admin' || m.role === 'autor').length;
+    return adminCount <= 1;
+  }, [members]);
 
-  const candidateMembers = useMemo(
-    () => members.filter((member) => member.userId !== userId),
-    [members, userId]
-  );
+  // Filtrado de solicitudes según pestaña
+  const filteredApps = useMemo(() => {
+    return applications.filter(app => {
+      if (activeTab === "pendientes") return app.status === "pendiente";
+      if (activeTab === "aceptadas") return app.status === "aceptada";
+      return app.status === "rechazada";
+    });
+  }, [applications, activeTab]);
 
-  const canLeaveAdmin = canTransferAdmin && candidateMembers.length > 0;
+  const handleSend = () => {
+    if (!newMessage.trim() || sendingMessage) return;
+    handleSendMessage(newMessage);
+    setNewMessage("");
+  };
+
+  const handleLeaveDirectly = async () => {
+    if (!requestId) return;
+    setLeavingGroup(true);
+    try {
+      await fetchApi(`/study-groups/${requestId}/leave`, { method: "POST" });
+      window.location.reload();
+    } catch (err) {
+      console.error("Error leaving group:", err);
+    } finally {
+      setLeavingGroup(false);
+    }
+  };
+
+  const checkPendingTransfers = React.useCallback(async () => {
+    if (!userId || !activeRequestId) {
+      setLoadingTransferCheck(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from("study_request_admin_transfers")
+        .select("id")
+        .eq("request_id", activeRequestId)
+        .eq("from_user_id", userId)
+        .eq("status", "pendiente")
+        .maybeSingle();
+      
+      setHasPendingTransfer(!!data);
+    } catch (err) {
+      console.error("Error checking transfers:", err);
+      setHasPendingTransfer(false);
+    } finally {
+      setLoadingTransferCheck(false);
+    }
+  }, [userId, activeRequestId]);
+
+  useEffect(() => {
+    checkPendingTransfers();
+  }, [checkPendingTransfers]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[#1A1A1A]">
+        <div className="w-12 h-12 border-4 border-[#0047AB]/20 border-t-[#0047AB] rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="dark min-h-screen bg-[#121212] text-white font-body-main antialiased">
-      {/* ============================================================================ */}
-      {/* HERO SECTION: Cabecera Informativa */}
-      {/* ============================================================================ */}
-      <section className="bg-[#121212] border-b border-[#2D2D2D] px-10 py-12 sticky top-20 z-30">
-        <div className="max-w-[1440px] mx-auto">
-          <div className="flex items-start justify-between gap-8 mb-6">
-            <div className="flex-1">
-              {/* Subject Badge */}
-              {groupSubtitle && (
-                <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 bg-blue-600/20 border border-blue-500/40 rounded-full">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  <span className="text-xs font-semibold text-blue-300 uppercase tracking-widest">
-                    {groupSubtitle} {facultyName && `• ${facultyName}`}
-                  </span>
-                </div>
-              )}
-
-              {/* Title */}
-              <h1 className="text-4xl font-bold text-white mb-3 leading-tight tracking-tight">
-                {groupTitle}
-              </h1>
-
-              {/* Description */}
-              <p className="text-lg text-neutral-400 max-w-2xl leading-relaxed">
-                {groupDescription}
+    <div className="flex h-full w-full bg-[#1A1A1A] text-white overflow-hidden font-['Inter']">
+      
+      {/* COLUMNA IZQUIERDA: Chat (65%) */}
+      <div className="w-[65%] flex flex-col border-r border-[#2D2D2D] relative">
+        <div className="p-6 bg-[#1A1A1A]/80 backdrop-blur-md border-b border-[#2D2D2D] flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-black font-['Manrope'] tracking-tight">Chat Grupal</h2>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                {members.length} MIEMBROS ACTIVOS
               </p>
             </div>
-
-            {/* Action Button: Abandonar Grupo */}
-            {canTransferAdmin && (
-              <div className="flex-shrink-0">
-                <div className="relative group">
-                  <button
-                    className={`px-6 py-3 text-sm font-semibold rounded-xl border transition-all ${
-                      canLeaveAdmin
-                        ? "border-red-500/50 text-red-300 hover:bg-red-500/10 hover:border-red-500"
-                        : "border-neutral-700 text-neutral-500 opacity-50 cursor-not-allowed"
-                    }`}
-                    onClick={() => {
-                      if (!canLeaveAdmin) return;
-                      setTransferMode((prev) => !prev);
-                      setSelectedCandidateId(null);
-                    }}
-                    disabled={!canLeaveAdmin}
-                    title={
-                      !canLeaveAdmin
-                        ? "Necesitas al menos un miembro para transferir"
-                        : undefined
-                    }
-                  >
-                    {transferMode ? "Cancelar salida" : "Abandonar Grupo"}
-                  </button>
-                  {!canLeaveAdmin && (
-                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-48 px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-xs text-neutral-300 z-50 whitespace-normal">
-                      Necesitas al menos un miembro para transferir la administración
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
-
-          {/* Stats */}
-          <div className="flex gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800">
-              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-              <span className="text-xs font-semibold text-neutral-300 uppercase tracking-widest">
-                {stats.pending} PENDIENTES
-              </span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-              <span className="text-xs font-semibold text-neutral-300 uppercase tracking-widest">
-                {stats.accepted} ACEPTADAS
-              </span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800">
-              <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-              <span className="text-xs font-semibold text-neutral-300 uppercase tracking-widest">
-                {stats.rejected} RECHAZADAS
-              </span>
-            </div>
+          <div className="flex items-center gap-4">
+             <button className="text-neutral-500 hover:text-white transition-colors">
+                <span className="material-symbols-outlined">search</span>
+             </button>
+             <button className="text-neutral-500 hover:text-white transition-colors">
+                <span className="material-symbols-outlined">more_vert</span>
+             </button>
           </div>
         </div>
-      </section>
 
-      {/* Toast Notification */}
-      {toast ? (
-        <div className="fixed right-10 top-40 z-50 w-96 rounded-xl border border-red-500/40 bg-red-500/10 p-6 text-red-100 shadow-2xl">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold">{toast.title}</p>
-              <p className="text-xs text-red-200/80 mt-1">{toast.message}</p>
-            </div>
-            <button
-              className="text-xs text-red-200/80 hover:text-red-100"
-              onClick={dismissToast}
-              aria-label="Cerrar"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* ============================================================================ */}
-      {/* MAIN CONTENT: Two-Column Layout (60/40) */}
-      {/* ============================================================================ */}
-      <main className="px-10 py-8 max-w-[1440px] mx-auto">
-        <div className="grid grid-cols-12 gap-8 h-[calc(100vh-300px)]">
-          {/* LEFT COLUMN: Solicitudes + Integrantes (60%) */}
-          <div className="col-span-12 lg:col-span-7 space-y-8 overflow-y-auto custom-scrollbar pr-4">
-            {/* ===== SOLICITUDES SECTION ===== */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">
-                  Solicitudes de Ingreso
-                </h2>
-                <span className="px-3 py-1 bg-neutral-900 text-neutral-400 rounded-full text-xs font-bold uppercase tracking-widest">
-                  {stats.pending} PENDIENTES
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900/5 via-transparent to-transparent">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex flex-col ${msg.senderId === userId ? "items-end" : "items-start"}`}>
+              <div className="flex items-center gap-2 mb-1.5 px-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                  {msg.senderFullName || "Integrante"}
+                </span>
+                <span className="text-[9px] text-neutral-700">
+                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-
-              {pendingCards.length === 0 && !loading ? (
-                <div className="bg-[#1E1E1E] border border-[#2D2D2D] rounded-xl p-8 text-center text-neutral-500">
-                  No hay solicitudes pendientes
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {pendingCards.map((request) => (
-                    <div
-                      key={request.id}
-                      className="bg-[#1E1E1E] border border-[#2D2D2D] p-8 rounded-xl hover:border-neutral-700 transition-colors"
-                    >
-                      <div className="flex flex-col items-center text-center space-y-4">
-                        {/* Profile Image */}
-                        {request.avatarUrl ? (
-                          <img
-                            alt={request.name}
-                            className="w-20 h-20 rounded-full object-cover ring-2 ring-neutral-700"
-                            src={request.avatarUrl}
-                          />
-                        ) : (
-                          <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center text-white font-bold text-lg">
-                            {request.name
-                              .split(" ")
-                              .map((part) => part[0])
-                              .join("")}
-                          </div>
-                        )}
-
-                        {/* Name & Info */}
-                        <div>
-                          <h3 className="text-lg font-bold text-white">
-                            {request.name}
-                          </h3>
-                          <p className="text-sm text-neutral-400 mt-1">
-                            {request.timeLabel}
-                          </p>
-                        </div>
-
-                        {/* Buttons */}
-                        <div className="flex gap-3 w-full pt-2">
-                          {reviewingApplicationId === request.id ? (
-                            <button className="flex-1 py-3 bg-blue-600/20 border border-blue-500/50 text-blue-300 font-semibold rounded-lg text-sm hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2">
-                              <span className="w-4 h-4 border-2 border-blue-300/30 border-t-blue-300 rounded-full animate-spin"></span>
-                              Procesando...
-                            </button>
-                          ) : (
-                            <button
-                              className="flex-1 py-3 bg-emerald-600/20 border border-emerald-500/50 text-emerald-300 font-semibold rounded-lg text-sm hover:bg-emerald-600/30 transition-all"
-                              onClick={() =>
-                                void handleReviewApplication(request.id, "aceptada")
-                              }
-                            >
-                              Aceptar
-                            </button>
-                          )}
-                          <button
-                            className="flex-1 py-3 bg-red-600/10 border border-red-500/30 text-red-300 font-semibold rounded-lg text-sm hover:bg-red-600/20 transition-all"
-                            onClick={() =>
-                              void handleReviewApplication(request.id, "rechazada")
-                            }
-                          >
-                            Rechazar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* ===== INTEGRANTES SECTION ===== */}
-            <section>
-              <h2 className="text-2xl font-bold text-white mb-6">
-                Integrantes del Grupo
-              </h2>
-
-              {transferMode && (
-                <div className="mb-4 rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-3 text-xs text-blue-300">
-                  Selecciona a quién le transferirás la administración antes de salir.
-                </div>
-              )}
-
-              <div className="bg-[#1E1E1E] border border-[#2D2D2D] rounded-xl overflow-hidden">
-                {members.length === 0 && !loading ? (
-                  <div className="p-8 text-center text-neutral-500">
-                    No hay integrantes todavía
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[#2D2D2D]">
-                    {members.map((member) => (
-                      <div
-                        key={member.userId}
-                        className="p-6 flex items-center justify-between hover:bg-neutral-900/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-4 flex-1">
-                          {/* Avatar */}
-                          {member.avatarUrl ? (
-                            <img
-                              alt={member.fullName ?? "Miembro"}
-                              className="w-12 h-12 rounded-full object-cover"
-                              src={member.avatarUrl}
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500 font-bold">
-                              {(member.fullName ?? "?")
-                                .split(" ")
-                                .map((part) => part[0])
-                                .join("")}
-                            </div>
-                          )}
-
-                          {/* Name & Role */}
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-base font-semibold text-white">
-                                {member.fullName ?? "Sin nombre"}
-                              </span>
-                              <span
-                                className={`text-xs px-2 py-1 rounded font-bold uppercase tracking-widest ${
-                                  member.role === "autor"
-                                    ? "bg-purple-600/20 text-purple-300"
-                                    : member.role === "admin"
-                                      ? "bg-blue-600/20 text-blue-300"
-                                      : "bg-neutral-800 text-neutral-400"
-                                }`}
-                              >
-                                {ROLE_LABELS[member.role]}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2">
-                          {transferMode && member.userId !== userId ? (
-                            <button
-                              className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-all ${
-                                selectedCandidateId === member.userId
-                                  ? "border-blue-500 text-blue-300 bg-blue-500/10"
-                                  : "border-[#2D2D2D] text-neutral-400 hover:border-blue-500 hover:text-blue-300"
-                              }`}
-                              onClick={() => setSelectedCandidateId(member.userId)}
-                            >
-                              {selectedCandidateId === member.userId
-                                ? "✓ Seleccionado"
-                                : "Seleccionar"}
-                            </button>
-                          ) : (
-                            <button className="p-2 text-neutral-500 hover:text-white transition-colors text-lg hover:scale-110 transition-transform">
-                              💬
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
+                msg.senderId === userId 
+                  ? "bg-[#0047AB] text-white rounded-tr-none shadow-lg shadow-blue-900/20" 
+                  : "bg-[#2D2D2D] text-neutral-200 rounded-tl-none border border-white/5"
+              }`}>
+                {msg.content}
+                {msg.senderId === userId && (
+                   <span className="material-symbols-outlined text-[12px] ml-2 align-middle opacity-50">done_all</span>
                 )}
               </div>
+            </div>
+          ))}
+        </div>
 
-              {/* Transfer Confirmation */}
-              {transferMode && (
-                <div className="mt-4 flex items-center justify-between gap-4 px-6 py-4 bg-neutral-900/50 border border-neutral-800 rounded-xl">
-                  <span className="text-sm text-neutral-400">
-                    {selectedCandidateId
-                      ? "Candidato listo para transferencia"
-                      : "Selecciona un integrante"}
-                  </span>
-                  <button
-                    className="px-6 py-2 text-sm font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!selectedCandidateId || transferingAdmin}
-                    onClick={() => {
-                      if (!selectedCandidateId) return;
-                      void requestAdminTransfer(selectedCandidateId);
-                      setTransferMode(false);
-                      setSelectedCandidateId(null);
-                    }}
-                  >
-                    {transferingAdmin ? "Enviando..." : "Confirmar Transferencia"}
-                  </button>
-                </div>
-              )}
-            </section>
+        <div className="p-6 bg-[#1A1A1A] border-t border-[#2D2D2D]">
+          <div className="flex items-center gap-4 bg-[#262626] p-4 rounded-2xl border border-white/5 focus-within:border-[#0047AB]/50 transition-all shadow-inner">
+            <span className="material-symbols-outlined text-neutral-500">attach_file</span>
+            <input 
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder="Escribe un mensaje aquí..."
+              className="flex-1 bg-transparent border-none text-white text-sm focus:ring-0 placeholder:text-neutral-600"
+            />
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-neutral-500 hover:text-yellow-500 cursor-pointer">mood</span>
+              <button
+                onClick={handleSend}
+                disabled={!newMessage.trim() || sendingMessage}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  newMessage.trim() && !sendingMessage
+                    ? "bg-[#0047AB] text-white shadow-lg shadow-blue-900/40 scale-105"
+                    : "bg-neutral-800 text-neutral-600"
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* COLUMNA DERECHA: Gestión Administrativa (35%) */}
+      <div className="w-[35%] flex flex-col bg-[#161616] overflow-y-auto custom-scrollbar border-l border-[#2D2D2D]">
+        {/* BOTÓN SALIR */}
+        <div className="p-6">
+          <button 
+            onClick={() => {
+              if (loadingTransferCheck) return;
+              if (hasPendingTransfer) return;
+              if (transferMode) {
+                setTransferMode(false);
+                setSelectedCandidateId(null);
+                return;
+              }
+              if (isOnlyAdmin) setShowDelegateWarning(true);
+              else setShowLeaveConfirm(true);
+            }}
+            disabled={hasPendingTransfer || loadingTransferCheck || leavingGroup}
+            className={`w-full py-4 rounded-2xl border flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-[0.2em] transition-all relative z-[9999] cursor-pointer ${
+              hasPendingTransfer
+                ? "bg-neutral-900 border-neutral-800 text-neutral-600 cursor-not-allowed"
+                : transferMode 
+                  ? "bg-red-900/20 border-red-500/50 text-red-500 hover:bg-red-900/30 shadow-lg shadow-red-900/10"
+                  : "bg-[#1E1E1E] border-white/5 text-white hover:bg-[#252525] hover:border-white/10"
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">
+              {transferMode ? "close" : "logout"}
+            </span>
+            <span>
+              {hasPendingTransfer 
+                ? "Solicitud enviada" 
+                : transferMode ? "Cancelar Salida" : "Salir del Grupo"}
+            </span>
+          </button>
+        </div>
+
+        {/* INFO GRUPO */}
+        <div className="px-6 pb-8 border-b border-[#2D2D2D]">
+          <span className="text-[9px] font-black uppercase tracking-widest text-[#0047AB] mb-2 block">
+            {activeRequest?.faculty_name || "FACULTAD DE INTELIGENCIA ARTIFICIAL E INGENIERÍAS"}
+          </span>
+          <h1 className="text-3xl font-black font-['Manrope'] tracking-tighter text-white mb-2 leading-none">
+            {activeRequest?.title || "Cargando..."}
+          </h1>
+          <div className="flex items-center gap-3 mb-6">
+             <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-lg border border-white/5">
+                <span className="material-symbols-outlined text-[12px] text-neutral-400">menu_book</span>
+                <span className="text-[10px] font-bold text-neutral-300">{activeRequest?.subject_name || "General"}</span>
+             </div>
+             <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-lg border border-white/5">
+                <span className="material-symbols-outlined text-[12px] text-neutral-400">group</span>
+                <span className="text-[10px] font-bold text-neutral-300">{members.length} / {activeRequest?.max_members || 0}</span>
+             </div>
           </div>
 
-          {/* RIGHT COLUMN: Chat Grupal (40%) */}
-          <div className="col-span-12 lg:col-span-5 h-full sticky top-32">
-            <section className="h-full flex flex-col bg-[#1E1E1E] border border-[#2D2D2D] rounded-xl overflow-hidden shadow-xl">
-              {/* Chat Header */}
-              <div className="p-6 border-b border-[#2D2D2D] flex items-center justify-between flex-shrink-0">
-                <div>
-                  <h2 className="text-xl font-bold text-white">
-                    Chat Grupal
-                  </h2>
-                  <p className="text-emerald-400 text-xs font-semibold mt-1 flex items-center">
-                    <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></span>
-                    {members.length} MIEMBROS ACTIVOS
-                  </p>
-                </div>
-              </div>
-
-              {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <GroupChatPanel
-                  groupName={activeRequest?.title ?? "Chat grupal"}
-                  onlineCount={members.length}
-                  messages={messages}
-                  currentUserId={userId}
-                  onSendMessage={handleSendMessage}
-                  isSending={sendingMessage}
+          <div className="group relative bg-[#1E1E1E] rounded-2xl p-4 border border-white/5 hover:border-[#0047AB]/30 transition-all">
+             <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Descripción</span>
+                <button 
+                  onClick={() => {
+                    if (isEditingDesc) {
+                       updateDescription(descDraft);
+                       setIsEditingDesc(false);
+                    } else {
+                       setIsEditingDesc(true);
+                    }
+                  }}
+                  className="text-[#0047AB] hover:text-blue-400 transition-colors"
+                >
+                   <span className="material-symbols-outlined text-sm">{isEditingDesc ? "check" : "edit_square"}</span>
+                </button>
+             </div>
+             {isEditingDesc ? (
+                <textarea 
+                  value={descDraft}
+                  onChange={(e) => setDescDraft(e.target.value)}
+                  className="w-full bg-[#161616] border-none rounded-xl text-sm text-neutral-300 p-3 min-h-[80px] focus:ring-1 focus:ring-[#0047AB]"
                 />
-              </div>
-            </section>
+             ) : (
+                <p className="text-sm text-neutral-400 leading-relaxed">
+                  {activeRequest?.description || "Sin descripción disponible."}
+                </p>
+             )}
           </div>
         </div>
 
-        {/* Error Display */}
-        {error ? (
-          <div className="mt-6 p-4 bg-red-500/10 border border-red-500/40 rounded-xl text-sm text-red-300">
-            {error}
-          </div>
-        ) : null}
-      </main>
+        {/* GESTIÓN DE SOLICITUDES */}
+        <div className="p-6 border-b border-[#2D2D2D]">
+           <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                 <h3 className="text-xs font-black uppercase tracking-widest text-white">Solicitudes</h3>
+                 <span className="px-2 py-0.5 bg-[#0047AB] text-white text-[9px] font-black rounded-full">
+                    {stats?.pending || 0}
+                 </span>
+              </div>
+              <div className="flex bg-[#1E1E1E] p-1 rounded-xl border border-white/5">
+                 {(["pendientes", "aceptadas", "rechazadas"] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${
+                        activeTab === tab ? "bg-[#0047AB] text-white shadow-lg shadow-blue-900/20" : "text-neutral-500 hover:text-neutral-300"
+                      }`}
+                    >
+                       {tab}
+                    </button>
+                 ))}
+              </div>
+           </div>
 
-      {/* Notificación de transferencia de administración */}
-      {requestId && <AdminTransferNotification requestId={requestId} />}
+           <div className="space-y-3 min-h-[100px]">
+              {filteredApps.length > 0 ? filteredApps.map(app => (
+                 <div key={app.id} className="p-4 bg-[#1E1E1E] rounded-2xl border border-white/5 flex items-center justify-between group animate-in fade-in slide-in-from-right-4">
+                    <div className="flex items-center gap-3">
+                       <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center border border-white/5 overflow-hidden">
+                          {app.profiles?.avatar_url ? <img src={app.profiles.avatar_url} className="w-full h-full object-cover" /> : <span className="text-xs font-black">{app.profiles?.full_name?.substring(0,1) || "?"}</span>}
+                       </div>
+                       <div>
+                          <h4 className="text-[11px] font-black text-white">{app.profiles?.full_name || "Cargando..."}</h4>
+                          <span className="text-[9px] text-neutral-500">{new Date(app.created_at).toLocaleDateString()}</span>
+                       </div>
+                    </div>
+                    {app.status === "pendiente" && (
+                       <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleReviewApplication(app.id, "aceptada")}
+                            className="w-8 h-8 rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white transition-all flex items-center justify-center border border-green-500/20"
+                          >
+                             <span className="material-symbols-outlined text-sm">check</span>
+                          </button>
+                          <button 
+                            onClick={() => handleReviewApplication(app.id, "rechazada")}
+                            className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
+                          >
+                             <span className="material-symbols-outlined text-sm">close</span>
+                          </button>
+                       </div>
+                    )}
+                 </div>
+              )) : (
+                 <div className="py-8 flex flex-col items-center justify-center opacity-30">
+                    <span className="material-symbols-outlined text-3xl mb-2">inbox</span>
+                    <p className="text-[10px] font-black uppercase tracking-widest">Sin solicitudes</p>
+                 </div>
+              )}
+           </div>
+        </div>
+
+        {/* LISTA DE INTEGRANTES */}
+        <div className="p-6">
+           <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500">Integrantes del Grupo</h3>
+              <span className="text-[10px] font-black text-neutral-700">{members.length} TOTAL</span>
+           </div>
+
+           <div className="space-y-4">
+              {members.map(member => (
+                 <div 
+                   key={member.userId} 
+                   className={`p-4 rounded-2xl border transition-all ${
+                     selectedCandidateId === member.userId ? "bg-[#0047AB]/10 border-[#0047AB]" : "bg-[#1E1E1E] border-white/5"
+                   }`}
+                 >
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                          <div className="w-11 h-11 rounded-2xl bg-neutral-800 border border-white/5 overflow-hidden shadow-inner">
+                             {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-black">{member.fullName?.substring(0,1)}</div>}
+                          </div>
+                          <div>
+                             <h4 className="text-sm font-black text-neutral-200">{member.fullName || "Integrante"}</h4>
+                             <span className={`text-[9px] font-black uppercase tracking-widest ${member.role === "autor" ? "text-yellow-500" : "text-neutral-500"}`}>
+                                {ROLE_LABELS[member.role]}
+                             </span>
+                          </div>
+                       </div>
+
+                       <div className="flex gap-2">
+                          {transferMode && member.userId !== userId ? (
+                             <button
+                               onClick={() => setSelectedCandidateId(member.userId)}
+                               className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                 selectedCandidateId === member.userId ? "bg-[#0047AB] text-white" : "bg-white/5 text-neutral-400 hover:bg-white/10"
+                               }`}
+                             >
+                                {selectedCandidateId === member.userId ? "Elegido" : "Elegir"}
+                             </button>
+                          ) : (
+                             <>
+                                <button className="w-9 h-9 rounded-xl bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5">
+                                   <span className="material-symbols-outlined text-sm">chat_bubble</span>
+                                </button>
+                                <button className="w-9 h-9 rounded-xl bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5">
+                                   <span className="material-symbols-outlined text-sm">more_horiz</span>
+                                </button>
+                             </>
+                          )}
+                       </div>
+                    </div>
+                 </div>
+              ))}
+           </div>
+
+           {transferMode && (
+              <div className="mt-8 animate-in slide-in-from-bottom-4">
+                 <button 
+                   onClick={async () => {
+                     if (selectedCandidateId) {
+                        await requestAdminTransfer(selectedCandidateId);
+                        setTransferMode(false);
+                        setHasPendingTransfer(true);
+                     }
+                   }}
+                   disabled={!selectedCandidateId}
+                   className="w-full py-4 bg-[#0047AB] text-white font-black rounded-2xl hover:bg-[#00378B] shadow-xl shadow-blue-900/30 transition-all active:scale-95 disabled:opacity-30"
+                 >
+                    CONFIRMAR Y SALIR
+                 </button>
+              </div>
+           )}
+        </div>
+      </div>
+
+      {/* MODALES */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] flex items-center justify-center p-6">
+          <div className="bg-[#1A1A1A] border border-white/10 rounded-[32px] p-10 max-w-sm w-full shadow-2xl">
+            <h3 className="text-2xl font-black font-['Manrope'] text-white text-center mb-2">¿Abandonar grupo?</h3>
+            <p className="text-neutral-500 text-center text-sm mb-8">Esta acción es permanente e inmediata.</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={handleLeaveDirectly} className="w-full py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-900/20">SÍ, SALIR</button>
+              <button onClick={() => setShowLeaveConfirm(false)} className="w-full py-4 bg-transparent text-neutral-500 font-bold rounded-2xl hover:bg-white/5 transition-all">CANCELAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDelegateWarning && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] flex items-center justify-center p-6">
+          <div className="bg-[#1A1A1A] border border-[#0047AB]/30 rounded-[32px] p-10 max-w-sm w-full shadow-2xl">
+            <div className="w-16 h-16 bg-[#0047AB]/10 rounded-3xl flex items-center justify-center mb-6 mx-auto border border-[#0047AB]/20">
+              <span className="material-symbols-outlined text-3xl text-[#0047AB]">shield_person</span>
+            </div>
+            <h3 className="text-2xl font-black font-['Manrope'] text-white text-center mb-2">Acción Requerida</h3>
+            <p className="text-neutral-500 text-center text-sm leading-relaxed mb-10">Como único administrador, debes delegar el control antes de salir.</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={() => { setShowDelegateWarning(false); setTransferMode(true); }} className="w-full py-4 bg-[#0047AB] text-white font-black rounded-2xl hover:bg-[#00378B] shadow-lg shadow-blue-900/30 transition-all">EMPEZAR DELEGACIÓN</button>
+              <button onClick={() => setShowDelegateWarning(false)} className="w-full py-4 bg-transparent text-neutral-500 font-bold rounded-2xl hover:bg-white/5 transition-all">CERRAR</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

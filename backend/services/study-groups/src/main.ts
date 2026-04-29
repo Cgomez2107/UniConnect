@@ -150,6 +150,20 @@ function bootstrap(): void {
   );
 
   const server = createServer((req, res) => {
+    const resp = res as any;
+    // Manejo de CORS
+    const origin = req.headers.origin || "*";
+    resp.setHeader("Access-Control-Allow-Origin", origin);
+    resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning, bypass-tunnel-reminder");
+    resp.setHeader("Access-Control-Allow-Credentials", "true");
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     void (async () => {
       const handled = await handleStudyGroupsRoutes(req, res, controller);
       if (!handled) {
