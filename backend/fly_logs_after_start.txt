@@ -1,0 +1,100 @@
+﻿[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._load (node:internal/modules/cjs/loader:1038:27)
+[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at node:internal/main/run_main_module:28:49 {
+[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'MODULE_NOT_FOUND',
+[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  requireStack: []
+[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T14:56:56Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 14:56:56 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T14:56:57Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T14:56:57Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T14:56:57Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.903523] reboot: Restarting system
+[2m2026-04-29T14:57:00Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:00.942319757 [01KQCVRK78T9V0QQNJCSB15E37:main] Running Firecracker v1.14.4
+[2m2026-04-29T14:57:00Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:00.942513956 [01KQCVRK78T9V0QQNJCSB15E37:main] Listening on API socket ("/fc.sock").
+[2m2026-04-29T14:57:01Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-29T14:57:01Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node dist/main.js` as nodejs
+[2m2026-04-29T14:57:01Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-29T14:57:02Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Machine started in 1.581s
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 14:57:02 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]node:internal/modules/cjs/loader:1210
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  throw err;
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  ^
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Error: Cannot find module '/app/dist/main.js'
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._load (node:internal/modules/cjs/loader:1038:27)
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at node:internal/main/run_main_module:28:49 {
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'MODULE_NOT_FOUND',
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  requireStack: []
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T14:57:02Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.895376] reboot: Restarting system
+[2m2026-04-29T14:57:05Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:05.656786114 [01KQCVRK78T9V0QQNJCSB15E37:main] Running Firecracker v1.14.4
+[2m2026-04-29T14:57:05Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:05.656969223 [01KQCVRK78T9V0QQNJCSB15E37:main] Listening on API socket ("/fc.sock").
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node dist/main.js` as nodejs
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-29T14:57:06Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Machine started in 1.238s
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 14:57:06 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]node:internal/modules/cjs/loader:1210
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  throw err;
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  ^
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Error: Cannot find module '/app/dist/main.js'
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._load (node:internal/modules/cjs/loader:1038:27)
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at node:internal/main/run_main_module:28:49 {
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'MODULE_NOT_FOUND',
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  requireStack: []
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T14:57:06Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T14:57:07Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T14:57:07Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T14:57:07Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.893884] reboot: Restarting system
+[2m2026-04-29T14:57:10Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:10.882680426 [01KQCVRK78T9V0QQNJCSB15E37:main] Running Firecracker v1.14.4
+[2m2026-04-29T14:57:10Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:10.882980564 [01KQCVRK78T9V0QQNJCSB15E37:main] Listening on API socket ("/fc.sock").
+[2m2026-04-29T14:57:11Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-29T14:57:11Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node dist/main.js` as nodejs
+[2m2026-04-29T14:57:11Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-29T14:57:12Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Machine started in 1.301s
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 14:57:12 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]node:internal/modules/cjs/loader:1210
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  throw err;
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  ^
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Error: Cannot find module '/app/dist/main.js'
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._load (node:internal/modules/cjs/loader:1038:27)
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at node:internal/main/run_main_module:28:49 {
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'MODULE_NOT_FOUND',
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  requireStack: []
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T14:57:12Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.921518] reboot: Restarting system
+[2m2026-04-29T14:57:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:16.058810260 [01KQCVRK78T9V0QQNJCSB15E37:main] Running Firecracker v1.14.4
+[2m2026-04-29T14:57:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:16.058984309 [01KQCVRK78T9V0QQNJCSB15E37:main] Listening on API socket ("/fc.sock").
+[2m2026-04-29T14:57:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node dist/main.js` as nodejs
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-29T14:57:17Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Machine started in 1.171s
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 14:57:17 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]node:internal/modules/cjs/loader:1210
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  throw err;
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  ^
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Error: Cannot find module '/app/dist/main.js'
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._load (node:internal/modules/cjs/loader:1038:27)
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at node:internal/main/run_main_module:28:49 {
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'MODULE_NOT_FOUND',
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  requireStack: []
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T14:57:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T14:57:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T14:57:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T14:57:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.918439] reboot: Restarting system

@@ -1,0 +1,47 @@
+name: frontend-e2e
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-e2e.yml"
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-e2e.yml"
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      E2E_BASE_URL: http://127.0.0.1:8081
+      E2E_OAUTH_BAD_EMAIL: noinst@correo.com
+      E2E_OAUTH_BAD_PASSWORD: dummy-password
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Run Playwright E2E
+        run: pnpm test:e2e

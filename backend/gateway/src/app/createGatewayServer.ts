@@ -1,9 +1,21 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse as NodeServerResponse } from "node:http";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import type { GatewayEnv } from "../shared/config/env.js";
 import { proxyRequest } from "../shared/http/proxyRequest.js";
 import { sendJson } from "../shared/http/sendJson.js";
 import { JWTMiddleware } from "../middleware/JWTMiddleware.js";
+
+function getAppVersion(): string {
+  try {
+    const packageJsonPath = join(process.cwd(), "package.json");
+    const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { version?: string };
+    return manifest.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 
 function isStudyGroupsRoute(pathname: string): boolean {
   return pathname === "/api/v1/study-groups" || pathname.startsWith("/api/v1/study-groups/");
@@ -37,9 +49,33 @@ function isAuthRoute(pathname: string): boolean {
   return pathname.startsWith("/api/v1/auth");
 }
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse, env: GatewayEnv): Promise<void> {
+const setHeader = (res: NodeServerResponse, name: string, value: string) => {
+  res.setHeader(name, value);
+};
+
+async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env: GatewayEnv): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
+  const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
+  const appVersion = getAppVersion();
+
+  if (origin) {
+    setHeader(res, "Access-Control-Allow-Origin", origin);
+    setHeader(res, "Access-Control-Allow-Credentials", "true");
+    setHeader(res, "Vary", "Origin");
+  }
+
+  if (req.method === "OPTIONS") {
+    setHeader(res, "Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    setHeader(
+      res,
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With, bypass-tunnel-reminder, ngrok-skip-browser-warning",
+    );
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
   // Inyectar token desde cookies si no viene en el header (Criterio 2)
   if (!req.headers.authorization) {
@@ -51,10 +87,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, env: Gat
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
-      service: "gateway",
       status: "ok",
-      environment: env.nodeEnv,
-      timestamp: new Date().toISOString(),
+      version: appVersion,
     });
     return;
   }

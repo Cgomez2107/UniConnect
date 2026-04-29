@@ -1,0 +1,100 @@
+﻿[2m2026-04-29T14:57:48Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:57:48.134506126 [01KQCVRK78T9V0QQNJCSB15E37:main] Listening on API socket ("/fc.sock").
+[2m2026-04-29T14:57:48Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node dist/main.js` as nodejs
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-29T14:57:49Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Machine started in 1.324s
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 14:57:49 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]node:internal/modules/cjs/loader:1210
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  throw err;
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  ^
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Error: Cannot find module '/app/dist/main.js'
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._load (node:internal/modules/cjs/loader:1038:27)
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at node:internal/main/run_main_module:28:49 {
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'MODULE_NOT_FOUND',
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  requireStack: []
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T14:57:49Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T14:57:50Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T14:57:50Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T14:57:50Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.913136] reboot: Restarting system
+[2m2026-04-29T14:58:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:58:16.963117922 [01KQCVRK78T9V0QQNJCSB15E37:main] Running Firecracker v1.14.4
+[2m2026-04-29T14:58:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T14:58:16.963319981 [01KQCVRK78T9V0QQNJCSB15E37:main] Listening on API socket ("/fc.sock").
+[2m2026-04-29T14:58:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-29T14:58:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node dist/main.js` as nodejs
+[2m2026-04-29T14:58:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-29T14:58:18Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Machine started in 1.362s
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]node:internal/modules/cjs/loader:1210
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  throw err;
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  ^
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Error: Cannot find module '/app/dist/main.js'
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Module._load (node:internal/modules/cjs/loader:1038:27)
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at node:internal/main/run_main_module:28:49 {
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'MODULE_NOT_FOUND',
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  requireStack: []
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 14:58:18 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T14:58:18Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.940510] reboot: Restarting system
+[2m2026-04-29T14:58:21Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]machine has reached its max restart count of 10
+[2m2026-04-29T14:58:46Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Pulling container image registry.fly.io/uniconnect-study-groups@sha256:b9d922b447194e1af9d7e52afb1166565cb6906140f44eb6b29851ea12194c90
+[2m2026-04-29T14:58:47Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Successfully prepared image registry.fly.io/uniconnect-study-groups@sha256:b9d922b447194e1af9d7e52afb1166565cb6906140f44eb6b29851ea12194c90 (1.014636865s)
+[2m2026-04-29T14:58:48Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Configuring firecracker
+[2m2026-04-29T15:01:05Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Pulling container image registry.fly.io/uniconnect-study-groups@sha256:849f6152defa8ea75d2af474d35ed0bff23c959bde640ea9ac74c956fea9bdef
+[2m2026-04-29T15:01:08Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Successfully prepared image registry.fly.io/uniconnect-study-groups@sha256:849f6152defa8ea75d2af474d35ed0bff23c959bde640ea9ac74c956fea9bdef (2.609739522s)
+[2m2026-04-29T15:01:09Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Configuring firecracker
+[2m2026-04-29T15:02:15Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T15:02:15.384603450 [01KQCW42A18AQ64PNB42A09ANP:main] Running Firecracker v1.14.4
+[2m2026-04-29T15:02:15Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T15:02:15.384795429 [01KQCW42A18AQ64PNB42A09ANP:main] Listening on API socket ("/fc.sock").
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node dist/services/study-groups/src/main.js` as nodejs
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-29T15:02:16Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Machine started in 1.205s
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 15:02:16 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]node:internal/modules/esm/resolve:873
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]        ^
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'pg' imported from /app/dist/services/study-groups/src/infrastructure/database/PostgresApplicationRepository.js
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at packageResolve (node:internal/modules/esm/resolve:873:9)
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'ERR_MODULE_NOT_FOUND'
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T15:02:16Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T15:02:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T15:02:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T15:02:17Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.922788] reboot: Restarting system
+[2m2026-04-29T15:02:20Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T15:02:20.382414157 [01KQCW42A18AQ64PNB42A09ANP:main] Running Firecracker v1.14.4
+[2m2026-04-29T15:02:20Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026-04-29T15:02:20.382703255 [01KQCW42A18AQ64PNB42A09ANP:main] Listening on API socket ("/fc.sock").
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 3040ac0)...
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Preparing to run: `docker-entrypoint.sh node dist/services/study-groups/src/main.js` as nodejs
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-04-29T15:02:21Z[0m runner[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Machine started in 1.366s
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]2026/04/29 15:02:21 INFO SSH listening listen_address=[fdaa:6d:90b0:a7b:505:821b:2211:2]:22
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]node:internal/modules/esm/resolve:873
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]        ^
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'pg' imported from /app/dist/services/study-groups/src/infrastructure/database/PostgresApplicationRepository.js
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at packageResolve (node:internal/modules/esm/resolve:873:9)
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]  code: 'ERR_MODULE_NOT_FOUND'
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]}
+[2m2026-04-29T15:02:21Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m]Node.js v20.20.2
+[2m2026-04-29T15:02:22Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 1
+[2m2026-04-29T15:02:22Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-04-29T15:02:22Z[0m app[d8962dea2e4558] [32mfra[0m [[34minfo[0m][    1.932184] reboot: Restarting system
