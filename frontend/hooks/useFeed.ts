@@ -307,7 +307,21 @@ export function useFeed(): UseFeedReturn {
     }
   }, [search, userSubjectIds, subjectsResolved])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  // Initial load once subjects are resolved
+  useEffect(() => {
+    if (subjectsResolved) {
+      fetchData()
+    }
+  }, [subjectsResolved, fetchData])
+
+  // Refetch when search or filters change (after initial load)
+  useEffect(() => {
+    if (!subjectsResolved) return
+    // Only re-fetch if we have subjects and search terms changed
+    if (userSubjectIds.length > 0 && search.length > 0) {
+      fetchData()
+    }
+  }, [search, userSubjectIds])
 
   const loadMore = useCallback(async () => {
     if (!subjectsResolved || loadingMore || !hasMoreRef.current || loading) return

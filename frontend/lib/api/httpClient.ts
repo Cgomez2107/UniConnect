@@ -72,6 +72,7 @@ export async function fetchApi<T>(
     const headers = new Headers(options.headers);
     headers.set("Content-Type", "application/json");
     headers.set("bypass-tunnel-reminder", "true");
+    headers.set("ngrok-skip-browser-warning", "true");
 
     if (accessToken) {
         headers.set("Authorization", `Bearer ${accessToken}`);

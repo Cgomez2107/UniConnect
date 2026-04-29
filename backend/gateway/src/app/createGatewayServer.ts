@@ -57,7 +57,7 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
     setHeader(
       res,
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With",
+      "Content-Type, Authorization, X-Requested-With, bypass-tunnel-reminder, ngrok-skip-browser-warning",
     );
     res.writeHead(204);
     res.end();
