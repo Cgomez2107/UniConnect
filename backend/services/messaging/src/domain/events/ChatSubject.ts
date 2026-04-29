@@ -13,6 +13,7 @@
  */
 
 import type { ChatEvent, ChatChannel } from "./ChatEvents.js";
+import type { ISubject } from "./ISubject.js";
 
 /**
  * Observer específico para chat
@@ -38,7 +39,7 @@ export interface IChatObserver {
  * Cada canal mantiene su propia lista de observers.
  * Un evento en "grupo:123" NO se emite a observers de "dm:abc:def"
  */
-export class ChatSubject {
+export class ChatSubject implements ISubject {
   /**
    * Map: canal → lista de observers
    * Ejemplo:

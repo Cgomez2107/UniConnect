@@ -12,8 +12,8 @@
 /**
  * Evento: Nuevo mensaje en conversación
  */
-export interface NewMessageEvent {
-  readonly type: "NewMessage";
+export interface NuevoMensajeEvent {
+  readonly type: "NUEVO_MENSAJE";
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly messageId: string;
@@ -22,7 +22,7 @@ export interface NewMessageEvent {
   readonly senderName: string;
   readonly content: string;
   readonly conversationType: "group" | "dm"; // ← Para saber qué canal usar
-  readonly payload?: Record<string, unknown>; // ← Payload decorado (file, mentions, reactions)
+  readonly payload: Record<string, unknown>; // ← DTO decorado (file, mentions, reactions)
 }
 
 /**
@@ -53,7 +53,7 @@ export interface UserTypingEvent {
  * Type Union: Todos los eventos de chat
  */
 export type ChatEvent =
-  | NewMessageEvent
+  | NuevoMensajeEvent
   | MessageReadEvent
   | UserTypingEvent;
 
@@ -80,4 +80,11 @@ export function createGroupChannel(groupId: string): ChatChannel {
 export function createDmChannel(userId1: string, userId2: string): ChatChannel {
   const sorted = [userId1, userId2].sort();
   return `dm:${sorted[0]}:${sorted[1]}`;
+}
+
+/**
+ * Alias para compatibilidad con criterios de aceptacion
+ */
+export function createDMChannel(userId1: string, userId2: string): ChatChannel {
+  return createDmChannel(userId1, userId2);
 }

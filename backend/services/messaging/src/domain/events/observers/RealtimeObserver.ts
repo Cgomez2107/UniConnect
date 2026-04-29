@@ -38,7 +38,7 @@ export interface IRealtimeService {
  * Observer que emite a WebSocket
  *
  * Flujo:
- * 1. NewMessageEvent ocurre en grupo:123
+ * 1. NUEVO_MENSAJE ocurre en grupo:123
  * 2. RealtimeObserver.handle() se ejecuta
  * 3. Convierte evento a JSON
  * 4. iRealtimeService.broadcast() lo envía a WebSocket
@@ -51,7 +51,7 @@ export class RealtimeObserver implements IChatObserver {
 
   async handle(event: ChatEvent, channel: ChatChannel): Promise<void> {
     switch (event.type) {
-      case "NewMessage":
+      case "NUEVO_MENSAJE":
         // Emitir nuevo mensaje a través de WebSocket
         await this.realtimeService.broadcast(channel, {
           type: "new_message",
@@ -61,6 +61,7 @@ export class RealtimeObserver implements IChatObserver {
             senderId: event.senderId,
             senderName: event.senderName,
             content: event.content,
+            payload: event.payload,
             timestamp: event.timestamp.toISOString(),
           },
         });

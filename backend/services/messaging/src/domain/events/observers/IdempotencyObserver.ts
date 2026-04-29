@@ -38,7 +38,7 @@ export interface IIdempotencyStore {
  * Observer que previene doble emisión
  *
  * Flujo:
- * 1. NewMessageEvent llega
+ * 1. NUEVO_MENSAJE llega
  * 2. IdempotencyObserver.handle() verifica si messageId ya fue procesado
  * 3. Si ya existe: loguear y retornar (no duplicar)
  * 4. Si es nuevo: marcar como procesado y permitir
@@ -51,8 +51,8 @@ export class IdempotencyObserver implements IChatObserver {
   constructor(private readonly idempotencyStore: IIdempotencyStore) {}
 
   async handle(event: ChatEvent, channel: ChatChannel): Promise<void> {
-    // Solo proteger NewMessage (otros eventos no tienen messageId)
-    if (event.type !== "NewMessage") {
+    // Solo proteger NUEVO_MENSAJE (otros eventos no tienen messageId)
+    if (event.type !== "NUEVO_MENSAJE") {
       return; // Otros tipos no necesitan idempotencia
     }
 

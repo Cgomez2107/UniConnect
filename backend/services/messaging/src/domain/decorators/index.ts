@@ -8,3 +8,4 @@ export { MessageDecorator } from "./MessageDecorator.js";
 export { FileDecorator, type FileMetadata } from "./FileDecorator.js";
 export { MentionDecorator, type Mention } from "./MentionDecorator.js";
 export { ReactionDecorator, type Reaction } from "./ReactionDecorator.js";
+export { extractMentionsFromContent } from "./mentionParser.js";
