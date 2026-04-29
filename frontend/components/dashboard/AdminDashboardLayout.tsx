@@ -8,6 +8,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useRouter } from "expo-router";
+import { useMessaging } from "@/hooks/application/useMessaging";
 import type { StudyGroupMember, GroupMessage } from "@/types/adminDashboard";
 import { fetchApi } from "@/lib/api/httpClient";
 import { supabase } from "@/lib/supabase";
@@ -23,6 +25,7 @@ interface AdminDashboardLayoutProps {
 }
 
 export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
+  // --- AUTH & HOOK DATA ---
   const { user } = useAuthStore();
   const userId = user?.id ?? "";
   
@@ -42,11 +45,11 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     updateDescription,
   } = useStudyGroupDashboard({ requestId });
 
-  const [newMessage, setNewMessage] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  // Estados de UI
+  // --- UI STATES ---
   const [activeTab, setActiveTab] = useState<"pendientes" | "aceptadas" | "rechazadas">("pendientes");
+  const [newMessage, setNewMessage] = useState("");
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState("");
   const [transferMode, setTransferMode] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [hasPendingTransfer, setHasPendingTransfer] = useState(false);
@@ -54,35 +57,31 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showDelegateWarning, setShowDelegateWarning] = useState(false);
   const [leavingGroup, setLeavingGroup] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [startingChat, setStartingChat] = useState(false);
   
-  // Edición de descripción
-  const [isEditingDesc, setIsEditingDesc] = useState(false);
-  const [descDraft, setDescDraft] = useState("");
+  const router = useRouter();
+  const { getOrCreateConversation } = useMessaging();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (activeRequest?.description) setDescDraft(activeRequest.description);
-  }, [activeRequest?.description]);
-
-  // Global click tracker for debugging
-  useEffect(() => {
-    const handleGlobalClick = (e: MouseEvent) => {
-      console.log("Global click at:", e.target);
-    };
-    window.addEventListener("click", handleGlobalClick);
-    return () => window.removeEventListener("click", handleGlobalClick);
-  }, []);
-
+  // --- DERIVED STATE ---
   const isAdmin = useMemo(() => {
     const member = members.find(m => m.userId === userId);
     return member?.role === 'admin' || member?.role === 'autor';
   }, [members, userId]);
 
+  const isCreator = useMemo(() => {
+    return activeRequest?.author_id === userId;
+  }, [activeRequest?.author_id, userId]);
+
   const isOnlyAdmin = useMemo(() => {
     const adminCount = members.filter(m => m.role === 'admin' || m.role === 'autor').length;
+    // IMPORTANTE: El Creador (autor) SIEMPRE debe delegar antes de salir para transferir la propiedad,
+    // incluso si existen otros administradores, de lo contrario el backend rechazará la salida directa.
+    if (isCreator) return true;
     return adminCount <= 1;
-  }, [members]);
+  }, [members, isCreator]);
 
-  // Filtrado de solicitudes según pestaña
   const filteredApps = useMemo(() => {
     return applications.filter(app => {
       if (activeTab === "pendientes") return app.status === "pendiente";
@@ -91,6 +90,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     });
   }, [applications, activeTab]);
 
+  // --- HANDLERS ---
   const handleSend = () => {
     if (!newMessage.trim() || sendingMessage) return;
     handleSendMessage(newMessage);
@@ -103,10 +103,24 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     try {
       await fetchApi(`/study-groups/${requestId}/leave`, { method: "POST" });
       window.location.reload();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error leaving group:", err);
+      // Opcional: Podríamos mostrar un mensaje de error visual aquí
     } finally {
       setLeavingGroup(false);
+    }
+  };
+
+  const handlePrivateChat = async (targetUserId: string) => {
+    if (targetUserId === userId || startingChat) return;
+    setStartingChat(true);
+    try {
+      const conversation = await getOrCreateConversation(userId, targetUserId);
+      router.push(`/chat/${conversation.id}` as any);
+    } catch (err) {
+      console.error("Error starting chat:", err);
+    } finally {
+      setStartingChat(false);
     }
   };
 
@@ -116,7 +130,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
       return;
     }
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("study_request_admin_transfers")
         .select("id")
         .eq("request_id", activeRequestId)
@@ -133,9 +147,48 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     }
   }, [userId, activeRequestId]);
 
+  // --- EFFECTS ---
+  useEffect(() => {
+    if (activeRequest?.description) setDescDraft(activeRequest.description);
+  }, [activeRequest?.description]);
+
   useEffect(() => {
     checkPendingTransfers();
   }, [checkPendingTransfers]);
+
+  useEffect(() => {
+    if (!activeRequestId || !userId) return;
+
+    const channel = supabase.channel(`presence_${activeRequestId}`, {
+      config: {
+        presence: {
+          key: userId,
+        },
+      },
+    });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const newState = channel.presenceState();
+        const activeIds = Object.values(newState)
+          .flat()
+          .map((p: any) => p.user_id)
+          .filter(Boolean);
+        setOnlineUsers(activeIds);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({
+            user_id: userId,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [activeRequestId, userId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -143,6 +196,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     }
   }, [messages]);
 
+  // --- RENDER HELPERS ---
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-[#1A1A1A]">
@@ -154,14 +208,14 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   return (
     <div className="flex h-full w-full bg-[#1A1A1A] text-white overflow-hidden font-['Inter']">
       
-      {/* COLUMNA IZQUIERDA: Chat (65%) */}
+      {/* COLUMNA IZQUIERDA: Chat Grupal (65%) */}
       <div className="w-[65%] flex flex-col border-r border-[#2D2D2D] relative">
         <div className="p-6 bg-[#1A1A1A]/80 backdrop-blur-md border-b border-[#2D2D2D] flex items-center justify-between">
           <div>
             <h2 className="text-xl font-black font-['Manrope'] tracking-tight">Chat Grupal</h2>
             <div className="flex items-center gap-2 mt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#0047AB] animate-pulse" />
+              <p className="text-[10px] text-[#0047AB] font-bold uppercase tracking-wider">
                 {members.length} MIEMBROS ACTIVOS
               </p>
             </div>
@@ -231,8 +285,9 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
 
       {/* COLUMNA DERECHA: Gestión Administrativa (35%) */}
       <div className="w-[35%] flex flex-col bg-[#161616] overflow-y-auto custom-scrollbar border-l border-[#2D2D2D]">
-        {/* BOTÓN SALIR */}
-        <div className="p-6">
+        
+        {/* BOTÓN SALIR (Alineado a la derecha) */}
+        <div className="p-6 flex justify-end">
           <button 
             onClick={() => {
               if (loadingTransferCheck) return;
@@ -242,19 +297,18 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                 setSelectedCandidateId(null);
                 return;
               }
+              // Validación corregida: El Creador siempre debe delegar
               if (isOnlyAdmin) setShowDelegateWarning(true);
               else setShowLeaveConfirm(true);
             }}
             disabled={hasPendingTransfer || loadingTransferCheck || leavingGroup}
-            className={`w-full py-4 rounded-2xl border flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-[0.2em] transition-all relative z-[9999] cursor-pointer ${
+            className={`py-2.5 px-6 rounded-xl border flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all relative z-[9999] cursor-pointer ${
               hasPendingTransfer
                 ? "bg-neutral-900 border-neutral-800 text-neutral-600 cursor-not-allowed"
-                : transferMode 
-                  ? "bg-red-900/20 border-red-500/50 text-red-500 hover:bg-red-900/30 shadow-lg shadow-red-900/10"
-                  : "bg-[#1E1E1E] border-white/5 text-white hover:bg-[#252525] hover:border-white/10"
+                : "border-red-600 text-red-600 hover:bg-red-600 hover:text-white shadow-lg shadow-red-900/5"
             }`}
           >
-            <span className="material-symbols-outlined text-sm">
+            <span className="material-symbols-outlined text-[18px]">
               {transferMode ? "close" : "logout"}
             </span>
             <span>
@@ -351,22 +405,30 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                           <span className="text-[9px] text-neutral-500">{new Date(app.created_at).toLocaleDateString()}</span>
                        </div>
                     </div>
-                    {app.status === "pendiente" && (
-                       <div className="flex gap-2">
-                          <button 
-                            onClick={() => handleReviewApplication(app.id, "aceptada")}
-                            className="w-8 h-8 rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white transition-all flex items-center justify-center border border-green-500/20"
-                          >
-                             <span className="material-symbols-outlined text-sm">check</span>
-                          </button>
-                          <button 
-                            onClick={() => handleReviewApplication(app.id, "rechazada")}
-                            className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
-                          >
-                             <span className="material-symbols-outlined text-sm">close</span>
-                          </button>
-                       </div>
-                    )}
+                    <div className="flex gap-2">
+                       <button 
+                         onClick={() => handlePrivateChat(app.applicant_id)}
+                         className="w-8 h-8 rounded-lg bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5"
+                       >
+                          <span className="material-symbols-outlined text-sm">chat_bubble</span>
+                       </button>
+                       {app.status === "pendiente" && (
+                          <>
+                             <button 
+                               onClick={() => handleReviewApplication(app.id, "aceptada")}
+                               className="w-8 h-8 rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white transition-all flex items-center justify-center border border-green-500/20"
+                             >
+                                <span className="material-symbols-outlined text-sm">check</span>
+                             </button>
+                             <button 
+                               onClick={() => handleReviewApplication(app.id, "rechazada")}
+                               className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
+                             >
+                                <span className="material-symbols-outlined text-sm">close</span>
+                             </button>
+                          </>
+                       )}
+                    </div>
                  </div>
               )) : (
                  <div className="py-8 flex flex-col items-center justify-center opacity-30">
@@ -387,10 +449,10 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
            <div className="space-y-4">
               {members.map(member => (
                  <div 
-                   key={member.userId} 
-                   className={`p-4 rounded-2xl border transition-all ${
-                     selectedCandidateId === member.userId ? "bg-[#0047AB]/10 border-[#0047AB]" : "bg-[#1E1E1E] border-white/5"
-                   }`}
+                    key={member.userId} 
+                    className={`p-4 rounded-2xl border transition-all ${
+                      selectedCandidateId === member.userId ? "bg-[#0047AB]/10 border-[#0047AB]" : "bg-[#1E1E1E] border-white/5"
+                    }`}
                  >
                     <div className="flex items-center justify-between">
                        <div className="flex items-center gap-4">
@@ -399,25 +461,38 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                           </div>
                           <div>
                              <h4 className="text-sm font-black text-neutral-200">{member.fullName || "Integrante"}</h4>
-                             <span className={`text-[9px] font-black uppercase tracking-widest ${member.role === "autor" ? "text-yellow-500" : "text-neutral-500"}`}>
-                                {ROLE_LABELS[member.role]}
-                             </span>
+                             <div className="flex items-center gap-2 mt-0.5">
+                               <span className={`text-[9px] font-black uppercase tracking-widest ${member.role === "autor" ? "text-yellow-500" : "text-neutral-500"}`}>
+                                  {ROLE_LABELS[member.role]}
+                               </span>
+                               <span className="text-[8px] text-neutral-600">•</span>
+                               <div className="flex items-center gap-1">
+                                 <div className={`w-1.5 h-1.5 rounded-full ${onlineUsers.includes(member.userId) ? "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-neutral-600"}`} />
+                                 <span className={`text-[9px] font-bold uppercase tracking-tight ${onlineUsers.includes(member.userId) ? "text-emerald-500" : "text-neutral-600"}`}>
+                                   {onlineUsers.includes(member.userId) ? "Conectado" : "Desconectado"}
+                                 </span>
+                               </div>
+                             </div>
                           </div>
                        </div>
 
                        <div className="flex gap-2">
                           {transferMode && member.userId !== userId ? (
                              <button
-                               onClick={() => setSelectedCandidateId(member.userId)}
-                               className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                 selectedCandidateId === member.userId ? "bg-[#0047AB] text-white" : "bg-white/5 text-neutral-400 hover:bg-white/10"
-                               }`}
+                                onClick={() => setSelectedCandidateId(member.userId)}
+                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                  selectedCandidateId === member.userId ? "bg-[#0047AB] text-white" : "bg-white/5 text-neutral-400 hover:bg-white/10"
+                                }`}
                              >
                                 {selectedCandidateId === member.userId ? "Elegido" : "Elegir"}
                              </button>
                           ) : (
                              <>
-                                <button className="w-9 h-9 rounded-xl bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5">
+                                <button 
+                                  onClick={() => handlePrivateChat(member.userId)}
+                                  className={`w-9 h-9 rounded-xl bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5 ${member.userId === userId ? "opacity-30 cursor-not-allowed" : "active:scale-90"}`}
+                                  disabled={member.userId === userId}
+                                >
                                    <span className="material-symbols-outlined text-sm">chat_bubble</span>
                                 </button>
                                 <button className="w-9 h-9 rounded-xl bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5">
@@ -451,7 +526,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
         </div>
       </div>
 
-      {/* MODALES */}
+      {/* MODALES DE ACCIÓN */}
       {showLeaveConfirm && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] flex items-center justify-center p-6">
           <div className="bg-[#1A1A1A] border border-white/10 rounded-[32px] p-10 max-w-sm w-full shadow-2xl">

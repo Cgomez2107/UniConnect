@@ -4,6 +4,7 @@ import { useApplications } from "@/hooks/application/useApplications";
 import { useStudyRequests } from "@/hooks/application/useStudyRequests";
 import { useApplicationsRealtime } from "@/hooks/useApplicationsRealtime";
 import { fetchApi } from "@/lib/api/httpClient";
+import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Application, StudyRequest } from "@/types";
 import type { GroupMessage, StudyGroupMember } from "@/types/adminDashboard";
@@ -85,20 +86,23 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     const uniqueIds = Array.from(new Set(applicantIds));
     if (uniqueIds.length === 0) return apps;
 
-    const profiles = await Promise.all(
-      uniqueIds.map(async (id) => {
-        try {
-          return await fetchApi<PublicProfileSummary>(`/profiles/${id}/public`);
-        } catch {
-          return null;
-        }
-      })
-    );
+    // Búsqueda masiva de perfiles en Supabase para evitar múltiples peticiones REST
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', uniqueIds);
 
-    const profileMap = new Map<string, PublicProfileSummary>();
-    profiles.forEach((profile) => {
-      if (profile?.id) profileMap.set(profile.id, profile);
-    });
+    if (profilesError) {
+      console.error("Error al enriquecer aplicaciones:", profilesError);
+      return apps;
+    }
+
+    const profileMap = new Map<string, any>();
+    if (profilesData) {
+      profilesData.forEach((profile) => {
+        profileMap.set(profile.id, profile);
+      });
+    }
 
     return apps.map((app) => {
       const profile = profileMap.get(app.applicant_id);
@@ -106,8 +110,8 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
       return {
         ...app,
         profiles: {
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
+          full_name: profile.full_name ?? "Integrante",
+          avatar_url: profile.avatar_url ?? null,
         },
       } as Application;
     });

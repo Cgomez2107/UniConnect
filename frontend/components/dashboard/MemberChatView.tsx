@@ -11,6 +11,8 @@ import { GroupChatPanel } from "@/components/dashboard/GroupChatPanel";
 import { AdminTransferNotification } from "@/components/dashboard/AdminTransferNotification";
 import { useAuthStore } from "@/store/useAuthStore";
 import { fetchApi } from "@/lib/api/httpClient";
+import { useRouter } from "expo-router";
+import { useMessaging } from "@/hooks/application/useMessaging";
 import type { GroupMessage, StudyGroupMember } from "@/types/adminDashboard";
 
 interface MemberChatViewProps {
@@ -61,6 +63,10 @@ export function MemberChatView({
   const [sendingMessage, setSendingMessage] = useState(false);
   const [leavingGroup, setLeavingGroup] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
+
+  const router = useRouter();
+  const { getOrCreateConversation } = useMessaging();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesLoadedRef = useRef(false);
   const companionsLoadedRef = useRef(false);
@@ -172,6 +178,20 @@ export function MemberChatView({
       console.error("Error leaving group:", error);
     } finally {
       setLeavingGroup(false);
+    }
+  };
+
+  // Iniciar chat privado
+  const handleStartPrivateChat = async (targetUserId: string) => {
+    if (targetUserId === userId || startingChat) return;
+    setStartingChat(true);
+    try {
+      const conversation = await getOrCreateConversation(userId, targetUserId);
+      router.push(`/chat/${conversation.id}` as any);
+    } catch (error) {
+      console.error("Error starting private chat:", error);
+    } finally {
+      setStartingChat(false);
     }
   };
 
@@ -423,7 +443,11 @@ export function MemberChatView({
                         <p className="text-[10px] text-neutral-500 font-medium">{online ? "En línea" : "Desconectado"}</p>
                       </div>
                     </div>
-                    <button className="w-8 h-8 flex items-center justify-center text-neutral-500 hover:text-[#0047AB] hover:bg-[#0047AB]/10 rounded-full transition-all">
+                    <button 
+                      onClick={() => handleStartPrivateChat(companion.userId)}
+                      disabled={startingChat}
+                      className="w-8 h-8 flex items-center justify-center text-neutral-500 hover:text-[#0047AB] hover:bg-[#0047AB]/10 rounded-full transition-all active:scale-90"
+                    >
                       <span className="material-symbols-outlined text-xl">chat_bubble</span>
                     </button>
                   </div>
