@@ -72,13 +72,14 @@ function bootstrap(): void {
     });
   });
 
-  server.listen(env.port, () => {
+  (server as any).listen({ port: env.port, host: "0.0.0.0" }, () => {
     console.log(
       JSON.stringify({
         service: "resources",
         level: "info",
         message: "Service listening",
         port: env.port,
+        host: "0.0.0.0",
         nodeEnv: env.nodeEnv,
       }),
     );

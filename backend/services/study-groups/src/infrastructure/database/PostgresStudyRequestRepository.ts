@@ -240,6 +240,9 @@ export class PostgresStudyRequestRepository implements IStudyRequestRepository {
       if (error instanceof Error && error.message.includes("validate_request_subject")) {
         throw new Error("Solo puedes crear solicitudes de materias que estés cursando actualmente.");
       }
+      if (error && typeof error === "object" && "code" in error && error.code === "23505") {
+        throw new Error("Has alcanzado el límite de grupos activos que puedes crear.");
+      }
       throw error;
     }
   }

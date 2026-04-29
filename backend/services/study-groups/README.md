@@ -23,5 +23,33 @@ Layer responsibilities:
 - `src/infrastructure`: current data adapters (in-memory now, Postgres later).
 - `src/interfaces`: HTTP controllers/routes/dto.
 
+Observer UML:
+
+```mermaid
+classDiagram
+	class StudyGroupSubject {
+		+subscribe(observer)
+		+unsubscribe(observer)
+		+emit(event)
+	}
+
+	class IObserver {
+		<<interface>>
+		+handle(event)
+	}
+
+	class NotificationObserver {
+		+handle(event)
+	}
+
+	class WebSocketNotificationObserver {
+		+handle(event)
+	}
+
+	StudyGroupSubject --> IObserver : notifies
+	IObserver <|.. NotificationObserver
+	IObserver <|.. WebSocketNotificationObserver
+```
+
 Run locally:
 - `pnpm --filter @uniconnect/study-groups dev`

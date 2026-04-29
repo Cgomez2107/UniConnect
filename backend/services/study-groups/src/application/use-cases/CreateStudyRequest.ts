@@ -22,12 +22,15 @@ export class CreateStudyRequest {
       throw new Error("maxMembers debe ser un entero mayor o igual a 2.");
     }
 
-    return this.repository.create({
+    // 1️⃣ Crear el grupo en BD
+    const created = await this.repository.create({
       authorId: input.actorUserId,
       subjectId,
       title,
       description,
       maxMembers: input.maxMembers,
     });
+
+    return created;
   }
 }

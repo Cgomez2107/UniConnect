@@ -118,6 +118,28 @@ Puertos por defecto:
 - gateway: 3000
 - study-groups: 3101
 
+## Docker (build + run + health)
+
+Desde la raiz del repo:
+
+```bash
+docker build -t uniconnect-backend ./backend
+```
+
+Ejecuta el contenedor con variables minimas para levantar el gateway:
+
+O en PowerShell, pasando las variables manualmente:
+
+```powershell
+docker run -p 3000:3000 -e PORT=3000 -e NODE_ENV=production -e STUDY_GROUPS_BASE_URL=http://localhost:3001 -e RESOURCES_BASE_URL=http://localhost:3002 -e MESSAGING_BASE_URL=http://localhost:3003 -e PROFILES_CATALOG_BASE_URL=http://localhost:3004 -e EVENTS_BASE_URL=http://localhost:3005 -e AUTH_BASE_URL=http://localhost:3006 -e JWT_ACCESS_SECRET=dev-secret uniconnect-backend
+```
+
+Valida el healthcheck:
+
+```powershell
+curl.exe http://localhost:3000/health
+```
+
 ## Pruebas rapidas de endpoints
 
 Health gateway:

@@ -132,24 +132,28 @@ export function useFeedScreen() {
     [getResourcesBySubject],
   );
 
+  // Load enrolled subjects once on mount
   useEffect(() => {
-    refreshEnrolledSubjects().catch(() => undefined);
-  }, [refreshEnrolledSubjects]);
+    if (!hasMountedRef.current) {
+      refreshEnrolledSubjects().catch(() => undefined);
+      hasMountedRef.current = true;
+    }
+  }, []);
 
+  // Fetch requests when subjects or search mode changes
   useEffect(() => {
     if (!subjectsLoaded || enrolledSubjectIds === null) return;
 
-    if (searchMode === "solicitudes") {
+    if (searchMode === "solicitudes" && enrolledSubjectIds.length > 0) {
       fetchRequests().catch(() => undefined);
     } else if (searchMode === "recursos" && resourceSubjectId) {
       fetchResources(resourceSubjectId).catch(() => undefined);
     }
+  }, [subjectsLoaded, enrolledSubjectIds, searchMode, selectedSubjects, resourceSubjectId]);
 
-    hasMountedRef.current = true;
-  }, [subjectsLoaded, enrolledSubjectIds, searchMode, selectedSubjects, resourceSubjectId, fetchRequests, fetchResources]);
-
+  // Handle search debouncing without depending on fetchRequests function
   useEffect(() => {
-    if (!hasMountedRef.current || searchMode !== "solicitudes") return;
+    if (!subjectsLoaded || searchMode !== "solicitudes") return;
 
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
@@ -159,7 +163,7 @@ export function useFeedScreen() {
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
-  }, [search, searchMode, fetchRequests]);
+  }, [search, searchMode]);
 
   useFocusEffect(
     useCallback(() => {

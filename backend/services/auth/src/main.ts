@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import type { ServerResponse } from "node:http";
 import { PostgreSQLAuthRepository } from "./infrastructure/repositories/PostgreSQLAuthRepository.js";
 import { PostgreSQLTokenRepository } from "./infrastructure/repositories/PostgreSQLTokenRepository.js";
 import { JWTService } from "./infrastructure/jwt/JWTService.js";
@@ -68,7 +69,10 @@ async function main() {
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With, bypass-tunnel-reminder, ngrok-skip-browser-warning",
+    );
 
     if (method === "OPTIONS") {
       res.writeHead(200);
@@ -133,13 +137,14 @@ async function main() {
     }
   });
 
-  server.listen(PORT, () => {
+  (server as any).listen({ port: PORT, host: "0.0.0.0" }, () => {
     console.log(
       JSON.stringify({
         service: "auth",
         level: "info",
         message: "Service listening",
         port: PORT,
+        host: "0.0.0.0",
         nodeEnv,
       }),
     );
