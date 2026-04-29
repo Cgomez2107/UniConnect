@@ -57,4 +57,4 @@ USER nodejs
 EXPOSE ${PORT}
 
 # Por defecto, iniciar gateway
-CMD ["node", "gateway/dist/app/gateway/src/main.js"]
+CMD ["node", "gateway/dist/gateway/src/main.js"]
