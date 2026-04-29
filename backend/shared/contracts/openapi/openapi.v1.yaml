@@ -43,17 +43,57 @@ paths:
       summary: List applications for request (request admin only)
       responses: {"200": {description: OK}, "403": {description: Forbidden}}
 
+  /api/v1/study-groups/{id}/members:
+    get:
+      tags: [study-groups]
+      summary: List members for request (request admin only)
+      responses: {"200": {description: OK}, "403": {description: Forbidden}}
+
+  /api/v1/study-groups/{id}/messages:
+    get:
+      tags: [study-groups]
+      summary: List group messages (members only)
+      responses: {"200": {description: OK}, "403": {description: Forbidden}}
+    post:
+      tags: [study-groups]
+      summary: Send group message (members only)
+      responses: {"201": {description: Created}, "403": {description: Forbidden}}
+
   /api/v1/study-groups/{id}/apply:
     post:
       tags: [study-groups]
       summary: Apply to a request (prevent duplicate)
       responses: {"201": {description: Created}, "409": {description: Duplicate application}}
 
+  /api/v1/study-groups/{id}/leave:
+    post:
+      tags: [study-groups]
+      summary: Leave admin role (blocked if transfer pending)
+      responses: {"200": {description: Updated}, "403": {description: Forbidden}}
+
+  /api/v1/study-groups/{id}/transfer:
+    post:
+      tags: [study-groups]
+      summary: Request admin transfer to a member
+      responses: {"201": {description: Created}, "403": {description: Forbidden}}
+
   /api/v1/study-groups/applications/{id}/review:
     put:
       tags: [study-groups]
       summary: Accept or reject application
       responses: {"200": {description: Updated}, "403": {description: Forbidden}, "409": {description: Capacity reached}}
+
+  /api/v1/study-groups/transfers/{id}/accept:
+    post:
+      tags: [study-groups]
+      summary: Accept admin transfer
+      responses: {"200": {description: Updated}, "403": {description: Forbidden}}
+
+  /api/v1/notifications:
+    get:
+      tags: [study-groups]
+      summary: List user notifications
+      responses: {"200": {description: OK}, "403": {description: Forbidden}}
 
   /api/v1/resources:
     get:
