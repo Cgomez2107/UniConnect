@@ -80,6 +80,12 @@ async function main() {
       return;
     }
 
+    if (method === "GET" && path === "/health") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ status: "ok", service: "auth" }));
+      return;
+    }
+
     // Rutas
     if (method === "POST" && path === "/signup") {
       await authController.signup(req, res);
