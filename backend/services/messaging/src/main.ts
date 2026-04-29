@@ -5,9 +5,7 @@ import { GetConversations } from "./application/use-cases/GetConversations.js";
 import { GetMessageById } from "./application/use-cases/GetMessageById.js";
 import { GetOrCreateConversation } from "./application/use-cases/GetOrCreateConversation.js";
 import { ListMessages } from "./application/use-cases/ListMessages.js";
-import { GetUnreadCount } from "./application/use-cases/GetUnreadCount.js";
 import { MarkMessageAsRead } from "./application/use-cases/MarkMessageAsRead.js";
-import { MarkConversationAsRead } from "./application/use-cases/MarkConversationAsRead.js";
 import { SendMessage } from "./application/use-cases/SendMessage.js";
 import { TouchConversation } from "./application/use-cases/TouchConversation.js";
 import { ChatSubject, RealtimeObserver, IdempotencyObserver, type IRealtimeService, type IIdempotencyStore } from "./domain/events/index.js";
@@ -94,10 +92,8 @@ function bootstrap(): void {
 	const touchConversation = new TouchConversation(repository);
 	const getMessageById = new GetMessageById(repository);
 	const listMessages = new ListMessages(repository);
-	const getUnreadCount = new GetUnreadCount(repository);
 	const sendMessage = new SendMessage(repository, chatSubject);
 	const markMessageAsRead = new MarkMessageAsRead(repository);
-	const markConversationAsRead = new MarkConversationAsRead(repository);
 
 	const controller = new MessagingController(
 		getConversations,
@@ -106,10 +102,10 @@ function bootstrap(): void {
 		touchConversation,
 		getMessageById,
 		listMessages,
-		getUnreadCount,
 		sendMessage,
 		markMessageAsRead,
-		markConversationAsRead,
+		realtimeObserver,
+		idempotencyObserver,
 	);
 
 	const server = createServer((req, res) => {
@@ -125,13 +121,14 @@ function bootstrap(): void {
 		});
 	});
 
-	server.listen(env.port, () => {
+	(server as any).listen({ port: env.port, host: "0.0.0.0" }, () => {
 		console.log(
 			JSON.stringify({
 				service: "messaging",
 				level: "info",
 				message: "Service listening",
 				port: env.port,
+				host: "0.0.0.0",
 				nodeEnv: env.nodeEnv,
 			}),
 		);
