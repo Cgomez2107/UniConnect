@@ -8,7 +8,7 @@ import { Colors } from "@/constants/Colors"
 import { StudyRequest } from "@/types"
 import { router } from "expo-router"
 import { memo, useCallback } from "react"
-import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
+import { Platform, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 
 interface Props {
   request: StudyRequest
@@ -19,7 +19,10 @@ export const MiniRequestCard = memo(function MiniRequestCard({ request }: Props)
   const C = Colors[scheme]
 
   const openRequest = useCallback(() => {
-    router.push(`/solicitud/${request.id}` as any)
+    const route = Platform.OS === "web"
+      ? `/study-groups/${request.id}/admin`
+      : `/study-groups/${request.id}`;
+    router.push(route as any)
   }, [request.id])
 
   const occupied = Math.max(1, Math.min(request.applications_count ?? 1, request.max_members))

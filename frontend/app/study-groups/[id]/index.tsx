@@ -2,7 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 
 import { StudyGroupDetailScreen } from "@/components/solicitud/StudyGroupDetailScreen";
 
-export default function SolicitudDetailScreen() {
+export default function StudyGroupDetailRoute() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const requestId = typeof id === "string" ? id : undefined;
 

@@ -1,13 +1,22 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { ApplyToStudyRequest } from "../../../application/use-cases/ApplyToStudyRequest.js";
+import { AcceptAdminTransfer } from "../../../application/use-cases/AcceptAdminTransfer.js";
 import { CreateStudyRequest } from "../../../application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequestById.js";
 import { ListApplicationsByRequest } from "../../../application/use-cases/ListApplicationsByRequest.js";
+import { ListStudyGroupMessages } from "../../../application/use-cases/ListStudyGroupMessages.js";
+import { ListUserNotifications } from "../../../application/use-cases/ListUserNotifications.js";
+import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
+import { LeaveAdminRole } from "../../../application/use-cases/LeaveAdminRole.js";
+import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
+import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
 import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
+import type { CreateStudyGroupMessageDto } from "../dto/CreateStudyGroupMessageDto.js";
 import type { CreateStudyGroupDto } from "../dto/CreateStudyGroupDto.js";
+import type { RequestAdminTransferDto } from "../dto/RequestAdminTransferDto.js";
 import type { ReviewApplicationDto } from "../dto/ReviewApplicationDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
@@ -32,9 +41,16 @@ export class StudyGroupsController {
     private readonly listOpenStudyRequests: ListOpenStudyRequests,
     private readonly getStudyRequestById: GetStudyRequestById,
     private readonly createStudyRequest: CreateStudyRequest,
+    private readonly listMembersByRequest: ListMembersByRequest,
     private readonly listApplicationsByRequest: ListApplicationsByRequest,
+    private readonly listStudyGroupMessages: ListStudyGroupMessages,
+    private readonly createStudyGroupMessage: CreateStudyGroupMessage,
+    private readonly listUserNotifications: ListUserNotifications,
     private readonly applyToStudyRequest: ApplyToStudyRequest,
     private readonly reviewApplication: ReviewApplication,
+    private readonly requestAdminTransfer: RequestAdminTransfer,
+    private readonly acceptAdminTransfer: AcceptAdminTransfer,
+    private readonly leaveAdminRole: LeaveAdminRole,
   ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -111,6 +127,133 @@ export class StudyGroupsController {
     sendData(res, 200, applications, { total: applications.length });
   }
 
+  async listMessages(
+    req: IncomingMessage,
+    res: ServerResponse,
+    requestId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const requestUrl = new URL(req.url ?? "/", "http://localhost");
+    const pageRaw = requestUrl.searchParams.get("page");
+    const limitRaw = requestUrl.searchParams.get("limit");
+
+    const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
+    const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 20;
+
+    try {
+      const messages = await this.listStudyGroupMessages.execute({
+        requestId,
+        actorUserId,
+        page,
+        pageSize,
+      });
+
+      sendData(res, 200, messages, { total: messages.length, page, pageSize });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async createMessage(
+    req: IncomingMessage,
+    res: ServerResponse,
+    requestId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const body = await readJsonBody<CreateStudyGroupMessageDto>(req);
+
+    try {
+      validateDto(
+        body,
+        {
+          content: [(value) => Validators.required(value, "content")],
+        },
+      );
+
+      const created = await this.createStudyGroupMessage.execute({
+        requestId,
+        actorUserId,
+        content: body.content as string,
+      });
+
+      sendData(res, 201, created);
+    } catch (error) {
+      if (error instanceof DtoValidationError) {
+        sendJson(res, 400, { error: error.message, fields: error.fields });
+        return;
+      }
+
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listNotifications(
+    req: IncomingMessage,
+    res: ServerResponse,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const requestUrl = new URL(req.url ?? "/", "http://localhost");
+    const pageRaw = requestUrl.searchParams.get("page");
+    const limitRaw = requestUrl.searchParams.get("limit");
+
+    const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
+    const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 20;
+
+    try {
+      const notifications = await this.listUserNotifications.execute({
+        actorUserId,
+        page,
+        pageSize,
+      });
+
+      sendData(res, 200, notifications, { total: notifications.length, page, pageSize });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listMembers(
+    req: IncomingMessage,
+    res: ServerResponse,
+    requestId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const members = await this.listMembersByRequest.execute({
+        requestId,
+        actorUserId,
+      });
+
+      sendData(res, 200, members, { total: members.length });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async apply(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
@@ -166,6 +309,93 @@ export class StudyGroupsController {
         return;
       }
 
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async requestTransfer(
+    req: IncomingMessage,
+    res: ServerResponse,
+    requestId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const body = await readJsonBody<RequestAdminTransferDto>(req);
+
+    try {
+      validateDto(
+        body,
+        {
+          targetUserId: [(value) => Validators.required(value, "targetUserId")],
+        },
+      );
+
+      const created = await this.requestAdminTransfer.execute({
+        requestId,
+        actorUserId,
+        targetUserId: body.targetUserId as string,
+      });
+
+      sendData(res, 201, created);
+    } catch (error) {
+      if (error instanceof DtoValidationError) {
+        sendJson(res, 400, { error: error.message, fields: error.fields });
+        return;
+      }
+
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async acceptTransfer(
+    req: IncomingMessage,
+    res: ServerResponse,
+    transferId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.acceptAdminTransfer.execute({
+        transferId,
+        actorUserId,
+      });
+
+      sendData(res, 200, { message: "Transferencia aceptada correctamente." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async leaveAdmin(
+    req: IncomingMessage,
+    res: ServerResponse,
+    requestId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.leaveAdminRole.execute({
+        requestId,
+        actorUserId,
+      });
+
+      sendData(res, 200, { message: "Salida de administracion registrada." });
+    } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
