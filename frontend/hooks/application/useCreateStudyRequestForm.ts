@@ -82,11 +82,7 @@ export function useCreateStudyRequestForm({ onCreated }: UseCreateStudyRequestFo
         max_members: Math.max(2, Math.min(10, parseInt(maxMembers) || 4)),
       });
 
-      Alert.alert(
-        "¡Éxito! 🎉",
-        "¡Solicitud creada correctamente!",
-        [{ text: "Ver feed", onPress: () => onCreated?.() }]
-      );
+      onCreated?.();
     } catch (e: any) {
       const msg = e?.message ?? "";
       const friendlyMsg = msg.includes("unique_open_request_per_subject")
