@@ -2,6 +2,10 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 
+if (typeof document !== "undefined") {
+  require("../global.css");
+}
+
 /**
  * Root layout component. Initializes authentication state listeners
  * and declares all available routes in the application.
@@ -39,6 +43,8 @@ export default function RootLayout() {
       <Stack.Screen name="subir-recurso"    options={{ presentation: "modal" }} />
       <Stack.Screen name="editar-perfil"    options={{ presentation: "modal" }} />
       <Stack.Screen name="solicitud/[id]" />
+      <Stack.Screen name="study-groups/[id]" />
+      <Stack.Screen name="study-groups/[id]/admin" />
       <Stack.Screen name="postular/[id]" />
       <Stack.Screen name="perfil-estudiante/[id]" />
       <Stack.Screen name="recurso/[id]" />
