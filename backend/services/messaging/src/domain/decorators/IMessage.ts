@@ -3,35 +3,45 @@
  *
  * Interfaz base que todos los mensajes (base y decorados) deben cumplir.
  *
- * Garantía de contrato:
- * - Todo mensaje tiene id, content, timestamp
+ * Garantía de contrato (CA1):
+ * - Todo mensaje debe implementar getContent(), getMetadata() y render()
  * - Todo mensaje puede ser serializado a JSON
- * - Todo mensaje puede ser comparado
+ * - Cumplimiento total del patrón Decorator
  */
 
+/**
+ * CA1: Interfaz base para todos los mensajes (base y decorados).
+ * Garantiza contrato uniforme para getContent(), getMetadata(), render()
+ */
 export interface IMessage {
   /**
-   * ID único del mensaje
+   * Obtener el contenido de texto del mensaje.
+   * - BaseMessage: retorna el texto plano
+   * - MentionDecorator: retorna contenido con menciones resaltadas (**@displayName**)
+   * - Otros decoradores: delegan al mensaje interno
    */
-  readonly id: string;
+  getContent(): string;
 
   /**
-   * Contenido de texto base
+   * Obtener los metadatos del mensaje completo.
+   * Incluye datos base (id, userId, timestamp) + datos de decoradores.
+   * - FileDecorator añade: { file: FileMetadata }
+   * - MentionDecorator añade: { mentions: Mention[] }
+   * - ReactionDecorator añade: { reactions: Reaction[] }
    */
-  readonly content: string;
+  getMetadata(): Record<string, unknown>;
 
   /**
-   * Cuándo se creó
+   * Renderizar el mensaje con formato visual específico.
+   * - BaseMessage: retorna el contenido plano
+   * - MentionDecorator: resalta menciones con **@displayName**
+   * - Otros decoradores: agrega su información al resultado
    */
-  readonly timestamp: Date;
+  render(): string;
 
   /**
-   * Quién lo envió
-   */
-  readonly senderId: string;
-
-  /**
-   * Serializar a JSON para enviar al cliente
+   * Serializar a JSON para transmitir al cliente.
+   * Debe incluir todos los datos: getMetadata() + getContent()
    */
   toJSON(): Record<string, unknown>;
 }
