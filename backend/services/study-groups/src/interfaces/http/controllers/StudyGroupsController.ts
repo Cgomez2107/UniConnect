@@ -67,26 +67,36 @@ export class StudyGroupsController {
     const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
     const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 10;
 
-    const result = await this.listOpenStudyRequests.execute({
-      subjectId: requestUrl.searchParams.get("subjectId") ?? undefined,
-      subjectIds,
-      search: requestUrl.searchParams.get("search") ?? undefined,
-      page,
-      pageSize,
-    });
+    try {
+      const result = await this.listOpenStudyRequests.execute({
+        subjectId: requestUrl.searchParams.get("subjectId") ?? undefined,
+        subjectIds,
+        search: requestUrl.searchParams.get("search") ?? undefined,
+        page,
+        pageSize,
+      });
 
-    sendData(res, 200, result, { total: result.length, page, pageSize });
+      sendData(res, 200, result, { total: result.length, page, pageSize });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
   }
 
   async getById(_req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
-    const result = await this.getStudyRequestById.execute(id);
+    try {
+      const result = await this.getStudyRequestById.execute(id);
 
-    if (!result) {
-      sendError(res, 404, "Solicitud de estudio no encontrada.");
-      return;
+      if (!result) {
+        sendError(res, 404, "Solicitud de estudio no encontrada.");
+        return;
+      }
+
+      sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
     }
-
-    sendData(res, 200, result);
   }
 
   async create(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -97,15 +107,20 @@ export class StudyGroupsController {
     }
 
     const body = await readJsonBody<CreateStudyGroupDto>(req);
-    const created = await this.createStudyRequest.execute({
-      actorUserId,
-      subjectId: body.subjectId ?? "",
-      title: body.title ?? "",
-      description: body.description ?? "",
-      maxMembers: body.maxMembers ?? Number.NaN,
-    });
+    try {
+      const created = await this.createStudyRequest.execute({
+        actorUserId,
+        subjectId: body.subjectId ?? "",
+        title: body.title ?? "",
+        description: body.description ?? "",
+        maxMembers: body.maxMembers ?? Number.NaN,
+      });
 
-    sendData(res, 201, created);
+      sendData(res, 201, created);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
   }
 
   async listApplications(
@@ -119,12 +134,17 @@ export class StudyGroupsController {
       return;
     }
 
-    const applications = await this.listApplicationsByRequest.execute({
-      requestId,
-      actorUserId,
-    });
+    try {
+      const applications = await this.listApplicationsByRequest.execute({
+        requestId,
+        actorUserId,
+      });
 
-    sendData(res, 200, applications, { total: applications.length });
+      sendData(res, 200, applications, { total: applications.length });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
   }
 
   async listMessages(
@@ -262,13 +282,18 @@ export class StudyGroupsController {
     }
 
     const body = await readJsonBody<ApplyToStudyGroupDto>(req);
-    const created = await this.applyToStudyRequest.execute({
-      requestId,
-      applicantId: actorUserId,
-      message: body.message ?? "",
-    });
+    try {
+      const created = await this.applyToStudyRequest.execute({
+        requestId,
+        applicantId: actorUserId,
+        message: body.message ?? "",
+      });
 
-    sendData(res, 201, created);
+      sendData(res, 201, created);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
   }
 
   async review(

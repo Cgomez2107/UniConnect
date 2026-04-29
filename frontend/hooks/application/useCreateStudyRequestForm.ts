@@ -1,6 +1,7 @@
 import {
   createStudyRequest,
   getAvailableSubjectsForCurrentUser,
+  getStudyRequestCountBySubject,
   type Subject,
 } from "@/hooks/application/useStudyRequestsCatalog";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -23,6 +24,8 @@ export function useCreateStudyRequestForm({ onCreated }: UseCreateStudyRequestFo
   const [loadingData, setLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [subjectGroupCount, setSubjectGroupCount] = useState<number>(0);
+  const [loadingCount, setLoadingCount] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoadingData(true);
@@ -41,13 +44,35 @@ export function useCreateStudyRequestForm({ onCreated }: UseCreateStudyRequestFo
     loadData();
   }, [loadData]);
 
+  // Validar límite de grupos al seleccionar materia
+  useEffect(() => {
+    if (selectedSubject) {
+      setLoadingCount(true);
+      getStudyRequestCountBySubject(selectedSubject)
+        .then(setSubjectGroupCount)
+        .catch(console.error)
+        .finally(() => setLoadingCount(false));
+    } else {
+      setSubjectGroupCount(0);
+    }
+  }, [selectedSubject]);
+
   const isValid = useMemo(
-    () => title.trim().length >= 5 && description.trim().length >= 10 && !!selectedSubject,
-    [description, selectedSubject, title]
+    () => title.trim().length >= 5 && description.trim().length >= 10 && !!selectedSubject && subjectGroupCount < 3,
+    [description, selectedSubject, title, subjectGroupCount]
   );
 
   const handleCreate = useCallback(async () => {
     if (!isValid || !selectedSubject) return;
+
+    if (subjectGroupCount >= 3) {
+      Alert.alert(
+        "Límite alcanzado",
+        "Ya existen 3 grupos para esta asignatura. Te sugerimos unirte a uno existente para concentrar la colaboración."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await createStudyRequest({
@@ -56,9 +81,10 @@ export function useCreateStudyRequestForm({ onCreated }: UseCreateStudyRequestFo
         subject_id: selectedSubject,
         max_members: Math.max(2, Math.min(10, parseInt(maxMembers) || 4)),
       });
+
       Alert.alert(
-        "¡Solicitud creada! 🎉",
-        "Tu grupo de estudio ya está visible en el feed.",
+        "¡Éxito! 🎉",
+        "¡Solicitud creada correctamente!",
         [{ text: "Ver feed", onPress: () => onCreated?.() }]
       );
     } catch (e: any) {
@@ -70,7 +96,7 @@ export function useCreateStudyRequestForm({ onCreated }: UseCreateStudyRequestFo
     } finally {
       setIsSubmitting(false);
     }
-  }, [description, isValid, maxMembers, onCreated, selectedSubject, title]);
+  }, [description, isValid, maxMembers, onCreated, selectedSubject, title, subjectGroupCount]);
 
   const decrementMembers = useCallback(() => {
     setMaxMembers((prev) => String(Math.max(2, parseInt(prev) - 1)));
@@ -98,5 +124,7 @@ export function useCreateStudyRequestForm({ onCreated }: UseCreateStudyRequestFo
     handleCreate,
     decrementMembers,
     incrementMembers,
+    subjectGroupCount,
+    loadingCount,
   };
 }

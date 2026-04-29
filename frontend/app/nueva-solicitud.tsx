@@ -40,9 +40,13 @@ export default function NuevaSolicitudScreen() {
     handleCreate,
     decrementMembers,
     incrementMembers,
+    subjectGroupCount,
+    loadingCount,
   } = useCreateStudyRequestForm({
-    onCreated: () => router.back(),
+    onCreated: () => router.replace("/feed"),
   });
+
+  const isLimitReached = subjectGroupCount >= 3;
 
   // Estados de carga / error / vacío
   if (loadingData) {
@@ -182,6 +186,21 @@ export default function NuevaSolicitudScreen() {
           </Text>
         )}
 
+        {selectedSubject && isLimitReached && (
+          <View style={[styles.warningBanner, { backgroundColor: C.error + "10", borderColor: C.error + "30" }]}>
+            <Text style={[styles.warningText, { color: C.error }]}>
+              ⚠️ Ya existen {subjectGroupCount} grupos activos para esta asignatura. 
+              Te recomendamos unirte a uno existente para fomentar la colaboración.
+            </Text>
+          </View>
+        )}
+
+        {selectedSubject && !isLimitReached && subjectGroupCount > 0 && (
+          <Text style={[styles.hint, { color: C.primary, marginTop: 8, fontWeight: "600" }]}>
+            Hay {subjectGroupCount} {subjectGroupCount === 1 ? "grupo activo" : "grupos activos"} para esta materia.
+          </Text>
+        )}
+
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Cupos máximos (2–10)
         </Text>
@@ -204,16 +223,18 @@ export default function NuevaSolicitudScreen() {
         <TouchableOpacity
           style={[
             styles.submitBtn,
-            { backgroundColor: isValid ? C.primary : C.border, opacity: isSubmitting ? 0.7 : 1 },
+            { backgroundColor: (isValid && !isLimitReached) ? C.primary : C.border, opacity: (isSubmitting || loadingCount) ? 0.7 : 1 },
           ]}
           onPress={handleCreate}
-          disabled={!isValid || isSubmitting}
+          disabled={!isValid || isSubmitting || loadingCount || isLimitReached}
         >
-          {isSubmitting ? (
+          {isSubmitting || loadingCount ? (
             <ActivityIndicator color={C.textOnPrimary} />
           ) : (
-            <Text style={[styles.submitText, { color: isValid ? C.textOnPrimary : C.textSecondary }]}>
-              {isValid ? "Publicar solicitud" : "Completa los campos requeridos"}
+            <Text style={[styles.submitText, { color: (isValid && !isLimitReached) ? C.textOnPrimary : C.textSecondary }]}>
+              {isLimitReached 
+                ? "Límite de grupos alcanzado" 
+                : (isValid ? "Publicar solicitud" : "Completa los campos requeridos")}
             </Text>
           )}
         </TouchableOpacity>
@@ -269,4 +290,19 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 14, textAlign: "center", lineHeight: 20, marginTop: 4 },
   actionBtn: { paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12 },
   actionBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+  warningBanner: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  warningText: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+    flex: 1,
+  },
 });
