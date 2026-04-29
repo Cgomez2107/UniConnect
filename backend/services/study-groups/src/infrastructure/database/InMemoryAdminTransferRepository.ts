@@ -4,6 +4,10 @@ import type { IAdminTransferRepository } from "../../domain/repositories/IAdminT
 export class InMemoryAdminTransferRepository implements IAdminTransferRepository {
   private readonly transfers: AdminTransfer[] = [];
 
+  async getById(transferId: string): Promise<AdminTransfer | null> {
+    return this.transfers.find((transfer) => transfer.id === transferId) ?? null;
+  }
+
   async requestTransfer(input: {
     requestId: string;
     actorUserId: string;

@@ -8,6 +8,10 @@ export class InMemoryApplicationRepository implements IApplicationRepository {
     return this.applications.filter((application) => application.requestId === requestId);
   }
 
+  async getById(applicationId: string): Promise<Application | null> {
+    return this.applications.find((application) => application.id === applicationId) ?? null;
+  }
+
   async create(input: { requestId: string; applicantId: string; message: string }): Promise<Application> {
     const created: Application = {
       id: crypto.randomUUID(),

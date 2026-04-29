@@ -10,81 +10,69 @@
  */
 
 /**
- * Evento: Nuevo estudiante se unió al grupo
+ * Evento: Solicitud de ingreso creada
  */
-export interface StudentJoinedEvent {
-  readonly type: "StudentJoined";
+export interface SolicitudIngresoEvent {
+  readonly type: "SOLICITUD_INGRESO";
   readonly version: "1.0";
   readonly timestamp: Date;
-  readonly groupId: string;
-  readonly studentId: string;
-  readonly studentName: string;
-  readonly totalMembers: number;
+  readonly requestId: string;
+  readonly applicantId: string;
+  readonly recipientUserId: string;
+  readonly message: string;
 }
 
 /**
- * Evento: Estudiante abandonó el grupo
+ * Evento: Solicitud de ingreso aceptada
  */
-export interface StudentLeftEvent {
-  readonly type: "StudentLeft";
-  readonly version: "1.0";
-  readonly timestamp: Date;
-  readonly groupId: string;
-  readonly studentId: string;
-  readonly studentName: string;
-  readonly totalMembers: number;
-}
-
-/**
- * Evento: Nuevo grupo de estudio creado
- */
-export interface GroupCreatedEvent {
-  readonly type: "GroupCreated";
-  readonly version: "1.0";
-  readonly timestamp: Date;
-  readonly groupId: string;
-  readonly authorId: string;
-  readonly authorName: string;
-  readonly title: string;
-  readonly subject: string;
-  readonly maxMembers: number;
-}
-
-/**
- * Evento: Grupo cerrado/desactivado
- */
-export interface GroupClosedEvent {
-  readonly type: "GroupClosed";
-  readonly version: "1.0";
-  readonly timestamp: Date;
-  readonly groupId: string;
-  readonly reason: "reached_max_members" | "manual_closure" | "expired";
-}
-
-/**
- * Evento: Solicitud de incorporación aceptada
- */
-export interface ApplicationApprovedEvent {
-  readonly type: "ApplicationApproved";
+export interface MiembroAceptadoEvent {
+  readonly type: "MIEMBRO_ACEPTADO";
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly applicationId: string;
-  readonly groupId: string;
+  readonly requestId: string;
   readonly applicantId: string;
   readonly approvedBy: string;
 }
 
 /**
- * Evento: Solicitud de incorporación rechazada
+ * Evento: Solicitud de ingreso rechazada
  */
-export interface ApplicationRejectedEvent {
-  readonly type: "ApplicationRejected";
+export interface MiembroRechazadoEvent {
+  readonly type: "MIEMBRO_RECHAZADO";
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly applicationId: string;
-  readonly groupId: string;
+  readonly requestId: string;
   readonly applicantId: string;
   readonly rejectedBy: string;
+}
+
+/**
+ * Evento: Transferencia de admin solicitada
+ */
+export interface TransferenciaAdminSolicitadaEvent {
+  readonly type: "TRANSFERENCIA_ADMIN_SOLICITADA";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly transferId: string;
+  readonly requestId: string;
+  readonly actorUserId: string;
+  readonly targetUserId: string;
+}
+
+/**
+ * Evento: Transferencia de admin aceptada
+ */
+export interface TransferenciaAdminAceptadaEvent {
+  readonly type: "TRANSFERENCIA_ADMIN_ACEPTADA";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly transferId: string;
+  readonly requestId: string;
+  readonly fromUserId: string;
+  readonly toUserId: string;
+  readonly actorUserId: string;
 }
 
 /**
@@ -93,12 +81,11 @@ export interface ApplicationRejectedEvent {
  * Ventaja: Si intentas pasar un evento inválido, TypeScript marca error 
  */
 export type StudyGroupEvent =
-  | StudentJoinedEvent
-  | StudentLeftEvent
-  | GroupCreatedEvent
-  | GroupClosedEvent
-  | ApplicationApprovedEvent
-  | ApplicationRejectedEvent;
+  | SolicitudIngresoEvent
+  | MiembroAceptadoEvent
+  | MiembroRechazadoEvent
+  | TransferenciaAdminSolicitadaEvent
+  | TransferenciaAdminAceptadaEvent;
 
 /**
  * Extrae el tipo específico de un evento

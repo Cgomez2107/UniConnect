@@ -51,6 +51,20 @@ export class PostgresAdminTransferRepository implements IAdminTransferRepository
     this.pool = buildPool(env);
   }
 
+  async getById(transferId: string): Promise<AdminTransfer | null> {
+    const result = await this.pool.query<AdminTransferRow>(
+      `
+        SELECT id, request_id, from_user_id, to_user_id, status, created_at, responded_at
+        FROM study_request_admin_transfers
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [transferId],
+    );
+
+    return result.rows[0] ? mapTransfer(result.rows[0]) : null;
+  }
+
   async requestTransfer(input: {
     requestId: string;
     actorUserId: string;

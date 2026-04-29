@@ -12,8 +12,9 @@
 
 import type { StudyGroupEvent } from "../StudyGroupEvents.js";
 import type { IObserver } from "./IObserver.js";
+import type { ISubject } from "./ISubject.js";
 
-export class StudyGroupSubject {
+export class StudyGroupSubject implements ISubject {
   /**
    * Lista privada de observers registrados
    * Usamos Set para O(1) lookup en unsubscribe

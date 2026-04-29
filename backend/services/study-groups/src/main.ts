@@ -14,6 +14,11 @@ import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransf
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
+import {
+  NotificationObserver,
+  StudyGroupSubject,
+  WebSocketNotificationObserver,
+} from "./domain/events/index.js";
 import type { IAdminTransferRepository } from "./domain/repositories/IAdminTransferRepository.js";
 import type { IApplicationRepository } from "./domain/repositories/IApplicationRepository.js";
 import type { INotificationRepository } from "./domain/repositories/INotificationRepository.js";
@@ -31,6 +36,7 @@ import { PostgresMemberRepository } from "./infrastructure/database/PostgresMemb
 import { PostgresNotificationRepository } from "./infrastructure/database/PostgresNotificationRepository.js";
 import { PostgresStudyGroupMessageRepository } from "./infrastructure/database/PostgresStudyGroupMessageRepository.js";
 import { PostgresStudyRequestRepository } from "./infrastructure/database/PostgresStudyRequestRepository.js";
+import { NoopStudyGroupSocketGateway } from "./infrastructure/realtime/NoopStudyGroupSocketGateway.js";
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
 import type { IStudyRequestRepository } from "./domain/repositories/IStudyRequestRepository.js";
@@ -120,6 +126,10 @@ function bootstrap(): void {
   const adminTransferRepository = createAdminTransferRepository(env);
   const messageRepository = createStudyGroupMessageRepository(env);
   const notificationRepository = createNotificationRepository(env);
+  const subject = new StudyGroupSubject();
+  const socketGateway = new NoopStudyGroupSocketGateway();
+  subject.subscribe(new NotificationObserver(notificationRepository));
+  subject.subscribe(new WebSocketNotificationObserver(socketGateway));
   const listOpenStudyRequests = new ListOpenStudyRequests(repository);
   const getStudyRequestById = new GetStudyRequestById(repository);
   const createStudyRequest = new CreateStudyRequest(repository);
@@ -128,10 +138,14 @@ function bootstrap(): void {
   const listStudyGroupMessages = new ListStudyGroupMessages(messageRepository);
   const createStudyGroupMessage = new CreateStudyGroupMessage(messageRepository);
   const listUserNotifications = new ListUserNotifications(notificationRepository);
-  const applyToStudyRequest = new ApplyToStudyRequest(applicationRepository);
-  const reviewApplication = new ReviewApplication(applicationRepository);
-  const requestAdminTransfer = new RequestAdminTransfer(adminTransferRepository);
-  const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository);
+  const applyToStudyRequest = new ApplyToStudyRequest(
+    applicationRepository,
+    repository,
+    subject,
+  );
+  const reviewApplication = new ReviewApplication(applicationRepository, subject);
+  const requestAdminTransfer = new RequestAdminTransfer(adminTransferRepository, subject);
+  const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,

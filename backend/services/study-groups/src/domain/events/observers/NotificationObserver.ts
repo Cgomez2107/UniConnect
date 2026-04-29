@@ -9,31 +9,15 @@
  * - Almacenarlos en BD para que usuarios puedan verlas después
  */
 
-import type { IObserver } from "./IObserver.js";
+import type { INotificationRepository } from "../../repositories/INotificationRepository.js";
 import type { StudyGroupEvent } from "../StudyGroupEvents.js";
-
-/**
- * Interfaz para el repositorio que persiste notificaciones
- * (Abstracta para no depender de BD directamente)
- */
-export interface INotificationRepository {
-  /**
-   * Crea una notificación persistida en BD
-   */
-  create(notification: {
-    userId: string;
-    eventType: string;
-    title: string;
-    description: string;
-    metadata: Record<string, unknown>;
-  }): Promise<string>;
-}
+import type { IObserver } from "./IObserver.js";
 
 /**
  * Observer que persiste eventos como notificaciones
  *
  * Flujo:
- * 1. Subject emite evento (ej: StudentJoined)
+ * 1. Subject emite evento (ej: SOLICITUD_INGRESO)
  * 2. NotificationObserver.handle() se ejecuta
  * 3. Convierte evento a notificación
  * 4. Persiste en BD
@@ -46,86 +30,72 @@ export class NotificationObserver implements IObserver {
   async handle(event: StudyGroupEvent): Promise<void> {
     // Mapear cada tipo de evento a una notificación específica
     switch (event.type) {
-      case "StudentJoined":
+      case "SOLICITUD_INGRESO":
         await this.notificationRepository.create({
-          userId: event.studentId,
-          eventType: "student_joined",
-          title: "Te uniste a un grupo",
-          description: `Te has unido al grupo exitosamente.`,
-          metadata: {
-            groupId: event.groupId,
-            studentName: event.studentName,
-            totalMembers: event.totalMembers,
+          userId: event.recipientUserId,
+          type: "solicitud_ingreso",
+          title: "Nueva solicitud de ingreso",
+          body: "Tienes una nueva solicitud para tu grupo de estudio.",
+          payload: {
+            requestId: event.requestId,
+            applicantId: event.applicantId,
+            message: event.message,
           },
         });
         break;
 
-      case "StudentLeft":
-        await this.notificationRepository.create({
-          userId: event.studentId,
-          eventType: "student_left",
-          title: "Abandonaste un grupo",
-          description: `Has abandonado el grupo.`,
-          metadata: {
-            groupId: event.groupId,
-            totalMembers: event.totalMembers,
-          },
-        });
-        break;
-
-      case "GroupCreated":
-        await this.notificationRepository.create({
-          userId: event.authorId,
-          eventType: "group_created",
-          title: "Grupo creado",
-          description: `Has creado el grupo "${event.title}" para ${event.subject}.`,
-          metadata: {
-            groupId: event.groupId,
-            title: event.title,
-            subject: event.subject,
-            maxMembers: event.maxMembers,
-          },
-        });
-        break;
-
-      case "GroupClosed":
-        // Notificar a todos los miembros (aquí simplificado)
-        await this.notificationRepository.create({
-          userId: event.groupId,
-          eventType: "group_closed",
-          title: "Grupo cerrado",
-          description: `El grupo ha sido cerrado. Razón: ${event.reason}`,
-          metadata: {
-            groupId: event.groupId,
-            reason: event.reason,
-          },
-        });
-        break;
-
-      case "ApplicationApproved":
+      case "MIEMBRO_ACEPTADO":
         await this.notificationRepository.create({
           userId: event.applicantId,
-          eventType: "application_approved",
+          type: "miembro_aceptado",
           title: "Solicitud aceptada",
-          description: `Tu solicitud ha sido aceptada. Ya formas parte del grupo.`,
-          metadata: {
+          body: "Tu solicitud fue aceptada. Ya formas parte del grupo.",
+          payload: {
             applicationId: event.applicationId,
-            groupId: event.groupId,
+            requestId: event.requestId,
             approvedBy: event.approvedBy,
           },
         });
         break;
 
-      case "ApplicationRejected":
+      case "MIEMBRO_RECHAZADO":
         await this.notificationRepository.create({
           userId: event.applicantId,
-          eventType: "application_rejected",
+          type: "miembro_rechazado",
           title: "Solicitud rechazada",
-          description: `Tu solicitud ha sido rechazada.`,
-          metadata: {
+          body: "Tu solicitud fue rechazada.",
+          payload: {
             applicationId: event.applicationId,
-            groupId: event.groupId,
+            requestId: event.requestId,
             rejectedBy: event.rejectedBy,
+          },
+        });
+        break;
+
+      case "TRANSFERENCIA_ADMIN_SOLICITADA":
+        await this.notificationRepository.create({
+          userId: event.targetUserId,
+          type: "transferencia_admin_solicitada",
+          title: "Transferencia de administracion",
+          body: "Tienes una solicitud para transferir la administracion del grupo.",
+          payload: {
+            transferId: event.transferId,
+            requestId: event.requestId,
+            actorUserId: event.actorUserId,
+          },
+        });
+        break;
+
+      case "TRANSFERENCIA_ADMIN_ACEPTADA":
+        await this.notificationRepository.create({
+          userId: event.fromUserId,
+          type: "transferencia_admin_aceptada",
+          title: "Transferencia aceptada",
+          body: "Tu transferencia de administracion fue aceptada.",
+          payload: {
+            transferId: event.transferId,
+            requestId: event.requestId,
+            toUserId: event.toUserId,
           },
         });
         break;
