@@ -1,5 +1,5 @@
-import type { Member } from "../domain/entities/Member.js";
-import type { IMemberRepository } from "../domain/repositories/IMemberRepository.js";
+import type { Member } from "../../domain/entities/Member.js";
+import type { IMemberRepository } from "../../domain/repositories/IMemberRepository.js";
 
 export interface ListMembersByRequestInput {
   readonly requestId: string;

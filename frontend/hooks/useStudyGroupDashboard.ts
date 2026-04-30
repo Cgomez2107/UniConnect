@@ -111,7 +111,9 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
 
   const loadMembers = useCallback(
     async (requestIdValue: string) => {
+      console.log(`[Members] Cargando miembros para requestId=${requestIdValue}`);
       const data = await fetchApi<StudyGroupMember[]>(`/study-groups/${requestIdValue}/members`);
+      console.log(`[Members] Miembros recibidos=${data?.length ?? 0} para requestId=${requestIdValue}`);
       setMembers(data ?? []);
     },
     []
@@ -136,9 +138,11 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
 
   const loadMessages = useCallback(
     async (requestIdValue: string) => {
+      console.log(`[Chat] Cargando mensajes para requestId=${requestIdValue}`);
       const data = await fetchApi<any[]>(
         `/study-groups/${requestIdValue}/messages?limit=50&page=1`
       );
+      console.log(`[Chat] Mensajes recibidos=${data?.length ?? 0} para requestId=${requestIdValue}`);
 
       const mapped = (data ?? []).map(mapApiMessageToDomain);
       const sorted = mapped.slice().sort((a, b) => {
@@ -152,9 +156,13 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
 
   const loadApplications = useCallback(
     async (requestIdValue: string) => {
-      const result = await getApplicationsByRequest(requestIdValue);
-      const enriched = await enrichApplications(result ?? []);
-      setApplications(enriched);
+      try {
+        const result = await getApplicationsByRequest(requestIdValue);
+        const enriched = await enrichApplications(result ?? []);
+        setApplications(enriched);
+      } catch {
+        // 403 es esperado para miembros sin rol de admin — ignorar silenciosamente.
+      }
     },
     [enrichApplications, getApplicationsByRequest]
   );
@@ -165,19 +173,26 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
       setError(null);
 
       try {
-        const [request, apps] = await Promise.all([
+        // Fetch request info and applications in parallel.
+        // Applications can return 403 if the user is not admin — that's expected for regular members.
+        const [request, appsResult] = await Promise.allSettled([
           getRequestById(requestIdValue),
           getApplicationsByRequest(requestIdValue),
         ]);
 
-        if (!request) {
+        const requestData = request.status === "fulfilled" ? request.value : null;
+
+        if (!requestData) {
           setError("No se encontro la solicitud activa.");
           setActiveRequest(null);
           setApplications([]);
           return;
         }
 
-        setActiveRequest(request);
+        setActiveRequest(requestData);
+
+        // If applications returned successfully use them; if 403 (no admin) just leave empty.
+        const apps = appsResult.status === "fulfilled" ? appsResult.value : [];
         const enriched = await enrichApplications(apps ?? []);
         setApplications(enriched);
 
@@ -255,9 +270,13 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
           event: "INSERT",
           schema: "public",
           table: "study_group_messages",
+          filter: `request_id=eq.${activeRequestId}`,
         },
         (payload) => {
           console.log("[Chat] Evento de Realtime recibido (crudo):", payload.new);
+          console.log(
+            `[Chat] Comparando request_id=${payload.new?.request_id} con activeRequestId=${activeRequestId}`
+          );
           
           // Filtrado manual por robustez (algunas versiones de Realtime tienen problemas con el filter string)
           if (payload.new.request_id !== activeRequestId) {
