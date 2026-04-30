@@ -85,7 +85,7 @@ export async function fetchApi<T>(
         ...options,
         method,
         headers,
-        credentials: "include",
+        credentials: "omit",
         body: isPayloadMethod ? options.body : undefined,
     };
 

@@ -74,6 +74,20 @@ export class PostgresApplicationRepository implements IApplicationRepository {
     return result.rows.map(mapApplication);
   }
 
+  async getById(applicationId: string): Promise<Application | null> {
+    const result = await this.pool.query<ApplicationRow>(
+      `
+        SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
+        FROM applications
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [applicationId],
+    );
+
+    return result.rows[0] ? mapApplication(result.rows[0]) : null;
+  }
+
   async create(input: { requestId: string; applicantId: string; message: string }): Promise<Application> {
     try {
       const result = await this.pool.query<ApplicationRow>(

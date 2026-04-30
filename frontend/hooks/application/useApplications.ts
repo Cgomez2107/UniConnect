@@ -17,11 +17,11 @@ export function useApplications() {
   })
 
   const applyToRequest = useCallback(
-    async (requestId: string, applicantId: string, message: string) => {
+    async (requestId: string, applicantId: string, message: string, applicantName?: string) => {
       setState((prev) => ({ ...prev, loading: true }))
       try {
         const useCase = container.getApplyToStudyRequest()
-        await useCase.execute({ requestId, applicantId, message })
+        await useCase.execute({ requestId, applicantId, message, applicantName })
         setState((prev) => ({ ...prev, loading: false, error: null }))
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Error al aplicar a solicitud"

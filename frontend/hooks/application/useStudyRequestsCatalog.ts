@@ -40,3 +40,8 @@ export async function getEnrolledSubjectsForUser() {
   const useCase = container.getGetEnrolledSubjectsForUser()
   return useCase.execute(user.id)
 }
+
+export async function getStudyRequestCountBySubject(subjectId: string) {
+  const repo = container.getStudyRequestRepository()
+  return repo.countBySubject(subjectId)
+}

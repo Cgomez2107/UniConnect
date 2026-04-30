@@ -28,12 +28,13 @@ export class ApiApplicationRepository implements IApplicationRepository {
         requestId: string,
         _applicantId: string,
         message: string,
+        applicantName?: string,
     ): Promise<Application> {
         const data = await fetchApi<Application>(
             `/study-groups/${requestId}/apply`,
             {
                 method: "POST",
-                body: JSON.stringify({ message }),
+                body: JSON.stringify({ message, applicantName }),
             },
         );
         return mapApplicationFromApi(data);

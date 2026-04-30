@@ -30,4 +30,5 @@ export interface IStudyRequestRepository {
     description: string;
     maxMembers: number;
   }): Promise<StudyRequest>;
+  countBySubject(subjectId: string): Promise<number>;
 }

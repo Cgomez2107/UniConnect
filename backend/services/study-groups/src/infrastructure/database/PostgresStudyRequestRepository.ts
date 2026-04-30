@@ -1,5 +1,7 @@
 import { Pool } from "pg";
 
+import { ConflictError } from "../../../../../shared/libs/errors/ConflictError.js";
+import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 import type { StudyGroupsEnv } from "../../config/env.js";
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type {
@@ -238,9 +240,20 @@ export class PostgresStudyRequestRepository implements IStudyRequestRepository {
       return created;
     } catch (error) {
       if (error instanceof Error && error.message.includes("validate_request_subject")) {
-        throw new Error("Solo puedes crear solicitudes de materias que estés cursando actualmente.");
+        throw new ValidationError("Solo puedes crear solicitudes de materias que estés cursando actualmente.");
+      }
+      if (error && typeof error === "object" && "code" in error && error.code === "23505") {
+        throw new ConflictError("Esta materia ya alcanzó el límite de 3 grupos activos.");
       }
       throw error;
     }
+  }
+
+  async countBySubject(subjectId: string): Promise<number> {
+    const result = await this.pool.query<{ count: string | number }>(
+      "SELECT COUNT(*)::int AS count FROM study_requests WHERE subject_id = $1 AND status = 'abierta' AND is_active = true",
+      [subjectId],
+    );
+    return Number(result.rows[0].count);
   }
 }

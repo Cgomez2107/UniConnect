@@ -6,6 +6,7 @@ interface ApplyInput {
   requestId: string
   applicantId: string
   message: string
+  applicantName?: string
 }
 
 export class ApplyToStudyRequest {
@@ -13,7 +14,7 @@ export class ApplyToStudyRequest {
 
   async execute(input: ApplyInput): Promise<Application> {
     this.validate(input)
-    return this.repository.create(input.requestId, input.applicantId, input.message)
+    return this.repository.create(input.requestId, input.applicantId, input.message, input.applicantName)
   }
 
   private validate(input: ApplyInput): void {

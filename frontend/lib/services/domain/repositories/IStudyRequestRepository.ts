@@ -31,4 +31,5 @@ export interface IStudyRequestRepository {
   getAdmins(requestId: string): Promise<RequestAdminEntry[]>
   assignAdmin(requestId: string, targetUserId: string, actorUserId: string): Promise<void>
   revokeAdmin(requestId: string, targetUserId: string, actorUserId: string): Promise<void>
+  countBySubject(subjectId: string): Promise<number>
 }
