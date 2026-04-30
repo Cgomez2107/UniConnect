@@ -5,6 +5,7 @@
   "version": "53.0.43",
   "scripts": {
     "start": "expo start",
+    "build": "expo export --platform web",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",

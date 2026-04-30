@@ -1,0 +1,28 @@
+app = "uniconnect-auth"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 80
+
+  [[services.ports]]
+    port = 443
+
+  [[services.http_checks]]
+    interval = 10000
+    timeout = 2000
+    grace_period = "10s"
+    restart_limit = 0
+    path = "/health"
+    method = "get"
+    protocol = "http"
+
+[env]
+  PORT = "3000"
+  NODE_ENV = "production"
