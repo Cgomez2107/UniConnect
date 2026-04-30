@@ -1,89 +1,68 @@
 import { create } from "zustand";
 
-interface ActiveTransfer {
-  transferId: string;
-  requestId: string;
-  actorUserId: string;
-  groupName?: string;
-  senderName?: string;
-}
+export type NotificationType = 
+  | "transferencia_admin_solicitada" 
+  | "transferencia_admin_aceptada" 
+  | "solicitud_ingreso" 
+  | "miembro_aceptado"
+  | "miembro_rechazado";
 
-interface ActiveJoinRequest {
-  requestId: string;
-  applicantId: string;
-  applicantName?: string;
-  message?: string;
-  groupName?: string;
+export interface NotificationData {
+  id?: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  payload: any;
 }
 
 interface NotificationState {
-  activeTransfer: ActiveTransfer | null;
-  isTransferModalOpen: boolean;
+  queue: NotificationData[];
+  processedIds: Set<string>;
   transferAccepted: boolean;
 
-  activeJoinRequest: ActiveJoinRequest | null;
-  isJoinRequestModalOpen: boolean;
-
-  activeWelcome: { groupName: string } | null;
-  isWelcomeModalOpen: boolean;
-
   // Actions
-  setTransferData: (data: ActiveTransfer) => void;
-  clearTransfer: () => void;
+  pushNotification: (data: NotificationData) => void;
+  popNotification: () => void;
   markTransferAccepted: (requestId: string) => void;
   resetTransferAccepted: () => void;
-
-  showJoinRequestModal: (data: ActiveJoinRequest) => void;
-  clearJoinRequest: () => void;
-
-  showWelcomeModal: (groupName: string) => void;
-  clearWelcome: () => void;
+  clearQueue: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
-  activeTransfer: null,
-  isTransferModalOpen: false,
+  queue: [],
+  processedIds: new Set(),
   transferAccepted: false,
 
-  activeJoinRequest: null,
-  isJoinRequestModalOpen: false,
+  pushNotification: (data) => set((state) => {
+    // 1. Evitar duplicados por ID (Deduplicación absoluta)
+    if (data.id && state.processedIds.has(data.id)) {
+      return state;
+    }
 
-  activeWelcome: null,
-  isWelcomeModalOpen: false,
+    // 2. Evitar que se encole si ya está en la cola actual
+    if (data.id && state.queue.some(n => n.id === data.id)) {
+      return state;
+    }
 
-  setTransferData: (data) => set({
-    activeTransfer: data,
-    isTransferModalOpen: true
+    const newProcessed = new Set(state.processedIds);
+    if (data.id) newProcessed.add(data.id);
+
+    console.log("[NotificationStore] Nueva notificación encolada:", data.type, data.id);
+    return { 
+      queue: [...state.queue, data],
+      processedIds: newProcessed
+    };
   }),
 
-  clearTransfer: () => set({
-    activeTransfer: null,
-    isTransferModalOpen: false
-  }),
+  popNotification: () => set((state) => ({
+    queue: state.queue.slice(1)
+  })),
+
+  clearQueue: () => set({ queue: [], processedIds: new Set() }),
 
   markTransferAccepted: (requestId) => {
     set({ transferAccepted: true });
   },
 
   resetTransferAccepted: () => set({ transferAccepted: false }),
-
-  showJoinRequestModal: (data) => set({
-    activeJoinRequest: data,
-    isJoinRequestModalOpen: true
-  }),
-
-  clearJoinRequest: () => set({
-    activeJoinRequest: null,
-    isJoinRequestModalOpen: false
-  }),
-
-  showWelcomeModal: (groupName) => set({
-    activeWelcome: { groupName },
-    isWelcomeModalOpen: true
-  }),
-
-  clearWelcome: () => set({
-    activeWelcome: null,
-    isWelcomeModalOpen: false
-  }),
 }));

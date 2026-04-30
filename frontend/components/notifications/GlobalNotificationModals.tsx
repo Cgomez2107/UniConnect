@@ -1,68 +1,91 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Modal, 
   ActivityIndicator,
-  Platform
+  Platform 
 } from "react-native";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { supabase } from "@/lib/supabase";
 import { fetchApi } from "@/lib/api/httpClient";
 
 /**
  * GlobalNotificationModals
  * 
- * Centraliza todos los modales disparados por el sistema de notificaciones Realtime.
+ * Centraliza la visualización de modales basados en una cola de notificaciones.
+ * Muestra las notificaciones una por una.
  */
 export function GlobalNotificationModals() {
-  return (
-    <>
-      <AdminTransferModal />
-      <JoinRequestModal />
-      <WelcomeModal />
-    </>
-  );
+  const { queue, popNotification } = useNotificationStore();
+  const current = queue[0]; // La notificación al frente de la cola
+
+  const handleClose = async () => {
+    if (current?.id) {
+      // ✅ Marcar como leída en la base de datos para que no reaparezca al recargar
+      void supabase
+        .from('user_notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', current.id);
+    }
+    popNotification();
+  };
+
+  if (!current) return null;
+
+  // Determinar qué modal específico mostrar según el tipo
+  switch (current.type) {
+    case "transferencia_admin_solicitada":
+      return <AdminTransferModal data={current} onClose={handleClose} />;
+    case "solicitud_ingreso":
+      return <JoinRequestModal data={current} onClose={handleClose} />;
+    case "miembro_aceptado":
+      return <WelcomeModal data={current} onClose={handleClose} />;
+    default:
+      console.warn("[GlobalNotificationModals] Tipo desconocido:", current.type);
+      return null;
+  }
 }
 
 // 1. Modal de Transferencia de Administración
-function AdminTransferModal() {
-  const { activeTransfer, isTransferModalOpen, clearTransfer } = useNotificationStore();
+function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void }) {
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Lógica robusta para obtener el nombre del grupo
+  const groupName = data.payload?.groupName || (data.title !== "transferencia_admin_solicitada" ? data.title : "un grupo");
 
   const handleAccept = async () => {
-    if (!activeTransfer) return;
     setIsProcessing(true);
     try {
-      await fetchApi(`/study-groups/transfers/${activeTransfer.transferId}/accept`, {
+      await fetchApi(`/study-groups/transfers/${data.payload.transferId}/accept`, {
         method: "POST",
       });
-      clearTransfer();
+      onClose();
       if (Platform.OS === 'web') window.location.reload();
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error al aceptar transferencia:", error);
+      onClose();
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (!isTransferModalOpen || !activeTransfer) return null;
-
   return (
-    <Modal transparent visible={isTransferModalOpen} animationType="fade">
+    <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.container}>
           <Text style={styles.icon}>🛡️</Text>
           <Text style={styles.title}>Invitación de Administración</Text>
           <Text style={styles.description}>
-            Desean delegarte el control total del grupo. ¿Aceptas la responsabilidad?
+            Desean delegarte el control total del grupo <Text style={styles.boldWhite}>{groupName}</Text>. ¿Aceptas la responsabilidad?
           </Text>
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={handleAccept} disabled={isProcessing}>
               {isProcessing ? <ActivityIndicator color="#0047AB" /> : <Text style={styles.acceptText}>ACEPTAR CARGO</Text>}
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={clearTransfer} disabled={isProcessing}>
+            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onClose} disabled={isProcessing}>
               <Text style={styles.rejectText}>RECHAZAR</Text>
             </TouchableOpacity>
           </View>
@@ -73,25 +96,25 @@ function AdminTransferModal() {
 }
 
 // 2. Modal de Solicitud de Ingreso (Para el Admin)
-function JoinRequestModal() {
-  const { activeJoinRequest, isJoinRequestModalOpen, clearJoinRequest } = useNotificationStore();
-
-  if (!isJoinRequestModalOpen || !activeJoinRequest) return null;
+function JoinRequestModal({ data, onClose }: { data: any, onClose: () => void }) {
+  // Evitar usar el título si es igual al tipo (basura de pruebas)
+  const groupName = data.payload?.groupName || (data.title !== "solicitud_ingreso" ? data.title : "tu grupo");
+  const applicantName = data.payload?.applicantName || "un estudiante";
 
   return (
-    <Modal transparent visible={isJoinRequestModalOpen} animationType="fade">
+    <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
         <View style={[styles.container, { borderColor: '#0047AB' }]}>
           <Text style={styles.icon}>👋</Text>
           <Text style={styles.title}>Nueva Solicitud</Text>
           <Text style={styles.description}>
-            Tu grupo <Text style={{ fontWeight: 'bold', color: 'white' }}>{activeJoinRequest.groupName}</Text> tiene una nueva solicitud de ingreso de {activeJoinRequest.applicantName}.
+            Tu grupo <Text style={styles.boldWhite}>{groupName}</Text> tiene una nueva solicitud de ingreso de {applicantName}.
           </Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={clearJoinRequest}>
+            <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={onClose}>
               <Text style={styles.acceptText}>VER SOLICITUDES</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={clearJoinRequest}>
+            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onClose}>
               <Text style={styles.rejectText}>CERRAR</Text>
             </TouchableOpacity>
           </View>
@@ -102,22 +125,20 @@ function JoinRequestModal() {
 }
 
 // 3. Modal de Bienvenida (Para el Miembro)
-function WelcomeModal() {
-  const { activeWelcome, isWelcomeModalOpen, clearWelcome } = useNotificationStore();
-
-  if (!isWelcomeModalOpen || !activeWelcome) return null;
+function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
+  const groupName = data.payload?.groupName || (data.title !== "miembro_aceptado" ? data.title : "un nuevo grupo");
 
   return (
-    <Modal transparent visible={isWelcomeModalOpen} animationType="fade">
+    <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
         <View style={[styles.container, { borderColor: '#10B981' }]}>
           <Text style={styles.icon}>🎉</Text>
           <Text style={styles.title}>¡Bienvenido!</Text>
           <Text style={styles.description}>
-            Tu solicitud para el grupo <Text style={{ fontWeight: 'bold', color: 'white' }}>{activeWelcome.groupName}</Text> ha sido aceptada.
+            Tu solicitud para el grupo <Text style={styles.boldWhite}>{groupName}</Text> ha sido aceptada.
           </Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[styles.button, { backgroundColor: '#10B981' }]} onPress={clearWelcome}>
+            <TouchableOpacity style={[styles.button, { backgroundColor: '#10B981' }]} onPress={onClose}>
               <Text style={[styles.acceptText, { color: 'white' }]}>¡EXCELENTE!</Text>
             </TouchableOpacity>
           </View>
@@ -133,6 +154,7 @@ const styles = StyleSheet.create({
   icon: { fontSize: 40, marginBottom: 20 },
   title: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", textAlign: "center", marginBottom: 12 },
   description: { color: "#A3A3A3", fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 32 },
+  boldWhite: { fontWeight: 'bold', color: 'white' },
   buttonContainer: { width: "100%", gap: 12 },
   button: { width: "100%", paddingVertical: 16, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   acceptButton: { backgroundColor: "#FFFFFF" },
