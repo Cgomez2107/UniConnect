@@ -111,6 +111,7 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
 
   const loadMembers = useCallback(
     async (requestIdValue: string) => {
+      console.log(`[Members] Cargando miembros para requestId=${requestIdValue}`);
       const data = await fetchApi<StudyGroupMember[]>(`/study-groups/${requestIdValue}/members`);
       const list = data ?? [];
       setMembers(list);
@@ -141,6 +142,7 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
       const data = await fetchApi<any[]>(
         `/study-groups/${requestIdValue}/messages?limit=50&page=1`
       );
+      console.log(`[Chat] Mensajes recibidos=${data?.length ?? 0} para requestId=${requestIdValue}`);
 
       let mapped = (data ?? []).map(mapApiMessageToDomain);
 
@@ -171,9 +173,13 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
 
   const loadApplications = useCallback(
     async (requestIdValue: string) => {
-      const result = await getApplicationsByRequest(requestIdValue);
-      const enriched = await enrichApplications(result ?? []);
-      setApplications(enriched);
+      try {
+        const result = await getApplicationsByRequest(requestIdValue);
+        const enriched = await enrichApplications(result ?? []);
+        setApplications(enriched);
+      } catch {
+        // 403 es esperado para miembros sin rol de admin — ignorar silenciosamente.
+      }
     },
     [enrichApplications, getApplicationsByRequest]
   );
@@ -290,9 +296,13 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
           event: "INSERT",
           schema: "public",
           table: "study_group_messages",
+          filter: `request_id=eq.${activeRequestId}`,
         },
         (payload) => {
           console.log("[Chat] Evento de Realtime recibido (crudo):", payload.new);
+          console.log(
+            `[Chat] Comparando request_id=${payload.new?.request_id} con activeRequestId=${activeRequestId}`
+          );
           
           // Filtrado manual por robustez (algunas versiones de Realtime tienen problemas con el filter string)
           if (payload.new.request_id !== activeRequestId) {
