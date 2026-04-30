@@ -66,10 +66,13 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [selectedMentions, setSelectedMentions] = useState<any[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<any | null>(null);
   
   const router = useRouter();
   const { getOrCreateConversation } = useMessaging();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- DERIVED STATE ---
   const isAdmin = useMemo(() => {
@@ -122,15 +125,53 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   };
 
   const handleSend = () => {
-    if (!newMessage.trim() || sendingMessage) return;
+    if ((!newMessage.trim() && !pendingAttachment) || sendingMessage) return;
     
     const finalMentions = selectedMentions.filter(m => 
       newMessage.includes(`@${m.displayName}`)
     );
 
-    handleSendMessage(newMessage, finalMentions);
+    handleSendMessage(newMessage, finalMentions, pendingAttachment || undefined);
+    
+    // Limpiar todo después de enviar
     setNewMessage("");
     setSelectedMentions([]);
+    setPendingAttachment(null);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+
+    setUploadingFile(true);
+    try {
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const path = `${userId}/chat/${fileName}`;
+      
+      const { data, error } = await supabase.storage
+        .from("resources")
+        .upload(path, file);
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("resources")
+        .getPublicUrl(path);
+
+      // En lugar de enviar inmediatamente, lo dejamos "preparado"
+      setPendingAttachment({
+        url: publicUrl,
+        type: file.type,
+        filename: file.name
+      });
+
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("No se pudo subir el archivo. Inténtalo de nuevo.");
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleLeaveDirectly = async () => {
@@ -318,6 +359,27 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
         </div>
 
         <div className="p-6 bg-[#1A1A1A] border-t border-[#2D2D2D] relative">
+          {/* Pending Attachment Preview */}
+          {pendingAttachment && (
+            <div className="absolute bottom-full left-6 mb-4 flex items-center gap-3 bg-[#0047AB]/10 border border-[#0047AB]/30 p-3 rounded-2xl animate-in slide-in-from-bottom-2">
+              <div className="w-10 h-10 rounded-xl bg-[#0047AB] flex items-center justify-center text-white">
+                <span className="material-symbols-outlined">
+                  {pendingAttachment.type.startsWith('image/') ? 'image' : 'description'}
+                </span>
+              </div>
+              <div className="max-w-[200px]">
+                <p className="text-[11px] font-black text-white truncate">{pendingAttachment.filename}</p>
+                <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Listo para enviar</p>
+              </div>
+              <button 
+                onClick={() => setPendingAttachment(null)}
+                className="w-6 h-6 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+          )}
+
           {/* Mention Suggestions Popover */}
           {showMentions && (
             <div className="absolute bottom-full left-6 mb-2 w-64 bg-[#2D2D2D] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2">
@@ -347,7 +409,23 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
           )}
 
           <div className="flex items-center gap-4 bg-[#262626] p-4 rounded-2xl border border-white/5 focus-within:border-[#0047AB]/50 transition-all shadow-inner">
-            <span className="material-symbols-outlined text-neutral-500">attach_file</span>
+            <input 
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingFile}
+              className={`text-neutral-500 hover:text-[#0047AB] transition-colors ${uploadingFile ? "animate-pulse cursor-not-allowed" : ""}`}
+            >
+              {uploadingFile ? (
+                <div className="w-5 h-5 border-2 border-[#0047AB] border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <span className="material-symbols-outlined">attach_file</span>
+              )}
+            </button>
             <input 
               value={newMessage}
               onChange={(e) => handleInputChange(e.target.value)}
@@ -360,16 +438,17 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                   setShowMentions(false);
                 }
               }}
-              placeholder="Escribe un mensaje aquí... (usa @ para mencionar)"
+              disabled={uploadingFile}
+              placeholder={uploadingFile ? "Subiendo archivo..." : "Escribe un mensaje aquí... (usa @ para mencionar)"}
               className="flex-1 bg-transparent border-none text-white text-sm focus:ring-0 placeholder:text-neutral-600"
             />
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-neutral-500 hover:text-yellow-500 cursor-pointer">mood</span>
               <button
                 onClick={handleSend}
-                disabled={!newMessage.trim() || sendingMessage}
+                disabled={(!newMessage.trim() && !pendingAttachment) || sendingMessage || uploadingFile}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  newMessage.trim() && !sendingMessage
+                  (newMessage.trim() || pendingAttachment) && !sendingMessage && !uploadingFile
                     ? "bg-[#0047AB] text-white shadow-lg shadow-blue-900/40 scale-105"
                     : "bg-neutral-800 text-neutral-600"
                 }`}

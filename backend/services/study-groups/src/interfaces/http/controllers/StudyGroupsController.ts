@@ -194,17 +194,20 @@ export class StudyGroupsController {
     const body = await readJsonBody<CreateStudyGroupMessageDto>(req);
 
     try {
-      validateDto(
-        body,
-        {
-          content: [(value) => Validators.required(value, "content")],
-        },
-      );
+      // Validar que al menos haya texto o un archivo
+      if (!body.content && !body.mediaUrl) {
+        sendError(res, 400, "El mensaje debe contener texto o un archivo adjunto.");
+        return;
+      }
 
       const created = await this.createStudyGroupMessage.execute({
         requestId,
         actorUserId,
-        content: body.content as string,
+        content: body.content || "",
+        mediaUrl: body.mediaUrl,
+        mediaType: body.mediaType,
+        mediaFilename: body.mediaFilename,
+        mentions: body.mentions
       });
 
       sendData(res, 201, created);

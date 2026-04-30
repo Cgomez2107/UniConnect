@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
 import { transformRawMessage } from "@/chat/utils/messageFactory";
+import { supabase } from "@/lib/supabase";
 
 interface MemberChatViewProps {
   requestId: string;
@@ -57,12 +58,15 @@ export function MemberChatView({
   const router = useRouter();
   const { getOrCreateConversation } = useMessaging();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Estados para manejo de mensajes y menciones
   const [inputContent, setInputContent] = useState("");
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [selectedMentions, setSelectedMentions] = useState<any[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<any | null>(null);
 
   // Filtrar compañeros (excluir al usuario actual)
   const companions = useMemo(() => 
@@ -142,16 +146,54 @@ export function MemberChatView({
   };
 
   const handleSend = () => {
-    if (!inputContent.trim()) return;
+    if (!inputContent.trim() && !pendingAttachment) return;
     
     // Filtrar solo las menciones que permanecen en el texto
     const finalMentions = selectedMentions.filter(m => 
       inputContent.includes(`@${m.displayName}`)
     );
 
-    handleSendMessage(inputContent, finalMentions);
+    handleSendMessage(inputContent, finalMentions, pendingAttachment || undefined);
+    
+    // Limpiar todo después de enviar
     setInputContent("");
     setSelectedMentions([]);
+    setPendingAttachment(null);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+
+    setUploadingFile(true);
+    try {
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const path = `${userId}/chat/${fileName}`;
+      
+      const { data, error } = await supabase.storage
+        .from("resources")
+        .upload(path, file);
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("resources")
+        .getPublicUrl(path);
+
+      // En lugar de enviar inmediatamente, lo dejamos "preparado"
+      setPendingAttachment({
+        url: publicUrl,
+        type: file.type,
+        filename: file.name
+      });
+
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("No se pudo subir el archivo. Inténtalo de nuevo.");
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -271,16 +313,52 @@ export function MemberChatView({
             </div>
           )}
 
+          {/* Pending Attachment Preview */}
+          {pendingAttachment && (
+            <div className="absolute bottom-full left-6 mb-4 flex items-center gap-3 bg-[#0047AB]/10 border border-[#0047AB]/30 p-3 rounded-2xl animate-in slide-in-from-bottom-2">
+              <div className="w-10 h-10 rounded-xl bg-[#0047AB] flex items-center justify-center text-white">
+                <span className="material-symbols-outlined">
+                  {pendingAttachment.type.startsWith('image/') ? 'image' : 'description'}
+                </span>
+              </div>
+              <div className="max-w-[200px]">
+                <p className="text-[11px] font-black text-white truncate">{pendingAttachment.filename}</p>
+                <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Listo para enviar</p>
+              </div>
+              <button 
+                onClick={() => setPendingAttachment(null)}
+                className="w-6 h-6 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+          )}
+
           <div className="bg-[#2D2D2D]/50 border border-[#2D2D2D] rounded-2xl flex items-center p-2 focus-within:border-[#0047AB]/50 focus-within:bg-[#2D2D2D]/80 transition-all shadow-inner">
-            <button className="p-3 text-neutral-500 hover:text-[#0047AB] transition-colors">
-              <span className="material-symbols-outlined">attach_file</span>
+            <input 
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <button 
+              className={`p-3 text-neutral-500 hover:text-[#0047AB] transition-colors ${uploadingFile ? "animate-pulse cursor-not-allowed" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingFile}
+            >
+              {uploadingFile ? (
+                <div className="w-5 h-5 border-2 border-[#0047AB] border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <span className="material-symbols-outlined">attach_file</span>
+              )}
             </button>
             <input
               className="flex-1 bg-transparent border-none focus:ring-0 text-white text-base px-4 placeholder:text-neutral-600 outline-none"
-              placeholder="Escribe un mensaje aquí... (usa @ para mencionar)"
+              placeholder={uploadingFile ? "Subiendo archivo..." : "Escribe un mensaje aquí... (usa @ para mencionar)"}
               type="text"
               value={inputContent}
               onChange={(e) => handleInputChange(e.target.value)}
+              disabled={uploadingFile}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -297,7 +375,7 @@ export function MemberChatView({
               </button>
               <button
                 className="bg-[#0047AB] text-white p-3 rounded-xl flex items-center justify-center hover:bg-[#003d91] active:scale-95 transition-all disabled:opacity-50 shadow-lg shadow-[#0047AB]/20"
-                disabled={sendingMessage || !inputContent.trim()}
+                disabled={sendingMessage || uploadingFile || (!inputContent.trim() && !pendingAttachment)}
                 onClick={handleSend}
               >
                 <span className="material-symbols-outlined">send</span>

@@ -363,11 +363,12 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
   );
 
   const handleSendMessage = useCallback(
-    async (content: string, mentions?: any[]) => {
+    async (content: string, mentions?: any[], media?: { url: string; type: string; filename: string }) => {
       if (!activeRequestId) return;
 
       const trimmed = content.trim();
-      if (!trimmed) return;
+      // Permitir enviar solo archivos sin texto
+      if (!trimmed && !media) return;
 
       setSendingMessage(true);
       try {
@@ -377,7 +378,10 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
             method: "POST",
             body: JSON.stringify({ 
               content: trimmed,
-              mentions: mentions || []
+              mentions: mentions || [],
+              mediaUrl: media?.url,
+              mediaType: media?.type,
+              mediaFilename: media?.filename
             }),
           }
         );
