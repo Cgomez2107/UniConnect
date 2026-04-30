@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useApplications } from "@/hooks/application/useApplications";
 import { useStudyRequests } from "@/hooks/application/useStudyRequests";
@@ -236,6 +236,64 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     onChange: refreshFromRealtime,
   });
 
+  // Usar Ref para acceder a los miembros actuales dentro del callback de Realtime sin reiniciar la suscripción
+  const membersRef = useRef<StudyGroupMember[]>(members);
+  useEffect(() => {
+    membersRef.current = members;
+  }, [members]);
+
+  // Suscripción Realtime para mensajes del chat grupal (US-W03)
+  useEffect(() => {
+    if (!activeRequestId) return;
+
+    console.log(`[Chat] Suscribiendo a grupo: ${activeRequestId}`);
+    const channel = supabase
+      .channel(`group-chat-${activeRequestId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "study_group_messages",
+        },
+        (payload) => {
+          console.log("[Chat] Evento de Realtime recibido (crudo):", payload.new);
+          
+          // Filtrado manual por robustez (algunas versiones de Realtime tienen problemas con el filter string)
+          if (payload.new.request_id !== activeRequestId) {
+            console.log(`[Chat] Mensaje ignorado (ID de grupo ${payload.new.request_id} no coincide con ${activeRequestId})`);
+            return;
+          }
+          const newMessage = mapApiMessageToDomain(payload.new);
+          
+          // Enriquecer con datos del miembro si es posible (Realtime no incluye el JOIN de perfiles)
+          const member = membersRef.current.find(m => m.userId === newMessage.senderId);
+          if (member) {
+            newMessage.senderFullName = member.fullName;
+            newMessage.senderAvatarUrl = member.avatarUrl;
+          }
+
+          setMessages((prev) => {
+            // Evitar duplicados (ej. si el mensaje fue insertado localmente de forma optimista)
+            if (prev.some((m) => m.id === newMessage.id)) return prev;
+            
+            const updated = [...prev, newMessage];
+            return updated.sort((a, b) => 
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log(`[Chat] Estado de la suscripción para ${activeRequestId}: ${status}`);
+      });
+
+    return () => {
+      console.log(`[Chat] Desuscribiendo de grupo: ${activeRequestId}`);
+      void supabase.removeChannel(channel);
+    };
+  }, [activeRequestId, mapApiMessageToDomain]);
+
   const handleReviewApplication = useCallback(
     async (applicationId: string, decision: "aceptada" | "rechazada") => {
       if (!user?.id || !activeRequestId) return;
@@ -278,7 +336,7 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
 
       setSendingMessage(true);
       try {
-        const created = await fetchApi<GroupMessage>(
+        const created = await fetchApi<any>(
           `/study-groups/${activeRequestId}/messages`,
           {
             method: "POST",
@@ -286,7 +344,8 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
           }
         );
 
-        setMessages((prev) => [...prev, created]);
+        // Mapear explícitamente para asegurar consistencia entre camelCase y snake_case
+        setMessages((prev) => [...prev, mapApiMessageToDomain(created)]);
       } catch (err) {
         const message = err instanceof Error ? err.message : "No se pudo enviar el mensaje.";
         setToast({
@@ -297,7 +356,7 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
         setSendingMessage(false);
       }
     },
-    [activeRequestId]
+    [activeRequestId, mapApiMessageToDomain]
   );
 
   const requestAdminTransfer = useCallback(

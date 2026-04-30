@@ -6,14 +6,13 @@
  * Funcionalidad: ver compañeros, chat privado, salir del grupo
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { GroupChatPanel } from "@/components/dashboard/GroupChatPanel";
 import { AdminTransferNotification } from "@/components/dashboard/AdminTransferNotification";
 import { useAuthStore } from "@/store/useAuthStore";
-import { fetchApi } from "@/lib/api/httpClient";
 import { useRouter } from "expo-router";
 import { useMessaging } from "@/hooks/application/useMessaging";
-import type { GroupMessage, StudyGroupMember } from "@/types/adminDashboard";
+import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
 import { transformRawMessage } from "@/chat/utils/messageFactory";
 
 interface MemberChatViewProps {
@@ -25,23 +24,6 @@ interface MemberChatViewProps {
   onLeaveGroup?: () => void;
 }
 
-// Mapeo de propiedades snake_case a camelCase para mensajes de API
-function mapApiMessageToDomain(msg: any): GroupMessage {
-  return {
-    id: msg.id,
-    requestId: msg.request_id || msg.requestId,
-    senderId: msg.sender_id || msg.senderId,
-    content: msg.content,
-    createdAt: msg.created_at || msg.createdAt,
-    senderFullName: msg.sender_full_name || msg.senderFullName,
-    senderAvatarUrl: msg.sender_avatar_url || msg.senderAvatarUrl,
-    media_url: msg.media_url || msg.mediaUrl,
-    media_type: msg.media_type || msg.mediaType,
-    media_filename: msg.media_filename || msg.mediaFilename,
-    mentions: msg.mentions,
-    reactions: msg.reactions,
-  };
-}
 
 // Determinar si un miembro está online basado en última conexión
 function isUserOnline(lastSeen: string | null): boolean {
@@ -60,22 +42,29 @@ export function MemberChatView({
   facultyName = "",
   onLeaveGroup,
 }: MemberChatViewProps) {
+  const {
+    messages,
+    members,
+    loading: loadingData,
+    sendingMessage,
+    handleSendMessage,
+    leaveGroup
+  } = useStudyGroupDashboard({ requestId });
+
   const userId = useAuthStore((s) => s.user?.id ?? "");
-  const userAvatarUrl = useAuthStore((s) => s.user?.avatarUrl ?? "");
-  const [messages, setMessages] = useState<GroupMessage[]>([]);
-  const [companions, setCompanions] = useState<StudyGroupMember[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(true);
-  const [loadingCompanions, setLoadingCompanions] = useState(true);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [leavingGroup, setLeavingGroup] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [startingChat, setStartingChat] = useState(false);
+  const [leavingGroup, setLeavingGroup] = useState(false);
 
   const router = useRouter();
   const { getOrCreateConversation } = useMessaging();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesLoadedRef = useRef(false);
-  const companionsLoadedRef = useRef(false);
+
+  // Filtrar compañeros (excluir al usuario actual)
+  const companions = useMemo(() => 
+    members.filter(m => m.userId !== userId), 
+    [members, userId]
+  );
 
   // Auto-scroll al último mensaje
   const scrollToBottom = () => {
@@ -86,94 +75,11 @@ export function MemberChatView({
     scrollToBottom();
   }, [messages]);
 
-  // Cargar mensajes del grupo (solo una vez al montar)
-  useEffect(() => {
-    if (messagesLoadedRef.current) return;
-    messagesLoadedRef.current = true;
-
-    const loadMessages = async () => {
-      try {
-        setLoadingMessages(true);
-        const response = await fetchApi<any[]>(
-          `/study-groups/${requestId}/messages?limit=50&offset=0`,
-          { method: "GET" }
-        );
-        setMessages((response || []).map(mapApiMessageToDomain));
-      } catch (error) {
-        console.error("Error loading chat messages:", error);
-      } finally {
-        setLoadingMessages(false);
-      }
-    };
-
-    loadMessages();
-    // No hacer polling automático para evitar bucle infinito
-  }, [requestId]);
-
-  // Cargar compañeros del grupo (solo una vez al montar)
-  useEffect(() => {
-    if (companionsLoadedRef.current) return;
-    companionsLoadedRef.current = true;
-
-    const loadCompanions = async () => {
-      try {
-        setLoadingCompanions(true);
-        const response = await fetchApi<any[]>(
-          `/study-groups/${requestId}/members`,
-          { method: "GET" }
-        );
-        if (response) {
-          const members = response.map((m) => ({
-            userId: m.user_id || m.userId,
-            fullName: m.full_name || m.fullName,
-            avatarUrl: m.avatar_url || m.avatarUrl,
-            role: m.role || "miembro",
-            joinedAt: m.joined_at || m.joinedAt,
-          }));
-          // Excluir al usuario actual
-          setCompanions(members.filter((m) => m.userId !== userId));
-        }
-      } catch (error) {
-        console.error("Error loading companions:", error);
-      } finally {
-        setLoadingCompanions(false);
-      }
-    };
-
-    loadCompanions();
-  }, [requestId, userId]);
-
-  // Enviar mensaje
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
-
-    setSendingMessage(true);
-    try {
-      const response = await fetchApi<any>(
-        `/study-groups/${requestId}/messages`,
-        {
-          method: "POST",
-          body: JSON.stringify({ content }),
-        }
-      );
-
-      if (response) {
-        setMessages((prev) => [mapApiMessageToDomain(response), ...prev]);
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-    } finally {
-      setSendingMessage(false);
-    }
-  };
-
   // Salir del grupo
   const handleLeaveGroup = async () => {
     setLeavingGroup(true);
     try {
-      await fetchApi(`/study-groups/${requestId}/leave`, {
-        method: "POST",
-      });
+      await leaveGroup();
       setShowLeaveConfirm(false);
       if (onLeaveGroup) {
         onLeaveGroup();
@@ -192,8 +98,8 @@ export function MemberChatView({
     if (targetUserId === userId || startingChat) return;
     setStartingChat(true);
     try {
-      const conversation = await getOrCreateConversation(userId, targetUserId);
-      router.push(`/chat/${conversation.id}` as any);
+      // US-W03: Navegar a la ruta base de chat privado solicitada
+      router.push(`/dashboard/chat/direct/${targetUserId}` as any);
     } catch (error) {
       console.error("Error starting private chat:", error);
     } finally {
@@ -238,7 +144,7 @@ export function MemberChatView({
 
         {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-[#1A1A1A]">
-          {loadingMessages ? (
+          {loadingData ? (
             <div className="flex items-center justify-center h-full">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-2 border-[#0047AB] border-t-transparent rounded-full animate-spin"></div>
@@ -309,7 +215,7 @@ export function MemberChatView({
                                 : "bg-[#2D2D2D] text-neutral-200 rounded-bl-none border border-[#3D3D3D]"
                             }`}
                           >
-                            {decoratedMessage.render()}
+                            {decoratedMessage.render({ currentUserId: userId })}
                           </div>
                         );
                       })()}
@@ -421,7 +327,7 @@ export function MemberChatView({
           </div>
 
           <div className="space-y-3">
-            {loadingCompanions ? (
+            {loadingData ? (
               <div className="py-4 flex justify-center">
                 <div className="w-5 h-5 border-2 border-[#0047AB] border-t-transparent rounded-full animate-spin"></div>
               </div>

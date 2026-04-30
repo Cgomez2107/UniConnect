@@ -11,5 +11,9 @@ export interface IStudyGroupMessageRepository {
     requestId: string;
     actorUserId: string;
     content: string;
+    mediaUrl?: string;
+    mediaType?: string;
+    mediaFilename?: string;
+    mentions?: any[];
   }): Promise<StudyGroupMessage>;
 }
