@@ -18,12 +18,6 @@ interface UseStudyGroupDashboardOptions {
   requestId?: string;
 }
 
-interface PublicProfileSummary {
-  id: string;
-  full_name: string;
-  avatar_url: string | null;
-}
-
 function toRelativeLabel(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "Solicitado recientemente";
@@ -86,14 +80,12 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     const uniqueIds = Array.from(new Set(applicantIds));
     if (uniqueIds.length === 0) return apps;
 
-    // Búsqueda masiva de perfiles en Supabase para evitar múltiples peticiones REST
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('id, full_name, avatar_url')
       .in('id', uniqueIds);
 
     if (profilesError) {
-      console.error("Error al enriquecer aplicaciones:", profilesError);
       return apps;
     }
 
@@ -125,19 +117,37 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     []
   );
 
+  const mapApiMessageToDomain = useCallback((msg: any): GroupMessage => {
+    return {
+      id: msg.id,
+      requestId: msg.request_id || msg.requestId,
+      senderId: msg.sender_id || msg.senderId,
+      content: msg.content,
+      createdAt: msg.created_at || msg.createdAt,
+      senderFullName: msg.sender_full_name || msg.senderFullName,
+      senderAvatarUrl: msg.sender_avatar_url || msg.senderAvatarUrl,
+      media_url: msg.media_url || msg.mediaUrl,
+      media_type: msg.media_type || msg.mediaType,
+      media_filename: msg.media_filename || msg.mediaFilename,
+      mentions: msg.mentions,
+      reactions: msg.reactions,
+    };
+  }, []);
+
   const loadMessages = useCallback(
     async (requestIdValue: string) => {
-      const data = await fetchApi<GroupMessage[]>(
+      const data = await fetchApi<any[]>(
         `/study-groups/${requestIdValue}/messages?limit=50&page=1`
       );
 
-      const sorted = (data ?? []).slice().sort((a, b) => {
+      const mapped = (data ?? []).map(mapApiMessageToDomain);
+      const sorted = mapped.slice().sort((a, b) => {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       });
 
       setMessages(sorted);
     },
-    []
+    [mapApiMessageToDomain]
   );
 
   const loadApplications = useCallback(
@@ -329,6 +339,16 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     [pendingApplications]
   );
 
+  const leaveGroup = useCallback(async () => {
+    if (!activeRequestId) return;
+    try {
+      await fetchApi(`/study-groups/${activeRequestId}/leave`, { method: "POST" });
+      setActiveRequest(null);
+    } catch (err) {
+      console.error("Error leaving group:", err);
+    }
+  }, [activeRequestId]);
+
   const updateDescription = useCallback(
     async (description: string) => {
       if (!activeRequestId) return;
@@ -373,7 +393,10 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     dismissToast,
     handleReviewApplication,
     handleSendMessage,
-    requestAdminTransfer,
+    loadDashboard,
+    loadMessages,
+    leaveGroup,
     updateDescription,
+    requestAdminTransfer,
   };
 }

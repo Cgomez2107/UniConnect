@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 import type { GroupMessage } from "@/types/adminDashboard";
+import { transformRawMessage } from "@/chat/utils/messageFactory";
 
 interface Props {
   groupName: string;
@@ -88,7 +89,7 @@ export function GroupChatPanel({
                     : "bg-[#26292B] text-zinc-300 px-4 py-3 rounded-2xl rounded-tl-none border border-[#2D3135] text-body-sm"
                 }
               >
-                {message.content}
+                {transformRawMessage(message).render()}
               </div>
             </div>
           );

@@ -28,17 +28,21 @@ export class InMemoryAdminTransferRepository implements IAdminTransferRepository
   }
 
   async acceptTransfer(input: { transferId: string; actorUserId: string }): Promise<void> {
-    const transfer = this.transfers.find((item) => item.id === input.transferId);
-    if (!transfer) {
+    const index = this.transfers.findIndex((item) => item.id === input.transferId);
+    if (index === -1) {
       throw new Error("Transfer request not found");
     }
 
+    const transfer = this.transfers[index];
     if (transfer.toUserId !== input.actorUserId) {
       throw new Error("No autorizado para aceptar la transferencia.");
     }
 
-    transfer.status = "aceptada";
-    transfer.respondedAt = new Date().toISOString();
+    this.transfers[index] = {
+      ...transfer,
+      status: "aceptada",
+      respondedAt: new Date().toISOString(),
+    };
   }
 
   async leaveAdminRole(_input: { requestId: string; actorUserId: string }): Promise<void> {

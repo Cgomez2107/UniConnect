@@ -14,6 +14,7 @@ import { fetchApi } from "@/lib/api/httpClient";
 import { useRouter } from "expo-router";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import type { GroupMessage, StudyGroupMember } from "@/types/adminDashboard";
+import { transformRawMessage } from "@/chat/utils/messageFactory";
 
 interface MemberChatViewProps {
   requestId: string;
@@ -34,6 +35,11 @@ function mapApiMessageToDomain(msg: any): GroupMessage {
     createdAt: msg.created_at || msg.createdAt,
     senderFullName: msg.sender_full_name || msg.senderFullName,
     senderAvatarUrl: msg.sender_avatar_url || msg.senderAvatarUrl,
+    media_url: msg.media_url || msg.mediaUrl,
+    media_type: msg.media_type || msg.mediaType,
+    media_filename: msg.media_filename || msg.mediaFilename,
+    mentions: msg.mentions,
+    reactions: msg.reactions,
   };
 }
 
@@ -292,15 +298,21 @@ export function MemberChatView({
                         </span>
                       )}
 
-                      <div
-                        className={`px-5 py-3 rounded-2xl shadow-sm ${
-                          isOwnMessage
-                            ? "bg-[#0047AB] text-white rounded-br-none"
-                            : "bg-[#2D2D2D] text-neutral-200 rounded-bl-none border border-[#3D3D3D]"
-                        }`}
-                      >
-                        <p className="text-[15px] leading-relaxed">{msg.content}</p>
-                      </div>
+                      {/* Generación del mensaje decorado */}
+                      {(() => {
+                        const decoratedMessage = transformRawMessage(msg);
+                        return (
+                          <div
+                            className={`px-5 py-3 rounded-2xl shadow-sm ${
+                              isOwnMessage
+                                ? "bg-[#0047AB] text-white rounded-br-none"
+                                : "bg-[#2D2D2D] text-neutral-200 rounded-bl-none border border-[#3D3D3D]"
+                            }`}
+                          >
+                            {decoratedMessage.render()}
+                          </div>
+                        );
+                      })()}
 
                       <div className={`flex items-center gap-1.5 px-2 mt-0.5 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
                         <span className="text-[10px] font-medium text-neutral-600 uppercase tracking-wider">

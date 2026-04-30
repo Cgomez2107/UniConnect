@@ -14,6 +14,12 @@ export interface GroupMessage {
   createdAt: string;
   senderFullName: string | null;
   senderAvatarUrl: string | null;
+  // Soporte para Decorator Pattern
+  media_url?: string | null;
+  media_type?: string | null;
+  media_filename?: string | null;
+  mentions?: any[];
+  reactions?: any[];
 }
 
 export interface AdminTransfer {

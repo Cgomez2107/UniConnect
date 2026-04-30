@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import type { StudyGroupMember, GroupMessage } from "@/types/adminDashboard";
 import { fetchApi } from "@/lib/api/httpClient";
+import { transformRawMessage } from "@/chat/utils/messageFactory";
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/useNotificationStore";
 
@@ -262,16 +263,22 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                   {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
-                msg.senderId === userId 
-                  ? "bg-[#0047AB] text-white rounded-tr-none shadow-lg shadow-blue-900/20" 
-                  : "bg-[#2D2D2D] text-neutral-200 rounded-tl-none border border-white/5"
-              }`}>
-                {msg.content}
-                {msg.senderId === userId && (
-                   <span className="material-symbols-outlined text-[12px] ml-2 align-middle opacity-50">done_all</span>
-                )}
-              </div>
+              
+              {(() => {
+                const decoratedMessage = transformRawMessage(msg);
+                return (
+                  <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
+                    msg.senderId === userId 
+                      ? "bg-[#0047AB] text-white rounded-tr-none shadow-lg shadow-blue-900/20" 
+                      : "bg-[#2D2D2D] text-neutral-200 rounded-tl-none border border-white/5"
+                  }`}>
+                    {decoratedMessage.render()}
+                    {msg.senderId === userId && (
+                       <span className="material-symbols-outlined text-[12px] ml-2 align-middle opacity-50">done_all</span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

@@ -12,6 +12,11 @@ interface StudyGroupMessageRow {
   created_at: Date | string;
   sender_full_name: string | null;
   sender_avatar_url: string | null;
+  media_url?: string | null;
+  media_type?: string | null;
+  media_filename?: string | null;
+  mentions?: any[] | null;
+  reactions?: any[] | null;
 }
 
 function buildPool(env: StudyGroupsEnv): Pool {
@@ -41,6 +46,11 @@ function mapMessage(row: StudyGroupMessageRow): StudyGroupMessage {
     createdAt: new Date(row.created_at).toISOString(),
     senderFullName: row.sender_full_name,
     senderAvatarUrl: row.sender_avatar_url,
+    mediaUrl: row.media_url,
+    mediaType: row.media_type,
+    mediaFilename: row.media_filename,
+    mentions: row.mentions,
+    reactions: row.reactions,
   };
 }
 
