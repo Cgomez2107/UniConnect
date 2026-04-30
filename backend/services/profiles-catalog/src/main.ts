@@ -50,14 +50,14 @@ function bootstrap(): void {
     });
   });
 
-  (server as any).listen({ port: env.port, host: "::" }, () => {
+  (server as any).listen({ port: env.port, host: "0.0.0.0" }, () => {
     console.log(
       JSON.stringify({
         service: "profiles-catalog",
         level: "info",
         message: "Service listening",
         port: env.port,
-        host: "::",
+        host: "0.0.0.0",
         nodeEnv: env.nodeEnv,
       }),
     );

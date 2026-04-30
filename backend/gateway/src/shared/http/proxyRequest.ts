@@ -73,7 +73,6 @@ export async function proxyRequest(
     res.writeHead(downstreamResponse.status, responseHeaders);
     res.end(responseText);
   } catch (error) {
-    console.error(`[Gateway Proxy Error] Method: ${method}, Target: ${targetUrl.href}, Error:`, error);
     sendJson(res, 502, {
       error: "Downstream service unavailable",
       details: error instanceof Error ? error.message : "Unknown proxy error",
