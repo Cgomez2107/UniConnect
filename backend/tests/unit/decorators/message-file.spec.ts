@@ -6,7 +6,7 @@ import { FileDecorator } from "../../../services/messaging/src/domain/decorators
 import type { FileMetadata } from "../../../services/messaging/src/domain/decorators/FileDecorator";
 
 describe("US-T01 Tarea 2 - MensajeConArchivo", () => {
-  it("render() debe incluir informacion del archivo (url, mimeType, size)", () => {
+  it("getMetadata() debe incluir informacion del archivo (url, mimeType, size)", () => {
     const base = new BaseMessage({
       id: "msg-file-001",
       content: "Adjunto archivo",
@@ -22,11 +22,12 @@ describe("US-T01 Tarea 2 - MensajeConArchivo", () => {
     };
 
     const decorated = new FileDecorator(base, file);
-    const rendered = decorated.render();
+    const metadata = decorated.getMetadata();
+    const fileMetadata = metadata.file as any;
 
-    assert(rendered.includes(file.url));
-    assert(rendered.includes(file.mimeType));
-    assert(rendered.includes(String(file.size)));
+    assert.equal(fileMetadata.url, file.url);
+    assert.equal(fileMetadata.mimeType, file.mimeType);
+    assert.equal(fileMetadata.size, file.size);
   });
 
   it("un mensaje base no debe incluir archivo en metadata ni render", () => {
@@ -62,7 +63,7 @@ describe("US-T01 Tarea 2 - MensajeConArchivo", () => {
 
     assert.throws(
       () => new FileDecorator(base, invalid),
-      /filename no puede estar vacio/,
+      /filename no puede estar vac[ií]o/,
     );
   });
 
@@ -83,7 +84,7 @@ describe("US-T01 Tarea 2 - MensajeConArchivo", () => {
 
     assert.throws(
       () => new FileDecorator(base, invalid),
-      /url no puede estar vacia/,
+      /url no puede estar vac[ií]a/,
     );
   });
 
@@ -104,7 +105,7 @@ describe("US-T01 Tarea 2 - MensajeConArchivo", () => {
 
     assert.throws(
       () => new FileDecorator(base, invalid),
-      /mimeType no puede estar vacio/,
+      /mimeType no puede estar vac[ií]o/,
     );
   });
 });
