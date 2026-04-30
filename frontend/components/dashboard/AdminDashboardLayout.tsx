@@ -13,6 +13,7 @@ import { useMessaging } from "@/hooks/application/useMessaging";
 import type { StudyGroupMember, GroupMessage } from "@/types/adminDashboard";
 import { fetchApi } from "@/lib/api/httpClient";
 import { supabase } from "@/lib/supabase";
+import { useNotificationStore } from "@/store/useNotificationStore";
 
 const ROLE_LABELS: Record<StudyGroupMember["role"], string> = {
   autor: "Creador",
@@ -195,6 +196,26 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // --- REDIRECCIÓN PROACTIVA (PREVENCIÓN 403) ---
+  const transferAccepted = useNotificationStore((s) => s.transferAccepted);
+  const resetTransferAccepted = useNotificationStore((s) => s.resetTransferAccepted);
+
+  useEffect(() => {
+    if (transferAccepted) {
+      console.log("[AdminDashboard] Transferencia aceptada detectada. Redirigiendo para evitar 403...");
+      
+      // Limpiar canales activos antes de salir
+      void supabase.removeAllChannels();
+      
+      // Resetear señal
+      resetTransferAccepted();
+      
+      // Redirigir al feed limpiando cualquier modal o pantalla previa
+      router.dismissAll();
+      router.replace("/(tabs)/feed" as any);
+    }
+  }, [transferAccepted, router, resetTransferAccepted]);
 
   // --- RENDER HELPERS ---
   if (loading) {

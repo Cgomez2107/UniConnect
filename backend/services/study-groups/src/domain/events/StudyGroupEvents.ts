@@ -20,6 +20,8 @@ export interface SolicitudIngresoEvent {
   readonly applicantId: string;
   readonly recipientUserId: string;
   readonly message: string;
+  readonly groupName: string;
+  readonly applicantName: string;
 }
 
 /**
@@ -33,6 +35,7 @@ export interface MiembroAceptadoEvent {
   readonly requestId: string;
   readonly applicantId: string;
   readonly approvedBy: string;
+  readonly groupName: string;
 }
 
 /**
@@ -59,6 +62,7 @@ export interface TransferenciaAdminSolicitadaEvent {
   readonly requestId: string;
   readonly actorUserId: string;
   readonly targetUserId: string;
+  readonly groupName: string;
 }
 
 /**

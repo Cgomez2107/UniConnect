@@ -34,12 +34,14 @@ export class NotificationObserver implements IObserver {
         await this.notificationRepository.create({
           userId: event.recipientUserId,
           type: "solicitud_ingreso",
-          title: "Nueva solicitud de ingreso",
-          body: "Tienes una nueva solicitud para tu grupo de estudio.",
+          title: event.groupName, // Usamos el nombre del grupo como título
+          body: `${event.applicantName} quiere unirse a tu grupo.`,
           payload: {
             requestId: event.requestId,
             applicantId: event.applicantId,
             message: event.message,
+            applicantName: event.applicantName,
+            groupName: event.groupName,
           },
         });
         break;
@@ -48,12 +50,13 @@ export class NotificationObserver implements IObserver {
         await this.notificationRepository.create({
           userId: event.applicantId,
           type: "miembro_aceptado",
-          title: "Solicitud aceptada",
-          body: "Tu solicitud fue aceptada. Ya formas parte del grupo.",
+          title: event.groupName, // Usamos el nombre del grupo como título
+          body: `Tu solicitud para ${event.groupName} fue aceptada.`,
           payload: {
             applicationId: event.applicationId,
             requestId: event.requestId,
             approvedBy: event.approvedBy,
+            groupName: event.groupName,
           },
         });
         break;
@@ -76,7 +79,7 @@ export class NotificationObserver implements IObserver {
         await this.notificationRepository.create({
           userId: event.targetUserId,
           type: "transferencia_admin_solicitada",
-          title: "Transferencia de administracion",
+          title: event.groupName, // Usamos el nombre del grupo
           body: "Tienes una solicitud para transferir la administracion del grupo.",
           payload: {
             transferId: event.transferId,

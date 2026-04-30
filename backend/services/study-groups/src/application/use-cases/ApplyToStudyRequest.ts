@@ -12,7 +12,7 @@ export class ApplyToStudyRequest {
     private readonly subject: StudyGroupSubject,
   ) {}
 
-  async execute(input: { requestId: string; applicantId: string; message: string }): Promise<Application> {
+  async execute(input: { requestId: string; applicantId: string; message: string; applicantName?: string }): Promise<Application> {
     const requestId = requireTrimmed(input.requestId, "requestId");
     const applicantId = requireTrimmed(input.applicantId, "applicantId");
     const message = requireTrimmed(input.message, "message");
@@ -36,6 +36,8 @@ export class ApplyToStudyRequest {
       applicantId,
       recipientUserId: request.authorId,
       message,
+      groupName: request.title,
+      applicantName: input.applicantName || "Un estudiante",
     };
 
     this.subject.emit(event).catch((error) => {

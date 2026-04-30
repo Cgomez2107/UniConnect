@@ -72,7 +72,7 @@ export function usePostulationForm({ requestId, onApplied }: UsePostulationFormP
         return;
       }
 
-      await applyToRequest(requestId, user.id, message.trim());
+      await applyToRequest(requestId, user.id, message.trim(), user.fullName);
       onApplied?.();
     } catch (e: any) {
       Alert.alert("Error", e.message ?? "No se pudo enviar la postulación.");

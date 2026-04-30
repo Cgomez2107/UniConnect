@@ -180,8 +180,8 @@ function bootstrap(): void {
     repository,
     subject,
   );
-  const reviewApplication = new ReviewApplication(applicationRepository, subject);
-  const requestAdminTransfer = new RequestAdminTransfer(adminTransferRepository, subject);
+  const reviewApplication = new ReviewApplication(applicationRepository, repository, subject);
+  const requestAdminTransfer = new RequestAdminTransfer(adminTransferRepository, repository, subject);
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
   const controller = new StudyGroupsController(

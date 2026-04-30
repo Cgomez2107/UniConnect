@@ -287,6 +287,7 @@ export class StudyGroupsController {
         requestId,
         applicantId: actorUserId,
         message: body.message ?? "",
+        applicantName: body.applicantName,
       });
 
       sendData(res, 201, created);

@@ -1,4 +1,5 @@
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
+import type { IStudyRequestRepository } from "../../domain/repositories/IStudyRequestRepository.js";
 import type { StudyGroupSubject } from "../../domain/events/index.js";
 import type { MiembroAceptadoEvent, MiembroRechazadoEvent } from "../../domain/events/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
@@ -6,6 +7,7 @@ import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 export class ReviewApplication {
   constructor(
     private readonly repository: IApplicationRepository,
+    private readonly studyRequestRepository: IStudyRequestRepository,
     private readonly subject: StudyGroupSubject,
   ) {}
 
@@ -16,6 +18,11 @@ export class ReviewApplication {
     const application = await this.repository.getById(applicationId);
     if (!application) {
       throw new Error("Postulacion no encontrada.");
+    }
+
+    const request = await this.studyRequestRepository.getById(application.requestId);
+    if (!request) {
+      throw new Error("Solicitud de estudio no encontrada.");
     }
 
     await this.repository.review({
@@ -33,6 +40,7 @@ export class ReviewApplication {
         requestId: application.requestId,
         applicantId: application.applicantId,
         approvedBy: actorUserId,
+        groupName: request.title,
       };
 
       this.subject.emit(event).catch((error) => {
@@ -55,4 +63,4 @@ export class ReviewApplication {
       console.error("[ReviewApplication] Error emitiendo evento:", error);
     });
   }
-}
+}
