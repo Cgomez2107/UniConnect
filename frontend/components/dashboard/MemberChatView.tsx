@@ -7,7 +7,6 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { GroupChatPanel } from "@/components/dashboard/GroupChatPanel";
 import { AdminTransferNotification } from "@/components/dashboard/AdminTransferNotification";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
@@ -23,7 +22,6 @@ interface MemberChatViewProps {
   facultyName?: string;
   onLeaveGroup?: () => void;
 }
-
 
 // Determinar si un miembro está online basado en última conexión
 function isUserOnline(lastSeen: string | null): boolean {
@@ -59,6 +57,12 @@ export function MemberChatView({
   const router = useRouter();
   const { getOrCreateConversation } = useMessaging();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Estados para manejo de mensajes y menciones
+  const [inputContent, setInputContent] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedMentions, setSelectedMentions] = useState<any[]>([]);
 
   // Filtrar compañeros (excluir al usuario actual)
   const companions = useMemo(() => 
@@ -108,16 +112,50 @@ export function MemberChatView({
     }
   };
 
+  // Manejo de entrada de texto y detección de menciones
+  const handleInputChange = (text: string) => {
+    setInputContent(text);
+    
+    // Detectar si el último carácter o palabra sugiere una mención
+    const lastWord = text.split(" ").pop() || "";
+    if (lastWord.startsWith("@")) {
+      setMentionQuery(lastWord.slice(1).toLowerCase());
+      setShowMentions(true);
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const insertMention = (member: any) => {
+    const words = inputContent.split(" ");
+    words.pop(); // Eliminar el "@query" parcial
+    const name = member.fullName || "Usuario";
+    const newContent = [...words, `@${name} `].join(" ");
+    
+    setInputContent(newContent);
+    setShowMentions(false);
+    
+    // Guardar metadata de la mención para el envío
+    if (!selectedMentions.some(m => m.userId === member.userId)) {
+      setSelectedMentions([...selectedMentions, { userId: member.userId, displayName: name }]);
+    }
+  };
+
+  const handleSend = () => {
+    if (!inputContent.trim()) return;
+    
+    // Filtrar solo las menciones que permanecen en el texto
+    const finalMentions = selectedMentions.filter(m => 
+      inputContent.includes(`@${m.displayName}`)
+    );
+
+    handleSendMessage(inputContent, finalMentions);
+    setInputContent("");
+    setSelectedMentions([]);
+  };
+
   return (
     <div className="dark h-screen bg-[#1A1A1A] text-on-surface font-['Inter'] antialiased flex overflow-hidden">
-      {/* Notificación flotante de transferencia de admin */}
-      <AdminTransferNotification
-        requestId={requestId}
-        onAccepted={() => {
-          window.location.reload();
-        }}
-      />
-
       {/* ============================================================================ */}
       {/* LEFT COLUMN: Main Chat (70%) */}
       {/* ============================================================================ */}
@@ -183,7 +221,7 @@ export function MemberChatView({
                             ? "bg-[#0047AB] text-white rounded-tr-none shadow-lg shadow-blue-900/20" 
                             : "bg-[#2D2D2D] text-neutral-200 rounded-tl-none border border-white/5"
                         }`}>
-                          {decoratedMessage.render()}
+                          {decoratedMessage.render({ currentUserId: userId })}
                           {isOwnMessage && (
                              <span className="material-symbols-outlined text-[12px] ml-2 align-middle opacity-50">done_all</span>
                           )}
@@ -199,21 +237,57 @@ export function MemberChatView({
         </div>
 
         {/* Chat Input */}
-        <div className="p-6 border-t border-[#2D2D2D] bg-[#1A1A1A]">
+        <div className="p-6 border-t border-[#2D2D2D] bg-[#1A1A1A] relative">
+          {/* Mention Suggestions Popover */}
+          {showMentions && (
+            <div className="absolute bottom-full left-6 mb-2 w-64 bg-[#2D2D2D] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2">
+              <div className="px-4 py-3 border-b border-white/5 bg-white/5">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Mencionar compañero</p>
+              </div>
+              <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                {members
+                  .filter(m => (m.fullName || "").toLowerCase().includes(mentionQuery))
+                  .map(member => (
+                    <button
+                      key={member.userId}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+                      onClick={() => insertMention(member)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#0047AB] flex items-center justify-center text-[10px] font-bold text-white border border-white/10">
+                        {(member.fullName || "??").substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{member.fullName || "Integrante"}</p>
+                        <p className="text-[10px] text-neutral-500">{member.role === 'admin' || member.role === 'autor' ? 'Administrador' : 'Estudiante'}</p>
+                      </div>
+                    </button>
+                  ))}
+                {members.filter(m => (m.fullName || "").toLowerCase().includes(mentionQuery)).length === 0 && (
+                  <div className="px-4 py-6 text-center">
+                    <p className="text-xs text-neutral-500 italic">No se encontraron miembros</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="bg-[#2D2D2D]/50 border border-[#2D2D2D] rounded-2xl flex items-center p-2 focus-within:border-[#0047AB]/50 focus-within:bg-[#2D2D2D]/80 transition-all shadow-inner">
             <button className="p-3 text-neutral-500 hover:text-[#0047AB] transition-colors">
               <span className="material-symbols-outlined">attach_file</span>
             </button>
             <input
               className="flex-1 bg-transparent border-none focus:ring-0 text-white text-base px-4 placeholder:text-neutral-600 outline-none"
-              placeholder="Escribe un mensaje aquí..."
+              placeholder="Escribe un mensaje aquí... (usa @ para mencionar)"
               type="text"
-              onKeyPress={(e) => {
+              value={inputContent}
+              onChange={(e) => handleInputChange(e.target.value)}
+              onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  const input = e.currentTarget;
-                  handleSendMessage(input.value);
-                  input.value = "";
+                  handleSend();
+                }
+                if (e.key === "Escape") {
+                  setShowMentions(false);
                 }
               }}
             />
@@ -223,16 +297,10 @@ export function MemberChatView({
               </button>
               <button
                 className="bg-[#0047AB] text-white p-3 rounded-xl flex items-center justify-center hover:bg-[#003d91] active:scale-95 transition-all disabled:opacity-50 shadow-lg shadow-[#0047AB]/20"
-                disabled={sendingMessage}
-                onClick={(e) => {
-                  const input = e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement;
-                  handleSendMessage(input.value);
-                  input.value = "";
-                }}
+                disabled={sendingMessage || !inputContent.trim()}
+                onClick={handleSend}
               >
-                <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  send
-                </span>
+                <span className="material-symbols-outlined">send</span>
               </button>
             </div>
           </div>
@@ -242,7 +310,7 @@ export function MemberChatView({
       {/* ============================================================================ */}
       {/* RIGHT COLUMN: Info Panel (30%) */}
       {/* ============================================================================ */}
-      <aside className="w-[30%] h-full overflow-y-auto p-8 flex flex-col gap-10 bg-[#1A1A1A] custom-scrollbar">
+      <aside className="w-[30%] h-full overflow-y-auto p-8 flex flex-col gap-10 bg-[#1A1A1A] border-l border-[#2D2D2D] custom-scrollbar">
         {/* Leave Group Action */}
         <div className="flex-shrink-0">
           <button
@@ -306,7 +374,7 @@ export function MemberChatView({
                       <div className="relative">
                         <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center border border-[#3D3D3D] overflow-hidden">
                           {companion.avatarUrl ? (
-                            <img src={companion.avatarUrl ?? undefined} alt={companion.fullName ?? "Compañero"} className="w-full h-full object-cover" />
+                            <img src={companion.avatarUrl} alt={companion.fullName ?? "Compañero"} className="w-full h-full object-cover" />
                           ) : (
                             <span className="text-neutral-500 font-bold text-xs">
                               {(companion.fullName ?? "?").split(" ").map(n => n[0]).join("")}
@@ -316,7 +384,7 @@ export function MemberChatView({
                         <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1A1A1A] ${online ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-neutral-600"}`}></div>
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white">{companion.fullName}</p>
+                        <p className="text-sm font-bold text-white">{companion.fullName || "Integrante"}</p>
                         <p className="text-[10px] text-neutral-500 font-medium">{online ? "En línea" : "Desconectado"}</p>
                       </div>
                     </div>
@@ -396,6 +464,7 @@ export function MemberChatView({
           </div>
         </div>
       )}
+
       {/* Notificación de transferencia de administración */}
       <AdminTransferNotification 
         requestId={requestId} 

@@ -363,7 +363,7 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
   );
 
   const handleSendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, mentions?: any[]) => {
       if (!activeRequestId) return;
 
       const trimmed = content.trim();
@@ -375,7 +375,10 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
           `/study-groups/${activeRequestId}/messages`,
           {
             method: "POST",
-            body: JSON.stringify({ content: trimmed }),
+            body: JSON.stringify({ 
+              content: trimmed,
+              mentions: mentions || []
+            }),
           }
         );
 

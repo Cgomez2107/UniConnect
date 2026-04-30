@@ -62,6 +62,11 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [startingChat, setStartingChat] = useState(false);
   
+  // --- MENTION STATES ---
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedMentions, setSelectedMentions] = useState<any[]>([]);
+  
   const router = useRouter();
   const { getOrCreateConversation } = useMessaging();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -93,10 +98,39 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   }, [applications, activeTab]);
 
   // --- HANDLERS ---
+  const handleInputChange = (text: string) => {
+    setNewMessage(text);
+    const lastWord = text.split(" ").pop() || "";
+    if (lastWord.startsWith("@")) {
+      setMentionQuery(lastWord.slice(1).toLowerCase());
+      setShowMentions(true);
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const insertMention = (member: any) => {
+    const words = newMessage.split(" ");
+    words.pop();
+    const name = member.fullName || "Integrante";
+    const updated = [...words, `@${name} `].join(" ");
+    setNewMessage(updated);
+    setShowMentions(false);
+    if (!selectedMentions.some(m => m.userId === member.userId)) {
+      setSelectedMentions([...selectedMentions, { userId: member.userId, displayName: name }]);
+    }
+  };
+
   const handleSend = () => {
     if (!newMessage.trim() || sendingMessage) return;
-    handleSendMessage(newMessage);
+    
+    const finalMentions = selectedMentions.filter(m => 
+      newMessage.includes(`@${m.displayName}`)
+    );
+
+    handleSendMessage(newMessage, finalMentions);
     setNewMessage("");
+    setSelectedMentions([]);
   };
 
   const handleLeaveDirectly = async () => {
@@ -272,7 +306,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                       ? "bg-[#0047AB] text-white rounded-tr-none shadow-lg shadow-blue-900/20" 
                       : "bg-[#2D2D2D] text-neutral-200 rounded-tl-none border border-white/5"
                   }`}>
-                    {decoratedMessage.render()}
+                    {decoratedMessage.render({ currentUserId: userId })}
                     {msg.senderId === userId && (
                        <span className="material-symbols-outlined text-[12px] ml-2 align-middle opacity-50">done_all</span>
                     )}
@@ -283,14 +317,50 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
           ))}
         </div>
 
-        <div className="p-6 bg-[#1A1A1A] border-t border-[#2D2D2D]">
+        <div className="p-6 bg-[#1A1A1A] border-t border-[#2D2D2D] relative">
+          {/* Mention Suggestions Popover */}
+          {showMentions && (
+            <div className="absolute bottom-full left-6 mb-2 w-64 bg-[#2D2D2D] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2">
+              <div className="px-4 py-3 border-b border-white/5 bg-white/5">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Mencionar integrante</p>
+              </div>
+              <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                {members
+                  .filter(m => (m.fullName || "").toLowerCase().includes(mentionQuery))
+                  .map(member => (
+                    <button
+                      key={member.userId}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+                      onClick={() => insertMention(member)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#0047AB] flex items-center justify-center text-[10px] font-bold text-white border border-white/10">
+                        {(member.fullName || "??").substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{member.fullName || "Integrante"}</p>
+                        <p className="text-[10px] text-neutral-500">{ROLE_LABELS[member.role]}</p>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-4 bg-[#262626] p-4 rounded-2xl border border-white/5 focus-within:border-[#0047AB]/50 transition-all shadow-inner">
             <span className="material-symbols-outlined text-neutral-500">attach_file</span>
             <input 
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Escribe un mensaje aquí..."
+              onChange={(e) => handleInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+                if (e.key === "Escape") {
+                  setShowMentions(false);
+                }
+              }}
+              placeholder="Escribe un mensaje aquí... (usa @ para mencionar)"
               className="flex-1 bg-transparent border-none text-white text-sm focus:ring-0 placeholder:text-neutral-600"
             />
             <div className="flex items-center gap-3">
