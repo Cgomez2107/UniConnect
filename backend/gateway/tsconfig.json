@@ -3,8 +3,9 @@
   "compilerOptions": {
     "rootDir": "../",
     "outDir": "dist",
-    "baseUrl": "../",
-    "types": ["node"]
+    "baseUrl": "../../",
+    "types": ["node"],
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "src/**/*.ts",

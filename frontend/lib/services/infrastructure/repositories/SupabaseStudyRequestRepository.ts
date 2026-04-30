@@ -249,4 +249,16 @@ export class SupabaseStudyRequestRepository implements IStudyRequestRepository {
     })
     if (error) throw new Error(error.message)
   }
+
+  async countBySubject(subjectId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from("study_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("subject_id", subjectId)
+      .eq("status", "abierta")
+      .eq("is_active", true)
+
+    if (error) throw error
+    return count ?? 0
+  }
 }

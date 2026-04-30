@@ -13,6 +13,7 @@ import { StatusBar } from "expo-status-bar";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -22,6 +23,8 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function PostularScreen() {
@@ -29,6 +32,8 @@ export default function PostularScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
   const insets = useSafeAreaInsets();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   const {
     request,
     loadingRequest,
@@ -40,7 +45,7 @@ export default function PostularScreen() {
     handlePostular,
   } = usePostulationForm({
     requestId: id,
-    onApplied: () => router.back(),
+    onApplied: () => setShowSuccessModal(true),
   });
 
   if (loadingRequest) {
@@ -165,6 +170,36 @@ export default function PostularScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Modal de Éxito */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: C.surface, borderColor: C.primary }]}>
+            <View style={[styles.successIconCircle, { backgroundColor: C.primary + "20" }]}>
+              <Ionicons name="paper-plane" size={42} color={C.primary} />
+            </View>
+            
+            <Text style={[styles.modalTitle, { color: C.textPrimary }]}>
+              ¡Postulación Enviada!
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: C.textSecondary }]}>
+              Tu mensaje de presentación ha sido enviado al administrador. Recibirás una notificación si eres aceptado en el grupo.
+            </Text>
+
+            <TouchableOpacity 
+              style={[styles.modalBtn, { backgroundColor: C.primary }]}
+              onPress={() => router.replace("/feed")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalBtnText}>Ir al Feed</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -218,4 +253,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   sendBtnText: { fontSize: 16, fontWeight: "700" },
+
+  // Modal de éxito
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 32,
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  successIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  modalBtn: {
+    width: "100%",
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  modalBtnText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

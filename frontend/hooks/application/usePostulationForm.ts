@@ -72,12 +72,8 @@ export function usePostulationForm({ requestId, onApplied }: UsePostulationFormP
         return;
       }
 
-      await applyToRequest(requestId, user.id, message.trim());
-      Alert.alert(
-        "¡Postulación enviada! 🎉",
-        "El creador del grupo recibirá tu mensaje y te notificará pronto.",
-        [{ text: "Entendido", onPress: () => onApplied?.() }]
-      );
+      await applyToRequest(requestId, user.id, message.trim(), user.fullName);
+      onApplied?.();
     } catch (e: any) {
       Alert.alert("Error", e.message ?? "No se pudo enviar la postulación.");
     } finally {

@@ -138,6 +138,10 @@ export class ApiStudyRequestRepository implements IStudyRequestRepository {
     ): Promise<void> {
         return this.fallback.revokeAdmin(requestId, targetUserId, actorUserId);
     }
+
+    async countBySubject(subjectId: string): Promise<number> {
+        return this.fallback.countBySubject(subjectId);
+    }
 }
 
 /**

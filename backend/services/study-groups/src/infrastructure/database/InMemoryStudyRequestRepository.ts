@@ -86,4 +86,10 @@ export class InMemoryStudyRequestRepository implements IStudyRequestRepository {
     this.requests.unshift(created);
     return created;
   }
+
+  async countBySubject(subjectId: string): Promise<number> {
+    return this.requests.filter(
+      (r) => r.subjectId === subjectId && r.status === "abierta" && r.isActive,
+    ).length;
+  }
 }

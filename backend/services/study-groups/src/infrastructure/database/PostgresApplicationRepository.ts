@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 
+import { AuthorizationError } from "../../../../../shared/libs/errors/index.js";
 import type { StudyGroupsEnv } from "../../config/env.js";
 import type { Application } from "../../domain/entities/Application.js";
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
@@ -58,7 +59,7 @@ export class PostgresApplicationRepository implements IApplicationRepository {
     );
 
     if (!adminCheck.rows[0]?.is_request_admin) {
-      throw new Error("No tienes permisos para ver las postulaciones de esta solicitud.");
+      throw new AuthorizationError("No tienes permisos para ver las postulaciones de esta solicitud.");
     }
 
     const result = await this.pool.query<ApplicationRow>(
@@ -72,6 +73,20 @@ export class PostgresApplicationRepository implements IApplicationRepository {
     );
 
     return result.rows.map(mapApplication);
+  }
+
+  async getById(applicationId: string): Promise<Application | null> {
+    const result = await this.pool.query<ApplicationRow>(
+      `
+        SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
+        FROM applications
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [applicationId],
+    );
+
+    return result.rows[0] ? mapApplication(result.rows[0]) : null;
   }
 
   async create(input: { requestId: string; applicantId: string; message: string }): Promise<Application> {

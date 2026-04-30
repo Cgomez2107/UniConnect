@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,10 +19,14 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function NuevaSolicitudScreen() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   const {
     role,
     title,
@@ -40,9 +45,13 @@ export default function NuevaSolicitudScreen() {
     handleCreate,
     decrementMembers,
     incrementMembers,
+    subjectGroupCount,
+    loadingCount,
   } = useCreateStudyRequestForm({
-    onCreated: () => router.back(),
+    onCreated: () => setShowSuccessModal(true),
   });
+
+  const isLimitReached = subjectGroupCount >= 3;
 
   // Estados de carga / error / vacío
   if (loadingData) {
@@ -182,6 +191,21 @@ export default function NuevaSolicitudScreen() {
           </Text>
         )}
 
+        {selectedSubject && isLimitReached && (
+          <View style={[styles.warningBanner, { backgroundColor: C.error + "10", borderColor: C.error + "30" }]}>
+            <Text style={[styles.warningText, { color: C.error }]}>
+              ⚠️ Ya existen {subjectGroupCount} grupos activos para esta asignatura. 
+              Te recomendamos unirte a uno existente para fomentar la colaboración.
+            </Text>
+          </View>
+        )}
+
+        {selectedSubject && !isLimitReached && subjectGroupCount > 0 && (
+          <Text style={[styles.hint, { color: C.primary, marginTop: 8, fontWeight: "600" }]}>
+            Hay {subjectGroupCount} {subjectGroupCount === 1 ? "grupo activo" : "grupos activos"} para esta materia.
+          </Text>
+        )}
+
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Cupos máximos (2–10)
         </Text>
@@ -204,22 +228,54 @@ export default function NuevaSolicitudScreen() {
         <TouchableOpacity
           style={[
             styles.submitBtn,
-            { backgroundColor: isValid ? C.primary : C.border, opacity: isSubmitting ? 0.7 : 1 },
+            { backgroundColor: (isValid && !isLimitReached) ? C.primary : C.border, opacity: (isSubmitting || loadingCount) ? 0.7 : 1 },
           ]}
           onPress={handleCreate}
-          disabled={!isValid || isSubmitting}
+          disabled={!isValid || isSubmitting || loadingCount || isLimitReached}
         >
-          {isSubmitting ? (
+          {isSubmitting || loadingCount ? (
             <ActivityIndicator color={C.textOnPrimary} />
           ) : (
-            <Text style={[styles.submitText, { color: isValid ? C.textOnPrimary : C.textSecondary }]}>
-              {isValid ? "Publicar solicitud" : "Completa los campos requeridos"}
+            <Text style={[styles.submitText, { color: (isValid && !isLimitReached) ? C.textOnPrimary : C.textSecondary }]}>
+              {isLimitReached 
+                ? "Límite de grupos alcanzado" 
+                : (isValid ? "Publicar solicitud" : "Completa los campos requeridos")}
             </Text>
           )}
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Modal de Éxito */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: C.surface, borderColor: C.primary }]}>
+            <View style={[styles.successIconCircle, { backgroundColor: C.primary + "20" }]}>
+              <Ionicons name="checkmark-done" size={42} color={C.primary} />
+            </View>
+            
+            <Text style={[styles.modalTitle, { color: C.textPrimary }]}>
+              ¡Solicitud Registrada!
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: C.textSecondary }]}>
+              Tu solicitud se ha procesado correctamente. Ya puedes empezar a colaborar con tu equipo en el feed.
+            </Text>
+
+            <TouchableOpacity 
+              style={[styles.modalBtn, { backgroundColor: C.primary }]}
+              onPress={() => router.replace("/feed")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalBtnText}>Ir al Feed</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -269,4 +325,71 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 14, textAlign: "center", lineHeight: 20, marginTop: 4 },
   actionBtn: { paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12 },
   actionBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+  warningBanner: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  warningText: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+    flex: 1,
+  },
+  
+  // Modal de éxito
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 32,
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  successIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  modalBtn: {
+    width: "100%",
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  modalBtnText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

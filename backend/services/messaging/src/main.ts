@@ -10,6 +10,7 @@ import { MarkMessageAsRead } from "./application/use-cases/MarkMessageAsRead.js"
 import { MarkConversationAsRead } from "./application/use-cases/MarkConversationAsRead.js";
 import { SendMessage } from "./application/use-cases/SendMessage.js";
 import { TouchConversation } from "./application/use-cases/TouchConversation.js";
+import { ChatSubject, RealtimeObserver, IdempotencyObserver, type IRealtimeService, type IIdempotencyStore } from "./domain/events/index.js";
 import { loadMessagingEnv } from "./config/env.js";
 import type { IMessagingRepository } from "./domain/repositories/IMessagingRepository.js";
 import { InMemoryMessagingRepository } from "./infrastructure/database/InMemoryMessagingRepository.js";
@@ -48,6 +49,45 @@ function bootstrap(): void {
 	const env = loadMessagingEnv();
 	const repository = createRepository(env);
 
+	// ✅ Crear ChatSubject para eventos en tiempo real
+	const chatSubject = new ChatSubject("messaging-domain");
+
+	// ✅ Registrar observers
+	// 1. Mock de RealtimeService (en producción usarías Socket.io, ws, etc)
+	const mockRealtimeService: IRealtimeService = {
+		async broadcast(channel, message) {
+			console.log(
+				JSON.stringify({
+					service: "messaging",
+					level: "info",
+					message: "WebSocket broadcast",
+					channel,
+					eventType: message.type,
+				}),
+			);
+			// En producción: chatSubject.emit(channel, ...);
+		},
+	};
+	const realtimeObserver = new RealtimeObserver(mockRealtimeService);
+	
+	// 2. Mock de IdempotencyStore (en producción usarías Redis, BD, etc)
+	const mockIdempotencyStore: IIdempotencyStore = {
+		async markProcessed(messageId) {
+			// Aquí verificarías contra Redis o BD
+			// Por ahora: siempre es nuevo
+			return true;
+		},
+		async cleanup(olderThanSeconds) {
+			// Limpieza de IDs antiguos
+		},
+	};
+	const idempotencyObserver = new IdempotencyObserver(mockIdempotencyStore);
+
+	// Registrar observers en canal de ejemplo
+	// (En producción, se registran dinámicamente por grupo/DM)
+	// chatSubject.subscribe("grupo:ejemplo", realtimeObserver);
+	// chatSubject.subscribe("grupo:ejemplo", idempotencyObserver);
+
 	const getConversations = new GetConversations(repository);
 	const getConversationById = new GetConversationById(repository);
 	const getOrCreateConversation = new GetOrCreateConversation(repository);
@@ -55,7 +95,12 @@ function bootstrap(): void {
 	const getMessageById = new GetMessageById(repository);
 	const listMessages = new ListMessages(repository);
 	const getUnreadCount = new GetUnreadCount(repository);
-	const sendMessage = new SendMessage(repository);
+	const sendMessage = new SendMessage(
+		repository,
+		chatSubject,
+		realtimeObserver,
+		idempotencyObserver,
+	);
 	const markMessageAsRead = new MarkMessageAsRead(repository);
 	const markConversationAsRead = new MarkConversationAsRead(repository);
 
