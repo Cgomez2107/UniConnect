@@ -102,14 +102,13 @@ export class ApiAuthRepository implements IAuthRepository {
     }
 
     try {
-      // Implementación Fail-Fast: compite contra un timeout de 1.5s
       const fetchPromise = fetchApi<any>("/auth/session");
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Backend timeout")), 1500)
       );
 
       const data = await Promise.race([fetchPromise, timeoutPromise]) as any;
-      
+
       if (data.session) {
         setManualToken(data.session.access_token);
         this._cachedSession = data.session as Session;

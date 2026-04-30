@@ -142,49 +142,48 @@ export function useFeedScreen() {
 
   // Fetch requests when subjects or search mode changes
   useEffect(() => {
-    if (!subjectsLoaded || enrolledSubjectIds === null) return;
+    let isMounted = true;
 
-    if (searchMode === "solicitudes" && enrolledSubjectIds.length > 0) {
-      fetchRequests().catch(() => undefined);
-    } else if (searchMode === "recursos" && resourceSubjectId) {
-      fetchResources(resourceSubjectId).catch(() => undefined);
+    async function loadData() {
+      if (!subjectsLoaded || enrolledSubjectIds === null) return;
+
+      try {
+        if (searchMode === "solicitudes") {
+          console.log("[Feed] Cargando solicitudes para materias:", enrolledSubjectIds);
+          await fetchRequests();
+        } else if (searchMode === "recursos" && resourceSubjectId) {
+          console.log("[Feed] Cargando recursos para materia:", resourceSubjectId);
+          await fetchResources(resourceSubjectId);
+        }
+      } catch (err) {
+        console.error("[Feed] Error cargando datos:", err);
+      }
     }
+
+    loadData();
+
+    return () => { isMounted = false; };
   }, [subjectsLoaded, enrolledSubjectIds, searchMode, selectedSubjects, resourceSubjectId]);
 
-  // Handle search debouncing without depending on fetchRequests function
+  // Handle search debouncing
   useEffect(() => {
     if (!subjectsLoaded || searchMode !== "solicitudes") return;
 
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => {
+    const timer = setTimeout(() => {
       fetchRequests().catch(() => undefined);
     }, SEARCH_DEBOUNCE_MS);
 
-    return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    };
+    return () => clearTimeout(timer);
   }, [search, searchMode]);
 
   useFocusEffect(
     useCallback(() => {
       if (!hasMountedRef.current) return;
-
-      if (searchMode !== "solicitudes") return;
-
-      refreshEnrolledSubjects()
-        .then((ids) => {
-          if (ids.length === 0) {
-            setRequests([]);
-            setRequestsPage(0);
-            setHasMoreRequests(false);
-            setIsFirstLoad(false);
-            return;
-          }
-
-          return fetchRequests(undefined, ids);
-        })
-        .catch(() => undefined);
-    }, [fetchRequests, refreshEnrolledSubjects, searchMode]),
+      // Solo refrescamos las materias si es necesario
+      if (searchMode === "solicitudes") {
+        refreshEnrolledSubjects().catch(() => undefined);
+      }
+    }, [refreshEnrolledSubjects, searchMode]),
   );
 
   const loadMoreRequests = useCallback(async () => {

@@ -95,7 +95,7 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
 
   // Rutas de autenticación (sin protección de JWT)
   if (isAuthRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.authBaseUrl);
+    await proxyRequest(req, res, env.authBaseUrl, "/api/v1/auth");
     return;
   }
 

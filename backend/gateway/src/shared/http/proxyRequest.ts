@@ -14,9 +14,28 @@ export async function proxyRequest(
   req: IncomingMessage,
   res: ServerResponse,
   targetBaseUrl: string,
+  stripPrefix?: string,
 ): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
-  const targetUrl = new URL(requestUrl.pathname + requestUrl.search, targetBaseUrl);
+  let pathname = requestUrl.pathname;
+
+  if (stripPrefix && pathname.startsWith(stripPrefix)) {
+    pathname = pathname.substring(stripPrefix.length);
+    if (!pathname.startsWith("/")) {
+      pathname = "/" + pathname;
+    }
+  }
+
+  const targetUrl = new URL(pathname + requestUrl.search, targetBaseUrl);
+
+  console.log(JSON.stringify({
+    service: "gateway",
+    level: "info",
+    message: "Proxying request",
+    method: req.method,
+    originalUrl: req.url,
+    targetUrl: targetUrl.href,
+  }));
 
   const bodyParts: string[] = [];
   const decoder = new TextDecoder();
@@ -54,11 +73,26 @@ export async function proxyRequest(
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
     const downstreamResponse = await fetch(targetUrl, {
       method,
       headers,
       body,
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
+
+    console.log(JSON.stringify({
+      service: "gateway",
+      level: "info",
+      message: "Downstream response received",
+      method,
+      targetUrl: targetUrl.href,
+      status: downstreamResponse.status
+    }));
 
     const responseText = await downstreamResponse.text();
     const responseHeaders: Record<string, string> = {};
@@ -72,10 +106,14 @@ export async function proxyRequest(
 
     res.writeHead(downstreamResponse.status, responseHeaders);
     res.end(responseText);
-  } catch (error) {
-    sendJson(res, 502, {
-      error: "Downstream service unavailable",
-      details: error instanceof Error ? error.message : "Unknown proxy error",
-    });
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      sendJson(res, 504, { error: "Gateway Timeout", details: "Downstream service took too long to respond" });
+    } else {
+      sendJson(res, 502, {
+        error: "Downstream service unavailable",
+        details: error instanceof Error ? error.message : "Unknown proxy error",
+      });
+    }
   }
 }

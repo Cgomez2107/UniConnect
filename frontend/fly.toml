@@ -3,6 +3,10 @@ primary_region = "fra"
 
 [build]
   dockerfile = "Dockerfile"
+  [build.args]
+    EXPO_PUBLIC_API_BASE_URL = "/api/v1"
+    EXPO_PUBLIC_SUPABASE_URL = "https://becitrklvpadvjwdbmck.supabase.co"
+    EXPO_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_FkHanjxqCZ7LDaQa1AomSg_xThwhZxW"
 
 [http_service]
   internal_port = 80

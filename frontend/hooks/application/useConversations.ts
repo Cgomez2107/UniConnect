@@ -45,12 +45,23 @@ export function useConversations(): UseConversationsReturn {
 			if (isRefresh) setRefreshing(true)
 			else setLoading(true)
 			setError(null)
+
 			try {
 				const useCase = container.getGetConversations()
-				const data = await useCase.execute(user.id)
+				
+				// Timeout de seguridad para mensajería (10s)
+				const TIMEOUT_MS = 10000
+				const fetchPromise = useCase.execute(user.id)
+				const timeoutPromise = new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error("Timeout cargando mensajes")), TIMEOUT_MS)
+				)
+
+				const data = await Promise.race([fetchPromise, timeoutPromise])
+				
 				setConversations(data)
 				await useUnreadCountStore.getState().refreshUnreadCount()
 			} catch (e) {
+				console.error("[useConversations] Error:", e)
 				setError(e instanceof Error ? e.message : "Error al cargar mensajes")
 			} finally {
 				setLoading(false)
