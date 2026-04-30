@@ -1,19 +1,21 @@
 /**
  * ReactionDecorator.ts
  *
- * Decorador que agrega reacciones (emojis) al mensaje.
+ * CA5: Decorador que agrega reacciones (emojis) al mensaje.
+ * CA6: Es componible (puede envolver BaseMessage u otro decorador)
  *
  * Flujo:
  * 1. Mensaje base: "¡Excelente!"
- * 2. Decorador: Agrega { "👍": 3, "❤️": 1 }
- * 3. Resultado: Mensaje con reacciones agregadas
+ * 2. ReactionDecorator envuelve el mensaje
+ * 3. Agrega mapa de reacciones: { "👍": 3, "❤️": 1 }
+ * 4. Resultado: Mensaje con reacciones agregadas
  */
 
 import type { IMessage } from "./IMessage.js";
 import { MessageDecorator } from "./MessageDecorator.js";
 
 /**
- * Metadata de una reacción
+ * CA5: Metadata de una reacción
  */
 export interface Reaction {
   readonly emoji: string; // "👍", "❤️", etc
@@ -22,12 +24,13 @@ export interface Reaction {
 }
 
 /**
- * Decorador: Agrega reacciones al mensaje
+ * CA5, CA6: Decorador que agrega reacciones al mensaje
  *
  * Garantías:
  * - Valida que emoji sea válido (1 carácter Unicode)
  * - Valida que count = users.length
  * - Propaga todas las propiedades del mensaje base
+ * - Componible: puede ser envuelto por otro decorador
  */
 export class ReactionDecorator extends MessageDecorator {
   private readonly reactions: Map<string, Reaction>;
@@ -147,16 +150,37 @@ export class ReactionDecorator extends MessageDecorator {
   }
 
   /**
-   * Serializar: mensaje base + reacciones
+   * CA5: Implementa getContent() - delega al mensaje interno
    */
-  override toJSON(): Record<string, unknown> {
+  override getContent(): string {
+    return this.message.getContent();
+  }
+
+  /**
+   * CA5: Implementa getMetadata() - combina base + reacciones
+   */
+  override getMetadata(): Record<string, unknown> {
     return {
-      ...super.toJSON(),
+      ...this.message.getMetadata(),
       reactions: this.getReactions().map((r) => ({
         emoji: r.emoji,
         count: r.count,
         users: r.users,
       })),
     };
+  }
+
+  /**
+   * CA5: Implementa render() - delega al mensaje interno
+   */
+  override render(): string {
+    return this.message.render();
+  }
+
+  /**
+   * Serializar: mensaje base + reacciones
+   */
+  override toJSON(): Record<string, unknown> {
+    return this.getMetadata();
   }
 }

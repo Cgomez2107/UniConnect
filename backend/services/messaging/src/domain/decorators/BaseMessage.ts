@@ -1,11 +1,11 @@
 /**
  * BaseMessage.ts
  *
- * Implementación base de IMessage.
- *
+ * CA2: Implementación base de IMessage.
  * Responsabilidad:
- * - Guardar datos básicos del mensaje
+ * - Guardar datos básicos del mensaje (content, userId, timestamp)
  * - Proporcionar punto de partida para decoradores
+ * - Implementar getContent(), getMetadata(), render()
  */
 
 import type { IMessage } from "./IMessage.js";
@@ -28,12 +28,36 @@ export class BaseMessage implements IMessage {
     this.senderId = input.senderId;
   }
 
-  toJSON(): Record<string, unknown> {
+  /**
+   * CA2: Retorna el contenido de texto plano del mensaje
+   */
+  getContent(): string {
+    return this.content;
+  }
+
+  /**
+   * CA2: Retorna metadatos básicos del mensaje
+   */
+  getMetadata(): Record<string, unknown> {
     return {
       id: this.id,
-      content: this.content,
-      timestamp: this.timestamp.toISOString(),
       senderId: this.senderId,
+      timestamp: this.timestamp.toISOString(),
+      content: this.content,
     };
+  }
+
+  /**
+   * CA2: Renderiza el mensaje (en BaseMessage, es igual al contenido)
+   */
+  render(): string {
+    return this.content;
+  }
+
+  /**
+   * Serializar a JSON
+   */
+  toJSON(): Record<string, unknown> {
+    return this.getMetadata();
   }
 }

@@ -1,19 +1,21 @@
 /**
  * FileDecorator.ts
  *
- * Decorador que agrega metadata de archivo a un mensaje.
+ * CA3: Decorador que agrega metadata de archivo a un mensaje.
+ * CA6: Es componible (puede envolver BaseMessage u otro decorador)
  *
  * Flujo:
  * 1. Mensaje base: "Aquí está el documento"
- * 2. Decorador: Agrega { filename, size, mimeType, url }
- * 3. Resultado: Mensaje con archivo adjunto
+ * 2. FileDecorator envuelve el mensaje
+ * 3. Agrega { url, mimeType, tamaño }
+ * 4. Resultado: Mensaje con archivo adjunto
  */
 
 import type { IMessage } from "./IMessage.js";
 import { MessageDecorator } from "./MessageDecorator.js";
 
 /**
- * Metadata del archivo adjunto
+ * CA3: Metadata del archivo adjunto
  */
 export interface FileMetadata {
   readonly filename: string;
@@ -23,12 +25,13 @@ export interface FileMetadata {
 }
 
 /**
- * Decorador: Agrega archivo al mensaje
+ * CA3, CA6: Decorador que agrega archivo al mensaje
  *
  * Garantías:
  * - Válida que mimeType sea conocido
  * - Válida que size sea razonable (< 100MB)
  * - Propaga todas las propiedades del mensaje base
+ * - Componible: puede ser envuelto por otro decorador
  */
 export class FileDecorator extends MessageDecorator {
   private readonly file: FileMetadata;
@@ -65,11 +68,18 @@ export class FileDecorator extends MessageDecorator {
   }
 
   /**
-   * Serializar: mensaje base + archivo
+   * CA3: Implementa getContent() - delega al mensaje interno
    */
-  override toJSON(): Record<string, unknown> {
+  override getContent(): string {
+    return this.message.getContent();
+  }
+
+  /**
+   * CA3: Implementa getMetadata() - combina base + archivo
+   */
+  override getMetadata(): Record<string, unknown> {
     return {
-      ...super.toJSON(),
+      ...this.message.getMetadata(),
       file: {
         filename: this.file.filename,
         size: this.file.size,
@@ -77,5 +87,19 @@ export class FileDecorator extends MessageDecorator {
         url: this.file.url,
       },
     };
+  }
+
+  /**
+   * CA3: Implementa render() - delega al mensaje interno
+   */
+  override render(): string {
+    return this.message.render();
+  }
+
+  /**
+   * Serializar: mensaje base + archivo
+   */
+  override toJSON(): Record<string, unknown> {
+    return this.getMetadata();
   }
 }
