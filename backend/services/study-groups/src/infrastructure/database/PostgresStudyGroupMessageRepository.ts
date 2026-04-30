@@ -81,10 +81,22 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
     requestId: string;
     actorUserId: string;
     content: string;
+    mediaUrl?: string;
+    mediaType?: string;
+    mediaFilename?: string;
+    mentions?: any[];
   }): Promise<StudyGroupMessage> {
     const result = await this.pool.query<StudyGroupMessageRow>(
-      "SELECT * FROM insert_study_group_message($1, $2, $3)",
-      [input.requestId, input.actorUserId, input.content],
+      "SELECT * FROM insert_study_group_message($1, $2, $3, $4, $5, $6, $7)",
+      [
+        input.requestId,
+        input.actorUserId,
+        input.content,
+        input.mediaUrl || null,
+        input.mediaType || null,
+        input.mediaFilename || null,
+        JSON.stringify(input.mentions || []),
+      ],
     );
 
     return mapMessage(result.rows[0]);

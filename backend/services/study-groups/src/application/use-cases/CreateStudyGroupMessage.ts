@@ -1,5 +1,5 @@
-import type { StudyGroupMessage } from "../domain/entities/StudyGroupMessage.js";
-import type { IStudyGroupMessageRepository } from "../domain/repositories/IStudyGroupMessageRepository.js";
+import type { StudyGroupMessage } from "../../domain/entities/StudyGroupMessage.js";
+import type { IStudyGroupMessageRepository } from "../../domain/repositories/IStudyGroupMessageRepository.js";
 import type {
   ChatSubject,
   IChatObserver,
@@ -17,6 +17,8 @@ export interface CreateStudyGroupMessageInput {
   readonly requestId: string;
   readonly actorUserId: string;
   readonly content: string;
+  readonly mediaUrl?: string;
+  readonly mediaType?: string;
 }
 
 export class CreateStudyGroupMessage {
@@ -25,16 +27,30 @@ export class CreateStudyGroupMessage {
     private readonly subject: ChatSubject,
     private readonly realtimeObserver: IChatObserver,
     private readonly idempotencyObserver: IChatObserver,
-  ) {}
+  ) { }
 
   async execute(input: CreateStudyGroupMessageInput): Promise<StudyGroupMessage> {
     const requestId = requireTrimmed(input.requestId, "requestId");
     const content = requireTrimmed(input.content, "content");
 
+    // Implementación de regex simple para detectar @nombre
+    const mentionRegex = /@(\w+)/g;
+    const mentions: any[] = [];
+    let match;
+    while ((match = mentionRegex.exec(content)) !== null) {
+      mentions.push({
+        userId: match[1], // Usamos el nombre como ID temporalmente si no hay resolución
+        displayName: match[1]
+      });
+    }
+
     const created = await this.repository.create({
       requestId,
       actorUserId: input.actorUserId,
       content,
+      mentions,
+      mediaUrl: (input as any).mediaUrl,
+      mediaType: (input as any).mediaType,
     });
 
     const channel = createGroupChannel(requestId);

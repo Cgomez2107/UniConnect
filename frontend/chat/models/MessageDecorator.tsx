@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 // 1. Interfaz IMessage siguiendo el contrato del Backend
 export interface IMessage {
@@ -17,7 +18,7 @@ export interface IMessage {
 
   getContent(): string;
   getMetadata(): Record<string, any>;
-  render(): React.JSX.Element;
+  render(context?: { currentUserId?: string }): React.JSX.Element;
 }
 
 // 2. Clase BaseMessage (Implementación Raíz)
@@ -41,7 +42,7 @@ export class BaseMessage implements IMessage {
     };
   }
 
-  render(): React.JSX.Element {
+  render(context?: { currentUserId?: string }): React.JSX.Element {
     return (
       <Text key="text-base" style={styles.baseText}>
         {this.content}
@@ -67,8 +68,8 @@ export abstract class MessageDecorator implements IMessage {
     return this.message.getMetadata();
   }
 
-  render(): React.JSX.Element {
-    return this.message.render();
+  render(context?: { currentUserId?: string }): React.JSX.Element {
+    return this.message.render(context);
   }
 }
 
@@ -87,18 +88,25 @@ export class FileMessageDecorator extends MessageDecorator {
     return { ...this.message.getMetadata(), file: this.file };
   }
 
-  override render(): React.JSX.Element {
+  override render(context?: { currentUserId?: string }): React.JSX.Element {
     const isImage = this.file.mimeType.startsWith('image/');
     return (
-      <View key="decorator-file">
-        {isImage && (
+      <View key="decorator-file" style={styles.fileContainer}>
+        {isImage ? (
           <Image 
             source={{ uri: this.file.url }} 
             style={styles.attachedImage} 
             resizeMode="cover"
           />
+        ) : (
+          <View style={styles.fileIconContainer}>
+            <MaterialIcons name="insert-drive-file" size={24} color="#007AFF" />
+            <Text style={styles.fileName} numberOfLines={1}>
+              {this.file.filename}
+            </Text>
+          </View>
         )}
-        {this.message.render()}
+        {this.message.render(context)}
       </View>
     );
   }
@@ -114,9 +122,12 @@ export class MentionMessageDecorator extends MessageDecorator {
     return { ...this.message.getMetadata(), mentions: this.mentions };
   }
 
-  override render(): React.JSX.Element {
+  override render(context?: { currentUserId?: string }): React.JSX.Element {
+    const isMentioned = context?.currentUserId && 
+      this.mentions.some(m => m.userId === context.currentUserId || m.displayName === context.currentUserId);
+
     return (
-      <View key="decorator-mention">
+      <View key="decorator-mention" style={isMentioned ? styles.mentionHighlight : null}>
         <View style={styles.mentionContainer}>
           {this.mentions.map((m, idx) => (
             <Text key={`mention-${idx}`} style={styles.mentionText}>
@@ -124,7 +135,7 @@ export class MentionMessageDecorator extends MessageDecorator {
             </Text>
           ))}
         </View>
-        {this.message.render()}
+        {this.message.render(context)}
       </View>
     );
   }
@@ -140,10 +151,10 @@ export class ReactionMessageDecorator extends MessageDecorator {
     return { ...this.message.getMetadata(), reactions: this.reactions };
   }
 
-  override render(): React.JSX.Element {
+  override render(context?: { currentUserId?: string }): React.JSX.Element {
     return (
       <View key="decorator-reaction">
-        {this.message.render()}
+        {this.message.render(context)}
         <View style={styles.reactionRow}>
           {this.reactions.map((r, idx) => (
             <View key={`reaction-${idx}`} style={styles.reactionBubble}>
@@ -164,6 +175,24 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     paddingVertical: 2,
   },
+  fileContainer: {
+    marginBottom: 4,
+  },
+  fileIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F2',
+    padding: 10,
+    borderRadius: 12,
+    gap: 8,
+    marginBottom: 8,
+  },
+  fileName: {
+    fontSize: 13,
+    color: '#1A1A1A',
+    fontWeight: '500',
+    flex: 1,
+  },
   attachedImage: {
     width: '100%',
     minWidth: 200,
@@ -183,6 +212,12 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
     fontSize: 14,
+  },
+  mentionHighlight: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 8,
+    padding: 4,
+    marginHorizontal: -4,
   },
   reactionRow: {
     flexDirection: 'row',

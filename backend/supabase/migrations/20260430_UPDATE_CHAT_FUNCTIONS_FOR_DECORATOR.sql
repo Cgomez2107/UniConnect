@@ -14,6 +14,7 @@ ADD COLUMN IF NOT EXISTS reactions JSONB DEFAULT '[]'::jsonb;
 -- 2. IMPORTANTE: Eliminar funciones antes de recrearlas para cambiar el tipo de retorno
 DROP FUNCTION IF EXISTS get_study_group_messages(UUID, UUID, INTEGER, INTEGER) CASCADE;
 DROP FUNCTION IF EXISTS insert_study_group_message(UUID, UUID, TEXT, TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS insert_study_group_message(UUID, UUID, TEXT, TEXT, TEXT, TEXT, JSONB) CASCADE;
 -- También eliminamos la versión antigua que solo recibía 3 parámetros
 DROP FUNCTION IF EXISTS insert_study_group_message(UUID, UUID, TEXT) CASCADE;
 
@@ -77,7 +78,8 @@ CREATE OR REPLACE FUNCTION insert_study_group_message(
   p_content TEXT,
   p_media_url TEXT DEFAULT NULL,
   p_media_type TEXT DEFAULT NULL,
-  p_media_filename TEXT DEFAULT NULL
+  p_media_filename TEXT DEFAULT NULL,
+  p_mentions JSONB DEFAULT '[]'::jsonb
 )
 RETURNS TABLE (
   id UUID,
@@ -117,7 +119,8 @@ BEGIN
     content, 
     media_url, 
     media_type, 
-    media_filename
+    media_filename,
+    mentions
   )
   VALUES (
     p_request_id, 
@@ -125,7 +128,8 @@ BEGIN
     v_trimmed, 
     p_media_url, 
     p_media_type, 
-    p_media_filename
+    p_media_filename,
+    p_mentions
   )
   RETURNING study_group_messages.id INTO v_new_id;
 
@@ -150,4 +154,4 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION get_study_group_messages(UUID, UUID, INTEGER, INTEGER) TO authenticated;
-GRANT EXECUTE ON FUNCTION insert_study_group_message(UUID, UUID, TEXT, TEXT, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION insert_study_group_message(UUID, UUID, TEXT, TEXT, TEXT, TEXT, JSONB) TO authenticated;

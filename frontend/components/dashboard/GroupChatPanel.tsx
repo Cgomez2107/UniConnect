@@ -89,7 +89,7 @@ export function GroupChatPanel({
                     : "bg-[#26292B] text-zinc-300 px-4 py-3 rounded-2xl rounded-tl-none border border-[#2D3135] text-body-sm"
                 }
               >
-                {transformRawMessage(message).render()}
+                {transformRawMessage(message).render({ currentUserId })}
               </div>
             </div>
           );
