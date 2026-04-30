@@ -281,9 +281,6 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     if (transferAccepted) {
       console.log("[AdminDashboard] Transferencia aceptada detectada. Redirigiendo para evitar 403...");
       
-      // Limpiar canales activos antes de salir
-      void supabase.removeAllChannels();
-      
       // Resetear señal
       resetTransferAccepted();
       
