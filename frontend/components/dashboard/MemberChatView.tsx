@@ -98,8 +98,9 @@ export function MemberChatView({
     if (targetUserId === userId || startingChat) return;
     setStartingChat(true);
     try {
-      // US-W03: Navegar a la ruta base de chat privado solicitada
-      router.push(`/dashboard/chat/direct/${targetUserId}` as any);
+      // US-W03: Obtener o crear la conversación privada antes de navegar
+      const conversation = await getOrCreateConversation(userId, targetUserId);
+      router.push(`/chat/${conversation.id}` as any);
     } catch (error) {
       console.error("Error starting private chat:", error);
     } finally {
@@ -125,10 +126,10 @@ export function MemberChatView({
         <div className="px-8 py-6 border-b border-[#2D2D2D] flex items-center justify-between flex-shrink-0 bg-[#1A1A1A]/80 backdrop-blur-md sticky top-0 z-10">
           <div>
             <h2 className="text-xl font-['Manrope'] font-bold text-white">Chat Grupal</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="w-2 h-2 bg-[#0047AB] rounded-full animate-pulse"></span>
-              <p className="text-[#0047AB] text-xs font-bold uppercase tracking-widest">
-                {companions.length + 1} Miembros en el grupo
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#0047AB] animate-pulse" />
+              <p className="text-[10px] text-[#0047AB] font-bold uppercase tracking-wider">
+                {members.length} MIEMBROS ACTIVOS
               </p>
             </div>
           </div>
@@ -160,81 +161,39 @@ export function MemberChatView({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col-reverse gap-6">
-              {/* Scroll anchor at bottom (since we are using col-reverse for logic or just regular order) */}
-              {/* Note: the messages state seems to be ordered from newest to oldest in handleSendMessage (prev => [new, ...prev]), 
-                  but the initial load might be oldest to newest. Let's check logic. 
-                  Actually, the original code used regular map. Let's keep regular order for simplicity or reverse if needed.
-              */}
-              <div ref={messagesEndRef} />
-              
-              {[...messages].reverse().map((msg) => {
+            <div className="flex flex-col gap-6">
+              {messages.map((msg) => {
                 const isOwnMessage = msg.senderId === userId;
                 return (
-                  <div
-                    key={msg.id}
-                    className={`flex items-end gap-3 ${
-                      isOwnMessage ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {!isOwnMessage && (
-                      <div className="w-8 h-8 rounded-full bg-[#0047AB]/20 flex items-center justify-center flex-shrink-0 overflow-hidden border border-[#0047AB]/30">
-                        {msg.senderAvatarUrl ? (
-                          <img
-                            alt={msg.senderFullName ?? "Remitente"}
-                            className="w-full h-full object-cover"
-                            src={msg.senderAvatarUrl ?? undefined}
-                          />
-                        ) : (
-                          <span className="text-[#0047AB] text-xs font-bold">
-                            {(msg.senderFullName ?? "?")[0]}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div
-                      className={`flex flex-col gap-1.5 max-w-[70%] ${
-                        isOwnMessage ? "items-end" : "items-start"
-                      }`}
-                    >
-                      {!isOwnMessage && (
-                        <span className="text-xs font-bold text-neutral-400 ml-2">
-                          {msg.senderFullName}
-                        </span>
-                      )}
-
-                      {/* Generación del mensaje decorado */}
-                      {(() => {
-                        const decoratedMessage = transformRawMessage(msg);
-                        return (
-                          <div
-                            className={`px-5 py-3 rounded-2xl shadow-sm ${
-                              isOwnMessage
-                                ? "bg-[#0047AB] text-white rounded-br-none"
-                                : "bg-[#2D2D2D] text-neutral-200 rounded-bl-none border border-[#3D3D3D]"
-                            }`}
-                          >
-                            {decoratedMessage.render({ currentUserId: userId })}
-                          </div>
-                        );
-                      })()}
-
-                      <div className={`flex items-center gap-1.5 px-2 mt-0.5 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
-                        <span className="text-[10px] font-medium text-neutral-600 uppercase tracking-wider">
-                          {new Date(msg.createdAt).toLocaleTimeString("es-ES", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                        {isOwnMessage && (
-                          <span className="material-symbols-outlined text-[14px] text-[#0047AB]">done_all</span>
-                        )}
-                      </div>
+                  <div key={msg.id} className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"}`}>
+                    <div className="flex items-center gap-2 mb-1.5 px-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                        {msg.senderFullName || "Integrante"}
+                      </span>
+                      <span className="text-[9px] text-neutral-700">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
+
+                    {(() => {
+                      const decoratedMessage = transformRawMessage(msg);
+                      return (
+                        <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
+                          isOwnMessage 
+                            ? "bg-[#0047AB] text-white rounded-tr-none shadow-lg shadow-blue-900/20" 
+                            : "bg-[#2D2D2D] text-neutral-200 rounded-tl-none border border-white/5"
+                        }`}>
+                          {decoratedMessage.render()}
+                          {isOwnMessage && (
+                             <span className="material-symbols-outlined text-[12px] ml-2 align-middle opacity-50">done_all</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </div>
@@ -322,7 +281,7 @@ export function MemberChatView({
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-['Manrope'] font-bold text-white">Compañeros</h3>
             <span className="px-2.5 py-1 bg-[#0047AB]/10 text-[#0047AB] rounded-full text-[10px] font-black tracking-tighter">
-              {companions.length} MIEMBROS
+              {members.length} MIEMBROS
             </span>
           </div>
 

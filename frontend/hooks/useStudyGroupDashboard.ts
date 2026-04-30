@@ -112,7 +112,9 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
   const loadMembers = useCallback(
     async (requestIdValue: string) => {
       const data = await fetchApi<StudyGroupMember[]>(`/study-groups/${requestIdValue}/members`);
-      setMembers(data ?? []);
+      const list = data ?? [];
+      setMembers(list);
+      return list;
     },
     []
   );
@@ -135,12 +137,29 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
   }, []);
 
   const loadMessages = useCallback(
-    async (requestIdValue: string) => {
+    async (requestIdValue: string, currentMembers?: StudyGroupMember[]) => {
       const data = await fetchApi<any[]>(
         `/study-groups/${requestIdValue}/messages?limit=50&page=1`
       );
 
-      const mapped = (data ?? []).map(mapApiMessageToDomain);
+      let mapped = (data ?? []).map(mapApiMessageToDomain);
+
+      // Enriquecer mensajes históricos con nombres de la lista de miembros
+      const membersList = currentMembers || membersRef.current;
+      if (membersList.length > 0) {
+        mapped = mapped.map((msg) => {
+          const member = membersList.find((m) => m.userId === msg.senderId);
+          if (member) {
+            return {
+              ...msg,
+              senderFullName: member.fullName,
+              senderAvatarUrl: member.avatarUrl,
+            };
+          }
+          return msg;
+        });
+      }
+
       const sorted = mapped.slice().sort((a, b) => {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       });
@@ -165,26 +184,42 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
       setError(null);
 
       try {
-        const [request, apps] = await Promise.all([
-          getRequestById(requestIdValue),
-          getApplicationsByRequest(requestIdValue),
-        ]);
-
+        // 1. Carga inicial de datos base (solicitud)
+        const request = await getRequestById(requestIdValue);
+        
         if (!request) {
-          setError("No se encontro la solicitud activa.");
+          setError("No se encontró la solicitud activa.");
           setActiveRequest(null);
           setApplications([]);
+          setMembers([]);
+          setMessages([]);
           return;
         }
 
         setActiveRequest(request);
-        const enriched = await enrichApplications(apps ?? []);
-        setApplications(enriched);
 
-        await Promise.all([
-          loadMembers(requestIdValue),
-          loadMessages(requestIdValue),
-        ]);
+        // 2. Cargar miembros primero para verificar rol
+        const loadedMembers = await loadMembers(requestIdValue);
+
+        // 3. Determinar si somos admin para cargar postulaciones (evita 403/500 en miembros)
+        const myMemberRecord = loadedMembers.find(m => m.userId === user?.id);
+        const isAdmin = myMemberRecord?.role === "admin" || myMemberRecord?.role === "autor";
+
+        let apps: Application[] = [];
+        if (isAdmin) {
+          try {
+            const rawApps = await getApplicationsByRequest(requestIdValue);
+            apps = await enrichApplications(rawApps ?? []);
+          } catch (err) {
+            console.warn("[Dashboard] Error al cargar postulaciones:", err);
+            apps = [];
+          }
+        }
+        setApplications(apps);
+
+        // 4. Cargar mensajes (ya tenemos los miembros para enriquecer)
+        await loadMessages(requestIdValue, loadedMembers);
+        
       } catch (err) {
         const message = err instanceof Error ? err.message : "Error al cargar el dashboard";
         setError(message);
@@ -192,7 +227,7 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
         setLoading(false);
       }
     },
-    [enrichApplications, getApplicationsByRequest, getRequestById, loadMembers, loadMessages]
+    [enrichApplications, getApplicationsByRequest, getRequestById, loadMembers, loadMessages, user?.id]
   );
 
   const resolveRequest = useCallback(async () => {
