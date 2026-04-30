@@ -12,7 +12,7 @@ export interface CreateStudyRequestInput {
 }
 
 export class CreateStudyRequest {
-  constructor(private readonly repository: IStudyRequestRepository) {}
+  constructor(private readonly repository: IStudyRequestRepository) { }
 
   async execute(input: CreateStudyRequestInput): Promise<StudyRequest> {
     const subjectId = requireTrimmed(input.subjectId, "subjectId");
@@ -23,17 +23,21 @@ export class CreateStudyRequest {
       throw new Error("maxMembers debe ser un entero mayor o igual a 2.");
     }
 
+    // Fragmento del código integrado:
     const currentCount = await this.repository.countBySubject(subjectId);
     if (currentCount >= 3) {
       throw new ConflictError("Esta materia ya alcanzó el límite de 3 grupos activos.");
     }
 
-    return this.repository.create({
+    const created = await this.repository.create({
       authorId: input.actorUserId,
       subjectId,
       title,
       description,
       maxMembers: input.maxMembers,
     });
+
+    return created;
+
   }
 }

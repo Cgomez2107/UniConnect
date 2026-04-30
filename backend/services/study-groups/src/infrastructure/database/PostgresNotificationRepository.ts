@@ -53,6 +53,25 @@ export class PostgresNotificationRepository implements INotificationRepository {
     this.pool = buildPool(env);
   }
 
+  async create(input: {
+    userId: string;
+    type: string;
+    title: string;
+    body: string;
+    payload: Record<string, unknown> | null;
+  }): Promise<string> {
+    const result = await this.pool.query<{ id: string }>(
+      `
+        INSERT INTO user_notifications (user_id, type, title, body, payload)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+      `,
+      [input.userId, input.type, input.title, input.body, input.payload],
+    );
+
+    return result.rows[0].id;
+  }
+
   async listByUser(input: {
     actorUserId: string;
     page: number;
