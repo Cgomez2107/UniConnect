@@ -18,7 +18,12 @@ function getAppVersion(): string {
 }
 
 function isStudyGroupsRoute(pathname: string): boolean {
-  return pathname === "/api/v1/study-groups" || pathname.startsWith("/api/v1/study-groups/");
+  return (
+    pathname === "/api/v1/study-groups" ||
+    pathname.startsWith("/api/v1/study-groups/") ||
+    pathname === "/api/v1/notifications" ||
+    pathname.startsWith("/api/v1/notifications/")
+  );
 }
 
 function isResourcesRoute(pathname: string): boolean {

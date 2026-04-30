@@ -122,6 +122,8 @@ describe("Observer Pattern - Subscription and Notification", () => {
       applicantId: "user-123",
       recipientUserId: "user-456",
       message: "Hola, quiero unirme al grupo",
+      groupName: "Test Group",
+      applicantName: "Test Applicant",
     };
 
     subject.subscribe(observerOne);
@@ -148,6 +150,8 @@ describe("Observer Pattern - Subscription and Notification", () => {
       applicantId: "user-789",
       recipientUserId: "user-456",
       message: "Quiero participar en el grupo",
+      groupName: "Test Group",
+      applicantName: "Test Applicant",
     };
 
     subject.subscribe(observerOne);
@@ -174,6 +178,8 @@ describe("Observer Pattern - Subscription and Notification", () => {
       applicantId: "user-111",
       recipientUserId: "user-222",
       message: "Evento para prueba de resiliencia",
+      groupName: "Test Group",
+      applicantName: "Test Applicant",
     };
 
     failingObserver.handle.mockImplementation(async () => {

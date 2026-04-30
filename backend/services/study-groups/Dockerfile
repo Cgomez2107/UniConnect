@@ -8,6 +8,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY shared ./shared
 COPY services/study-groups/package.json services/study-groups/tsconfig.json ./services/study-groups/
 COPY services/study-groups/src ./services/study-groups/src
+COPY services/messaging/src ./services/messaging/src
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @uniconnect/study-groups build

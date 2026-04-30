@@ -1,5 +1,6 @@
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
 import type { IStudyRequestRepository } from "../../domain/repositories/IStudyRequestRepository.js";
+import type { IMemberRepository } from "../../domain/repositories/IMemberRepository.js";
 import type { StudyGroupSubject } from "../../domain/events/index.js";
 import type { MiembroAceptadoEvent, MiembroRechazadoEvent } from "../../domain/events/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
@@ -8,6 +9,7 @@ export class ReviewApplication {
   constructor(
     private readonly repository: IApplicationRepository,
     private readonly studyRequestRepository: IStudyRequestRepository,
+    private readonly memberRepository: IMemberRepository,
     private readonly subject: StudyGroupSubject,
   ) { }
 
@@ -37,7 +39,7 @@ export class ReviewApplication {
         requestId: application.requestId, 
         actorUserId 
       });
-      const newMember = members.find(m => m.userId === application.applicantId);
+      const newMember = members.find((m: any) => m.userId === application.applicantId);
       const applicantName = newMember?.fullName || "Nuevo integrante";
 
       const event: MiembroAceptadoEvent = {
@@ -52,7 +54,7 @@ export class ReviewApplication {
         groupName: request.title,
       };
 
-      this.subject.emit(event).catch((error) => {
+      this.subject.emit(event).catch((error: any) => {
         console.error("[ReviewApplication] Error emitiendo evento:", error);
       });
       return;
@@ -68,7 +70,7 @@ export class ReviewApplication {
       rejectedBy: actorUserId,
     };
 
-    this.subject.emit(event).catch((error) => {
+    this.subject.emit(event).catch((error: any) => {
       console.error("[ReviewApplication] Error emitiendo evento:", error);
     });
   }

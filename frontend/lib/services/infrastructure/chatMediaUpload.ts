@@ -16,8 +16,23 @@ function normalizeMimeType(mimeType: string, fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   const normalized = mimeType.trim().toLowerCase();
 
-  if (normalized === "audio/m4a" || ext === "m4a") {
-    return "audio/mp4";
+  // Mapeos específicos para extensiones comunes si el mimeType es genérico o nulo
+  const mimeMap: Record<string, string> = {
+    "m4a": "audio/mp4",
+    "md": "text/markdown",
+    "markdown": "text/markdown",
+    "pdf": "application/pdf",
+    "txt": "text/plain",
+    "zip": "application/zip",
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "webp": "image/webp",
+  };
+
+  if (mimeMap[ext]) {
+    return mimeMap[ext];
   }
 
   return normalized || "application/octet-stream";

@@ -1,5 +1,5 @@
-import type { UserNotification } from "../domain/entities/UserNotification.js";
-import type { INotificationRepository } from "../domain/repositories/INotificationRepository.js";
+import type { UserNotification } from "../../domain/entities/UserNotification.js";
+import type { INotificationRepository } from "../../domain/repositories/INotificationRepository.js";
 
 export interface ListUserNotificationsInput {
   readonly actorUserId: string;
