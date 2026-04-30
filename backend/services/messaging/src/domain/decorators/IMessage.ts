@@ -15,6 +15,26 @@
  */
 export interface IMessage {
   /**
+   * Identificador único del mensaje
+   */
+  readonly id: string;
+
+  /**
+   * Contenido de texto del mensaje
+   */
+  readonly content: string;
+
+  /**
+   * Timestamp del mensaje (cuándo fue creado)
+   */
+  readonly timestamp: Date;
+
+  /**
+   * ID del usuario que envió el mensaje
+   */
+  readonly senderId: string;
+
+  /**
    * Obtener el contenido de texto del mensaje.
    * - BaseMessage: retorna el texto plano
    * - MentionDecorator: retorna contenido con menciones resaltadas (**@displayName**)
