@@ -31,8 +31,19 @@ export async function proxyRequest(
   }
   bodyParts.push(decoder.decode());
 
+  const method = req.method?.toUpperCase() ?? "GET";
+  const isPayloadMethod = method !== "GET" && method !== "HEAD";
+  const rawBody = bodyParts.join("");
+  const body = isPayloadMethod && rawBody.length > 0 ? rawBody : undefined;
+
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
+    // Evitar reenviar headers que causan conflictos en Fly.io internal networking o Node fetch
+    const lowerKey = key.toLowerCase();
+    if (["host", "connection", "content-length", "transfer-encoding", "content-encoding"].includes(lowerKey)) {
+      continue;
+    }
+
     if (Array.isArray(value)) {
       value.forEach((v) => headers.append(key, v));
       continue;
@@ -42,14 +53,9 @@ export async function proxyRequest(
     }
   }
 
-  const method = req.method?.toUpperCase() ?? "GET";
-  const isPayloadMethod = method !== "GET" && method !== "HEAD";
-  const rawBody = bodyParts.join("");
-  const body = isPayloadMethod && rawBody.length > 0 ? rawBody : undefined;
-
   try {
     const downstreamResponse = await fetch(targetUrl, {
-      method: req.method,
+      method,
       headers,
       body,
     });
@@ -57,12 +63,17 @@ export async function proxyRequest(
     const responseText = await downstreamResponse.text();
     const responseHeaders: Record<string, string> = {};
     downstreamResponse.headers.forEach((value, key) => {
-      responseHeaders[key] = value;
+      // Evitar propagar headers de hop-by-hop o compresión del downstream
+      const lowerKey = key.toLowerCase();
+      if (!["connection", "content-encoding", "transfer-encoding", "content-length"].includes(lowerKey)) {
+        responseHeaders[key] = value;
+      }
     });
 
     res.writeHead(downstreamResponse.status, responseHeaders);
     res.end(responseText);
   } catch (error) {
+    console.error(`[Gateway Proxy Error] Method: ${method}, Target: ${targetUrl.href}, Error:`, error);
     sendJson(res, 502, {
       error: "Downstream service unavailable",
       details: error instanceof Error ? error.message : "Unknown proxy error",

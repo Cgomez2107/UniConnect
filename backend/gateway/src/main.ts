@@ -6,7 +6,7 @@ function bootstrap(): void {
 	const server = createGatewayServer(env);
 
 	// Cast to any to allow 0.0.0.0 binding for network access
-	(server as any).listen({ port: env.port, host: "0.0.0.0" }, () => {
+	(server as any).listen({ port: env.port, host: "::" }, () => {
 		// Startup log stays concise and structured for future central logging.
 		console.log(
 			JSON.stringify({
@@ -14,7 +14,7 @@ function bootstrap(): void {
 				level: "info",
 				message: "Gateway listening",
 				port: env.port,
-				host: "0.0.0.0",
+				host: "::",
 				nodeEnv: env.nodeEnv,
 			}),
 		);
