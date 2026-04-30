@@ -32,6 +32,8 @@ describe("StudyGroupSubject integration", () => {
       applicantId: "student-1",
       recipientUserId: "admin-1",
       message: "Solicitud de ingreso para prueba de integracion",
+      groupName: "Test Group",
+      applicantName: "Test Applicant",
     };
 
     subject.subscribe(observer);

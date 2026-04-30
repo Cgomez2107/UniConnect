@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/main.js",
+    "start": "node dist/services/study-groups/src/main.js",
     "lint": "echo \"study-groups lint config scaffold\"",
     "typecheck": "tsc --noEmit",
     "test": "echo \"study-groups tests config scaffold\""

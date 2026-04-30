@@ -1,4 +1,4 @@
-import type { IAdminTransferRepository } from "../domain/repositories/IAdminTransferRepository.js";
+import type { IAdminTransferRepository } from "../../domain/repositories/IAdminTransferRepository.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 export interface LeaveAdminRoleInput {

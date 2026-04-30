@@ -15,6 +15,8 @@ export interface UserSession {
   role: UserRole;
   semester?: number | null;
   bio?: string | null;
+  programs?: any[];
+  subjects?: any[];
 }
 
 function normalizeRole(role: unknown): UserRole {
@@ -48,11 +50,13 @@ const buildFallbackUser = (sessionUser: any): UserSession => ({
   role: normalizeRole(sessionUser.user_metadata?.role),
   semester: null,
   bio: null,
+  programs: [],
+  subjects: [],
 });
 
-const HYDRATION_TIMEOUT_MS = 4000; // Bajado de 6s
-const SESSION_TIMEOUT_MS = 2500;   // Bajado de 3.5s (el repo ya tiene su propio timeout de 1.5s)
-const PROFILE_TIMEOUT_MS = 2000;   // Bajado de 2.5s
+const HYDRATION_TIMEOUT_MS = 10000; // 10s para dar margen a la latencia
+const SESSION_TIMEOUT_MS = 6000;    // 6s para el check inicial de sesión
+const PROFILE_TIMEOUT_MS = 4000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -83,143 +87,96 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const subscribeAuthStateChanges = container.getSubscribeAuthStateChanges()
     const clearLocalSessionUseCase = container.getClearLocalSession()
 
-    const hydrationWatchdog = setTimeout(() => {
-      if (get().isHydrating) {
-        console.warn("[authStore] Hydration timeout. Forzando salida de estado de carga.");
-        set({ isHydrating: false });
-      }
-    }, HYDRATION_TIMEOUT_MS);
-
-    const isInvalidRefreshTokenError = (error: unknown) => {
-      const message =
-        error instanceof Error ? error.message : String(error ?? "");
-      return message.toLowerCase().includes("invalid refresh token");
-    };
-
-    const clearCorruptedSession = async () => {
-      try {
-        await clearLocalSessionUseCase.execute()
-      } catch {
-        // Si falla la limpieza remota/local, igual forzamos estado no autenticado.
-      }
-
-      set({ user: null, isAuthenticated: false, isHydrating: false });
-    };
+    let hasProcessedInitial = false;
 
     const processSession = async (session: any) => {
-      if (session?.user) {
+      const userId = session?.user?.id;
+      
+      if (userId && userId !== "undefined" && userId !== "null") {
+        const email = session.user.email?.toLowerCase();
+
+        if (email && !email.endsWith('@ucaldas.edu.co')) {
+          console.warn("[authStore] Dominio no permitido:", email);
+          await clearLocalSessionUseCase.execute();
+          set({ user: null, isAuthenticated: false, isHydrating: false });
+          return;
+        }
+
         const fallbackUser = buildFallbackUser(session.user);
-        try {
-          const email = session.user.email?.toLowerCase();
+        
+        // Establecer estado autenticado DE INMEDIATO para evitar saltos al login
+        set({
+          user: fallbackUser,
+          isAuthenticated: true,
+          isHydrating: false,
+        });
 
-          if (!email?.endsWith('@ucaldas.edu.co')) {
-            console.warn("[authStore] Usuario rechazado: no es de ucaldas.edu.co -", email);
-            await clearLocalSessionUseCase.execute()
-            set({ user: null, isAuthenticated: false, isHydrating: false });
-            return;
-          }
-
-          // Resolvemos el rol antes de salir de hidratación para evitar
-          // el salto visual tabs -> admin en cuentas administrativas.
-          let resolvedUser = fallbackUser;
-          try {
-            const profile = await withTimeout(getMyAuthProfile.execute(), PROFILE_TIMEOUT_MS);
-            if (profile) {
-              resolvedUser = {
-                ...fallbackUser,
-                fullName: profile.full_name,
-                avatarUrl: profile.avatar_url,
+        // Carga de perfil en background
+        getMyAuthProfile.execute().then(profile => {
+          if (profile) {
+            set(state => ({
+              user: state.user ? {
+                ...state.user,
+                fullName: profile.full_name || state.user.fullName,
+                avatarUrl: profile.avatar_url || state.user.avatarUrl,
                 role: normalizeRole(profile.role),
                 semester: profile.semester,
                 bio: profile.bio,
-              };
-            }
-          } catch {
-            // Si el perfil falla o vence timeout, continuamos con fallback.
+              } : null
+            }));
           }
+        }).catch(() => {});
 
-          set({
-            user: resolvedUser,
-            isAuthenticated: true,
-            isHydrating: false,
-          });
+        // Carga de programas/materias en background
+        const getMyPrograms = container.getGetMyPrograms();
+        const getMySubjects = container.getGetMySubjects();
+        Promise.all([
+          getMyPrograms.execute(userId),
+          getMySubjects.execute(userId)
+        ]).then(([progs, subs]) => {
+          set(state => ({
+            user: state.user ? { ...state.user, programs: progs, subjects: subs } : null
+          }));
+        }).catch(() => {});
 
-          registerAndSavePushToken(session.user.id).catch(() => {});
-        } catch (error) {
-          if (isInvalidRefreshTokenError(error)) {
-            console.warn("[authStore] Refresh token invalido durante hidratacion. Cerrando sesion local.");
-            await clearCorruptedSession();
-            return;
-          }
-
-          if (!isAuthTimeoutError(error)) {
-            console.warn("[authStore] Error al procesar sesión:", error);
-          }
-          set({
-            user: fallbackUser,
-            isAuthenticated: true,
-            isHydrating: false,
-          });
-        }
+        registerAndSavePushToken(userId).catch(() => {});
       } else {
+        // Solo marcar como no hidratado si no hay sesión y no estamos esperando a OAuth
         set({ user: null, isAuthenticated: false, isHydrating: false });
       }
+      hasProcessedInitial = true;
     };
 
-    (async () => {
-      try {
-        const session = await withTimeout(getCurrentSession.execute(), SESSION_TIMEOUT_MS);
-        await processSession(session);
-      } catch (error) {
-        if (isInvalidRefreshTokenError(error)) {
-          console.warn("[authStore] Refresh token invalido en getSession inicial. Limpiando sesion local.");
-          await clearCorruptedSession();
-          return;
-        }
-
-        if (isAuthTimeoutError(error)) {
-          console.warn("[authStore] Timeout inicial de sesión. Reintentando en background...");
-          set((state) => ({
-            ...state,
-            isHydrating: false,
-          }));
-
-          getCurrentSession
-            .execute()
-            .then((sessionRetry) => processSession(sessionRetry))
-            .catch((retryError) => {
-              console.error("[authStore] Error en reintento de sesión:", retryError);
-              set({ user: null, isAuthenticated: false, isHydrating: false });
-            });
-
-          return;
-        }
-
-        console.error("[authStore] Error al verificar sesión inicial:", error);
-        set({ user: null, isAuthenticated: false, isHydrating: false });
+    // Watchdog de seguridad final (15s)
+    const watchdog = setTimeout(() => {
+      if (get().isHydrating) {
+        console.warn("[authStore] Watchdog final. Liberando UI.");
+        set({ isHydrating: false });
       }
-    })();
+    }, 15000);
 
+    // UNICO PUNTO DE VERDAD: Escuchar cambios de estado de Supabase.
+    // Supabase dispara 'INITIAL_SESSION' automáticamente al inicializarse si hay sesión guardada.
     const { data: { subscription } } = subscribeAuthStateChanges.execute(async (event, session) => {
-      if (event === "SIGNED_OUT") {
+      console.log("[authStore] Cambio de estado detectado:", event);
+      
+      if (event === "SIGNED_OUT" || event === "USER_DELETED") {
         set({ user: null, isAuthenticated: false, isHydrating: false });
         return;
       }
 
-      if (event === "SIGNED_IN") {
-        await processSession(session);
-        return;
-      }
-
-      // En OAuth (Google) pueden llegar eventos distintos a SIGNED_IN
-      // como INITIAL_SESSION o TOKEN_REFRESHED con sesión ya válida.
       if (session?.user) {
         await processSession(session);
+      } else {
+        // Si no hay sesión inicial, marcamos como hidratado para que el usuario pueda ver el login
+        if (event === "INITIAL_SESSION" || event === "SIGNED_OUT") {
+          set({ user: null, isAuthenticated: false, isHydrating: false });
+        }
       }
     });
 
     return () => {
-      clearTimeout(hydrationWatchdog);
+      clearTimeout(watchdog);
       subscription.unsubscribe();
     };
   },
@@ -229,7 +186,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const signInWithPassword = container.getSignInWithPassword()
 
     const normalizedEmail = email.trim().toLowerCase();
-    set({ isLoading: true, isHydrating: true });
+    set({ isLoading: true });
 
     try {
       const { user } = await signInWithPassword.execute({
@@ -238,7 +195,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       })
       if (!user) throw new Error("No se pudo iniciar sesión");
     } catch (error) {
-      set({ user: null, isAuthenticated: false, isHydrating: false });
+      set({ user: null, isAuthenticated: false });
       throw error;
     } finally {
       set({ isLoading: false });

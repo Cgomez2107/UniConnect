@@ -9,7 +9,7 @@ export interface IStudentRepository {
    * Buscar estudiantes inscritos en una materia específica
    * Soporta búsqueda por nombre
    */
-  searchBySubject(subjectId: string, searchTerm?: string): Promise<Student[]>;
+  searchBySubject(subjectId: string, searchTerm?: string, currentUserId?: string): Promise<Student[]>;
 
   /**
    * Obtener perfil público de un estudiante por ID
@@ -20,4 +20,9 @@ export interface IStudentRepository {
    * Obtener perfil de un estudiante por user_id (equivalente a ID de perfil)
    */
   getByUserId(userId: string): Promise<Student | null>;
+
+  /**
+   * Obtener materias inscritas de un usuario
+   */
+  getSubjectsByUserId(userId: string): Promise<{ subjectId: string; name: string }[]>;
 }

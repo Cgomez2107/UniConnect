@@ -1,4 +1,4 @@
-﻿/**
+/**
  * app/(tabs)/perfil.tsx
  *
  * Perfil del estudiante - US-004.
@@ -89,7 +89,9 @@ export default function PerfilScreen() {
         />
 
         {isLoading ? (
-          <LoadingState message="Cargando perfil..." />
+          <View style={{ paddingVertical: 40 }}>
+            <LoadingState message="Cargando datos académicos..." />
+          </View>
         ) : (
           <>
             <SectionCard title="Información académica">

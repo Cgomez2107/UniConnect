@@ -72,7 +72,7 @@ export class CreateStudyGroupMessage {
       payload,
     };
 
-    this.subject.emit(channel, event).catch((error) => {
+    this.subject.emit(channel, event).catch((error: any) => {
       console.error("[CreateStudyGroupMessage] Error emitiendo evento:", error);
     });
 

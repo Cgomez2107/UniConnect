@@ -1,5 +1,5 @@
-import type { StudyGroupMessage } from "../domain/entities/StudyGroupMessage.js";
-import type { IStudyGroupMessageRepository } from "../domain/repositories/IStudyGroupMessageRepository.js";
+import type { StudyGroupMessage } from "../../domain/entities/StudyGroupMessage.js";
+import type { IStudyGroupMessageRepository } from "../../domain/repositories/IStudyGroupMessageRepository.js";
 
 export interface ListStudyGroupMessagesInput {
   readonly requestId: string;

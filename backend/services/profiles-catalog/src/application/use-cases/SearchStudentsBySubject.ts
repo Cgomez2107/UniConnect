@@ -11,6 +11,7 @@ export class SearchStudentsBySubject {
   async execute(input: {
     subjectId: string;
     search?: string;
+    currentUserId?: string;
   }): Promise<Student[]> {
     if (!input.subjectId.trim()) {
       throw new Error("Subject ID is required");
@@ -19,6 +20,7 @@ export class SearchStudentsBySubject {
     return this.repository.searchBySubject(
       input.subjectId.trim(),
       input.search?.trim(),
+      input.currentUserId?.trim(),
     );
   }
 }

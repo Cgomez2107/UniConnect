@@ -4,8 +4,7 @@
     "rootDir": "../",
     "outDir": "dist",
     "baseUrl": "../../",
-    "types": ["node"],
-    "ignoreDeprecations": "6.0"
+    "types": ["node"]
   },
   "include": [
     "src/**/*.ts",

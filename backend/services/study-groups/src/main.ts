@@ -180,7 +180,12 @@ function bootstrap(): void {
     repository,
     subject,
   );
-  const reviewApplication = new ReviewApplication(applicationRepository, repository, subject);
+  const reviewApplication = new ReviewApplication(
+    applicationRepository,
+    repository,
+    memberRepository,
+    subject,
+  );
   const requestAdminTransfer = new RequestAdminTransfer(adminTransferRepository, repository, subject);
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
@@ -221,20 +226,21 @@ function bootstrap(): void {
         res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
         res.end(sendJsonError(404, "Route not found"));
       }
-    })().catch((error: unknown) => {
+    })().catch((error: any) => {
       res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
       res.end(sendJsonError(500, error instanceof Error ? error.message : "Unexpected service error"));
     });
   });
 
-  (server as any).listen({ port: env.port, host: "0.0.0.0" }, () => {
+
+  (server as any).listen({ port: env.port, host: "::" }, () => {
     console.log(
       JSON.stringify({
         service: "study-groups",
         level: "info",
         message: "Service listening",
         port: env.port,
-        host: "0.0.0.0",
+        host: "::",
         nodeEnv: env.nodeEnv,
       }),
     );

@@ -34,6 +34,7 @@ export interface MiembroAceptadoEvent {
   readonly applicationId: string;
   readonly requestId: string;
   readonly applicantId: string;
+  readonly applicantName: string;
   readonly approvedBy: string;
   readonly groupName: string;
 }

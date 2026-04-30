@@ -14,9 +14,28 @@ export async function proxyRequest(
   req: IncomingMessage,
   res: ServerResponse,
   targetBaseUrl: string,
+  stripPrefix?: string,
 ): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
-  const targetUrl = new URL(requestUrl.pathname + requestUrl.search, targetBaseUrl);
+  let pathname = requestUrl.pathname;
+
+  if (stripPrefix && pathname.startsWith(stripPrefix)) {
+    pathname = pathname.substring(stripPrefix.length);
+    if (!pathname.startsWith("/")) {
+      pathname = "/" + pathname;
+    }
+  }
+
+  const targetUrl = new URL(pathname + requestUrl.search, targetBaseUrl);
+
+  console.log(JSON.stringify({
+    service: "gateway",
+    level: "info",
+    message: "Proxying request",
+    method: req.method,
+    originalUrl: req.url,
+    targetUrl: targetUrl.href,
+  }));
 
   const bodyParts: string[] = [];
   const decoder = new TextDecoder();
@@ -31,8 +50,19 @@ export async function proxyRequest(
   }
   bodyParts.push(decoder.decode());
 
+  const method = req.method?.toUpperCase() ?? "GET";
+  const isPayloadMethod = method !== "GET" && method !== "HEAD";
+  const rawBody = bodyParts.join("");
+  const body = isPayloadMethod && rawBody.length > 0 ? rawBody : undefined;
+
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
+    // Evitar reenviar headers que causan conflictos en Fly.io internal networking o Node fetch
+    const lowerKey = key.toLowerCase();
+    if (["host", "connection", "content-length", "transfer-encoding", "content-encoding"].includes(lowerKey)) {
+      continue;
+    }
+
     if (Array.isArray(value)) {
       value.forEach((v) => headers.append(key, v));
       continue;
@@ -42,30 +72,48 @@ export async function proxyRequest(
     }
   }
 
-  const method = req.method?.toUpperCase() ?? "GET";
-  const isPayloadMethod = method !== "GET" && method !== "HEAD";
-  const rawBody = bodyParts.join("");
-  const body = isPayloadMethod && rawBody.length > 0 ? rawBody : undefined;
-
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
     const downstreamResponse = await fetch(targetUrl, {
-      method: req.method,
+      method,
       headers,
       body,
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
+
+    console.log(JSON.stringify({
+      service: "gateway",
+      level: "info",
+      message: "Downstream response received",
+      method,
+      targetUrl: targetUrl.href,
+      status: downstreamResponse.status
+    }));
 
     const responseText = await downstreamResponse.text();
     const responseHeaders: Record<string, string> = {};
     downstreamResponse.headers.forEach((value, key) => {
-      responseHeaders[key] = value;
+      // Evitar propagar headers de hop-by-hop o compresión del downstream
+      const lowerKey = key.toLowerCase();
+      if (!["connection", "content-encoding", "transfer-encoding", "content-length"].includes(lowerKey)) {
+        responseHeaders[key] = value;
+      }
     });
 
     res.writeHead(downstreamResponse.status, responseHeaders);
     res.end(responseText);
-  } catch (error) {
-    sendJson(res, 502, {
-      error: "Downstream service unavailable",
-      details: error instanceof Error ? error.message : "Unknown proxy error",
-    });
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      sendJson(res, 504, { error: "Gateway Timeout", details: "Downstream service took too long to respond" });
+    } else {
+      sendJson(res, 502, {
+        error: "Downstream service unavailable",
+        details: error instanceof Error ? error.message : "Unknown proxy error",
+      });
+    }
   }
 }

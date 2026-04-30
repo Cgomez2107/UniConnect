@@ -15,6 +15,11 @@ interface StudentRow {
   updated_at: Date | string;
 }
 
+interface SubjectRow {
+  subject_id: string;
+  name: string;
+}
+
 function mapStudent(row: StudentRow): Student {
   return {
     id: row.id,
@@ -58,13 +63,18 @@ export class PostgresStudentRepository implements IStudentRepository {
     this.pool = buildPool(env);
   }
 
-  async searchBySubject(subjectId: string, searchTerm?: string): Promise<Student[]> {
+  async searchBySubject(subjectId: string, searchTerm?: string, currentUserId?: string): Promise<Student[]> {
     const values: Array<string> = [subjectId];
     const conditions = ["us.subject_id = $1"];
 
     if (searchTerm) {
       values.push(`%${searchTerm}%`);
       conditions.push(`pr.full_name ILIKE $${values.length}`);
+    }
+
+    if (currentUserId && currentUserId.trim()) {
+      values.push(currentUserId.trim());
+      conditions.push(`pr.id != $${values.length}`);
     }
 
     const result = await this.pool.query<StudentRow>(
@@ -119,5 +129,24 @@ export class PostgresStudentRepository implements IStudentRepository {
 
   async getByUserId(userId: string): Promise<Student | null> {
     return this.getById(userId);
+  }
+
+  async getSubjectsByUserId(userId: string): Promise<{ subjectId: string; name: string }[]> {
+    const result = await this.pool.query<SubjectRow>(
+      `
+        SELECT
+          us.subject_id,
+          s.name
+        FROM user_subjects us
+        JOIN subjects s ON s.id = us.subject_id
+        WHERE us.user_id = $1
+      `,
+      [userId],
+    );
+
+    return result.rows.map((row) => ({
+      subjectId: row.subject_id,
+      name: row.name,
+    }));
   }
 }

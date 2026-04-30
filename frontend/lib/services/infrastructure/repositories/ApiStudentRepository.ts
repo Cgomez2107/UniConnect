@@ -21,6 +21,9 @@ export class ApiStudentRepository implements IStudentRepository {
                 page: (page + 1).toString(),
                 limit: pageSize.toString()
             });
+            if (currentUserId) {
+                params.set("currentUserId", currentUserId);
+            }
 
             const data = await fetchApi<any[]>(`/students?${params.toString()}`);
             return (data ?? []).map(mapStudentSearchResultFromApi);
@@ -31,7 +34,12 @@ export class ApiStudentRepository implements IStudentRepository {
 
     async getPublicProfile(studentId: string, currentUserId: string): Promise<StudentPublicProfile | null> {
         try {
-            const data = await fetchApi<any>(`/students/${studentId}`);
+            const params = new URLSearchParams();
+            if (currentUserId) {
+                params.set("currentUserId", currentUserId);
+            }
+            const suffix = params.toString() ? `?${params.toString()}` : "";
+            const data = await fetchApi<any>(`/students/${studentId}${suffix}`);
             return data ? mapStudentPublicProfileFromApi(data) : null;
         } catch (error) {
             return this.fallback.getPublicProfile(studentId, currentUserId);

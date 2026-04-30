@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/main.js",
+    "start": "node dist/gateway/src/main.js",
     "lint": "echo \"gateway lint config scaffold\"",
     "typecheck": "tsc --noEmit",
     "test": "echo \"gateway tests config scaffold\""

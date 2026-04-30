@@ -32,35 +32,60 @@ export function useInvitationsHub() {
   const [sentApplications, setSentApplications] = useState<Application[]>([]);
   const [myResources, setMyResources] = useState<StudyResource[]>([]);
 
+  const isHydrating = useAuthStore((s) => s.isHydrating);
+
   const loadHub = useCallback(
     async (isRefresh = false) => {
-      if (!user?.id) return;
+      if (isHydrating || !user?.id) return;
+      
       if (isRefresh) {
         setRefreshing(true);
       } else {
         setLoading(true);
       }
 
-      try {
-        const [requests, received, sent, resources] = await Promise.all([
-          getRequestsByAuthor(user.id),
-          getReceivedByAuthor(user.id),
-          getByApplicant(user.id),
-          getResourcesByUser(user.id),
-        ]);
+      // Contador para manejar el estado de carga global de forma incremental
+      let completed = 0;
+      const total = 4;
+      const markDone = () => {
+        completed++;
+        if (completed >= total) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      };
 
-        setMyRequests(requests);
-        setReceivedApplications(received);
-        setSentApplications(sent);
-        setMyResources(resources);
-      } catch (e: any) {
-        Alert.alert("Error", e.message ?? "No se pudo cargar tu espacio de solicitudes.");
-      } finally {
+      // 1. Mis solicitudes (las que yo creé)
+      getRequestsByAuthor(user.id)
+        .then(setMyRequests)
+        .catch(e => console.warn("[hub] Error solicitudes:", e))
+        .finally(markDone);
+
+      // 2. Postulaciones recibidas (de otros hacia mis solicitudes)
+      getReceivedByAuthor(user.id)
+        .then(setReceivedApplications)
+        .catch(e => console.warn("[hub] Error recibidas:", e))
+        .finally(markDone);
+
+      // 3. Mis postulaciones (yo hacia otros)
+      getByApplicant(user.id)
+        .then(setSentApplications)
+        .catch(e => console.warn("[hub] Error enviadas:", e))
+        .finally(markDone);
+
+      // 4. Mis recursos
+      getResourcesByUser(user.id)
+        .then(setMyResources)
+        .catch(e => console.warn("[hub] Error recursos:", e))
+        .finally(markDone);
+
+      // Timeout de seguridad
+      setTimeout(() => {
         setLoading(false);
         setRefreshing(false);
-      }
+      }, 7000);
     },
-    [getByApplicant, getReceivedByAuthor, getRequestsByAuthor, getResourcesByUser, user?.id]
+    [getByApplicant, getReceivedByAuthor, getRequestsByAuthor, getResourcesByUser, user?.id, isHydrating]
   );
 
   useFocusEffect(

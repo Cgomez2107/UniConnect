@@ -35,15 +35,15 @@ if (!Number.isInteger(PORT) || PORT <= 0) {
 function sendOAuthUrl(res: ServerResponse, redirectTo?: string): void {
   const supabaseUrl = process.env.SUPABASE_URL || "https://becitrklvpadvjwdbmck.supabase.co";
   const hd = "ucaldas.edu.co"; // restricción de dominio institucional
-  
+
   // Construir URL base de Supabase
   let authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&hd=${hd}`;
-  
+
   // Si se proporciona redirectTo, agregarlo como parámetro
   if (redirectTo) {
     authUrl += `&redirect_to=${encodeURIComponent(redirectTo)}`;
   }
-  
+
   res.writeHead(200);
   res.end(JSON.stringify({ url: authUrl }));
 }
@@ -66,9 +66,9 @@ async function main() {
     const method = req.method || "GET";
 
     // Headers CORS
-    res.setHeader("Content-Type", "application/json");
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    //res.setHeader("Content-Type", "application/json");
+    //res.setHeader("Access-Control-Allow-Origin", "*");
+    //res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization, X-Requested-With, bypass-tunnel-reminder, ngrok-skip-browser-warning",
@@ -103,8 +103,8 @@ async function main() {
         // En un caso real buscaríamos el usuario en la DB
         // Aquí devolvemos un mock basado en que el Gateway pasó el token
         res.writeHead(200);
-        res.end(JSON.stringify({ 
-          session: { user: { email: "usuario@ucaldas.edu.co" }, access_token: auth.substring(7) } 
+        res.end(JSON.stringify({
+          session: { user: { email: "usuario@ucaldas.edu.co" }, access_token: auth.substring(7) }
         }));
       } else {
         res.writeHead(401);
@@ -114,7 +114,7 @@ async function main() {
       // Endpoint unificado para Google OAuth
       // Acepta POST con redirectTo en el body o GET con redirectTo como query param
       let redirectTo: string | undefined;
-      
+
       if (method === "POST") {
         // Leer body para obtener redirectTo
         let body = "";
@@ -143,14 +143,14 @@ async function main() {
     }
   });
 
-  (server as any).listen({ port: PORT, host: "0.0.0.0" }, () => {
+  (server as any).listen({ port: PORT, host: "::" }, () => {
     console.log(
       JSON.stringify({
         service: "auth",
         level: "info",
         message: "Service listening",
         port: PORT,
-        host: "0.0.0.0",
+        host: "::",
         nodeEnv,
       }),
     );

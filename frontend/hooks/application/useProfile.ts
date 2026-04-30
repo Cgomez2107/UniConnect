@@ -18,46 +18,77 @@ interface UseProfileReturn {
 }
 
 export function useProfile(): UseProfileReturn {
-	const container = useMemo(() => DIContainer.getInstance(), [])
 	const user = useAuthStore((s) => s.user)
 
-	const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-	const [phoneNumber, setPhoneNumber] = useState<string | null>(null)
-	const [userPrograms, setUserPrograms] = useState<UserProgram[]>([])
-	const [userSubjects, setUserSubjects] = useState<UserSubject[]>([])
+	const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatarUrl ?? null)
+	const [phoneNumber, setPhoneNumber] = useState<string | null>(user?.phoneNumber ?? null)
+	const [userPrograms, setUserPrograms] = useState<UserProgram[]>(user?.programs ?? [])
+	const [userSubjects, setUserSubjects] = useState<UserSubject[]>(user?.subjects ?? [])
 	const [myRequests, setMyRequests] = useState<StudyRequest[]>([])
-	const [isLoading, setIsLoading] = useState(true)
+	const [isLoading, setIsLoading] = useState(!user?.programs?.length && !user?.subjects?.length)
 
 	useFocusEffect(
 		useCallback(() => {
-			if (!user?.id) return
+			if (!user?.id) {
+				setIsLoading(false)
+				return
+			}
 
 			const load = async () => {
-				setIsLoading(true)
-				try {
-					const getProfileByUserId = container.getGetProfileByUserId()
-					const getMyProgramsUseCase = container.getGetMyPrograms()
-					const getMySubjectsUseCase = container.getGetMySubjects()
-					const getRequestsByAuthor = container.getGetStudyRequestsByAuthor()
+				const container = DIContainer.getInstance()
+				const userId = user.id
 
-					const [profile, progs, subs, reqs] = await Promise.all([
-						getProfileByUserId.execute(user.id),
-						getMyProgramsUseCase.execute(user.id),
-						getMySubjectsUseCase.execute(user.id),
-						getRequestsByAuthor.execute(user.id),
-					])
-					setAvatarUrl(profile?.avatar_url ?? null)
-					setPhoneNumber(profile?.phone_number ?? null)
-					setUserPrograms(progs)
-					setUserSubjects(subs)
-					setMyRequests(reqs)
-				} finally {
-					setIsLoading(false)
+				// Si ya tenemos datos básicos, no mostramos el loader gigante,
+				// pero igual refrescamos en background para asegurar consistencia.
+				const hasBasicData = !!(user?.programs?.length || user?.subjects?.length)
+				if (!hasBasicData) {
+					setIsLoading(true)
 				}
+
+				let completed = 0
+				const total = 4
+				const markDone = () => {
+					completed++
+					if (completed >= total) setIsLoading(false)
+				}
+
+				// 1. Perfil básico (Avatar, Teléfono)
+				container.getGetProfileByUserId().execute(userId)
+					.then(p => {
+						if (p) {
+							setAvatarUrl(p.avatar_url ?? null)
+							setPhoneNumber(p.phone_number ?? null)
+						}
+					})
+					.catch(e => console.warn("[useProfile] Error perfil:", e))
+					.finally(markDone)
+
+				// 2. Programas
+				container.getGetMyPrograms().execute(userId)
+					.then(setUserPrograms)
+					.catch(e => console.warn("[useProfile] Error programas:", e))
+					.finally(markDone)
+
+				// 3. Materias
+				container.getGetMySubjects().execute(userId)
+					.then(setUserSubjects)
+					.catch(e => console.warn("[useProfile] Error materias:", e))
+					.finally(markDone)
+
+				// 4. Mis Solicitudes
+				container.getGetStudyRequestsByAuthor().execute(userId)
+					.then(setMyRequests)
+					.catch(e => console.warn("[useProfile] Error solicitudes:", e))
+					.finally(markDone)
+				
+				// Timeout de seguridad
+				setTimeout(() => {
+					setIsLoading(false)
+				}, 5000)
 			}
 
 			load()
-		}, [container, user?.id])
+		}, [user?.id])
 	)
 
 	const initials = (user?.fullName ?? "UC")

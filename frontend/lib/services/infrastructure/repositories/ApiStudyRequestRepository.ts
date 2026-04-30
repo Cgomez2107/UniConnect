@@ -152,6 +152,7 @@ export class ApiStudyRequestRepository implements IStudyRequestRepository {
  * del backend afecte a hooks ni pantallas.
  */
 function mapStudyRequestFromApi(raw: any): StudyRequest {
+    const subjectName = raw.subjectName ?? raw.subject_name;
     return {
         id: raw.id,
         author_id: raw.authorId ?? raw.author_id,
@@ -163,9 +164,10 @@ function mapStudyRequestFromApi(raw: any): StudyRequest {
         is_active: raw.isActive ?? raw.is_active,
         created_at: raw.createdAt ?? raw.created_at,
         updated_at: raw.updatedAt ?? raw.updated_at,
-        subject_name: raw.subjectName ?? raw.subject_name,
+        subject_name: subjectName,
         faculty_name: raw.facultyName ?? raw.faculty_name,
         applications_count: raw.applicationsCount ?? raw.applications_count,
+        subjects: subjectName ? { name: subjectName } : undefined,
         profiles: raw.author
             ? {
                 full_name: raw.author.fullName,

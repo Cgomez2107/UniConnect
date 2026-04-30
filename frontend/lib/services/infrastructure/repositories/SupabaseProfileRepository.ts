@@ -19,6 +19,7 @@ export class SupabaseProfileRepository implements IProfileRepository {
   }
 
   async getProfile(userId: string): Promise<Profile | null> {
+    if (!userId || userId === "undefined" || userId === "null") return null
     return apiGetOne<Profile>("profiles", (q) => q.select("*").eq("id", userId).single())
   }
 
@@ -78,6 +79,7 @@ export class SupabaseProfileRepository implements IProfileRepository {
   }
 
   async getMyPrograms(userId: string): Promise<UserProgram[]> {
+    if (!userId || userId === "undefined" || userId === "null") return []
     return apiGet<UserProgram>("user_programs", (q) =>
       q
         .select("*, programs ( id, name, faculty_id, faculties ( name ) )")
@@ -122,6 +124,7 @@ export class SupabaseProfileRepository implements IProfileRepository {
   }
 
   async getMySubjects(userId: string): Promise<UserSubject[]> {
+    if (!userId || userId === "undefined" || userId === "null") return []
     return apiGet<UserSubject>("user_subjects", (q) =>
       q
         .select("*, subjects ( id, name )")

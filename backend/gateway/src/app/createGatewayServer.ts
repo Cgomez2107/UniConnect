@@ -18,7 +18,12 @@ function getAppVersion(): string {
 }
 
 function isStudyGroupsRoute(pathname: string): boolean {
-  return pathname === "/api/v1/study-groups" || pathname.startsWith("/api/v1/study-groups/");
+  return (
+    pathname === "/api/v1/study-groups" ||
+    pathname.startsWith("/api/v1/study-groups/") ||
+    pathname === "/api/v1/notifications" ||
+    pathname.startsWith("/api/v1/notifications/")
+  );
 }
 
 function isResourcesRoute(pathname: string): boolean {
@@ -95,7 +100,7 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
 
   // Rutas de autenticación (sin protección de JWT)
   if (isAuthRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.authBaseUrl);
+    await proxyRequest(req, res, env.authBaseUrl, "/api/v1/auth");
     return;
   }
 

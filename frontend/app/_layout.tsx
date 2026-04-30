@@ -2,7 +2,7 @@ import { GlobalNotificationModals } from "@/components/notifications/GlobalNotif
 import { RealtimeNotificationHandler } from "@/components/notifications/RealtimeNotificationHandler";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Stack } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 if (typeof document !== "undefined") {
   require("../global.css");
@@ -14,8 +14,11 @@ if (typeof document !== "undefined") {
  */
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    
     if (typeof window !== "undefined") {
       const mockUser = (window as any).__E2E_MOCK_AUTH__;
       if (mockUser) {
@@ -31,6 +34,10 @@ export default function RootLayout() {
     const unsubscribe = initialize();
     return unsubscribe;
   }, [initialize]);
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <React.Fragment>
@@ -61,4 +68,4 @@ export default function RootLayout() {
       </Stack>
     </React.Fragment>
   );
-}
+}
