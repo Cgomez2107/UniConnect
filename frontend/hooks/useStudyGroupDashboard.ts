@@ -113,8 +113,9 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     async (requestIdValue: string) => {
       console.log(`[Members] Cargando miembros para requestId=${requestIdValue}`);
       const data = await fetchApi<StudyGroupMember[]>(`/study-groups/${requestIdValue}/members`);
-      console.log(`[Members] Miembros recibidos=${data?.length ?? 0} para requestId=${requestIdValue}`);
-      setMembers(data ?? []);
+      const list = data ?? [];
+      setMembers(list);
+      return list;
     },
     []
   );
@@ -137,14 +138,30 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
   }, []);
 
   const loadMessages = useCallback(
-    async (requestIdValue: string) => {
-      console.log(`[Chat] Cargando mensajes para requestId=${requestIdValue}`);
+    async (requestIdValue: string, currentMembers?: StudyGroupMember[]) => {
       const data = await fetchApi<any[]>(
         `/study-groups/${requestIdValue}/messages?limit=50&page=1`
       );
       console.log(`[Chat] Mensajes recibidos=${data?.length ?? 0} para requestId=${requestIdValue}`);
 
-      const mapped = (data ?? []).map(mapApiMessageToDomain);
+      let mapped = (data ?? []).map(mapApiMessageToDomain);
+
+      // Enriquecer mensajes históricos con nombres de la lista de miembros
+      const membersList = currentMembers || membersRef.current;
+      if (membersList.length > 0) {
+        mapped = mapped.map((msg) => {
+          const member = membersList.find((m) => m.userId === msg.senderId);
+          if (member) {
+            return {
+              ...msg,
+              senderFullName: member.fullName,
+              senderAvatarUrl: member.avatarUrl,
+            };
+          }
+          return msg;
+        });
+      }
+
       const sorted = mapped.slice().sort((a, b) => {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       });
@@ -173,33 +190,42 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
       setError(null);
 
       try {
-        // Fetch request info and applications in parallel.
-        // Applications can return 403 if the user is not admin — that's expected for regular members.
-        const [request, appsResult] = await Promise.allSettled([
-          getRequestById(requestIdValue),
-          getApplicationsByRequest(requestIdValue),
-        ]);
-
-        const requestData = request.status === "fulfilled" ? request.value : null;
-
-        if (!requestData) {
-          setError("No se encontro la solicitud activa.");
+        // 1. Carga inicial de datos base (solicitud)
+        const request = await getRequestById(requestIdValue);
+        
+        if (!request) {
+          setError("No se encontró la solicitud activa.");
           setActiveRequest(null);
           setApplications([]);
+          setMembers([]);
+          setMessages([]);
           return;
         }
 
-        setActiveRequest(requestData);
+        setActiveRequest(request);
 
-        // If applications returned successfully use them; if 403 (no admin) just leave empty.
-        const apps = appsResult.status === "fulfilled" ? appsResult.value : [];
-        const enriched = await enrichApplications(apps ?? []);
-        setApplications(enriched);
+        // 2. Cargar miembros primero para verificar rol
+        const loadedMembers = await loadMembers(requestIdValue);
 
-        await Promise.all([
-          loadMembers(requestIdValue),
-          loadMessages(requestIdValue),
-        ]);
+        // 3. Determinar si somos admin para cargar postulaciones (evita 403/500 en miembros)
+        const myMemberRecord = loadedMembers.find(m => m.userId === user?.id);
+        const isAdmin = myMemberRecord?.role === "admin" || myMemberRecord?.role === "autor";
+
+        let apps: Application[] = [];
+        if (isAdmin) {
+          try {
+            const rawApps = await getApplicationsByRequest(requestIdValue);
+            apps = await enrichApplications(rawApps ?? []);
+          } catch (err) {
+            console.warn("[Dashboard] Error al cargar postulaciones:", err);
+            apps = [];
+          }
+        }
+        setApplications(apps);
+
+        // 4. Cargar mensajes (ya tenemos los miembros para enriquecer)
+        await loadMessages(requestIdValue, loadedMembers);
+        
       } catch (err) {
         const message = err instanceof Error ? err.message : "Error al cargar el dashboard";
         setError(message);
@@ -207,7 +233,7 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
         setLoading(false);
       }
     },
-    [enrichApplications, getApplicationsByRequest, getRequestById, loadMembers, loadMessages]
+    [enrichApplications, getApplicationsByRequest, getRequestById, loadMembers, loadMessages, user?.id]
   );
 
   const resolveRequest = useCallback(async () => {
@@ -347,11 +373,12 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
   );
 
   const handleSendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, mentions?: any[], media?: { url: string; type: string; filename: string }) => {
       if (!activeRequestId) return;
 
       const trimmed = content.trim();
-      if (!trimmed) return;
+      // Permitir enviar solo archivos sin texto
+      if (!trimmed && !media) return;
 
       setSendingMessage(true);
       try {
@@ -359,7 +386,13 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
           `/study-groups/${activeRequestId}/messages`,
           {
             method: "POST",
-            body: JSON.stringify({ content: trimmed }),
+            body: JSON.stringify({ 
+              content: trimmed,
+              mentions: mentions || [],
+              mediaUrl: media?.url,
+              mediaType: media?.type,
+              mediaFilename: media?.filename
+            }),
           }
         );
 

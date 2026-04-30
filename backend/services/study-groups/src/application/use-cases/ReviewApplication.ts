@@ -9,7 +9,7 @@ export class ReviewApplication {
     private readonly repository: IApplicationRepository,
     private readonly studyRequestRepository: IStudyRequestRepository,
     private readonly subject: StudyGroupSubject,
-  ) {}
+  ) { }
 
   async execute(input: { applicationId: string; actorUserId: string; status: "aceptada" | "rechazada" }): Promise<void> {
     const applicationId = requireTrimmed(input.applicationId, "applicationId");
@@ -32,6 +32,14 @@ export class ReviewApplication {
     });
 
     if (input.status === "aceptada") {
+      // Obtenemos los miembros para encontrar el nombre del nuevo integrante
+      const members = await this.memberRepository.listByRequest({ 
+        requestId: application.requestId, 
+        actorUserId 
+      });
+      const newMember = members.find(m => m.userId === application.applicantId);
+      const applicantName = newMember?.fullName || "Nuevo integrante";
+
       const event: MiembroAceptadoEvent = {
         type: "MIEMBRO_ACEPTADO",
         version: "1.0",
@@ -39,6 +47,7 @@ export class ReviewApplication {
         applicationId,
         requestId: application.requestId,
         applicantId: application.applicantId,
+        applicantName,
         approvedBy: actorUserId,
         groupName: request.title,
       };
@@ -63,4 +72,4 @@ export class ReviewApplication {
       console.error("[ReviewApplication] Error emitiendo evento:", error);
     });
   }
-}
+}

@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 // 1. Interfaz IMessage siguiendo el contrato del Backend
@@ -90,22 +90,42 @@ export class FileMessageDecorator extends MessageDecorator {
 
   override render(context?: { currentUserId?: string }): React.JSX.Element {
     const isImage = this.file.mimeType.startsWith('image/');
+    
+    const handleOpen = () => {
+      if (this.file.url) {
+        import('react-native').then(({ Linking }) => {
+          Linking.openURL(this.file.url);
+        });
+      }
+    };
+
     return (
       <View key="decorator-file" style={styles.fileContainer}>
-        {isImage ? (
-          <Image 
-            source={{ uri: this.file.url }} 
-            style={styles.attachedImage} 
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.fileIconContainer}>
-            <MaterialIcons name="insert-drive-file" size={24} color="#007AFF" />
-            <Text style={styles.fileName} numberOfLines={1}>
-              {this.file.filename}
-            </Text>
-          </View>
-        )}
+        <TouchableOpacity 
+          onPress={handleOpen} 
+          activeOpacity={0.7}
+          style={{ cursor: 'pointer' } as any}
+        >
+          {isImage ? (
+            <Image 
+              source={{ uri: this.file.url }} 
+              style={styles.attachedImage} 
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.fileIconContainer}>
+              <MaterialIcons name="insert-drive-file" size={24} color="#0047AB" />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.fileName} numberOfLines={1}>
+                  {this.file.filename}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#737373' }}>
+                  Haga clic para abrir
+                </Text>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
         {this.message.render(context)}
       </View>
     );

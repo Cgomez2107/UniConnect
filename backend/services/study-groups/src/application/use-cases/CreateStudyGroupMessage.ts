@@ -19,6 +19,8 @@ export interface CreateStudyGroupMessageInput {
   readonly content: string;
   readonly mediaUrl?: string;
   readonly mediaType?: string;
+  readonly mediaFilename?: string;
+  readonly mentions?: any[];
 }
 
 export class CreateStudyGroupMessage {
@@ -31,26 +33,24 @@ export class CreateStudyGroupMessage {
 
   async execute(input: CreateStudyGroupMessageInput): Promise<StudyGroupMessage> {
     const requestId = requireTrimmed(input.requestId, "requestId");
-    const content = requireTrimmed(input.content, "content");
+    
+    // Si no hay texto pero hay archivo, el contenido es una cadena vacía
+    const content = input.content ?? "";
 
-    // Implementación de regex simple para detectar @nombre
-    const mentionRegex = /@(\w+)/g;
-    const mentions: any[] = [];
-    let match;
-    while ((match = mentionRegex.exec(content)) !== null) {
-      mentions.push({
-        userId: match[1], // Usamos el nombre como ID temporalmente si no hay resolución
-        displayName: match[1]
-      });
-    }
+    // Priorizar menciones recibidas del frontend (ya resueltas)
+    // O extraerlas del contenido si no vienen
+    const finalMentions = (input.mentions && input.mentions.length > 0)
+      ? input.mentions
+      : extractMentionsFromContent(content);
 
     const created = await this.repository.create({
       requestId,
       actorUserId: input.actorUserId,
       content,
-      mentions,
-      mediaUrl: (input as any).mediaUrl,
-      mediaType: (input as any).mediaType,
+      mentions: finalMentions,
+      mediaUrl: input.mediaUrl,
+      mediaType: input.mediaType,
+      mediaFilename: input.mediaFilename,
     });
 
     const channel = createGroupChannel(requestId);

@@ -7,13 +7,13 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { GroupChatPanel } from "@/components/dashboard/GroupChatPanel";
 import { AdminTransferNotification } from "@/components/dashboard/AdminTransferNotification";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
 import { transformRawMessage } from "@/chat/utils/messageFactory";
+import { supabase } from "@/lib/supabase";
 
 interface MemberChatViewProps {
   requestId: string;
@@ -23,7 +23,6 @@ interface MemberChatViewProps {
   facultyName?: string;
   onLeaveGroup?: () => void;
 }
-
 
 // Determinar si un miembro está online basado en última conexión
 function isUserOnline(lastSeen: string | null): boolean {
@@ -59,6 +58,15 @@ export function MemberChatView({
   const router = useRouter();
   const { getOrCreateConversation } = useMessaging();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados para manejo de mensajes y menciones
+  const [inputContent, setInputContent] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedMentions, setSelectedMentions] = useState<any[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<any | null>(null);
 
   // Filtrar compañeros (excluir al usuario actual)
   const companions = useMemo(() => 
@@ -98,8 +106,9 @@ export function MemberChatView({
     if (targetUserId === userId || startingChat) return;
     setStartingChat(true);
     try {
-      // US-W03: Navegar a la ruta base de chat privado solicitada
-      router.push(`/dashboard/chat/direct/${targetUserId}` as any);
+      // US-W03: Obtener o crear la conversación privada antes de navegar
+      const conversation = await getOrCreateConversation(userId, targetUserId);
+      router.push(`/chat/${conversation.id}` as any);
     } catch (error) {
       console.error("Error starting private chat:", error);
     } finally {
@@ -107,16 +116,88 @@ export function MemberChatView({
     }
   };
 
+  // Manejo de entrada de texto y detección de menciones
+  const handleInputChange = (text: string) => {
+    setInputContent(text);
+    
+    // Detectar si el último carácter o palabra sugiere una mención
+    const lastWord = text.split(" ").pop() || "";
+    if (lastWord.startsWith("@")) {
+      setMentionQuery(lastWord.slice(1).toLowerCase());
+      setShowMentions(true);
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const insertMention = (member: any) => {
+    const words = inputContent.split(" ");
+    words.pop(); // Eliminar el "@query" parcial
+    const name = member.fullName || "Usuario";
+    const newContent = [...words, `@${name} `].join(" ");
+    
+    setInputContent(newContent);
+    setShowMentions(false);
+    
+    // Guardar metadata de la mención para el envío
+    if (!selectedMentions.some(m => m.userId === member.userId)) {
+      setSelectedMentions([...selectedMentions, { userId: member.userId, displayName: name }]);
+    }
+  };
+
+  const handleSend = () => {
+    if (!inputContent.trim() && !pendingAttachment) return;
+    
+    // Filtrar solo las menciones que permanecen en el texto
+    const finalMentions = selectedMentions.filter(m => 
+      inputContent.includes(`@${m.displayName}`)
+    );
+
+    handleSendMessage(inputContent, finalMentions, pendingAttachment || undefined);
+    
+    // Limpiar todo después de enviar
+    setInputContent("");
+    setSelectedMentions([]);
+    setPendingAttachment(null);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+
+    setUploadingFile(true);
+    try {
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const path = `${userId}/chat/${fileName}`;
+      
+      const { data, error } = await supabase.storage
+        .from("resources")
+        .upload(path, file);
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("resources")
+        .getPublicUrl(path);
+
+      // En lugar de enviar inmediatamente, lo dejamos "preparado"
+      setPendingAttachment({
+        url: publicUrl,
+        type: file.type,
+        filename: file.name
+      });
+
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("No se pudo subir el archivo. Inténtalo de nuevo.");
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="dark h-screen bg-[#1A1A1A] text-on-surface font-['Inter'] antialiased flex overflow-hidden">
-      {/* Notificación flotante de transferencia de admin */}
-      <AdminTransferNotification
-        requestId={requestId}
-        onAccepted={() => {
-          window.location.reload();
-        }}
-      />
-
       {/* ============================================================================ */}
       {/* LEFT COLUMN: Main Chat (70%) */}
       {/* ============================================================================ */}
@@ -125,10 +206,10 @@ export function MemberChatView({
         <div className="px-8 py-6 border-b border-[#2D2D2D] flex items-center justify-between flex-shrink-0 bg-[#1A1A1A]/80 backdrop-blur-md sticky top-0 z-10">
           <div>
             <h2 className="text-xl font-['Manrope'] font-bold text-white">Chat Grupal</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="w-2 h-2 bg-[#0047AB] rounded-full animate-pulse"></span>
-              <p className="text-[#0047AB] text-xs font-bold uppercase tracking-widest">
-                {companions.length + 1} Miembros en el grupo
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#0047AB] animate-pulse" />
+              <p className="text-[10px] text-[#0047AB] font-bold uppercase tracking-wider">
+                {members.length} MIEMBROS ACTIVOS
               </p>
             </div>
           </div>
@@ -160,101 +241,131 @@ export function MemberChatView({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col-reverse gap-6">
-              {/* Scroll anchor at bottom (since we are using col-reverse for logic or just regular order) */}
-              {/* Note: the messages state seems to be ordered from newest to oldest in handleSendMessage (prev => [new, ...prev]), 
-                  but the initial load might be oldest to newest. Let's check logic. 
-                  Actually, the original code used regular map. Let's keep regular order for simplicity or reverse if needed.
-              */}
-              <div ref={messagesEndRef} />
-              
-              {[...messages].reverse().map((msg) => {
+            <div className="flex flex-col gap-6">
+              {messages.map((msg) => {
                 const isOwnMessage = msg.senderId === userId;
                 return (
-                  <div
-                    key={msg.id}
-                    className={`flex items-end gap-3 ${
-                      isOwnMessage ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {!isOwnMessage && (
-                      <div className="w-8 h-8 rounded-full bg-[#0047AB]/20 flex items-center justify-center flex-shrink-0 overflow-hidden border border-[#0047AB]/30">
-                        {msg.senderAvatarUrl ? (
-                          <img
-                            alt={msg.senderFullName ?? "Remitente"}
-                            className="w-full h-full object-cover"
-                            src={msg.senderAvatarUrl ?? undefined}
-                          />
-                        ) : (
-                          <span className="text-[#0047AB] text-xs font-bold">
-                            {(msg.senderFullName ?? "?")[0]}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div
-                      className={`flex flex-col gap-1.5 max-w-[70%] ${
-                        isOwnMessage ? "items-end" : "items-start"
-                      }`}
-                    >
-                      {!isOwnMessage && (
-                        <span className="text-xs font-bold text-neutral-400 ml-2">
-                          {msg.senderFullName}
-                        </span>
-                      )}
-
-                      {/* Generación del mensaje decorado */}
-                      {(() => {
-                        const decoratedMessage = transformRawMessage(msg);
-                        return (
-                          <div
-                            className={`px-5 py-3 rounded-2xl shadow-sm ${
-                              isOwnMessage
-                                ? "bg-[#0047AB] text-white rounded-br-none"
-                                : "bg-[#2D2D2D] text-neutral-200 rounded-bl-none border border-[#3D3D3D]"
-                            }`}
-                          >
-                            {decoratedMessage.render({ currentUserId: userId })}
-                          </div>
-                        );
-                      })()}
-
-                      <div className={`flex items-center gap-1.5 px-2 mt-0.5 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
-                        <span className="text-[10px] font-medium text-neutral-600 uppercase tracking-wider">
-                          {new Date(msg.createdAt).toLocaleTimeString("es-ES", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                        {isOwnMessage && (
-                          <span className="material-symbols-outlined text-[14px] text-[#0047AB]">done_all</span>
-                        )}
-                      </div>
+                  <div key={msg.id} className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"}`}>
+                    <div className="flex items-center gap-2 mb-1.5 px-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                        {msg.senderFullName || "Integrante"}
+                      </span>
+                      <span className="text-[9px] text-neutral-700">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
+
+                    {(() => {
+                      const decoratedMessage = transformRawMessage(msg);
+                      return (
+                        <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
+                          isOwnMessage 
+                            ? "bg-[#0047AB] text-white rounded-tr-none shadow-lg shadow-blue-900/20" 
+                            : "bg-[#2D2D2D] text-neutral-200 rounded-tl-none border border-white/5"
+                        }`}>
+                          {decoratedMessage.render({ currentUserId: userId })}
+                          {isOwnMessage && (
+                             <span className="material-symbols-outlined text-[12px] ml-2 align-middle opacity-50">done_all</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </div>
 
         {/* Chat Input */}
-        <div className="p-6 border-t border-[#2D2D2D] bg-[#1A1A1A]">
+        <div className="p-6 border-t border-[#2D2D2D] bg-[#1A1A1A] relative">
+          {/* Mention Suggestions Popover */}
+          {showMentions && (
+            <div className="absolute bottom-full left-6 mb-2 w-64 bg-[#2D2D2D] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2">
+              <div className="px-4 py-3 border-b border-white/5 bg-white/5">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Mencionar compañero</p>
+              </div>
+              <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                {members
+                  .filter(m => (m.fullName || "").toLowerCase().includes(mentionQuery))
+                  .map(member => (
+                    <button
+                      key={member.userId}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+                      onClick={() => insertMention(member)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#0047AB] flex items-center justify-center text-[10px] font-bold text-white border border-white/10">
+                        {(member.fullName || "??").substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{member.fullName || "Integrante"}</p>
+                        <p className="text-[10px] text-neutral-500">{member.role === 'admin' || member.role === 'autor' ? 'Administrador' : 'Estudiante'}</p>
+                      </div>
+                    </button>
+                  ))}
+                {members.filter(m => (m.fullName || "").toLowerCase().includes(mentionQuery)).length === 0 && (
+                  <div className="px-4 py-6 text-center">
+                    <p className="text-xs text-neutral-500 italic">No se encontraron miembros</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Pending Attachment Preview */}
+          {pendingAttachment && (
+            <div className="absolute bottom-full left-6 mb-4 flex items-center gap-3 bg-[#0047AB]/10 border border-[#0047AB]/30 p-3 rounded-2xl animate-in slide-in-from-bottom-2">
+              <div className="w-10 h-10 rounded-xl bg-[#0047AB] flex items-center justify-center text-white">
+                <span className="material-symbols-outlined">
+                  {pendingAttachment.type.startsWith('image/') ? 'image' : 'description'}
+                </span>
+              </div>
+              <div className="max-w-[200px]">
+                <p className="text-[11px] font-black text-white truncate">{pendingAttachment.filename}</p>
+                <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Listo para enviar</p>
+              </div>
+              <button 
+                onClick={() => setPendingAttachment(null)}
+                className="w-6 h-6 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+          )}
+
           <div className="bg-[#2D2D2D]/50 border border-[#2D2D2D] rounded-2xl flex items-center p-2 focus-within:border-[#0047AB]/50 focus-within:bg-[#2D2D2D]/80 transition-all shadow-inner">
-            <button className="p-3 text-neutral-500 hover:text-[#0047AB] transition-colors">
-              <span className="material-symbols-outlined">attach_file</span>
+            <input 
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <button 
+              className={`p-3 text-neutral-500 hover:text-[#0047AB] transition-colors ${uploadingFile ? "animate-pulse cursor-not-allowed" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingFile}
+            >
+              {uploadingFile ? (
+                <div className="w-5 h-5 border-2 border-[#0047AB] border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <span className="material-symbols-outlined">attach_file</span>
+              )}
             </button>
             <input
               className="flex-1 bg-transparent border-none focus:ring-0 text-white text-base px-4 placeholder:text-neutral-600 outline-none"
-              placeholder="Escribe un mensaje aquí..."
+              placeholder={uploadingFile ? "Subiendo archivo..." : "Escribe un mensaje aquí... (usa @ para mencionar)"}
               type="text"
-              onKeyPress={(e) => {
+              value={inputContent}
+              onChange={(e) => handleInputChange(e.target.value)}
+              disabled={uploadingFile}
+              onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  const input = e.currentTarget;
-                  handleSendMessage(input.value);
-                  input.value = "";
+                  handleSend();
+                }
+                if (e.key === "Escape") {
+                  setShowMentions(false);
                 }
               }}
             />
@@ -264,16 +375,10 @@ export function MemberChatView({
               </button>
               <button
                 className="bg-[#0047AB] text-white p-3 rounded-xl flex items-center justify-center hover:bg-[#003d91] active:scale-95 transition-all disabled:opacity-50 shadow-lg shadow-[#0047AB]/20"
-                disabled={sendingMessage}
-                onClick={(e) => {
-                  const input = e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement;
-                  handleSendMessage(input.value);
-                  input.value = "";
-                }}
+                disabled={sendingMessage || uploadingFile || (!inputContent.trim() && !pendingAttachment)}
+                onClick={handleSend}
               >
-                <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  send
-                </span>
+                <span className="material-symbols-outlined">send</span>
               </button>
             </div>
           </div>
@@ -283,7 +388,7 @@ export function MemberChatView({
       {/* ============================================================================ */}
       {/* RIGHT COLUMN: Info Panel (30%) */}
       {/* ============================================================================ */}
-      <aside className="w-[30%] h-full overflow-y-auto p-8 flex flex-col gap-10 bg-[#1A1A1A] custom-scrollbar">
+      <aside className="w-[30%] h-full overflow-y-auto p-8 flex flex-col gap-10 bg-[#1A1A1A] border-l border-[#2D2D2D] custom-scrollbar">
         {/* Leave Group Action */}
         <div className="flex-shrink-0">
           <button
@@ -322,7 +427,7 @@ export function MemberChatView({
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-['Manrope'] font-bold text-white">Compañeros</h3>
             <span className="px-2.5 py-1 bg-[#0047AB]/10 text-[#0047AB] rounded-full text-[10px] font-black tracking-tighter">
-              {companions.length} MIEMBROS
+              {members.length} MIEMBROS
             </span>
           </div>
 
@@ -347,7 +452,7 @@ export function MemberChatView({
                       <div className="relative">
                         <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center border border-[#3D3D3D] overflow-hidden">
                           {companion.avatarUrl ? (
-                            <img src={companion.avatarUrl ?? undefined} alt={companion.fullName ?? "Compañero"} className="w-full h-full object-cover" />
+                            <img src={companion.avatarUrl} alt={companion.fullName ?? "Compañero"} className="w-full h-full object-cover" />
                           ) : (
                             <span className="text-neutral-500 font-bold text-xs">
                               {(companion.fullName ?? "?").split(" ").map(n => n[0]).join("")}
@@ -357,7 +462,7 @@ export function MemberChatView({
                         <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1A1A1A] ${online ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-neutral-600"}`}></div>
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white">{companion.fullName}</p>
+                        <p className="text-sm font-bold text-white">{companion.fullName || "Integrante"}</p>
                         <p className="text-[10px] text-neutral-500 font-medium">{online ? "En línea" : "Desconectado"}</p>
                       </div>
                     </div>
@@ -437,6 +542,7 @@ export function MemberChatView({
           </div>
         </div>
       )}
+
       {/* Notificación de transferencia de administración */}
       <AdminTransferNotification 
         requestId={requestId} 
