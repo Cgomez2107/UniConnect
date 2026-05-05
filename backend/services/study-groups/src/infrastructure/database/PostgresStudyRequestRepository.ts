@@ -1,8 +1,7 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
 import { ConflictError } from "../../../../../shared/libs/errors/ConflictError.js";
 import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
-import type { StudyGroupsEnv } from "../../config/env.js";
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type {
   IStudyRequestRepository,
@@ -56,41 +55,14 @@ function mapStudyRequest(row: StudyRequestRow): StudyRequest {
   };
 }
 
-function buildPool(env: StudyGroupsEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error(
-      "Variables de entorno de base de datos incompletas para PostgresStudyRequestRepository.",
-    );
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
-}
-
 /**
  * Implementación Postgres del repositorio de solicitudes de estudio.
  *
- * El pool de conexiones se crea una única vez en el constructor (Singleton por instancia),
- * lo que garantiza reutilización de conexiones sin abrir una nueva por cada solicitud.
- *
- * El filtro por `subjectIds` se resuelve en el servidor mediante `= ANY($n)`,
- * eliminando el antipatrón de filtrado en el cliente que genera paginación inconsistente.
+ * Recibe el Pool de conexiones por inyección de dependencias (Singleton centralizado),
+ * lo que garantiza reutilización de recursos y facilita el testing.
  */
 export class PostgresStudyRequestRepository implements IStudyRequestRepository {
-  private readonly pool: Pool;
-
-  constructor(env: StudyGroupsEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async listOpen(filters: ListOpenFilters = {}): Promise<StudyRequest[]> {
     const values: Array<string | number | string[]> = [];

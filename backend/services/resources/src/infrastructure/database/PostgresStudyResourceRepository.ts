@@ -1,6 +1,4 @@
-import { Pool } from "pg";
-
-import type { ResourcesEnv } from "../../config/env.js";
+import type { Pool } from "pg";
 import type { CreateStudyResourceInput, StudyResource } from "../../domain/entities/StudyResource.js";
 import type {
   IStudyResourceRepository,
@@ -23,26 +21,6 @@ interface StudyResourceRow {
   author_full_name: string | null;
   author_avatar_url: string | null;
   subject_name: string | null;
-}
-
-function buildPool(env: ResourcesEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error(
-      "Variables de entorno de base de datos incompletas para PostgresStudyResourceRepository.",
-    );
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
 }
 
 function mapStudyResource(row: StudyResourceRow): StudyResource {
@@ -74,11 +52,7 @@ function mapStudyResource(row: StudyResourceRow): StudyResource {
 }
 
 export class PostgresStudyResourceRepository implements IStudyResourceRepository {
-  private readonly pool: Pool;
-
-  constructor(env: ResourcesEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async list(filters: ListStudyResourcesFilters): Promise<StudyResource[]> {
     const values: Array<string | number> = [];

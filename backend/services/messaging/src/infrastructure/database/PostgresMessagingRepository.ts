@@ -1,6 +1,5 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
-import type { MessagingEnv } from "../../config/env.js";
 import type {
   ConversationSummary,
   CreateConversationInput,
@@ -73,24 +72,6 @@ function buildLegacyMediaContent(content: string, mediaUrl: string | undefined):
   return encoded.slice(0, 1000);
 }
 
-function buildPool(env: MessagingEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error("Variables de base de datos incompletas para PostgresMessagingRepository.");
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
-}
-
 function mapConversation(row: ConversationRow): ConversationSummary {
   return {
     id: row.id,
@@ -133,11 +114,7 @@ function mapMessage(row: MessageRow): Message {
 }
 
 export class PostgresMessagingRepository implements IMessagingRepository {
-  private readonly pool: Pool;
-
-  constructor(env: MessagingEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async getConversationById(id: string, currentUserId: string): Promise<ConversationSummary | null> {
     const result = await this.pool.query<ConversationRow>(

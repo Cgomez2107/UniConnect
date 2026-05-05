@@ -1,7 +1,6 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
 import { AuthorizationError } from "../../../../../shared/libs/errors/index.js";
-import type { StudyGroupsEnv } from "../../config/env.js";
 import type { Application } from "../../domain/entities/Application.js";
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
 
@@ -13,24 +12,6 @@ interface ApplicationRow {
   status: "pendiente" | "aceptada" | "rechazada";
   created_at: Date | string;
   reviewed_at: Date | string | null;
-}
-
-function buildPool(env: StudyGroupsEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error("Database environment variables are incomplete for PostgresApplicationRepository");
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
 }
 
 function mapApplication(row: ApplicationRow): Application {
@@ -46,11 +27,7 @@ function mapApplication(row: ApplicationRow): Application {
 }
 
 export class PostgresApplicationRepository implements IApplicationRepository {
-  private readonly pool: Pool;
-
-  constructor(env: StudyGroupsEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async getByRequest(requestId: string, actorUserId: string): Promise<Application[]> {
     const adminCheck = await this.pool.query<{ is_request_admin: boolean }>(

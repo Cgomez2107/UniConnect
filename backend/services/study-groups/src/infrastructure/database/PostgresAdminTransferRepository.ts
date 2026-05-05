@@ -1,6 +1,5 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
-import type { StudyGroupsEnv } from "../../config/env.js";
 import type { AdminTransfer } from "../../domain/entities/AdminTransfer.js";
 import type { IAdminTransferRepository } from "../../domain/repositories/IAdminTransferRepository.js";
 
@@ -12,24 +11,6 @@ interface AdminTransferRow {
   status: "pendiente" | "aceptada" | "rechazada" | "cancelada";
   created_at: Date | string;
   responded_at: Date | string | null;
-}
-
-function buildPool(env: StudyGroupsEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error("Database environment variables are incomplete for PostgresAdminTransferRepository");
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
 }
 
 function mapTransfer(row: AdminTransferRow): AdminTransfer {
@@ -45,11 +26,7 @@ function mapTransfer(row: AdminTransferRow): AdminTransfer {
 }
 
 export class PostgresAdminTransferRepository implements IAdminTransferRepository {
-  private readonly pool: Pool;
-
-  constructor(env: StudyGroupsEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async getById(transferId: string): Promise<AdminTransfer | null> {
     const result = await this.pool.query<AdminTransferRow>(

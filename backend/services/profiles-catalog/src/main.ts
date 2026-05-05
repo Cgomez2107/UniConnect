@@ -6,6 +6,7 @@ import { GetSubjectsByProgram } from "./application/use-cases/GetSubjectsByProgr
 import { loadProfilesCatalogEnv } from "./config/env.js";
 import { PostgresStudentRepository } from "./infrastructure/database/PostgresStudentRepository.js";
 import { PostgresFacultyCatalogRepository } from "./infrastructure/database/PostgresFacultyCatalogRepository.js";
+import { Database } from "./infrastructure/database/Database.js";
 import { ProfilesCatalogController } from "./interfaces/http/controllers/ProfilesCatalogController.js";
 import { handleProfilesCatalogRoutes } from "./interfaces/http/routes/profilesCatalogRoutes.js";
 
@@ -16,9 +17,12 @@ function sendJsonError(statusCode: number, message: string): string {
 function bootstrap(): void {
   const env = loadProfilesCatalogEnv();
 
-  // Repositorios con BD real
-  const studentRepository = new PostgresStudentRepository(env);
-  const catalogRepository = new PostgresFacultyCatalogRepository(env);
+  // Inicialización del Singleton de BD
+  const pool = Database.getInstance(env).getPool();
+
+  // Repositorios con BD real e inyección de dependencia
+  const studentRepository = new PostgresStudentRepository(pool);
+  const catalogRepository = new PostgresFacultyCatalogRepository(pool);
 
   // Use cases con dependencias inyectadas
   const searchStudents = new SearchStudentsBySubject(studentRepository);

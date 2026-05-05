@@ -7,6 +7,7 @@ import { UpdateEvent } from "./application/use-cases/UpdateEvent.js";
 import { DeleteEvent } from "./application/use-cases/DeleteEvent.js";
 import { loadEventsEnv } from "./config/env.js";
 import { PostgresEventRepository } from "./infrastructure/database/PostgresEventRepository.js";
+import { Database } from "./infrastructure/database/Database.js";
 import { EventsController } from "./interfaces/http/controllers/EventsController.js";
 import { handleEventsRoutes } from "./interfaces/http/routes/eventsRoutes.js";
 
@@ -17,7 +18,11 @@ function sendJsonError(statusCode: number, message: string): string {
 function bootstrap(): void {
   const env = loadEventsEnv();
 
-  const repository = new PostgresEventRepository(env);
+  // Inicialización del Singleton de BD
+  const pool = Database.getInstance(env).getPool();
+
+  // Repositorio con inyección de dependencia
+  const repository = new PostgresEventRepository(pool);
 
   const getAllEvents = new GetAllEvents(repository);
   const getUpcomingEvents = new GetUpcomingEvents(repository);

@@ -15,6 +15,8 @@ import { loadMessagingEnv } from "./config/env.js";
 import type { IMessagingRepository } from "./domain/repositories/IMessagingRepository.js";
 import { InMemoryMessagingRepository } from "./infrastructure/database/InMemoryMessagingRepository.js";
 import { PostgresMessagingRepository } from "./infrastructure/database/PostgresMessagingRepository.js";
+import { Database } from "./infrastructure/database/Database.js";
+import type { Pool } from "pg";
 import { MessagingController } from "./interfaces/http/controllers/MessagingController.js";
 import { handleMessagingRoutes } from "./interfaces/http/routes/messagingRoutes.js";
 
@@ -22,17 +24,13 @@ function sendJsonError(statusCode: number, message: string): string {
 	return JSON.stringify({ error: message, statusCode });
 }
 
-function createRepository(env: ReturnType<typeof loadMessagingEnv>): IMessagingRepository {
-	const hasDatabaseConfig =
-		!!env.dbHost &&
-		!!env.dbPort &&
-		!!env.dbName &&
-		!!env.dbUser &&
-		!!env.dbPassword;
-
-	if (hasDatabaseConfig) {
-		return new PostgresMessagingRepository(env);
-	}
+function createRepository(
+  env: ReturnType<typeof loadMessagingEnv>,
+  pool: Pool | null,
+): IMessagingRepository {
+  if (pool) {
+    return new PostgresMessagingRepository(pool);
+  }
 
 	console.log(
 		JSON.stringify({
@@ -46,8 +44,13 @@ function createRepository(env: ReturnType<typeof loadMessagingEnv>): IMessagingR
 }
 
 function bootstrap(): void {
-	const env = loadMessagingEnv();
-	const repository = createRepository(env);
+  const env = loadMessagingEnv();
+
+  const hasDatabaseConfig =
+    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
+  const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
+
+  const repository = createRepository(env, pool);
 
 	// ✅ Crear ChatSubject para eventos en tiempo real
 	const chatSubject = new ChatSubject("messaging-domain");

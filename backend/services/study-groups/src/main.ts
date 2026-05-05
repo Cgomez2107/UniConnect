@@ -40,6 +40,8 @@ import { NoopStudyGroupSocketGateway } from "./infrastructure/realtime/NoopStudy
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
 import type { IStudyRequestRepository } from "./domain/repositories/IStudyRequestRepository.js";
+import { Database } from "./infrastructure/database/Database.js";
+import type { Pool } from "pg";
 import {
   ChatSubject as GroupChatSubject,
   RealtimeObserver as GroupRealtimeObserver,
@@ -52,11 +54,12 @@ function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message });
 }
 
-function createRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IStudyRequestRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresStudyRequestRepository(env);
+function createRepository(
+  env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
+): IStudyRequestRepository {
+  if (pool) {
+    return new PostgresStudyRequestRepository(pool);
   }
 
   console.log(
@@ -70,31 +73,34 @@ function createRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IStudyReq
   return new InMemoryStudyRequestRepository();
 }
 
-function createApplicationRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IApplicationRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresApplicationRepository(env);
+function createApplicationRepository(
+  env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
+): IApplicationRepository {
+  if (pool) {
+    return new PostgresApplicationRepository(pool);
   }
 
   return new InMemoryApplicationRepository();
 }
 
-function createMemberRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IMemberRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresMemberRepository(env);
+function createMemberRepository(
+  env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
+): IMemberRepository {
+  if (pool) {
+    return new PostgresMemberRepository(pool);
   }
 
   return new InMemoryMemberRepository();
 }
 
-function createAdminTransferRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IAdminTransferRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresAdminTransferRepository(env);
+function createAdminTransferRepository(
+  env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
+): IAdminTransferRepository {
+  if (pool) {
+    return new PostgresAdminTransferRepository(pool);
   }
 
   return new InMemoryAdminTransferRepository();
@@ -102,11 +108,10 @@ function createAdminTransferRepository(env: ReturnType<typeof loadStudyGroupsEnv
 
 function createStudyGroupMessageRepository(
   env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
 ): IStudyGroupMessageRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresStudyGroupMessageRepository(env);
+  if (pool) {
+    return new PostgresStudyGroupMessageRepository(pool);
   }
 
   return new InMemoryStudyGroupMessageRepository();
@@ -114,11 +119,10 @@ function createStudyGroupMessageRepository(
 
 function createNotificationRepository(
   env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
 ): INotificationRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresNotificationRepository(env);
+  if (pool) {
+    return new PostgresNotificationRepository(pool);
   }
 
   return new InMemoryNotificationRepository();
@@ -127,12 +131,16 @@ function createNotificationRepository(
 function bootstrap(): void {
   const env = loadStudyGroupsEnv();
 
-  const repository = createRepository(env);
-  const applicationRepository = createApplicationRepository(env);
-  const memberRepository = createMemberRepository(env);
-  const adminTransferRepository = createAdminTransferRepository(env);
-  const messageRepository = createStudyGroupMessageRepository(env);
-  const notificationRepository = createNotificationRepository(env);
+  const hasDatabaseConfig =
+    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
+  const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
+
+  const repository = createRepository(env, pool);
+  const applicationRepository = createApplicationRepository(env, pool);
+  const memberRepository = createMemberRepository(env, pool);
+  const adminTransferRepository = createAdminTransferRepository(env, pool);
+  const messageRepository = createStudyGroupMessageRepository(env, pool);
+  const notificationRepository = createNotificationRepository(env, pool);
   const subject = new StudyGroupSubject();
   const socketGateway = new NoopStudyGroupSocketGateway();
   subject.subscribe(new NotificationObserver(notificationRepository));
