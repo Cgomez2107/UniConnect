@@ -86,6 +86,30 @@ function bootstrap(): void {
       }),
     );
   });
+
+  // --- Graceful Shutdown ---
+  const shutdown = async (signal: string) => {
+    console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio resources...`);
+
+    server.close(() => {
+      console.log("[Shutdown] Servidor HTTP cerrado.");
+    });
+
+    try {
+      if (hasDatabaseConfig) {
+        await Database.getInstance().close();
+      }
+
+      console.log("[Shutdown] Limpieza de recursos completada con éxito.");
+      process.exit(0);
+    } catch (error) {
+      console.error("[Shutdown] Error durante el cierre de recursos:", error);
+      process.exit(1);
+    }
+  };
+
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
 bootstrap();

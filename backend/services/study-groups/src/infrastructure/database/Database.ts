@@ -8,6 +8,7 @@ import type { StudyGroupsEnv } from "../../config/env.js";
  */
 export class Database {
   private static instance: Database | null = null;
+  private static activeEnv: StudyGroupsEnv | null = null;
   private readonly pool: pg.Pool;
 
   private constructor(env: StudyGroupsEnv) {
@@ -39,13 +40,26 @@ export class Database {
    * Retorna la instancia única de Database.
    * Si no existe, se crea utilizando el env proporcionado.
    * Lanza un error si se intenta obtener la instancia sin inicializarla previamente y sin proveer env.
+   * Advierte si se llama con un env distinto al que ya está activo (inmutabilidad de configuración).
    */
   public static getInstance(env?: StudyGroupsEnv): Database {
     if (!Database.instance) {
       if (!env) {
-        throw new Error("Database no ha sido inicializada y no se proporcionó la configuración (env).");
+        throw new Error(
+          "[Database:study-groups] No ha sido inicializada y no se proporcionó la configuración (env).",
+        );
       }
+      Database.activeEnv = env;
       Database.instance = new Database(env);
+    } else if (env && env !== Database.activeEnv) {
+      console.warn(
+        JSON.stringify({
+          service: "study-groups",
+          level: "warn",
+          message:
+            "[Database] getInstance() fue llamado con un env distinto al activo. La configuración es inmutable; se ignora el nuevo env.",
+        }),
+      );
     }
     return Database.instance;
   }
@@ -69,6 +83,7 @@ export class Database {
       console.error(`[Database] Error al cerrar el pool de conexiones:`, error);
     } finally {
       Database.instance = null; // Previene "conexiones huérfanas" y permite reinicialización
+      Database.activeEnv = null;
     }
   }
 }

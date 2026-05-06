@@ -3,10 +3,12 @@ const { Pool } = pg;
 import type { ResourcesEnv } from "../../config/env.js";
 
 /**
- * Singleton Database para el servicio de Resources.
+ * Singleton Database
+ * Centraliza la conexión al pool de PostgreSQL para el servicio de resources.
  */
 export class Database {
   private static instance: Database | null = null;
+  private static activeEnv: ResourcesEnv | null = null;
   private readonly pool: pg.Pool;
 
   private constructor(env: ResourcesEnv) {
@@ -18,6 +20,8 @@ export class Database {
       password: env.dbPassword,
       ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
       max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
     });
 
     this.pool.on("error", (err) => {
@@ -32,14 +36,54 @@ export class Database {
     });
   }
 
-  public static getInstance(env: ResourcesEnv): Database {
+  /**
+   * Retorna la instancia única de Database.
+   * Si no existe, se crea utilizando el env proporcionado.
+   * Lanza un error si se intenta obtener la instancia sin inicializarla previamente y sin proveer env.
+   * Lanza un error si se llama con un env distinto al que ya está activo (inmutabilidad de configuración).
+   */
+  public static getInstance(env?: ResourcesEnv): Database {
     if (!Database.instance) {
+      if (!env) {
+        throw new Error(
+          "[Database:resources] No ha sido inicializada y no se proporcionó la configuración (env).",
+        );
+      }
+      Database.activeEnv = env;
       Database.instance = new Database(env);
+    } else if (env && env !== Database.activeEnv) {
+      console.warn(
+        JSON.stringify({
+          service: "resources",
+          level: "warn",
+          message:
+            "[Database] getInstance() fue llamado con un env distinto al activo. La configuración es inmutable; se ignora el nuevo env.",
+        }),
+      );
     }
     return Database.instance;
   }
 
+  /**
+   * Expone el Pool de conexiones para ser inyectado en los repositorios.
+   */
   public getPool(): pg.Pool {
     return this.pool;
+  }
+
+  /**
+   * Cierra el pool de conexiones y destruye la instancia Singleton.
+   * Fundamental para un graceful shutdown y evitar fugas de memoria.
+   */
+  public async close(): Promise<void> {
+    try {
+      await this.pool.end();
+      console.log(`[Database:resources] Pool de conexiones cerrado exitosamente.`);
+    } catch (error) {
+      console.error(`[Database:resources] Error al cerrar el pool de conexiones:`, error);
+    } finally {
+      Database.instance = null; // Previene "conexiones huérfanas" y permite reinicialización
+      Database.activeEnv = null;
+    }
   }
 }
