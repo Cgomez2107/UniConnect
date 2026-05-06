@@ -1,3 +1,4 @@
+import { DomainError } from "../../../../../shared/libs/errors/DomainError.js";
 import type { IStudyGroupState, IStudyGroupContext } from "./IStudyGroupState.js";
 import { TransferenciaPendienteState } from "./TransferenciaPendienteState.js";
 import { LlenaState } from "./LlenaState.js";
@@ -75,8 +76,8 @@ export class AbiertaState implements IStudyGroupState {
     });
   }
 
-  acceptAdminTransfer(transferId: string, actorUserId: string, fromUserId: string, toUserId: string): void {
-    throw new Error("No hay ninguna transferencia de administrador pendiente para aceptar.");
+  acceptAdminTransfer(_transferId: string, _actorUserId: string, _fromUserId: string, _toUserId: string): void {
+    throw new DomainError("No hay ninguna transferencia de administrador pendiente para aceptar.");
   }
 
   leaveAdminRole(actorUserId: string): void {
