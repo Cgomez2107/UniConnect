@@ -1,5 +1,6 @@
 import type { IStudyGroupState, IStudyGroupContext } from "./IStudyGroupState.js";
 import { TransferenciaPendienteState } from "./TransferenciaPendienteState.js";
+import { LlenaState } from "./LlenaState.js";
 
 export class AbiertaState implements IStudyGroupState {
   private context!: IStudyGroupContext;
@@ -26,6 +27,8 @@ export class AbiertaState implements IStudyGroupState {
   reviewApplication(applicationId: string, status: 'approved' | 'rejected', reviewerId: string, applicantId: string, applicantName?: string): void {
     // Acción válida: Permite revisar postulaciones.
     if (status === 'approved') {
+      this.context.incrementMembersCount();
+
       this.context.emit({
         type: "MIEMBRO_ACEPTADO",
         version: "1.0",
@@ -37,6 +40,11 @@ export class AbiertaState implements IStudyGroupState {
         approvedBy: reviewerId,
         groupName: this.context.groupName
       });
+
+      // Validar si alcanzamos el límite de cupos tras aceptar
+      if (this.context.membersCount >= this.context.maxMembers) {
+        this.context.transitionTo(new LlenaState());
+      }
     } else {
       this.context.emit({
         type: "MIEMBRO_RECHAZADO",

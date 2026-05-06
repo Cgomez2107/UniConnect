@@ -3,6 +3,9 @@ import type { StudyGroupEvent } from "../events/StudyGroupEvents.js";
 export interface IStudyGroupContext {
   readonly requestId: string;
   readonly groupName: string;
+  readonly membersCount: number;
+  readonly maxMembers: number;
+  incrementMembersCount(): void;
   transitionTo(state: IStudyGroupState): void;
   emit(event: StudyGroupEvent): void;
 }

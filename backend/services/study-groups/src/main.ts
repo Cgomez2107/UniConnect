@@ -24,6 +24,7 @@ import type { IApplicationRepository } from "./domain/repositories/IApplicationR
 import type { INotificationRepository } from "./domain/repositories/INotificationRepository.js";
 import type { IMemberRepository } from "./domain/repositories/IMemberRepository.js";
 import type { IStudyGroupMessageRepository } from "./domain/repositories/IStudyGroupMessageRepository.js";
+import type { IStudyGroupRepository } from "./domain/repositories/IStudyGroupRepository.js";
 import { InMemoryStudyRequestRepository } from "./infrastructure/database/InMemoryStudyRequestRepository.js";
 import { InMemoryAdminTransferRepository } from "./infrastructure/database/InMemoryAdminTransferRepository.js";
 import { InMemoryApplicationRepository } from "./infrastructure/database/InMemoryApplicationRepository.js";
@@ -54,12 +55,19 @@ function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message });
 }
 
+interface Repositories {
+  studyRequest: IStudyRequestRepository;
+  studyGroup: IStudyGroupRepository;
+}
+
 function createRepository(
   env: ReturnType<typeof loadStudyGroupsEnv>,
   pool: Pool | null,
-): IStudyRequestRepository {
+): Repositories {
   if (pool) {
-    return new PostgresStudyRequestRepository(pool);
+    // PostgresStudyRequestRepository implementa ambas interfaces
+    const repo = new PostgresStudyRequestRepository(pool);
+    return { studyRequest: repo, studyGroup: repo };
   }
 
   console.log(
@@ -70,7 +78,9 @@ function createRepository(
     }),
   );
 
-  return new InMemoryStudyRequestRepository();
+  // En modo in-memory la hidratación no aplica; usamos el mismo repo como stub
+  const inMemoryRepo = new InMemoryStudyRequestRepository();
+  return { studyRequest: inMemoryRepo, studyGroup: inMemoryRepo as unknown as IStudyGroupRepository };
 }
 
 function createApplicationRepository(
@@ -135,7 +145,10 @@ function bootstrap(): void {
     !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
   const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
 
-  const repository = createRepository(env, pool);
+  // createRepository devuelve { studyRequest, studyGroup }.
+  // En modo Postgres ambas apuntan al mismo objeto (PostgresStudyRequestRepository
+  // implementa IStudyRequestRepository + IStudyGroupRepository).
+  const { studyRequest: repository, studyGroup: studyGroupRepository } = createRepository(env, pool);
   const applicationRepository = createApplicationRepository(env, pool);
   const memberRepository = createMemberRepository(env, pool);
   const adminTransferRepository = createAdminTransferRepository(env, pool);
@@ -186,15 +199,20 @@ function bootstrap(): void {
   const applyToStudyRequest = new ApplyToStudyRequest(
     applicationRepository,
     repository,
+    studyGroupRepository,  // ← IStudyGroupRepository para hidratación + validación de estado
     subject,
   );
   const reviewApplication = new ReviewApplication(
     applicationRepository,
-    repository,
+    studyGroupRepository,  // ← IStudyGroupRepository en lugar de studyRequestRepository
     memberRepository,
     subject,
   );
-  const requestAdminTransfer = new RequestAdminTransfer(adminTransferRepository, repository, subject);
+  const requestAdminTransfer = new RequestAdminTransfer(
+    adminTransferRepository,
+    studyGroupRepository,  // ← IStudyGroupRepository en lugar de studyRequestRepository
+    subject,
+  );
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
   const controller = new StudyGroupsController(

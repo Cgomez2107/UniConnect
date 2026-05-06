@@ -4,14 +4,26 @@ import type { ISubject } from "../events/observers/ISubject.js";
 
 export class StudyGroup implements IStudyGroupContext {
   private state!: IStudyGroupState;
+  private _membersCount: number;
 
   constructor(
     public readonly requestId: string,
     public readonly groupName: string,
+    public readonly maxMembers: number,
+    initialMembersCount: number,
     initialState: IStudyGroupState,
     private readonly subject: ISubject
   ) {
+    this._membersCount = initialMembersCount;
     this.transitionTo(initialState);
+  }
+
+  get membersCount(): number {
+    return this._membersCount;
+  }
+
+  public incrementMembersCount(): void {
+    this._membersCount++;
   }
 
   public transitionTo(state: IStudyGroupState): void {

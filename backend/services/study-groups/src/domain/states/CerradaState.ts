@@ -1,3 +1,4 @@
+import { DomainError } from "../../../../../shared/libs/errors/DomainError.js";
 import type { IStudyGroupState, IStudyGroupContext } from "./IStudyGroupState.js";
 
 export class CerradaState implements IStudyGroupState {
@@ -7,23 +8,23 @@ export class CerradaState implements IStudyGroupState {
     this.context = context;
   }
 
-  applyToGroup(applicationId: string, applicantId: string, applicantName: string, message: string, adminUserId: string): void {
-    throw new Error("El grupo está cerrado. No se aceptan más solicitudes.");
+  applyToGroup(_applicationId: string, _applicantId: string, _applicantName: string, _message: string, _adminUserId: string): void {
+    throw new DomainError("El grupo está cerrado. No se aceptan más solicitudes.");
   }
 
-  reviewApplication(applicationId: string, status: 'approved' | 'rejected', reviewerId: string, applicantId: string, applicantName?: string): void {
-    throw new Error("El grupo está cerrado. No se pueden revisar solicitudes.");
+  reviewApplication(_applicationId: string, _status: 'approved' | 'rejected', _reviewerId: string, _applicantId: string, _applicantName?: string): void {
+    throw new DomainError("El grupo está cerrado. No se pueden revisar solicitudes.");
   }
 
-  requestAdminTransfer(transferId: string, actorUserId: string, targetUserId: string): void {
-    throw new Error("El grupo está cerrado. No se pueden realizar transferencias de administrador.");
+  requestAdminTransfer(_transferId: string, _actorUserId: string, _targetUserId: string): void {
+    throw new DomainError("El grupo está cerrado. No se pueden realizar transferencias de administrador.");
   }
 
-  acceptAdminTransfer(transferId: string, actorUserId: string, fromUserId: string, toUserId: string): void {
-    throw new Error("El grupo está cerrado. No se pueden aceptar transferencias.");
+  acceptAdminTransfer(_transferId: string, _actorUserId: string, _fromUserId: string, _toUserId: string): void {
+    throw new DomainError("El grupo está cerrado. No se pueden aceptar transferencias.");
   }
 
-  leaveAdminRole(actorUserId: string): void {
-    throw new Error("El grupo está cerrado. Operación no permitida.");
+  leaveAdminRole(_actorUserId: string): void {
+    throw new DomainError("El grupo está cerrado. Operación no permitida.");
   }
 }
