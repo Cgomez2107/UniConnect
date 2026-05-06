@@ -213,7 +213,7 @@ function bootstrap(): void {
     studyGroupRepository,  // ← IStudyGroupRepository en lugar de studyRequestRepository
     subject,
   );
-  const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, subject);
+  const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
