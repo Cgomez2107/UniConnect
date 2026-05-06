@@ -2,17 +2,24 @@ import type { IStudyGroupState, IStudyGroupContext } from "./IStudyGroupState.js
 
 export class TransferenciaPendienteState implements IStudyGroupState {
   private context!: IStudyGroupContext;
+  private previousState: IStudyGroupState;
+
+  constructor(previousState: IStudyGroupState) {
+    this.previousState = previousState;
+  }
 
   setContext(context: IStudyGroupContext): void {
     this.context = context;
   }
 
   applyToGroup(memberId: string): void {
-    // TODO: Implementar lógica
+    // Delegamos a la lógica del estado anterior (Abierta o Llena)
+    this.previousState.applyToGroup(memberId);
   }
 
   reviewApplication(applicationId: string, status: string): void {
-    // TODO: Implementar lógica
+    // Delegamos a la lógica del estado anterior
+    this.previousState.reviewApplication(applicationId, status);
   }
 
   requestAdminTransfer(targetUserId: string): void {
@@ -20,7 +27,8 @@ export class TransferenciaPendienteState implements IStudyGroupState {
   }
 
   acceptAdminTransfer(transferId: string): void {
-    // TODO: Implementar lógica
+    // Transición: Volvemos al estado en el que estábamos (Abierta o Llena)
+    this.context.transitionTo(this.previousState);
   }
 
   leaveAdminRole(): void {

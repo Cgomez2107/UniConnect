@@ -24,6 +24,6 @@ export class CerradaState implements IStudyGroupState {
   }
 
   leaveAdminRole(): void {
-    // TODO: Implementar lógica o bloquear
+    throw new Error("El grupo está cerrado. Operación no permitida.");
   }
 }

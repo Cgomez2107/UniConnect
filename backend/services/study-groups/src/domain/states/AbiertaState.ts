@@ -1,4 +1,5 @@
 import type { IStudyGroupState, IStudyGroupContext } from "./IStudyGroupState.js";
+import { TransferenciaPendienteState } from "./TransferenciaPendienteState.js";
 
 export class AbiertaState implements IStudyGroupState {
   private context!: IStudyGroupContext;
@@ -8,22 +9,23 @@ export class AbiertaState implements IStudyGroupState {
   }
 
   applyToGroup(memberId: string): void {
-    // TODO: Implementar lógica
+    // Acción válida: Permite postularse. No requiere transición.
   }
 
   reviewApplication(applicationId: string, status: string): void {
-    // TODO: Implementar lógica
+    // Acción válida: Permite revisar postulaciones.
   }
 
   requestAdminTransfer(targetUserId: string): void {
-    // TODO: Implementar lógica
+    // Transición: Pasamos al estado de transferencia pendiente y guardamos el estado anterior.
+    this.context.transitionTo(new TransferenciaPendienteState(this));
   }
 
   acceptAdminTransfer(transferId: string): void {
-    // TODO: Implementar lógica
+    throw new Error("No hay ninguna transferencia de administrador pendiente para aceptar.");
   }
 
   leaveAdminRole(): void {
-    // TODO: Implementar lógica
+    // Acción válida: El administrador abandona el grupo.
   }
 }
