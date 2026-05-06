@@ -15,11 +15,11 @@ RUN pnpm prune --prod
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000
+ENV NODE_ENV=production PORT=3103
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/resources/node_modules ./services/resources/node_modules
 COPY --from=builder /app/services/resources/dist ./services/resources/dist
 USER nodejs
-EXPOSE 3000
+EXPOSE ${PORT}
 CMD ["node", "services/resources/dist/services/resources/src/main.js"]
