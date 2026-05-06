@@ -7,23 +7,23 @@ export class ExpiradaState implements IStudyGroupState {
     this.context = context;
   }
 
-  applyToGroup(memberId: string): void {
+  applyToGroup(applicationId: string, applicantId: string, applicantName: string, message: string, adminUserId: string): void {
     throw new Error("El grupo ha expirado.");
   }
 
-  reviewApplication(applicationId: string, status: string): void {
+  reviewApplication(applicationId: string, status: 'approved' | 'rejected', reviewerId: string, applicantId: string, applicantName?: string): void {
     throw new Error("El grupo ha expirado.");
   }
 
-  requestAdminTransfer(targetUserId: string): void {
+  requestAdminTransfer(transferId: string, actorUserId: string, targetUserId: string): void {
     throw new Error("El grupo ha expirado.");
   }
 
-  acceptAdminTransfer(transferId: string): void {
+  acceptAdminTransfer(transferId: string, actorUserId: string, fromUserId: string, toUserId: string): void {
     throw new Error("El grupo ha expirado.");
   }
 
-  leaveAdminRole(): void {
+  leaveAdminRole(actorUserId: string): void {
     throw new Error("El grupo ha expirado.");
   }
 }
