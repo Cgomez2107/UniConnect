@@ -14,6 +14,7 @@ declare module "node:http" {
   export function createServer(
     handler: (req: IncomingMessage, res: ServerResponse) => void,
   ): {
-    listen(port: number, callback?: () => void): void;
+    listen(options: any, callback?: () => void): void;
+    close(callback?: () => void): void;
   };
 }

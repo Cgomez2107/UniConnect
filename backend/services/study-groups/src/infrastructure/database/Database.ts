@@ -38,10 +38,13 @@ export class Database {
   /**
    * Retorna la instancia única de Database.
    * Si no existe, se crea utilizando el env proporcionado.
-   * Si ya existe, ignora el argumento env.
+   * Lanza un error si se intenta obtener la instancia sin inicializarla previamente y sin proveer env.
    */
-  public static getInstance(env: StudyGroupsEnv): Database {
+  public static getInstance(env?: StudyGroupsEnv): Database {
     if (!Database.instance) {
+      if (!env) {
+        throw new Error("Database no ha sido inicializada y no se proporcionó la configuración (env).");
+      }
       Database.instance = new Database(env);
     }
     return Database.instance;
@@ -55,9 +58,17 @@ export class Database {
   }
 
   /**
-   * Cierra el pool de conexiones (útil para tests o shutdown limpio).
+   * Cierra el pool de conexiones y destruye la instancia Singleton.
+   * Fundamental para un graceful shutdown y evitar fugas de memoria.
    */
   public async close(): Promise<void> {
-    await this.pool.end();
+    try {
+      await this.pool.end();
+      console.log(`[Database] Pool de conexiones cerrado exitosamente.`);
+    } catch (error) {
+      console.error(`[Database] Error al cerrar el pool de conexiones:`, error);
+    } finally {
+      Database.instance = null; // Previene "conexiones huérfanas" y permite reinicialización
+    }
   }
 }
