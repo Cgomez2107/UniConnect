@@ -1,4 +1,5 @@
 import axios from "axios";
+import { showErrorAlert } from "./errorHandler";
 
 // API URL con fallback
 const API_BASE_URL =
@@ -49,5 +50,22 @@ export const fetchApi = async (
   } catch (error: any) {
     console.error(`API Error [${endpoint}]:`, error.message);
     throw error;
+  }
+};
+
+/**
+ * Versión de fetchApi con manejo automático de errores.
+ * Captura excepciones y muestra un alerta al usuario.
+ */
+export const fetchApiWithErrorHandling = async (
+  endpoint: string,
+  options: any = {},
+  context?: string
+) => {
+  try {
+    return await fetchApi(endpoint, options);
+  } catch (error) {
+    showErrorAlert(error, context ?? "operación");
+    return null;
   }
 };
