@@ -17,9 +17,9 @@ export class LlenaState implements IStudyGroupState {
 
   requestAdminTransfer(groupId: string, actorUserId: string, targetUserId: string): void {
     console.log(
-      `[LlenaState] Solicitando transferencia de admin en grupo lleno ${groupId}`,
+      `[LlenaState] Transicionando grupo lleno ${groupId} a transferencia pendiente`,
     );
-    // Por ahora solo registra la acción.
+    this.context.transitionTo("transferenciaPendiente");
   }
 
   acceptAdminTransfer(groupId: string, transferId: string): void {
@@ -35,13 +35,13 @@ export class LlenaState implements IStudyGroupState {
   }
 
   closeGroup(groupId: string): void {
-    console.log(`[LlenaState] Cerrando grupo lleno ${groupId}`);
-    // Por ahora solo registra la acción.
+    console.log(`[LlenaState] Transicionando grupo lleno ${groupId} a cerrada`);
+    this.context.transitionTo("cerrada");
   }
 
   expireGroup(groupId: string): void {
-    console.log(`[LlenaState] Expirando grupo lleno ${groupId}`);
-    // Por ahora solo registra la acción.
+    console.log(`[LlenaState] Transicionando grupo lleno ${groupId} a expirada`);
+    this.context.transitionTo("expirada");
   }
 
   getStatusName(): string {

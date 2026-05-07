@@ -14,7 +14,12 @@ import type { IStudyGroupState } from "./IStudyGroupState.js";
 import type { StudyGroupContext } from "./StudyGroupContext.js";
 
 export class TransferenciaPendienteState implements IStudyGroupState {
-  constructor(private readonly context: StudyGroupContext) {}
+  // Mantiene track del estado anterior para poder volver en caso de rechazo
+  private previousState: string = "abierta";
+
+  constructor(private readonly context: StudyGroupContext, previousState: string = "abierta") {
+    this.previousState = previousState;
+  }
 
   requestAdminTransfer(groupId: string, actorUserId: string, targetUserId: string): void {
     throw new Error(
@@ -24,26 +29,29 @@ export class TransferenciaPendienteState implements IStudyGroupState {
 
   acceptAdminTransfer(groupId: string, transferId: string): void {
     console.log(
-      `[TransferenciaPendienteState] Aceptando transferencia ${transferId} en grupo ${groupId}`,
+      `[TransferenciaPendienteState] Aceptando transferencia ${transferId} en grupo ${groupId}. Regresando a estado anterior.`,
     );
-    // Por ahora solo registra la acción. La lógica se implementará en Tarea 2.
+    // En la aceptación, el grupo regresa a su estado anterior (Abierta o Llena)
+    // Por ahora simplemente regresa a "abierta" por defecto
+    this.context.transitionTo(this.previousState);
   }
 
   rejectAdminTransfer(groupId: string, transferId: string): void {
     console.log(
-      `[TransferenciaPendienteState] Rechazando transferencia ${transferId} en grupo ${groupId}`,
+      `[TransferenciaPendienteState] Rechazando transferencia ${transferId} en grupo ${groupId}. Regresando a estado anterior.`,
     );
-    // Por ahora solo registra la acción.
+    // En el rechazo, el grupo regresa a su estado anterior
+    this.context.transitionTo(this.previousState);
   }
 
   closeGroup(groupId: string): void {
-    console.log(`[TransferenciaPendienteState] Cerrando grupo ${groupId}`);
-    // Por ahora solo registra la acción.
+    console.log(`[TransferenciaPendienteState] Transicionando grupo ${groupId} a cerrada`);
+    this.context.transitionTo("cerrada");
   }
 
   expireGroup(groupId: string): void {
-    console.log(`[TransferenciaPendienteState] Expirando grupo ${groupId}`);
-    // Por ahora solo registra la acción.
+    console.log(`[TransferenciaPendienteState] Transicionando grupo ${groupId} a expirada`);
+    this.context.transitionTo("expirada");
   }
 
   getStatusName(): string {

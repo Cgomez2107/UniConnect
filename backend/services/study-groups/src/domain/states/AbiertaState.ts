@@ -16,9 +16,9 @@ export class AbiertaState implements IStudyGroupState {
 
   requestAdminTransfer(groupId: string, actorUserId: string, targetUserId: string): void {
     console.log(
-      `[AbiertaState] Solicitando transferencia de admin en grupo ${groupId}`,
+      `[AbiertaState] Transicionando grupo ${groupId} a transferencia pendiente`,
     );
-    // Por ahora solo registra la acción. La lógica se implementará en Tarea 2.
+    this.context.transitionTo("transferenciaPendiente");
   }
 
   acceptAdminTransfer(groupId: string, transferId: string): void {
@@ -34,13 +34,13 @@ export class AbiertaState implements IStudyGroupState {
   }
 
   closeGroup(groupId: string): void {
-    console.log(`[AbiertaState] Cerrando grupo ${groupId}`);
-    // Por ahora solo registra la acción.
+    console.log(`[AbiertaState] Transicionando grupo ${groupId} a cerrada`);
+    this.context.transitionTo("cerrada");
   }
 
   expireGroup(groupId: string): void {
-    console.log(`[AbiertaState] Expirando grupo ${groupId}`);
-    // Por ahora solo registra la acción.
+    console.log(`[AbiertaState] Transicionando grupo ${groupId} a expirada`);
+    this.context.transitionTo("expirada");
   }
 
   getStatusName(): string {
