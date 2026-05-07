@@ -9,20 +9,33 @@ import { useAuthStore } from "./store/useAuthStore";
 import { LoginPage } from "./pages/LoginPage";
 import { AdminPage } from "./pages/AdminPage";
 import { ChatPage } from "./pages/ChatPage";
+import { InvitationsPage } from "./pages/InvitationsPage";
 import "./App.css";
 
 function PrivateRoute({
   children,
   isAuthenticated,
+  requiredRole,
 }: {
   children: React.ReactNode;
   isAuthenticated: boolean;
+  requiredRole?: "admin" | "estudiante";
 }) {
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  const user = useAuthStore((s) => s.user);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/" />;
+  }
+
+  return <>{children}</>;
 }
 
 function App() {
-  const { isAuthenticated, restoreSession } = useAuthStore();
+  const { isAuthenticated, restoreSession, user } = useAuthStore();
 
   useEffect(() => {
     restoreSession();
@@ -35,8 +48,16 @@ function App() {
         <Route
           path="/admin"
           element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
+            <PrivateRoute isAuthenticated={isAuthenticated} requiredRole="admin">
               <AdminPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/invitaciones"
+          element={
+            <PrivateRoute isAuthenticated={isAuthenticated}>
+              <InvitationsPage />
             </PrivateRoute>
           }
         />
@@ -48,7 +69,17 @@ function App() {
             </PrivateRoute>
           }
         />
-        <Route path="/" element={<Navigate to="/admin" />} />
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? (
+              <Navigate to={user?.role === "admin" ? "/admin" : "/invitaciones"} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );
