@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true });
     try {
-      const response = await apiClient.post("/auth/login", {
+      const response = await apiClient.post("/auth/signin", {
         email,
         password,
       });
@@ -72,7 +72,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     try {
-      const response = await apiClient.get("/auth/me");
+      const response = await apiClient.get("/auth/session");
       const user = response.data;
 
       const userSession: UserSession = {

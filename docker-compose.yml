@@ -265,6 +265,19 @@ services:
     networks:
       - uniconnect-network
 
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: uniconnect-web
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://gateway:3000/api/v1}
+    ports:
+      - "8080:80"
+    depends_on:
+      - gateway
+    networks:
+      - uniconnect-network
   frontend:
     image: node:20-alpine
     container_name: uniconnect-frontend
