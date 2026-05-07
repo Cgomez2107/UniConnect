@@ -1,5 +1,6 @@
 import { ResourceCard } from "@/components/feed/ResourceCard";
 import { Colors } from "@/constants/Colors";
+import { GroupStatusBadge, isActionAvailable } from "@/components/common/GroupStatusBadge";
 import type { RequestWithApplications } from "@/hooks/application/useInvitationsHub";
 import type { Application, StudyResource } from "@/types";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -43,15 +44,19 @@ export function RequestApplicationsCard({
   const accepted = item.applications.filter((a) => a.status === "aceptada").length;
   const rejected = item.applications.filter((a) => a.status === "rechazada").length;
 
+  // Determinar si se pueden aceptar nuevas solicitudes según el estado del grupo
+  const groupStatus = (item.request.status || "abierta") as "abierta" | "llena" | "transferenciaPendiente" | "cerrada" | "expirada";
+  const canAcceptApplications = isActionAvailable(groupStatus, "join");
+
   return (
     <View style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
       <TouchableOpacity onPress={() => onOpenRequest(item.request.id)} activeOpacity={0.8}>
         <Text style={[styles.cardTitle, { color: C.textPrimary }]} numberOfLines={2}>
           {item.request.title}
         </Text>
-        <Text style={[styles.cardMeta, { color: C.textSecondary }]} numberOfLines={1}>
-          {item.request.subjects?.name ?? "Sin materia"} · {item.request.status}
-        </Text>
+        <View style={{ marginTop: 8 }}>
+          <GroupStatusBadge status={groupStatus} colors={C} size="small" />
+        </View>
       </TouchableOpacity>
 
       <View style={styles.rowStats}>
@@ -127,15 +132,32 @@ export function RequestApplicationsCard({
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.btn, { backgroundColor: isActionLoading ? C.border : C.primary }]}
+                    style={[
+                      styles.btn,
+                      {
+                        backgroundColor:
+                          isActionLoading || !canAcceptApplications
+                            ? C.border
+                            : C.primary,
+                      },
+                    ]}
                     onPress={() => onReview(app.id, "aceptada")}
-                    disabled={isActionLoading}
+                    disabled={isActionLoading || !canAcceptApplications}
                     activeOpacity={0.85}
                   >
                     {isActionLoading ? (
                       <ActivityIndicator size="small" color={C.textOnPrimary} />
                     ) : (
-                      <Text style={[styles.btnText, { color: C.textOnPrimary }]}>Aceptar</Text>
+                      <Text
+                        style={[
+                          styles.btnText,
+                          {
+                            color: !canAcceptApplications ? C.textSecondary : C.textOnPrimary,
+                          },
+                        ]}
+                      >
+                        {!canAcceptApplications ? "Grupo Lleno" : "Aceptar"}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -157,12 +179,16 @@ interface SentApplicationCardProps {
 export function SentApplicationCard({ item, C, onOpenRequest }: SentApplicationCardProps) {
   const reqTitle = item.study_requests?.title ?? "Solicitud";
   const subject = item.study_requests?.subjects?.name ?? "Sin materia";
+  const groupStatus = (item.study_requests?.status || "abierta") as "abierta" | "llena" | "transferenciaPendiente" | "cerrada" | "expirada";
 
   return (
     <View style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
       <Text style={[styles.cardTitle, { color: C.textPrimary }]} numberOfLines={2}>
         {reqTitle}
       </Text>
+      <View style={{ marginTop: 8, marginBottom: 12 }}>
+        <GroupStatusBadge status={groupStatus} colors={C} size="small" />
+      </View>
       <Text style={[styles.cardMeta, { color: C.textSecondary }]}>
         {subject} · {timeAgo(item.created_at)}
       </Text>
