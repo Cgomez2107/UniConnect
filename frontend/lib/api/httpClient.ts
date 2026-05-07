@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { showErrorAlert } from "@/lib/api/errorHandler";
 
 const API_BASE_URL =
     process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:3000/api/v1";
@@ -115,4 +116,22 @@ export async function fetchApi<T>(
     }
 
     return result as T;
+}
+
+/**
+ * Versión de fetchApi con manejo automático de errores.
+ * Captura excepciones y muestra un alerta al usuario.
+ * Útil para operaciones que pueden fallar por reglas de negocio del patrón State.
+ */
+export async function fetchApiWithErrorHandling<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    context?: string,
+): Promise<T | null> {
+    try {
+        return await fetchApi<T>(endpoint, options);
+    } catch (error) {
+        showErrorAlert(error, context ?? "operación");
+        return null;
+    }
 }
