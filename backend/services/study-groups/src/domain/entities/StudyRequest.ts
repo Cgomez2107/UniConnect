@@ -1,4 +1,4 @@
-export type StudyRequestStatus = "abierta" | "cerrada" | "expirada";
+export type StudyRequestStatus = "abierta" | "llena" | "transferenciaPendiente" | "cerrada" | "expirada";
 
 export interface StudyRequest {
   readonly id: string;
