@@ -22,6 +22,17 @@ interface AuthState {
   restoreSession: () => Promise<void>;
 }
 
+const clearStoredSession = () => {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("user");
+  sessionStorage.removeItem("preOAuthLocation");
+
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
+    .forEach((key) => localStorage.removeItem(key));
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: false,
@@ -59,9 +70,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
-    set({ user: null, isAuthenticated: false });
+    clearStoredSession();
+    set({ user: null, isAuthenticated: false, isLoading: false });
   },
 
   restoreSession: async () => {
@@ -86,7 +96,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: userSession, isAuthenticated: true });
     } catch (error) {
       console.error("Failed to restore session:", error);
-      localStorage.removeItem("accessToken");
+      clearStoredSession();
       set({ user: null, isAuthenticated: false });
     }
   },

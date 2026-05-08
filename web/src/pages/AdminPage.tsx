@@ -44,8 +44,11 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/login");
+    try {
+      await logout();
+    } finally {
+      navigate("/login", { replace: true });
+    }
   };
 
   return (
@@ -56,6 +59,7 @@ export const AdminPage: React.FC = () => {
           <div className="flex items-center gap-4">
             <span>{user?.fullName}</span>
             <button
+              type="button"
               onClick={handleLogout}
               className="bg-uc-gold text-uc-blue px-4 py-2 rounded hover:bg-uc-gold-dark"
             >

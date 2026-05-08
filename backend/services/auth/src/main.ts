@@ -32,12 +32,16 @@ if (!Number.isInteger(PORT) || PORT <= 0) {
 /**
  * Genera la URL de autorización de Google con redirectTo dinámico
  */
-function sendOAuthUrl(res: ServerResponse, redirectTo?: string): void {
+function sendOAuthUrl(
+  res: ServerResponse,
+  redirectTo?: string,
+  prompt = "select_account",
+): void {
   const supabaseUrl = process.env.SUPABASE_URL || "https://becitrklvpadvjwdbmck.supabase.co";
   const hd = "ucaldas.edu.co"; // restricción de dominio institucional
 
   // Construir URL base de Supabase
-  let authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&hd=${hd}`;
+  let authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&hd=${hd}&prompt=${encodeURIComponent(prompt)}`;
 
   // Si se proporciona redirectTo, agregarlo como parámetro
   if (redirectTo) {
