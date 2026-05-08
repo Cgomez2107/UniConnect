@@ -1,9 +1,9 @@
 import type { Pool } from "pg";
-import type { IIndicadoresRepository } from "../../domain/repositories/IIndicadoresRepository.js";
-import type { Indicadores } from "../../domain/decorators/EstadisticasDecorator.js";
-import type { Insignia } from "../../domain/decorators/InsigniasDecorator.js";
+import type { IIndicatorsRepository } from "../../domain/repositories/IIndicatorsRepository.js";
+import type { Indicators } from "../../domain/decorators/StatisticsDecorator.js";
+import type { Badge } from "../../domain/decorators/BadgesDecorator.js";
 
-interface MensajesCountRow {
+interface CountRow {
   count: number;
 }
 
@@ -12,11 +12,11 @@ interface GruposCountRow {
   grupos_participa: number;
 }
 
-export class PostgresIndicadoresRepository implements IIndicadoresRepository {
+export class PostgresIndicatorsRepository implements IIndicatorsRepository {
   constructor(private readonly pool: Pool) {}
 
-  async getIndicadores(userId: string): Promise<Indicadores> {
-    const mensajes = await this.pool.query<MensajesCountRow>(
+  async getIndicators(userId: string): Promise<Indicators> {
+    const mensajes = await this.pool.query<CountRow>(
       "SELECT COUNT(*)::int AS count FROM messages WHERE sender_id = $1",
       [userId],
     );
@@ -42,13 +42,13 @@ export class PostgresIndicadoresRepository implements IIndicadoresRepository {
     };
   }
 
-  async getInsignias(userId: string): Promise<Insignia[]> {
-    const totalMensajes = await this.pool.query<MensajesCountRow>(
+  async getBadges(userId: string): Promise<Badge[]> {
+    const totalMensajes = await this.pool.query<CountRow>(
       "SELECT COUNT(*)::int AS count FROM messages WHERE sender_id = $1",
       [userId],
     );
 
-    const gruposCount = await this.pool.query<MensajesCountRow>(
+    const gruposCount = await this.pool.query<CountRow>(
       `
         SELECT COUNT(*)::int AS count FROM applications
         WHERE applicant_id = $1 AND status = 'aceptada'
@@ -56,12 +56,12 @@ export class PostgresIndicadoresRepository implements IIndicadoresRepository {
       [userId],
     );
 
-    const insignias: Insignia[] = [];
+    const badges: Badge[] = [];
     const msgs = totalMensajes.rows[0]?.count ?? 0;
     const grupos = gruposCount.rows[0]?.count ?? 0;
 
     if (msgs >= 1) {
-      insignias.push({
+      badges.push({
         id: "primer-mensaje",
         nombre: "Primer Mensaje",
         descripcion: "Has enviado tu primer mensaje en la plataforma",
@@ -71,7 +71,7 @@ export class PostgresIndicadoresRepository implements IIndicadoresRepository {
     }
 
     if (msgs >= 50) {
-      insignias.push({
+      badges.push({
         id: "conversador",
         nombre: "Conversador",
         descripcion: "Has enviado 50 mensajes en la plataforma",
@@ -81,7 +81,7 @@ export class PostgresIndicadoresRepository implements IIndicadoresRepository {
     }
 
     if (grupos >= 1) {
-      insignias.push({
+      badges.push({
         id: "colaborador",
         nombre: "Colaborador",
         descripcion: "Participas en al menos un grupo de estudio",
@@ -91,7 +91,7 @@ export class PostgresIndicadoresRepository implements IIndicadoresRepository {
     }
 
     if (grupos >= 3) {
-      insignias.push({
+      badges.push({
         id: "trabajador-equipo",
         nombre: "Trabajador en Equipo",
         descripcion: "Participas en 3 o más grupos de estudio",
@@ -100,6 +100,6 @@ export class PostgresIndicadoresRepository implements IIndicadoresRepository {
       });
     }
 
-    return insignias;
+    return badges;
   }
 }

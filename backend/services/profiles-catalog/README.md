@@ -23,74 +23,74 @@ El dominio implementa el **Patrón Decorator** para composición flexible de est
 
 Los decoradores permiten agregar funcionalidades dinámicamente al perfil sin modificar la entidad base `Student`:
 
-- **PerfilBase**: Componente concreto con nombre, carrera, semestre y asignaturas activas.
-- **EstadisticasDecorator**: Agrega indicadores de actividad (grupos creados, grupos en los que participa, mensajes enviados).
-- **InsigniasDecorator**: Agrega array de insignias desbloqueadas por hitos del sistema.
+- **BaseProfile**: Componente concreto con nombre, carrera, semestre y asignaturas activas.
+- **StatisticsDecorator**: Agrega indicadores de actividad (grupos creados, grupos en los que participa, mensajes enviados).
+- **BadgesDecorator**: Agrega array de insignias desbloqueadas por hitos del sistema.
 
 ### Características
 
 ✅ **Componibles**: Los decoradores pueden anidarse en cualquier orden.
-✅ **Interfaz uniforme**: Todos implementan `IPerfil` con `getInformacionBase()`, `getMetadata()`, `render()`.
-✅ **Desacoplado de infraestructura**: Los datos de indicadores se inyectan vía `IIndicadoresRepository`, nunca se consultan desde el dominio.
-✅ **Degradación graceful**: Si el repositorio de indicadores falla, se retorna `PerfilBase` sin decorar.
+✅ **Interfaz uniforme**: Todos implementan `IProfile` con `getBaseInfo()`, `getMetadata()`, `render()`.
+✅ **Desacoplado de infraestructura**: Los datos de indicadores se inyectan vía `IIndicatorsRepository`, nunca se consultan desde el dominio.
+✅ **Degradación graceful**: Si el repositorio de indicadores falla, se retorna `BaseProfile` sin decorar.
 
 ### Diagrama UML
 
 ```mermaid
 classDiagram
-    class IPerfil {
+    class IProfile {
         <<interface>>
-        +getInformacionBase() Record~string, unknown~
+        +getBaseInfo() Record~string, unknown~
         +getMetadata() Record~string, unknown~
         +render() string
         +toJSON() Record~string, unknown~
     }
 
-    class PerfilBase {
+    class BaseProfile {
         -id: string
         -fullName: string
         -avatarUrl: string | null
         -carrera: string
         -semestre: number | null
         -asignaturasActivas: { id: string; name: string }[]
-        +getInformacionBase() Record~string, unknown~
+        +getBaseInfo() Record~string, unknown~
         +getMetadata() Record~string, unknown~
         +render() string
         +toJSON() Record~string, unknown~
     }
 
-    class PerfilDecorator {
+    class ProfileDecorator {
         <<abstract>>
-        #perfil: IPerfil
-        +getInformacionBase() Record~string, unknown~
+        #profile: IProfile
+        +getBaseInfo() Record~string, unknown~
         +getMetadata() Record~string, unknown~
         +render() string
         +toJSON() Record~string, unknown~
     }
 
-    class EstadisticasDecorator {
-        -indicadores: Indicadores
-        +getIndicadores() Indicadores
+    class StatisticsDecorator {
+        -indicators: Indicators
+        +getIndicators() Indicators
         +getMetadata() Record~string, unknown~
         +render() string
     }
 
-    class InsigniasDecorator {
-        -insignias: Insignia[]
-        +getInsignias() Insignia[]
+    class BadgesDecorator {
+        -badges: Badge[]
+        +getBadges() Badge[]
         +getMetadata() Record~string, unknown~
         +render() string
     }
 
-    IPerfil <|.. PerfilBase : implements
-    IPerfil <|.. PerfilDecorator : implements
-    PerfilDecorator <|-- EstadisticasDecorator : extends
-    PerfilDecorator <|-- InsigniasDecorator : extends
-    PerfilDecorator --> IPerfil : wraps
+    IProfile <|.. BaseProfile : implements
+    IProfile <|.. ProfileDecorator : implements
+    ProfileDecorator <|-- StatisticsDecorator : extends
+    ProfileDecorator <|-- BadgesDecorator : extends
+    ProfileDecorator --> IProfile : wraps
 
-    note for PerfilBase "AC-01: nombre, carrera, semestre,\nasignaturas activas"
-    note for EstadisticasDecorator "AC-02: gruposCreados,\ngruposParticipa,\nmensajesEnviados"
-    note for InsigniasDecorator "AC-03: array de insignias\npor hitos del sistema"
+    note for BaseProfile "AC-01: nombre, carrera, semestre,\nasignaturas activas"
+    note for StatisticsDecorator "AC-02: gruposCreados,\ngruposParticipa,\nmensajesEnviados"
+    note for BadgesDecorator "AC-03: array de insignias\npor hitos del sistema"
 ```
 
 ### Ejemplo de Composición

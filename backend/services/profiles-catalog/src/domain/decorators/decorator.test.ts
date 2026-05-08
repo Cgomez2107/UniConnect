@@ -1,16 +1,16 @@
-import { PerfilBase } from "./PerfilBase.js";
-import { EstadisticasDecorator, type Indicadores } from "./EstadisticasDecorator.js";
-import { InsigniasDecorator, type Insignia } from "./InsigniasDecorator.js";
+import { BaseProfile } from "./BaseProfile.js";
+import { StatisticsDecorator, type Indicators } from "./StatisticsDecorator.js";
+import { BadgesDecorator, type Badge } from "./BadgesDecorator.js";
 
 console.log("=".repeat(80));
 console.log("PRUEBA DE COMPOSICIÓN DE DECORADORES DE PERFIL");
 console.log("=".repeat(80));
 
-// ===== PASO 1: Crear PerfilBase =====
-console.log("\n📝 PASO 1: Crear PerfilBase");
+// ===== PASO 1: Crear BaseProfile =====
+console.log("\n📝 PASO 1: Crear BaseProfile");
 console.log("-".repeat(80));
 
-const base = new PerfilBase({
+const base = new BaseProfile({
   id: "user-123",
   fullName: "Carlos Pérez",
   avatarUrl: null,
@@ -22,38 +22,38 @@ const base = new PerfilBase({
   ],
 });
 
-console.log("PerfilBase creado:");
+console.log("BaseProfile creado:");
 console.log(`  Nombre: ${base.fullName}`);
 console.log(`  Carrera: ${base.carrera}`);
 console.log(`  Semestre: ${base.semestre}`);
 console.log(`  Render: ${base.render()}`);
 
-const baseInfo = base.getInformacionBase();
-console.log(`  getInformacionBase() contiene: ${Object.keys(baseInfo).join(", ")}`);
+const baseInfo = base.getBaseInfo();
+console.log(`  getBaseInfo() contiene: ${Object.keys(baseInfo).join(", ")}`);
 
-// ===== PASO 2: Envolver con EstadisticasDecorator =====
-console.log("\n📊 PASO 2: Envolver con EstadisticasDecorator");
+// ===== PASO 2: Envolver con StatisticsDecorator =====
+console.log("\n📊 PASO 2: Envolver con StatisticsDecorator");
 console.log("-".repeat(80));
 
-const indicadores: Indicadores = {
+const indicators: Indicators = {
   gruposCreados: 3,
   gruposParticipa: 5,
   mensajesEnviados: 42,
 };
 
-const conEstadisticas = new EstadisticasDecorator(base, indicadores);
+const conEstadisticas = new StatisticsDecorator(base, indicators);
 
-console.log("EstadisticasDecorator aplicado:");
+console.log("StatisticsDecorator aplicado:");
 console.log(`  Render: ${conEstadisticas.render()}`);
-console.log(`  Grupos creados: ${conEstadisticas.getIndicadores().gruposCreados}`);
-console.log(`  Grupos participa: ${conEstadisticas.getIndicadores().gruposParticipa}`);
-console.log(`  Mensajes enviados: ${conEstadisticas.getIndicadores().mensajesEnviados}`);
+console.log(`  Grupos creados: ${conEstadisticas.getIndicators().gruposCreados}`);
+console.log(`  Grupos participa: ${conEstadisticas.getIndicators().gruposParticipa}`);
+console.log(`  Mensajes enviados: ${conEstadisticas.getIndicators().mensajesEnviados}`);
 
-// ===== PASO 3: Envolver con InsigniasDecorator =====
-console.log("\n🏅 PASO 3: Envolver con InsigniasDecorator");
+// ===== PASO 3: Envolver con BadgesDecorator =====
+console.log("\n🏅 PASO 3: Envolver con BadgesDecorator");
 console.log("-".repeat(80));
 
-const insignias: Insignia[] = [
+const badges: Badge[] = [
   {
     id: "primer-mensaje",
     nombre: "Primer Mensaje",
@@ -70,13 +70,13 @@ const insignias: Insignia[] = [
   },
 ];
 
-const completo = new InsigniasDecorator(conEstadisticas, insignias);
+const completo = new BadgesDecorator(conEstadisticas, badges);
 
-console.log("InsigniasDecorator aplicado:");
+console.log("BadgesDecorator aplicado:");
 console.log(`  Render: ${completo.render()}`);
-console.log(`  Insignias: ${completo.getInsignias().length}`);
-for (const ins of completo.getInsignias()) {
-  console.log(`    - ${ins.nombre}: ${ins.descripcion}`);
+console.log(`  Badges: ${completo.getBadges().length}`);
+for (const b of completo.getBadges()) {
+  console.log(`    - ${b.nombre}: ${b.descripcion}`);
 }
 
 // ===== PASO 4: Validar getMetadata() =====
@@ -92,29 +92,25 @@ console.log(JSON.stringify(metadata, null, 2));
 const metadataKeys = Object.keys(metadata);
 console.log("\nValidación de campos en metadata:");
 
-// AC-01: PerfilBase
 const hasBaseFields =
   metadataKeys.includes("id") &&
   metadataKeys.includes("fullName") &&
   metadataKeys.includes("carrera") &&
   metadataKeys.includes("semestre") &&
   metadataKeys.includes("asignaturasActivas");
-console.log(`  ✅ AC-01 (PerfilBase): ${hasBaseFields ? "OK" : "FALLA"}`);
+console.log(`  ✅ AC-01 (BaseProfile): ${hasBaseFields ? "OK" : "FALLA"}`);
 
-// AC-02: Estadisticas
 const hasStats = metadataKeys.includes("indicadores");
 const statsValid =
   hasStats &&
-  (metadata.indicadores as Indicadores).gruposCreados !== undefined &&
-  (metadata.indicadores as Indicadores).gruposParticipa !== undefined &&
-  (metadata.indicadores as Indicadores).mensajesEnviados !== undefined;
-console.log(`  ✅ AC-02 (Estadisticas): ${statsValid ? "OK" : "FALLA"}`);
+  (metadata.indicadores as Indicators).gruposCreados !== undefined &&
+  (metadata.indicadores as Indicators).gruposParticipa !== undefined &&
+  (metadata.indicadores as Indicators).mensajesEnviados !== undefined;
+console.log(`  ✅ AC-02 (Statistics): ${statsValid ? "OK" : "FALLA"}`);
 
-// AC-03: Insignias
-const hasInsignias = metadataKeys.includes("insignias");
-console.log(`  ✅ AC-03 (Insignias): ${hasInsignias ? "OK" : "FALLA"}`);
+const hasBadges = metadataKeys.includes("insignias");
+console.log(`  ✅ AC-03 (Badges): ${hasBadges ? "OK" : "FALLA"}`);
 
-// AC-04: Render compuesto
 const renderOutput = completo.render();
 const renderOk =
   renderOutput.includes("Carlos Pérez") &&
@@ -130,18 +126,18 @@ console.log("=".repeat(80));
 console.log(`
 Cadena de decoradores creada exitosamente:
 
-  PerfilBase [Carlos Pérez - Ingeniería de Sistemas (Semestre 6)]
+  BaseProfile [Carlos Pérez - Ingeniería de Sistemas (Semestre 6)]
     ↓ (envuelto por)
-  EstadisticasDecorator [3 grupos creados, 5 participa, 42 msgs]
+  StatisticsDecorator [3 grupos creados, 5 participa, 42 msgs]
     ↓ (envuelto por)
-  InsigniasDecorator [2 insignias: Primer Mensaje, Colaborador]
+  BadgesDecorator [2 badges: Primer Mensaje, Colaborador]
     ↓ (resultado final)
   Perfil completamente decorado
 
 Validaciones:
-  ✅ AC-01: PerfilBase con nombre, carrera, semestre y asignaturas activas
-  ✅ AC-02: EstadisticasDecorator con gruposCreados, gruposParticipa, mensajesEnviados
-  ✅ AC-03: InsigniasDecorator con array de insignias
+  ✅ AC-01: BaseProfile con nombre, carrera, semestre y asignaturas activas
+  ✅ AC-02: StatisticsDecorator con gruposCreados, gruposParticipa, mensajesEnviados
+  ✅ AC-03: BadgesDecorator con array de badges
   ✅ AC-04: Render compuesto preserva capas inferiores
   ✅ getMetadata() retorna información de todos los decoradores
 `);

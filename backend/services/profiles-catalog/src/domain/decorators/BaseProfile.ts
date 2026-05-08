@@ -1,6 +1,6 @@
-import type { IPerfil } from "./IPerfil.js";
+import type { IProfile } from "./IProfile.js";
 
-export class PerfilBase implements IPerfil {
+export class BaseProfile implements IProfile {
   readonly id: string;
   readonly fullName: string;
   readonly avatarUrl: string | null;
@@ -24,7 +24,7 @@ export class PerfilBase implements IPerfil {
     this.asignaturasActivas = input.asignaturasActivas;
   }
 
-  getInformacionBase(): Record<string, unknown> {
+  getBaseInfo(): Record<string, unknown> {
     return {
       id: this.id,
       fullName: this.fullName,
