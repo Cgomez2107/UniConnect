@@ -32,8 +32,8 @@ export const InvitationsPage: React.FC = () => {
     try {
       setLoading(true);
       setError("");
-      const data = await apiClient.get("/study-groups");
-      setGroups(data || []);
+      const response = await apiClient.get("/study-groups");
+      setGroups(response.data?.data || response.data || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al cargar grupos";
       setError(message);

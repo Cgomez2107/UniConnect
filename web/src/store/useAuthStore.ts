@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { apiClient } from "../lib/httpClient";
+import { apiClient } from "../lib/api/client";
 
 export type UserRole = "estudiante" | "admin";
 

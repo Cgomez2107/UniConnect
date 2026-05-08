@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
+import { apiClient } from "../lib/api/client";
 import "./LoginPage.css";
 
 export const LoginPage: React.FC = () => {
@@ -32,16 +33,24 @@ export const LoginPage: React.FC = () => {
     setGoogleLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/v1/auth/google-callback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const redirectUrl = `${window.location.origin}/oauth-callback`;
+      const response = await apiClient.get("/auth/google", {
+        params: { redirectTo: redirectUrl },
       });
-      if (!response.ok) throw new Error("Google sign-in failed");
-      navigate("/admin");
+
+      if (response.data?.url) {
+        // Guardar la URL de retorno para después del OAuth
+        sessionStorage.setItem("preOAuthLocation", "/admin");
+        // Redirigir a la URL de autorización de Google/Supabase
+        window.location.href = response.data.url;
+      } else {
+        setError("No se pudo iniciar la sesión con Google.");
+      }
     } catch (err: any) {
       setError(
+        err.response?.data?.message ||
         err.message ||
-        "No pudimos conectarte con Google. Intenta nuevamente."
+        "Error al conectar con Google."
       );
     } finally {
       setGoogleLoading(false);

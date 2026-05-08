@@ -1,0 +1,71 @@
+import React from "react";
+import { StudyRequest, RequestStatus } from "@/types";
+import { Badge } from "@/components/ui/Badge";
+
+interface SolicitudCardProps {
+  solicitud: StudyRequest;
+  onViewDetails: (id: string) => void;
+  onApply?: (id: string) => void;
+}
+
+/**
+ * SolicitudCard component for displaying study group requests/solicitudes
+ */
+export function SolicitudCard({
+  solicitud,
+  onViewDetails,
+  onApply,
+}: SolicitudCardProps) {
+  const statusLabels: Record<RequestStatus, string> = {
+    OPEN: "Abierto",
+    IN_PROGRESS: "En progreso",
+    CLOSED: "Cerrado",
+  };
+
+  const statusColors: Record<RequestStatus, string> = {
+    OPEN: "bg-green-100 text-green-800",
+    IN_PROGRESS: "bg-blue-100 text-blue-800",
+    CLOSED: "bg-gray-100 text-gray-800",
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="font-semibold text-lg text-gray-900">
+          {solicitud.subject?.name || "Solicitud"}
+        </h3>
+        <Badge variant={statusColors[solicitud.status]}>
+          {statusLabels[solicitud.status]}
+        </Badge>
+      </div>
+
+      <p className="text-sm text-gray-600 mb-3">
+        {solicitud.description || "Sin descripción"}
+      </p>
+
+      <div className="flex gap-2 mb-3 text-sm text-gray-700">
+        <span>👤 {solicitud.creatorName || "Usuario"}</span>
+        <span>👥 {solicitud.memberCount || 0} miembros</span>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => onViewDetails(solicitud.id)}
+          className="flex-1 px-3 py-2 bg-uc-blue text-white rounded text-sm hover:bg-uc-blue-dark transition-colors"
+        >
+          Ver detalles
+        </button>
+        {solicitud.status === "OPEN" && onApply && (
+          <button
+            onClick={() => onApply(solicitud.id)}
+            className="flex-1 px-3 py-2 border-2 border-uc-blue text-uc-blue rounded text-sm hover:bg-uc-blue hover:text-white transition-colors"
+          >
+            Postularse
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default SolicitudCard;

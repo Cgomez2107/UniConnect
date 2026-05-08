@@ -1,0 +1,131 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import useEvents from "@/hooks/useEvents";
+import { EventCard } from "@/components/shared/EventCard";
+import { Button } from "@/components/ui/Button";
+
+/**
+ * EventosPage - Display and manage campus events
+ */
+export function EventosPage() {
+  const navigate = useNavigate();
+  const { events = [], isLoading = false, error = null } = useEvents() as any;
+  const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
+  useEffect(() => {
+    let filtered = (events || []);
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (event: any) =>
+          (event.title?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+          (event.description?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter(
+        (event: any) => event.category === categoryFilter
+      );
+    }
+
+    setFilteredEvents(filtered);
+  }, [searchTerm, categoryFilter, events]);
+
+  const handleViewDetails = (id: string) => {
+    navigate(`/eventos/${id}`);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Eventos del Campus
+          </h1>
+          <p className="text-gray-600">
+            Descubre eventos académicos y sociales
+          </p>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="mb-6 flex gap-3 flex-wrap">
+          <input
+            type="text"
+            placeholder="Buscar eventos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 min-w-48 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+          />
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+          >
+            <option value="all">Todas las categorías</option>
+            <option value="WORKSHOP">Taller</option>
+            <option value="CONFERENCE">Conferencia</option>
+            <option value="SOCIAL">Social</option>
+            <option value="SPORTS">Deporte</option>
+            <option value="CULTURAL">Cultural</option>
+            <option value="ACADEMIC">Académico</option>
+          </select>
+          <Button onClick={() => navigate("/crear-evento")}>
+            + Nuevo Evento
+          </Button>
+        </div>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-64 bg-gray-200 rounded-lg animate-pulse"
+              ></div>
+            ))}
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* Events Grid */}
+        {!isLoading && filteredEvents.length > 0 && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredEvents.map((event: any) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                onViewDetails={handleViewDetails}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && filteredEvents.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-600 mb-4">
+              {searchTerm || categoryFilter !== "all"
+                ? "No hay eventos que coincidan con tu búsqueda"
+                : "No hay eventos disponibles"}
+            </p>
+            <Button onClick={() => navigate("/crear-evento")}>
+              Crear el primer evento
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default EventosPage;

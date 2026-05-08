@@ -1,0 +1,110 @@
+import { apiClient } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import {
+  StudyRequest,
+  StudyGroup,
+  CreateStudyRequestPayload,
+  Application,
+} from "@/types";
+
+/**
+ * Servicio de gestión de grupos de estudio
+ */
+const studyGroupsService = {
+  /**
+   * Obtiene la lista de todas las solicitudes de grupos de estudio
+   */
+  async listStudyGroups(): Promise<StudyRequest[]> {
+    try {
+      const response = await apiClient.get<{ data: StudyRequest[] }>(
+        API_ENDPOINTS.STUDY_GROUPS_LIST
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching study groups:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtiene los detalles de un grupo de estudio por ID
+   */
+  async getStudyGroupById(id: string): Promise<StudyGroup> {
+    try {
+      const response = await apiClient.get<{ data: StudyGroup }>(
+        API_ENDPOINTS.STUDY_GROUPS_BY_ID(id)
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error(`Error fetching study group ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Crea una nueva solicitud de grupo de estudio
+   */
+  async createStudyGroup(
+    data: CreateStudyRequestPayload
+  ): Promise<StudyRequest> {
+    try {
+      const response = await apiClient.post<{ data: StudyRequest }>(
+        API_ENDPOINTS.STUDY_GROUPS_CREATE,
+        data
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error creating study group:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Invita a un usuario a un grupo de estudio
+   */
+  async inviteToStudyGroup(groupId: string, userId: string): Promise<void> {
+    try {
+      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_INVITE(groupId), {
+        user_id: userId,
+      });
+    } catch (error) {
+      console.error(
+        `Error inviting user ${userId} to group ${groupId}:`,
+        error
+      );
+      throw error;
+    }
+  },
+
+  /**
+   * Abandona un grupo de estudio
+   */
+  async leaveStudyGroup(groupId: string): Promise<void> {
+    try {
+      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_LEAVE(groupId));
+    } catch (error) {
+      console.error(`Error leaving study group ${groupId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtiene las solicitudes de aplicación para un grupo de estudio
+   */
+  async getStudyGroupApplications(groupId: string): Promise<Application[]> {
+    try {
+      const response = await apiClient.get<{ data: Application[] }>(
+        `/study-groups/${groupId}/applications`
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error(
+        `Error fetching applications for group ${groupId}:`,
+        error
+      );
+      throw error;
+    }
+  },
+};
+
+export default studyGroupsService;
