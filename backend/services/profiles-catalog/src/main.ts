@@ -1,11 +1,13 @@
 import { createServer } from "node:http";
 import { SearchStudentsBySubject } from "./application/use-cases/SearchStudentsBySubject.js";
 import { GetStudentPublicProfile } from "./application/use-cases/GetStudentPublicProfile.js";
+import { GetPerfilCompleto } from "./application/use-cases/GetPerfilCompleto.js";
 import { GetPrograms } from "./application/use-cases/GetPrograms.js";
 import { GetSubjectsByProgram } from "./application/use-cases/GetSubjectsByProgram.js";
 import { loadProfilesCatalogEnv } from "./config/env.js";
 import { PostgresStudentRepository } from "./infrastructure/database/PostgresStudentRepository.js";
 import { PostgresFacultyCatalogRepository } from "./infrastructure/database/PostgresFacultyCatalogRepository.js";
+import { PostgresIndicadoresRepository } from "./infrastructure/database/PostgresIndicadoresRepository.js";
 import { Database } from "./infrastructure/database/Database.js";
 import { ProfilesCatalogController } from "./interfaces/http/controllers/ProfilesCatalogController.js";
 import { handleProfilesCatalogRoutes } from "./interfaces/http/routes/profilesCatalogRoutes.js";
@@ -23,10 +25,12 @@ function bootstrap(): void {
   // Repositorios con BD real e inyección de dependencia
   const studentRepository = new PostgresStudentRepository(pool);
   const catalogRepository = new PostgresFacultyCatalogRepository(pool);
+  const indicadoresRepository = new PostgresIndicadoresRepository(pool);
 
   // Use cases con dependencias inyectadas
   const searchStudents = new SearchStudentsBySubject(studentRepository);
   const getPublicProfile = new GetStudentPublicProfile(studentRepository);
+  const getPerfilCompleto = new GetPerfilCompleto(indicadoresRepository);
   const getPrograms = new GetPrograms(catalogRepository);
   const getSubjectsByProgram = new GetSubjectsByProgram(catalogRepository);
 
@@ -34,6 +38,7 @@ function bootstrap(): void {
   const controller = new ProfilesCatalogController(
     searchStudents,
     getPublicProfile,
+    getPerfilCompleto,
     getPrograms,
     getSubjectsByProgram,
   );
