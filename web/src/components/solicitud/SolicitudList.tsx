@@ -1,10 +1,10 @@
 import React from "react";
-import { StudyRequest } from "@/types";
+import { StudyRequestUI } from "@/types/ui";
 
 interface SolicitudListProps {
-  solicitudes: StudyRequest[];
+  solicitudes: StudyRequestUI[];
   loading?: boolean;
-  onSelectSolicitud: (solicitud: StudyRequest) => void;
+  onSelectSolicitud: (solicitud: StudyRequestUI) => void;
 }
 
 /**
@@ -44,9 +44,7 @@ export function SolicitudList({
           onClick={() => onSelectSolicitud(solicitud)}
           className="w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border-l-4 border-l-uc-blue"
         >
-          <h3 className="font-semibold text-gray-900">
-            {solicitud.subject?.name}
-          </h3>
+          <h3 className="font-semibold text-gray-900">{solicitud.subjectName}</h3>
           <p className="text-sm text-gray-600 mt-1">
             {solicitud.description}
           </p>

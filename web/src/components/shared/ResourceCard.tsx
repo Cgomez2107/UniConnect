@@ -1,9 +1,9 @@
 import React from "react";
-import { StudyResource } from "@/types";
+import { StudyResourceUI } from "@/types/ui";
 import { Badge } from "@/components/ui/Badge";
 
 interface ResourceCardProps {
-  resource: StudyResource;
+  resource: StudyResourceUI;
   onViewDetails: (id: string) => void;
   onDelete?: (id: string) => void;
   isOwner?: boolean;
@@ -27,22 +27,20 @@ export function ResourceCard({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
-      <div className="flex items-start gap-3 mb-3">
-        <span className="text-2xl">{getFileIcon(resource.fileType)}</span>
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">{resource.title}</h3>
-          <p className="text-sm text-gray-600">{resource.subject?.name}</p>
+        <div className="flex items-start gap-3 mb-3">
+          <span className="text-2xl">{getFileIcon(resource.fileType || "")}</span>
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900">{resource.title}</h3>
+            <p className="text-sm text-gray-600">{resource.subject?.name || resource.subjectName}</p>
+          </div>
         </div>
-      </div>
 
       <p className="text-sm text-gray-700 mb-3 line-clamp-2">
         {resource.description}
       </p>
 
       <div className="flex justify-between items-center mb-3">
-        <span className="text-xs text-gray-500">
-          👤 {resource.uploadedBy || "Anónimo"}
-        </span>
+        <span className="text-xs text-gray-500">👤 {resource.uploadedBy || resource.uploaderName || "Anónimo"}</span>
         <Badge>{resource.fileType}</Badge>
       </div>
 

@@ -1,8 +1,8 @@
 import React from "react";
-import { Conversation } from "@/types";
+import { ConversationUI } from "@/types/ui";
 
 interface ConversationItemProps {
-  conversation: Conversation;
+  conversation: ConversationUI;
   isSelected: boolean;
   onClick: () => void;
   unreadCount?: number;
@@ -26,11 +26,9 @@ export function ConversationItem({
     >
       <div className="flex-1 text-left">
         <h3 className="font-medium text-gray-900">
-          {conversation.participantName || "Chat"}
+          {conversation.otherUserName || "Chat"}
         </h3>
-        <p className="text-sm text-gray-600 truncate">
-          {conversation.lastMessage?.content || "No hay mensajes aún"}
-        </p>
+        <p className="text-sm text-gray-600 truncate">{conversation.lastMessage || "No hay mensajes aún"}</p>
       </div>
       {unreadCount > 0 && (
         <span className="ml-2 bg-uc-blue text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">

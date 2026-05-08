@@ -1,9 +1,9 @@
 import React from "react";
-import { Message, AuthProfile } from "@/types";
+import { MessageUI, UserSessionUI } from "@/types/ui";
 
 interface MessageBubbleProps {
-  message: Message;
-  currentUser: AuthProfile | null;
+  message: MessageUI;
+  currentUser: UserSessionUI | null;
   previousSenderSame?: boolean;
 }
 

@@ -75,6 +75,21 @@ export default function useForm<T extends Record<string, any>>(
     }));
   }, []);
 
+  const handleChange = useCallback(
+    (
+      e:
+        | React.ChangeEvent<HTMLInputElement>
+        | React.ChangeEvent<HTMLTextAreaElement>
+        | React.ChangeEvent<HTMLSelectElement>
+    ) => {
+      const { name, value, type } = e.target;
+      const nextValue = type === "number" ? Number(value) : value;
+      setFieldValue(name as keyof T, nextValue);
+      setFieldTouched(name);
+    },
+    [setFieldTouched, setFieldValue]
+  );
+
   const handleSubmit = useCallback(
     async (e?: React.FormEvent) => {
       if (e) {
@@ -128,6 +143,7 @@ export default function useForm<T extends Record<string, any>>(
     setFieldValue,
     setFieldError,
     setFieldTouched,
+    handleChange,
     handleSubmit,
     reset,
   };

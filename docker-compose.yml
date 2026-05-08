@@ -31,12 +31,17 @@ services:
       dockerfile: Dockerfile.dev
     container_name: uniconnect-backend-setup
     working_dir: /app
-    command: sh -c "pnpm install"
+    # Run pnpm in workspace mode, frozen lockfile and pipe a 'yes' to accept prompts
+    # This avoids interactive prompts on pnpm versions that don't support --no-interactive or -y
+    command: sh -c "yes | pnpm -w install --frozen-lockfile"
     environment:
+      # CI=true helps make package tools non-interactive in CI/containers
+      CI: "true"
       PNPM_STORE_DIR: /pnpm-store
     volumes:
       - ./backend:/app
       - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     networks:
       - uniconnect-network
 
@@ -63,6 +68,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     depends_on:
       backend-setup:
         condition: service_completed_successfully
@@ -107,6 +113,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     depends_on:
       backend-setup:
         condition: service_completed_successfully
@@ -137,6 +144,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     depends_on:
       backend-setup:
         condition: service_completed_successfully
@@ -167,6 +175,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     depends_on:
       backend-setup:
         condition: service_completed_successfully
@@ -197,6 +206,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     depends_on:
       backend-setup:
         condition: service_completed_successfully
@@ -227,6 +237,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     depends_on:
       backend-setup:
         condition: service_completed_successfully
@@ -257,6 +268,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     depends_on:
       backend-setup:
         condition: service_completed_successfully
@@ -306,6 +318,8 @@ volumes:
   db-data:
     driver: local
   backend-pnpm-store:
+    driver: local
+  backend-node-modules:
     driver: local
 
 networks:

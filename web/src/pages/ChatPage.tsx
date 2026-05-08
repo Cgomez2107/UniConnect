@@ -12,7 +12,7 @@ interface Message {
 
 interface Conversation {
   id: string;
-  participantName: string;
+  otherUserName: string;
 }
 
 export const ChatPage: React.FC = () => {
@@ -85,7 +85,7 @@ export const ChatPage: React.FC = () => {
     <div className="flex flex-col h-screen bg-gray-50">
       <header className="bg-uc-blue text-white p-4">
         <h1 className="text-xl font-bold">
-          Chat: {conversation?.participantName}
+          Chat: {conversation?.otherUserName}
         </h1>
       </header>
 

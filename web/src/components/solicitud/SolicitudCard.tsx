@@ -1,9 +1,8 @@
 import React from "react";
-import { StudyRequest, RequestStatus } from "@/types";
-import { Badge } from "@/components/ui/Badge";
+import { StudyRequestUI, RequestStatusUI } from "@/types/ui";
 
 interface SolicitudCardProps {
-  solicitud: StudyRequest;
+  solicitud: StudyRequestUI;
   onViewDetails: (id: string) => void;
   onApply?: (id: string) => void;
 }
@@ -16,27 +15,27 @@ export function SolicitudCard({
   onViewDetails,
   onApply,
 }: SolicitudCardProps) {
-  const statusLabels: Record<RequestStatus, string> = {
-    OPEN: "Abierto",
-    IN_PROGRESS: "En progreso",
-    CLOSED: "Cerrado",
+  const statusLabels: Record<RequestStatusUI, string> = {
+    abierta: "Abierto",
+    cerrada: "Cerrada",
+    expirada: "Expirada",
   };
 
-  const statusColors: Record<RequestStatus, string> = {
-    OPEN: "bg-green-100 text-green-800",
-    IN_PROGRESS: "bg-blue-100 text-blue-800",
-    CLOSED: "bg-gray-100 text-gray-800",
+  const statusColors: Record<RequestStatusUI, string> = {
+    abierta: "bg-green-100 text-green-800",
+    cerrada: "bg-gray-100 text-gray-800",
+    expirada: "bg-yellow-100 text-yellow-800",
   };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-lg text-gray-900">
-          {solicitud.subject?.name || "Solicitud"}
+          {solicitud.subjectName || solicitud.subjects?.name || "Solicitud"}
         </h3>
-        <Badge variant={statusColors[solicitud.status]}>
+        <span className={`px-2 py-1 text-xs rounded ${statusColors[solicitud.status]}`}>
           {statusLabels[solicitud.status]}
-        </Badge>
+        </span>
       </div>
 
       <p className="text-sm text-gray-600 mb-3">
@@ -55,7 +54,7 @@ export function SolicitudCard({
         >
           Ver detalles
         </button>
-        {solicitud.status === "OPEN" && onApply && (
+        {solicitud.status === "abierta" && onApply && (
           <button
             onClick={() => onApply(solicitud.id)}
             className="flex-1 px-3 py-2 border-2 border-uc-blue text-uc-blue rounded text-sm hover:bg-uc-blue hover:text-white transition-colors"

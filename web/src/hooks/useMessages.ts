@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
-import { Message } from "@/types";
+import { MessageUI } from "@/types/ui";
 import messagingService from "@/lib/services/messaging.service";
 
 interface UseMessagesState {
-  messages: Message[];
+  messages: MessageUI[];
   isLoading: boolean;
   error: string | null;
 }

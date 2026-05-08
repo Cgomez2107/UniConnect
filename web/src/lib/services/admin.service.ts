@@ -1,12 +1,14 @@
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import {
-  AdminUser,
-  AdminRequest,
-  AdminResource,
-  AdminEvent,
+  AdminUser as AdminUserApi,
+  AdminRequest as AdminRequestApi,
+  AdminResource as AdminResourceApi,
+  AdminEvent as AdminEventApi,
   AdminMetrics,
 } from "@/types";
+import { mapAdminUserApiToUI, mapStudyRequestApiToUI } from "@/utils/mappers";
+import { AdminUserUI, StudyRequestUI } from "@/types/ui";
 
 /**
  * Servicio de operaciones administrativas
@@ -15,12 +17,12 @@ const adminService = {
   /**
    * Obtiene la lista de usuarios registrados
    */
-  async getUsers(): Promise<AdminUser[]> {
+  async getUsers(): Promise<AdminUserUI[]> {
     try {
-      const response = await apiClient.get<{ data: AdminUser[] }>(
+      const response = await apiClient.get<{ data: AdminUserApi[] }>(
         API_ENDPOINTS.ADMIN_USERS
       );
-      return response.data.data;
+      return response.data.data.map(mapAdminUserApiToUI);
     } catch (error) {
       console.error("Error fetching users:", error);
       throw error;
@@ -30,9 +32,9 @@ const adminService = {
   /**
    * Obtiene la lista de solicitudes de grupos de estudio
    */
-  async getRequests(): Promise<AdminRequest[]> {
+  async getRequests(): Promise<AdminRequestApi[]> {
     try {
-      const response = await apiClient.get<{ data: AdminRequest[] }>(
+      const response = await apiClient.get<{ data: AdminRequestApi[] }>(
         API_ENDPOINTS.ADMIN_REQUESTS
       );
       return response.data.data;
@@ -45,9 +47,9 @@ const adminService = {
   /**
    * Obtiene la lista de recursos de estudio
    */
-  async getResources(): Promise<AdminResource[]> {
+  async getResources(): Promise<AdminResourceApi[]> {
     try {
-      const response = await apiClient.get<{ data: AdminResource[] }>(
+      const response = await apiClient.get<{ data: AdminResourceApi[] }>(
         API_ENDPOINTS.ADMIN_RESOURCES
       );
       return response.data.data;
@@ -60,9 +62,9 @@ const adminService = {
   /**
    * Obtiene la lista de eventos del campus
    */
-  async getEvents(): Promise<AdminEvent[]> {
+  async getEvents(): Promise<AdminEventApi[]> {
     try {
-      const response = await apiClient.get<{ data: AdminEvent[] }>(
+      const response = await apiClient.get<{ data: AdminEventApi[] }>(
         API_ENDPOINTS.ADMIN_EVENTS
       );
       return response.data.data;

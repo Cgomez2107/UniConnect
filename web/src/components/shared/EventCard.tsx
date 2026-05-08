@@ -1,9 +1,9 @@
 import React from "react";
-import { CampusEvent, EventCategory } from "@/types";
+import { CampusEventUI, EventCategoryUI } from "@/types/ui";
 import { Badge } from "@/components/ui/Badge";
 
 interface EventCardProps {
-  event: CampusEvent;
+  event: CampusEventUI;
   onViewDetails: (id: string) => void;
   onAttend?: (id: string) => void;
   isAttending?: boolean;
@@ -18,23 +18,17 @@ export function EventCard({
   onAttend,
   isAttending = false,
 }: EventCardProps) {
-  const categoryLabels: Record<EventCategory, string> = {
-    WORKSHOP: "Taller",
-    CONFERENCE: "Conferencia",
-    SOCIAL: "Social",
-    SPORTS: "Deporte",
-    CULTURAL: "Cultural",
-    ACADEMIC: "Académico",
+  const categoryLabels: Record<EventCategoryUI, string> = {
+    academico: "Académico",
+    cultural: "Cultural",
+    deportivo: "Deporte",
+    otro: "Otro",
   };
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       {event.imageUrl && (
-        <img
-          src={event.imageUrl}
-          alt={event.title}
-          className="w-full h-40 object-cover"
-        />
+        <img src={event.imageUrl} alt={event.title} className="w-full h-40 object-cover" />
       )}
 
       <div className="p-4">
@@ -49,7 +43,9 @@ export function EventCard({
 
         <div className="space-y-2 mb-4 text-sm text-gray-700">
           <p>📅 {new Date(event.eventDate).toLocaleDateString("es-CO")}</p>
-          <p>⏰ {event.eventTime}</p>
+          <p>
+            ⏰ {new Date(event.eventDate).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
+          </p>
           <p>📍 {event.location}</p>
         </div>
 

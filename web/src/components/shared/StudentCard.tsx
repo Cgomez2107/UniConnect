@@ -1,9 +1,9 @@
 import React from "react";
-import { StudentSearchResult } from "@/types";
+import { StudentSearchResultUI } from "@/types/ui";
 import { Avatar } from "@/components/ui/Avatar";
 
 interface StudentCardProps {
-  student: StudentSearchResult;
+  student: StudentSearchResultUI;
   onViewProfile: (id: string) => void;
   actionButton?: React.ReactNode;
 }
@@ -19,10 +19,10 @@ export function StudentCard({
   return (
     <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
       <div className="flex items-center gap-3 mb-3">
-        <Avatar src={student.profileImage} name={student.name} />
+        <Avatar src={student.avatarUrl ?? undefined} name={student.fullName} />
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">{student.name}</h3>
-          <p className="text-sm text-gray-600">{student.program?.name}</p>
+          <h3 className="font-semibold text-gray-900">{student.fullName}</h3>
+          <p className="text-sm text-gray-600">{student.programName}</p>
         </div>
       </div>
 

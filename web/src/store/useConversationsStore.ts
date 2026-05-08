@@ -1,16 +1,17 @@
 import { create } from "zustand";
-import type { Message, Conversation } from "@/types";
+import type { Message as MessageApi, Conversation as ConversationApi } from "@/types";
+import type { MessageUI, ConversationUI } from "@/types/ui";
 
 interface ConversationsStore {
-  conversations: Conversation[];
-  currentConversation: Conversation | null;
-  messages: Message[];
+  conversations: ConversationUI[];
+  currentConversation: ConversationUI | null;
+  messages: MessageUI[];
   isLoading: boolean;
 
-  setConversations: (conversations: Conversation[]) => void;
-  setCurrentConversation: (conversation: Conversation) => void;
-  addMessage: (message: Message) => void;
-  setMessages: (messages: Message[]) => void;
+  setConversations: (conversations: ConversationUI[]) => void;
+  setCurrentConversation: (conversation: ConversationUI) => void;
+  addMessage: (message: MessageUI) => void;
+  setMessages: (messages: MessageUI[]) => void;
   setIsLoading: (loading: boolean) => void;
   clearCurrentConversation: () => void;
 }

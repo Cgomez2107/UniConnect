@@ -1,15 +1,6 @@
 import { useState, useCallback } from "react";
 import eventsService from "@/lib/services/events.service";
-
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  createdBy: string;
-}
+import { CampusEventUI } from "@/types/ui";
 
 interface CreateEventPayload {
   title: string;
@@ -20,7 +11,7 @@ interface CreateEventPayload {
 }
 
 interface UseEventsState {
-  events: Event[];
+  events: CampusEventUI[];
   isLoading: boolean;
   error: string | null;
 }
@@ -54,7 +45,7 @@ export default function useEvents() {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       const data = await eventsService.listEvents();
-      setState({ events: data as Event[], isLoading: false, error: null });
+      setState({ events: data as CampusEventUI[], isLoading: false, error: null });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Error cargando eventos";
@@ -73,7 +64,7 @@ export default function useEvents() {
       const event = await eventsService.createEvent(payload as any);
       setState((prev) => ({
         ...prev,
-        events: [...prev.events, event as Event],
+        events: [...prev.events, event as CampusEventUI],
         isLoading: false,
       }));
       return event;
@@ -97,7 +88,7 @@ export default function useEvents() {
         const updated = await eventsService.updateEvent(eventId, payload as any);
         setState((prev) => ({
           ...prev,
-          events: prev.events.map((e) => (e.id === eventId ? updated as Event : e)),
+          events: prev.events.map((e) => (e.id === eventId ? updated as CampusEventUI : e)),
           isLoading: false,
         }));
         return updated;

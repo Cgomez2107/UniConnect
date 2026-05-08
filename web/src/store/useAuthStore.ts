@@ -1,24 +1,16 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api/client";
-
-export type UserRole = "estudiante" | "admin";
-
-export interface UserSession {
-  id: string;
-  email: string;
-  fullName: string;
-  avatarUrl?: string | null;
-  role: UserRole;
-}
+import { UserSessionUI } from "@/types/ui";
+import { mapAuthUserApiToUI } from "@/utils/mappers";
 
 interface AuthState {
-  user: UserSession | null;
+  user: UserSessionUI | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  setUser: (user: UserSession | null) => void;
+  setUser: (user: UserSessionUI | null) => void;
   restoreSession: () => Promise<void>;
 }
 
@@ -54,13 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         localStorage.setItem("accessToken", access_token);
       }
 
-      const userSession: UserSession = {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name || "Estudiante",
-        avatarUrl: user.avatar_url,
-        role: user.role === "admin" ? "admin" : "estudiante",
-      };
+      const userSession = mapAuthUserApiToUI(user);
 
       set({ user: userSession, isAuthenticated: true, isLoading: false });
     } catch (error) {
@@ -85,13 +71,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await apiClient.get("/auth/session");
       const user = response.data;
 
-      const userSession: UserSession = {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name || "Estudiante",
-        avatarUrl: user.avatar_url,
-        role: user.role === "admin" ? "admin" : "estudiante",
-      };
+      const userSession = mapAuthUserApiToUI(user);
 
       set({ user: userSession, isAuthenticated: true });
     } catch (error) {

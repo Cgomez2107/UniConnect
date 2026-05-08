@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
-import { Conversation, Message } from "@/types";
 import messagingService from "@/lib/services/messaging.service";
 import { useConversationsStore } from "@/store/useConversationsStore";
+import type { ConversationUI, MessageUI } from "@/types/ui";
 
 interface UseConversationsState {
-  conversations: Conversation[];
-  currentConversation: Conversation | null;
-  messages: Message[];
+  conversations: ConversationUI[];
+  currentConversation: ConversationUI | null;
+  messages: MessageUI[];
   loading: boolean;
   error: string | null;
 }
@@ -65,8 +65,9 @@ export default function useConversations() {
     async (conversationId: string) => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
-        const conversation =
-          await messagingService.getConversationById(conversationId);
+        const conversation = await messagingService.getConversationById(
+          conversationId
+        );
         const messages = await messagingService.getMessages(conversationId);
         setState((prev) => ({
           ...prev,
@@ -96,7 +97,7 @@ export default function useConversations() {
 
       try {
         const message = await messagingService.sendMessage(
-          state.currentConversation.id,
+          state.currentConversation!.id,
           content
         );
         setState((prev) => ({

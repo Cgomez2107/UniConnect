@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 export function MensajesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { conversations = [], isLoading: conversationsLoading = false } = useConversations();
+  const { conversations = [], loading: conversationsLoading = false } = useConversations();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [messageText, setMessageText] = useState("");
@@ -71,9 +71,7 @@ export function MensajesPage() {
         <div className="flex-1 flex flex-col bg-white">
           {/* Chat Header */}
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {selectedConversation.participantName}
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900">{selectedConversation.otherUserName}</h2>
             <button className="text-gray-600 hover:text-gray-900">
               ⋯
             </button>

@@ -1,6 +1,8 @@
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import { Conversation, Message, SendMessagePayload } from "@/types";
+import { Conversation as ConversationApi, Message as MessageApi, SendMessagePayload } from "@/types";
+import { mapConversationApiToUI, mapMessageApiToUI } from "@/utils/mappers";
+import type { ConversationUI, MessageUI } from "@/types/ui";
 
 /**
  * Servicio de mensajería y conversaciones
@@ -9,12 +11,12 @@ const messagingService = {
   /**
    * Obtiene todas las conversaciones del usuario autenticado
    */
-  async getConversations(): Promise<Conversation[]> {
+  async getConversations(): Promise<ConversationUI[]> {
     try {
-      const response = await apiClient.get<{ data: Conversation[] }>(
+      const response = await apiClient.get<{ data: ConversationApi[] }>(
         API_ENDPOINTS.CONVERSATIONS_LIST
       );
-      return response.data.data;
+      return response.data.data.map(mapConversationApiToUI);
     } catch (error) {
       console.error("Error fetching conversations:", error);
       throw error;
@@ -24,12 +26,12 @@ const messagingService = {
   /**
    * Obtiene los detalles de una conversación por ID
    */
-  async getConversationById(id: string): Promise<Conversation> {
+  async getConversationById(id: string): Promise<ConversationUI> {
     try {
-      const response = await apiClient.get<{ data: Conversation }>(
+      const response = await apiClient.get<{ data: ConversationApi }>(
         API_ENDPOINTS.CONVERSATIONS_BY_ID(id)
       );
-      return response.data.data;
+      return mapConversationApiToUI(response.data.data);
     } catch (error) {
       console.error(`Error fetching conversation ${id}:`, error);
       throw error;
@@ -39,13 +41,13 @@ const messagingService = {
   /**
    * Crea una nueva conversación con un participante
    */
-  async createConversation(participantId: string): Promise<Conversation> {
+  async createConversation(participantId: string): Promise<ConversationUI> {
     try {
-      const response = await apiClient.post<{ data: Conversation }>(
+      const response = await apiClient.post<{ data: ConversationApi }>(
         API_ENDPOINTS.CONVERSATIONS_CREATE,
         { participant_id: participantId }
       );
-      return response.data.data;
+      return mapConversationApiToUI(response.data.data);
     } catch (error) {
       console.error(
         `Error creating conversation with ${participantId}:`,
@@ -58,12 +60,12 @@ const messagingService = {
   /**
    * Obtiene todos los mensajes de una conversación
    */
-  async getMessages(conversationId: string): Promise<Message[]> {
+  async getMessages(conversationId: string): Promise<MessageUI[]> {
     try {
-      const response = await apiClient.get<{ data: Message[] }>(
+      const response = await apiClient.get<{ data: MessageApi[] }>(
         API_ENDPOINTS.MESSAGES_LIST(conversationId)
       );
-      return response.data.data;
+      return response.data.data.map(mapMessageApiToUI);
     } catch (error) {
       console.error(
         `Error fetching messages for conversation ${conversationId}:`,
@@ -79,17 +81,17 @@ const messagingService = {
   async sendMessage(
     conversationId: string,
     content: string
-  ): Promise<Message> {
+  ): Promise<MessageUI> {
     try {
       const payload: SendMessagePayload = {
         conversation_id: conversationId,
         content,
       };
-      const response = await apiClient.post<{ data: Message }>(
+      const response = await apiClient.post<{ data: MessageApi }>(
         API_ENDPOINTS.MESSAGES_SEND(conversationId),
         payload
       );
-      return response.data.data;
+      return mapMessageApiToUI(response.data.data as MessageApi);
     } catch (error) {
       console.error(
         `Error sending message to conversation ${conversationId}:`,

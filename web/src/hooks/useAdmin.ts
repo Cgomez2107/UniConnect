@@ -1,17 +1,11 @@
 import { useState, useCallback } from "react";
 import adminService from "@/lib/services/admin.service";
-import { Profile } from "@/types";
-
-interface AdminMetrics {
-  totalUsers: number;
-  activeUsers: number;
-  totalStudyGroups: number;
-  totalResources: number;
-}
+import { AdminUserUI } from "@/types/ui";
+import { AdminRequest, AdminMetrics } from "@/types";
 
 interface UseAdminState {
-  users: Profile[];
-  requests: any[];
+  users: AdminUserUI[];
+  requests: AdminRequest[];
   resources: any[];
   events: any[];
   metrics: AdminMetrics | null;
@@ -74,7 +68,7 @@ export default function useAdmin() {
   const getRequests = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await adminService.getStudyGroupRequests();
+      const data = await adminService.getRequests();
       setState((prev) => ({
         ...prev,
         requests: data,

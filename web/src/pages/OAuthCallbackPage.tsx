@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
+import { mapAuthUserApiToUI } from "@/utils/mappers";
 
 /**
  * OAuthCallbackPage - Maneja el redirect de OAuth desde Supabase
@@ -49,7 +50,7 @@ export function OAuthCallbackPage() {
                   role: "estudiante" as const,
                 };
                 localStorage.setItem("user", JSON.stringify(userData));
-                setUser(userData);
+                setUser(mapAuthUserApiToUI(userData));
               }
             }
           } catch (error) {
