@@ -62,9 +62,9 @@ export const Input: React.FC<InputProps> = ({
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-neutral-700 mb-1">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-error-500 ml-1">*</span>}
         </label>
       )}
       <input
@@ -79,15 +79,15 @@ export const Input: React.FC<InputProps> = ({
         required={required}
         className={`
           w-full px-3 py-2 border rounded-lg transition-colors duration-200
-          focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:bg-gray-100 disabled:cursor-not-allowed
-          ${error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-uc-blue focus:border-uc-blue'}
+          focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:bg-neutral-100 disabled:cursor-not-allowed
+          ${error ? 'border-error-500 focus:ring-error-500' : 'border-neutral-300 focus:ring-primary-500 focus:border-primary-500'}
           ${className}
         `}
         aria-invalid={!!error}
         aria-describedby={error ? `${inputId}-error` : undefined}
       />
       {error && (
-        <p id={`${inputId}-error`} className="text-red-500 text-sm mt-1">
+        <p id={`${inputId}-error`} className="text-error-500 text-sm mt-1">
           {error}
         </p>
       )}

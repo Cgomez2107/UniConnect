@@ -29,8 +29,8 @@ export function MessageBubble({
       <div
         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
           isOwn
-            ? "bg-uc-blue text-white rounded-br-none"
-            : "bg-gray-200 text-gray-800 rounded-bl-none"
+            ? "bg-primary-600 text-white rounded-br-none"
+            : "bg-neutral-200 text-neutral-800 rounded-bl-none"
         }`}
       >
         <p className="text-sm">{message.content}</p>
@@ -43,7 +43,7 @@ export function MessageBubble({
         )}
         <p
           className={`text-xs mt-1 ${
-            isOwn ? "text-blue-100" : "text-gray-500"
+            isOwn ? "text-primary-200" : "text-neutral-500"
           }`}
         >
           {new Date(message.createdAt).toLocaleTimeString("es-CO", {

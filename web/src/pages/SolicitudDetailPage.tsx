@@ -32,7 +32,7 @@ export function SolicitudDetailPage() {
   if (!solicitud) {
     return (
       <div className="p-8 text-center">
-        <p className="text-gray-600 mb-4">Solicitud no encontrada</p>
+        <p className="text-neutral-600 mb-4">Solicitud no encontrada</p>
         <Button onClick={() => navigate("/invitaciones")}>
           Volver a solicitudes
         </Button>
@@ -41,42 +41,42 @@ export function SolicitudDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-50">
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <button
           onClick={() => navigate("/invitaciones")}
-          className="text-uc-blue hover:underline mb-4"
+          className="text-primary-600 hover:underline mb-4"
         >
           ← Volver
         </button>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-neutral-900 mb-2">
             {solicitud.subject?.name}
           </h1>
-          <p className="text-gray-600 mb-4">{solicitud.description}</p>
+          <p className="text-neutral-600 mb-4">{solicitud.description}</p>
 
           <div className="grid md:grid-cols-2 gap-4 mb-6">
             <div>
-              <p className="text-sm text-gray-600">Creador</p>
-              <p className="font-semibold text-gray-900">
+              <p className="text-sm text-neutral-600">Creador</p>
+              <p className="font-semibold text-neutral-900">
                 {solicitud.creatorName}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Miembros</p>
-              <p className="font-semibold text-gray-900">
+              <p className="text-sm text-neutral-600">Miembros</p>
+              <p className="font-semibold text-neutral-900">
                 {solicitud.memberCount}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Estado</p>
-              <p className="font-semibold text-gray-900">{solicitud.status}</p>
+              <p className="text-sm text-neutral-600">Estado</p>
+              <p className="font-semibold text-neutral-900">{solicitud.status}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Creado</p>
-              <p className="font-semibold text-gray-900">
+              <p className="text-sm text-neutral-600">Creado</p>
+              <p className="font-semibold text-neutral-900">
                 {new Date(solicitud.createdAt).toLocaleDateString("es-CO")}
               </p>
             </div>
@@ -95,19 +95,19 @@ export function SolicitudDetailPage() {
         {/* Applications List (if owner) */}
         {user?.id === solicitud.creatorId && (
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+            <h2 className="text-xl font-bold text-neutral-900 mb-4">
               Postulaciones ({applications.length})
             </h2>
             {applications.length === 0 ? (
-              <p className="text-gray-600">Sin postulaciones aún</p>
+              <p className="text-neutral-600">Sin postulaciones aún</p>
             ) : (
               <div className="space-y-3">
                 {applications.map((app) => (
-                  <div key={app.id} className="border-l-4 border-l-uc-blue p-3">
-                    <p className="font-semibold text-gray-900">
+                  <div key={app.id} className="border-l-4 border-l-primary-500 p-3">
+                    <p className="font-semibold text-neutral-900">
                       {app.applicantName}
                     </p>
-                    <p className="text-sm text-gray-600">{app.message}</p>
+                    <p className="text-sm text-neutral-600">{app.message}</p>
                   </div>
                 ))}
               </div>
@@ -125,7 +125,7 @@ export function SolicitudDetailPage() {
         <div className="space-y-4">
           <textarea
             placeholder="Cuéntanos por qué quieres unirte a este grupo..."
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+            className="w-full p-3 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
             rows={4}
           />
           <div className="flex gap-2 justify-end">

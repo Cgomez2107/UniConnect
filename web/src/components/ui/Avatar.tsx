@@ -65,7 +65,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       className={`
         ${sizeStyles[size]}
         rounded-full flex items-center justify-center flex-shrink-0
-        overflow-hidden bg-uc-blue text-white font-semibold
+        overflow-hidden bg-primary-600 text-white font-semibold
         ${className}
       `}
     >

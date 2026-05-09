@@ -52,16 +52,16 @@ export const AdminPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-uc-blue text-white p-4">
+    <div className="min-h-screen bg-neutral-50">
+      <nav className="bg-primary-600 text-white p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold">Admin Panel</h1>
           <div className="flex items-center gap-4">
-            <span>{user?.fullName}</span>
+            <span>{user ? `${user.firstName} ${user.lastName}` : ''}</span>
             <button
               type="button"
               onClick={handleLogout}
-              className="bg-uc-gold text-uc-blue px-4 py-2 rounded hover:bg-uc-gold-dark"
+              className="bg-secondary-500 text-primary-700 px-4 py-2 rounded hover:bg-secondary-600"
             >
               Salir
             </button>
@@ -70,19 +70,19 @@ export const AdminPage: React.FC = () => {
       </nav>
 
       <main className="max-w-7xl mx-auto p-6">
-        <h2 className="text-3xl font-bold text-uc-blue mb-6">
+        <h2 className="text-3xl font-bold text-primary-600 mb-6">
           Grupos de Estudio
         </h2>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded mb-6">
+          <div className="bg-error-50 border border-error-200 text-error-700 p-4 rounded mb-6">
             {error}
           </div>
         )}
 
         {isLoading ? (
           <div className="text-center py-12">
-            <p className="text-gray-600">Cargando...</p>
+            <p className="text-neutral-600">Cargando...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -91,11 +91,11 @@ export const AdminPage: React.FC = () => {
                 key={group.id}
                 className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
               >
-                <h3 className="text-xl font-bold text-uc-blue mb-2">
+                <h3 className="text-xl font-bold text-primary-600 mb-2">
                   {group.name}
                 </h3>
-                <p className="text-gray-600 mb-2">{group.subject}</p>
-                <p className="text-sm text-gray-500">
+                <p className="text-neutral-600 mb-2">{group.subject}</p>
+                <p className="text-sm text-neutral-500">
                   Miembros: {group.memberCount}
                 </p>
               </div>

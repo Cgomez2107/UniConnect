@@ -4,6 +4,7 @@ import useAuth from "@/hooks/useAuth";
 import useFeed from "@/hooks/useFeed";
 import { SolicitudCard } from "@/components/solicitud/SolicitudCard";
 import { Button } from "@/components/ui/Button";
+import { typographyStyles } from "@uniconnect/shared-ui";
 
 /**
  * SolicitudesPage - Display and manage study group requests/solicitudes
@@ -33,14 +34,21 @@ export function SolicitudesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1
+            className="text-neutral-900 mb-2"
+            style={{
+              fontSize: typographyStyles.h1.fontSize,
+              fontWeight: typographyStyles.h1.fontWeight,
+              lineHeight: typographyStyles.h1.lineHeight,
+            }}
+          >
             Solicitudes de Grupos de Estudio
           </h1>
-          <p className="text-gray-600">
+          <p className="text-neutral-700">
             Encuentra y únete a grupos de estudio activos
           </p>
         </div>
@@ -52,7 +60,7 @@ export function SolicitudesPage() {
             placeholder="Buscar por materia o descripción..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+            className="flex-1 px-4 py-3 bg-neutral-50 text-neutral-900 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-600"
           />
           <Button onClick={() => navigate("/nueva-solicitud")}>
             + Nueva Solicitud
@@ -61,11 +69,11 @@ export function SolicitudesPage() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="h-40 bg-gray-200 rounded-lg animate-pulse"
+                className="h-40 bg-neutral-100 border border-neutral-200 rounded-lg animate-pulse"
               ></div>
             ))}
           </div>
@@ -73,14 +81,14 @@ export function SolicitudesPage() {
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <div className="bg-error-50 border border-error-200 rounded-lg p-4 text-error-700">
             {error}
           </div>
         )}
 
         {/* Solicitudes Grid */}
         {!isLoading && filteredSolicitudes.length > 0 && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-4">
             {filteredSolicitudes.map((solicitud: any) => (
               <SolicitudCard
                 key={solicitud.id}
@@ -95,7 +103,7 @@ export function SolicitudesPage() {
         {/* Empty State */}
         {!isLoading && filteredSolicitudes.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">
+            <p className="text-neutral-700 mb-4">
               {searchTerm
                 ? "No hay solicitudes que coincidan con tu búsqueda"
                 : "No hay solicitudes disponibles"}

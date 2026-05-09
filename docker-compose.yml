@@ -1,41 +1,18 @@
 # ============================================================================
-# docker-compose.yml - Stack local: backend + frontend + db
-# Ubicacion: repo root
+# docker-compose.yml - Stack: backend services + web + frontend
+# Services connect to Supabase DB via their own .env files
 # ============================================================================
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: uniconnect-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME:-uniconnect_dev}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
-    ports:
-      - "5432:5432"
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - uniconnect-network
-
   backend-setup:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: uniconnect-backend-setup
     working_dir: /app
-    # Run pnpm in workspace mode, frozen lockfile and pipe a 'yes' to accept prompts
-    # This avoids interactive prompts on pnpm versions that don't support --no-interactive or -y
-    command: sh -c "yes | pnpm -w install --frozen-lockfile"
+    command: sh -c "pnpm -w install --frozen-lockfile"
+    stdin_open: false
     environment:
-      # CI=true helps make package tools non-interactive in CI/containers
       CI: "true"
       PNPM_STORE_DIR: /pnpm-store
     volumes:
@@ -72,8 +49,6 @@ services:
     depends_on:
       backend-setup:
         condition: service_completed_successfully
-      db:
-        condition: service_healthy
       auth:
         condition: service_started
       study-groups:
@@ -96,18 +71,10 @@ services:
     container_name: uniconnect-auth
     working_dir: /app
     command: sh -c "pnpm --filter @uniconnect/auth dev"
+    env_file:
+      - ./backend/services/auth/.env
     environment:
-      NODE_ENV: development
-      PORT: 3102
       PNPM_STORE_DIR: /pnpm-store
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-uniconnect_dev}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
-      DB_SSL: "false"
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_secret_access}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_secret_refresh}
     ports:
       - "3102:3102"
     volumes:
@@ -117,8 +84,6 @@ services:
     depends_on:
       backend-setup:
         condition: service_completed_successfully
-      db:
-        condition: service_healthy
     networks:
       - uniconnect-network
 
@@ -129,16 +94,10 @@ services:
     container_name: uniconnect-study-groups
     working_dir: /app
     command: sh -c "pnpm --filter @uniconnect/study-groups dev"
+    env_file:
+      - ./backend/services/study-groups/.env
     environment:
-      NODE_ENV: development
-      PORT: 3101
       PNPM_STORE_DIR: /pnpm-store
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-uniconnect_dev}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
-      DB_SSL: "false"
     ports:
       - "3101:3101"
     volumes:
@@ -148,8 +107,6 @@ services:
     depends_on:
       backend-setup:
         condition: service_completed_successfully
-      db:
-        condition: service_healthy
     networks:
       - uniconnect-network
 
@@ -160,16 +117,10 @@ services:
     container_name: uniconnect-resources
     working_dir: /app
     command: sh -c "pnpm --filter @uniconnect/resources dev"
+    env_file:
+      - ./backend/services/resources/.env
     environment:
-      NODE_ENV: development
-      PORT: 3103
       PNPM_STORE_DIR: /pnpm-store
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-uniconnect_dev}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
-      DB_SSL: "false"
     ports:
       - "3103:3103"
     volumes:
@@ -179,8 +130,6 @@ services:
     depends_on:
       backend-setup:
         condition: service_completed_successfully
-      db:
-        condition: service_healthy
     networks:
       - uniconnect-network
 
@@ -191,16 +140,10 @@ services:
     container_name: uniconnect-messaging
     working_dir: /app
     command: sh -c "pnpm --filter @uniconnect/messaging dev"
+    env_file:
+      - ./backend/services/messaging/.env
     environment:
-      NODE_ENV: development
-      PORT: 3104
       PNPM_STORE_DIR: /pnpm-store
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-uniconnect_dev}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
-      DB_SSL: "false"
     ports:
       - "3104:3104"
     volumes:
@@ -210,8 +153,6 @@ services:
     depends_on:
       backend-setup:
         condition: service_completed_successfully
-      db:
-        condition: service_healthy
     networks:
       - uniconnect-network
 
@@ -222,16 +163,10 @@ services:
     container_name: uniconnect-profiles-catalog
     working_dir: /app
     command: sh -c "pnpm --filter @uniconnect/profiles-catalog dev"
+    env_file:
+      - ./backend/services/profiles-catalog/.env
     environment:
-      NODE_ENV: development
-      PORT: 3105
       PNPM_STORE_DIR: /pnpm-store
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-uniconnect_dev}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
-      DB_SSL: "false"
     ports:
       - "3105:3105"
     volumes:
@@ -241,8 +176,6 @@ services:
     depends_on:
       backend-setup:
         condition: service_completed_successfully
-      db:
-        condition: service_healthy
     networks:
       - uniconnect-network
 
@@ -253,16 +186,10 @@ services:
     container_name: uniconnect-events
     working_dir: /app
     command: sh -c "pnpm --filter @uniconnect/events dev"
+    env_file:
+      - ./backend/services/events/.env
     environment:
-      NODE_ENV: development
-      PORT: 3106
       PNPM_STORE_DIR: /pnpm-store
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-uniconnect_dev}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
-      DB_SSL: "false"
     ports:
       - "3106:3106"
     volumes:
@@ -272,24 +199,25 @@ services:
     depends_on:
       backend-setup:
         condition: service_completed_successfully
-      db:
-        condition: service_healthy
     networks:
       - uniconnect-network
 
   web:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        VITE_API_URL: "http://localhost:3000/api/v1"
     container_name: uniconnect-web
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://gateway:3000/api/v1}
+      VITE_API_URL: "http://localhost:3000/api/v1"
     ports:
       - "8080:80"
     depends_on:
       - gateway
     networks:
       - uniconnect-network
+
   frontend:
     image: node:20-alpine
     container_name: uniconnect-frontend
@@ -315,8 +243,6 @@ services:
       - uniconnect-network
 
 volumes:
-  db-data:
-    driver: local
   backend-pnpm-store:
     driver: local
   backend-node-modules:

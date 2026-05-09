@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import authService from "@/lib/services/auth.service";
+import { mapAuthUserApiToUI } from "@/utils/mappers";
 
 /**
  * Hook para gestionar la autenticación del usuario
@@ -18,19 +18,18 @@ import authService from "@/lib/services/auth.service";
  * await login("user@example.com", "password");
  */
 export default function useAuth() {
-  const { user, isLoading, isAuthenticated, login, logout, restoreSession } =
-    useAuthStore();
+  const { user, isLoading, isAuthenticated, signIn, logout, getCurrentUser, hydrate } = useAuthStore();
 
   const handleLogin = useCallback(
     async (email: string, password: string) => {
       try {
-        await login(email, password);
+        await signIn(email, password);
       } catch (error) {
         console.error("Error en login:", error);
         throw error;
       }
     },
-    [login]
+    [signIn]
   );
 
   const handleLogout = useCallback(async () => {
@@ -45,15 +44,20 @@ export default function useAuth() {
 
   const handleRestoreSession = useCallback(async () => {
     try {
-      await restoreSession();
+      // hydrate() / getCurrentUser from shared store
+      await hydrate?.();
+      // optionally fetch current user
+      await getCurrentUser();
     } catch (error) {
       console.error("Error restaurando sesión:", error);
-      // No relanzar error, solo registrar
     }
-  }, [restoreSession]);
+  }, [hydrate, getCurrentUser]);
+
+  // Map domain user (from shared-state) to UI shape
+  const userUI = user ? mapAuthUserApiToUI(user as any) : null;
 
   return {
-    user,
+    user: userUI,
     isAuthenticated,
     isLoading,
     login: handleLogin,

@@ -1,0 +1,22 @@
+{
+  "name": "uniconnect-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "UniConnect - Educational Social Network Monorepo",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "typecheck": "pnpm -w -r -s run typecheck",
+    "build": "pnpm -w -r -s run build",
+    "dev": "pnpm -w run dev",
+    "lint": "pnpm -w -r -s run lint",
+    "test": "pnpm -w -r -s run test",
+    "format": "pnpm -w -r -s run format"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

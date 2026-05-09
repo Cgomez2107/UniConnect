@@ -39,18 +39,18 @@ export function MensajesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-neutral-50 flex">
       {/* Conversations Sidebar */}
-      <div className="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">Mensajes</h1>
+      <div className="w-full md:w-80 bg-white border-r border-neutral-200 flex flex-col">
+        <div className="p-4 border-b border-neutral-200">
+          <h1 className="text-xl font-bold text-neutral-900">Mensajes</h1>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {conversationsLoading ? (
-            <div className="p-4 text-gray-600">Cargando...</div>
+            <div className="p-4 text-neutral-600">Cargando...</div>
           ) : conversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-600">
+            <div className="p-4 text-center text-neutral-600">
               Sin conversaciones
             </div>
           ) : (
@@ -70,9 +70,9 @@ export function MensajesPage() {
       {selectedConversation ? (
         <div className="flex-1 flex flex-col bg-white">
           {/* Chat Header */}
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">{selectedConversation.otherUserName}</h2>
-            <button className="text-gray-600 hover:text-gray-900">
+          <div className="p-4 border-b border-neutral-200 flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-neutral-900">{selectedConversation.otherUserName}</h2>
+            <button className="text-neutral-600 hover:text-neutral-900">
               ⋯
             </button>
           </div>
@@ -94,14 +94,14 @@ export function MensajesPage() {
           {/* Message Input */}
           <form
             onSubmit={handleSendMessage}
-            className="p-4 border-t border-gray-200 flex gap-3"
+            className="p-4 border-t border-neutral-200 flex gap-3"
           >
             <input
               type="text"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               placeholder="Escribe un mensaje..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+              className="flex-1 px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
               disabled={sendingMessage}
             />
             <Button
@@ -114,7 +114,7 @@ export function MensajesPage() {
           </form>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-600">
+        <div className="flex-1 flex items-center justify-center text-neutral-600">
           Selecciona una conversación
         </div>
       )}

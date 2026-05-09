@@ -21,27 +21,27 @@ export function StudentCard({
       <div className="flex items-center gap-3 mb-3">
         <Avatar src={student.avatarUrl ?? undefined} name={student.fullName} />
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">{student.fullName}</h3>
-          <p className="text-sm text-gray-600">{student.programName}</p>
+          <h3 className="font-semibold text-neutral-900">{student.fullName}</h3>
+          <p className="text-sm text-neutral-600">{student.programName}</p>
         </div>
       </div>
 
       {student.studySubjects && student.studySubjects.length > 0 && (
         <div className="mb-3">
-          <p className="text-xs font-medium text-gray-700 mb-2">
+          <p className="text-xs font-medium text-neutral-700 mb-2">
             Materias de interés:
           </p>
           <div className="flex flex-wrap gap-2">
             {student.studySubjects.slice(0, 3).map((subject) => (
               <span
                 key={subject.id}
-                className="inline-block px-2 py-1 bg-uc-blue-light text-uc-blue text-xs rounded"
+                className="inline-block px-2 py-1 bg-primary-100 text-primary-600 text-xs rounded"
               >
                 {subject.name}
               </span>
             ))}
             {student.studySubjects.length > 3 && (
-              <span className="inline-block px-2 py-1 text-xs text-gray-600">
+              <span className="inline-block px-2 py-1 text-xs text-neutral-600">
                 +{student.studySubjects.length - 3} más
               </span>
             )}
@@ -52,7 +52,7 @@ export function StudentCard({
       <div className="flex gap-2">
         <button
           onClick={() => onViewProfile(student.id)}
-          className="flex-1 px-3 py-2 bg-uc-blue text-white rounded text-sm hover:bg-uc-blue-dark transition-colors"
+          className="flex-1 px-3 py-2 bg-primary-600 text-white rounded text-sm hover:bg-primary-700 transition-colors"
         >
           Ver perfil
         </button>

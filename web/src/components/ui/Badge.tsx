@@ -31,24 +31,24 @@ export const Badge: React.FC<BadgeProps> = ({
 }) => {
   const colorMap = {
     blue: {
-      solid: 'bg-uc-blue text-white',
-      outline: 'border-2 border-uc-blue text-uc-blue bg-transparent',
+      solid: 'bg-primary-600 text-white',
+      outline: 'border-2 border-primary-600 text-primary-600 bg-transparent',
     },
     gold: {
-      solid: 'bg-uc-gold text-uc-blue',
-      outline: 'border-2 border-uc-gold text-uc-gold bg-transparent',
+      solid: 'bg-secondary-500 text-primary-700',
+      outline: 'border-2 border-secondary-500 text-secondary-500 bg-transparent',
     },
     green: {
-      solid: 'bg-green-500 text-white',
-      outline: 'border-2 border-green-500 text-green-500 bg-transparent',
+      solid: 'bg-success-500 text-white',
+      outline: 'border-2 border-success-500 text-success-500 bg-transparent',
     },
     red: {
-      solid: 'bg-red-500 text-white',
-      outline: 'border-2 border-red-500 text-red-500 bg-transparent',
+      solid: 'bg-error-500 text-white',
+      outline: 'border-2 border-error-500 text-error-500 bg-transparent',
     },
     gray: {
-      solid: 'bg-gray-300 text-gray-700',
-      outline: 'border-2 border-gray-300 text-gray-700 bg-transparent',
+      solid: 'bg-neutral-300 text-neutral-700',
+      outline: 'border-2 border-neutral-300 text-neutral-700 bg-transparent',
     },
   };
 

@@ -38,22 +38,22 @@ export function NuevaSolicitudPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
         <button
           onClick={() => navigate("/invitaciones")}
-          className="text-uc-blue hover:underline mb-4"
+          className="text-primary-600 hover:underline mb-4"
         >
           ← Volver
         </button>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">
+          <h1 className="text-3xl font-bold text-neutral-900 mb-6">
             Crear nueva solicitud
           </h1>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            <div className="mb-4 p-4 bg-error-50 border border-error-200 rounded-lg text-error-700">
               {error}
             </div>
           )}
@@ -61,14 +61,14 @@ export function NuevaSolicitudPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Subject Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
                 Materia
               </label>
               <select
                 name="subjectId"
                 value={values.subjectId}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
                 required
               >
                 <option value="">Selecciona una materia</option>
@@ -78,7 +78,7 @@ export function NuevaSolicitudPage() {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
                 Descripción
               </label>
               <textarea
@@ -87,14 +87,14 @@ export function NuevaSolicitudPage() {
                 onChange={handleChange}
                 placeholder="Describe el propósito del grupo..."
                 rows={5}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
                 required
               />
             </div>
 
             {/* Max Members */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
                 Máximo de miembros
               </label>
               <input
@@ -104,7 +104,7 @@ export function NuevaSolicitudPage() {
                 onChange={handleChange}
                 min="2"
                 max="20"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
                 required
               />
             </div>

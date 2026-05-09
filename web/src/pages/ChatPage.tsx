@@ -82,8 +82,8 @@ export const ChatPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <header className="bg-uc-blue text-white p-4">
+    <div className="flex flex-col h-screen bg-neutral-50">
+      <header className="bg-primary-600 text-white p-4">
         <h1 className="text-xl font-bold">
           Chat: {conversation?.otherUserName}
         </h1>
@@ -94,14 +94,14 @@ export const ChatPage: React.FC = () => {
           <div
             key={msg.id}
             className={`flex ${
-              msg.senderName === user?.fullName ? "justify-end" : "justify-start"
+              msg.senderName === (user ? `${user.firstName} ${user.lastName}` : '') ? "justify-end" : "justify-start"
             }`}
           >
             <div
               className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                msg.senderName === user?.fullName
-                  ? "bg-uc-blue text-white"
-                  : "bg-white border border-gray-200"
+                msg.senderName === (user ? `${user.firstName} ${user.lastName}` : '')
+                  ? "bg-primary-600 text-white"
+                  : "bg-white border border-neutral-200"
               }`}
             >
               <p className="text-sm font-medium opacity-70">
@@ -123,13 +123,13 @@ export const ChatPage: React.FC = () => {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Escribe un mensaje..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+            className="flex-1 px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
             disabled={isSending}
           />
           <button
             type="submit"
             disabled={isSending || !newMessage.trim()}
-            className="bg-uc-blue text-white px-6 py-2 rounded-lg hover:bg-uc-blue-dark disabled:opacity-50"
+            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
           >
             {isSending ? "..." : "Enviar"}
           </button>

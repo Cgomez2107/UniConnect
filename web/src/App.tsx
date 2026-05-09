@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -44,11 +44,35 @@ function PrivateRoute({
 }
 
 function App() {
-  const { isAuthenticated, restoreSession, user } = useAuthStore();
+  const { isAuthenticated, hydrate, user } = useAuthStore();
+  const [isHydrating, setIsHydrating] = useState(true);
 
   useEffect(() => {
-    restoreSession();
-  }, []);
+    (async () => {
+      try {
+        await hydrate();
+      } finally {
+        setIsHydrating(false);
+      }
+    })();
+  }, [hydrate]);
+
+  // Block rendering until hydration completes
+  if (isHydrating) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        backgroundColor: '#f9fafb',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: '#6b7280', fontSize: '16px' }}>Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>

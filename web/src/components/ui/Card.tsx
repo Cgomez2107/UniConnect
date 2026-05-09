@@ -37,7 +37,7 @@ export const Card: React.FC<CardProps> = ({
   const variantStyles = {
     default: 'bg-white shadow rounded-lg p-4',
     hover: 'bg-white shadow hover:shadow-lg hover:scale-105 rounded-lg p-4 transition-all duration-300 cursor-pointer',
-    elevated: 'bg-white shadow-lg rounded-lg p-4 border border-gray-100',
+    elevated: 'bg-white shadow-lg rounded-lg p-4 border border-neutral-100',
   };
 
   return (

@@ -45,14 +45,14 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantStyles = {
     primary: disabled
-      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-      : 'bg-uc-blue text-white hover:bg-uc-blue-dark focus:ring-uc-blue',
+      ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+      : 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
     secondary: disabled
-      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-      : 'bg-gray-200 text-uc-blue hover:bg-gray-300 focus:ring-gray-400',
+      ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+      : 'bg-neutral-200 text-primary-600 hover:bg-neutral-300 focus:ring-neutral-400',
     danger: disabled
-      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-      : 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
+      ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+      : 'bg-error-500 text-white hover:bg-error-600 focus:ring-error-500',
   };
 
   const sizeStyles = {

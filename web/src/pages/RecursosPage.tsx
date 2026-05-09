@@ -38,14 +38,14 @@ export function RecursosPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-neutral-900 mb-2">
             Recursos de Estudio
           </h1>
-          <p className="text-gray-600">
+          <p className="text-neutral-600">
             Encuentra y comparte recursos educativos
           </p>
         </div>
@@ -57,7 +57,7 @@ export function RecursosPage() {
             placeholder="Buscar recursos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 min-w-48 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-uc-blue"
+            className="flex-1 min-w-48 px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
           />
           <Button onClick={() => navigate("/subir-recurso")}>
             + Subir Recurso
@@ -70,7 +70,7 @@ export function RecursosPage() {
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="h-32 bg-gray-200 rounded-lg animate-pulse"
+                className="h-32 bg-neutral-200 rounded-lg animate-pulse"
               ></div>
             ))}
           </div>
@@ -78,7 +78,7 @@ export function RecursosPage() {
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <div className="bg-error-50 border border-error-200 rounded-lg p-4 text-error-700">
             {error}
           </div>
         )}
@@ -100,7 +100,7 @@ export function RecursosPage() {
         {/* Empty State */}
         {!isLoading && filteredResources.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">
+            <p className="text-neutral-600 mb-4">
               {searchTerm
                 ? "No hay recursos que coincidan con tu búsqueda"
                 : "No hay recursos disponibles"}

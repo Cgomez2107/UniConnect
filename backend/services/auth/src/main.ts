@@ -30,7 +30,8 @@ if (!Number.isInteger(PORT) || PORT <= 0) {
 }
 
 /**
- * Genera la URL de autorización de Google con redirectTo dinámico
+ * Genera la URL de autorización de Google con redirectTo dinámico.
+ * En desarrollo, mapea URLs de Fly.dev a localhost para evitar redirecciones a producción.
  */
 function sendOAuthUrl(
   res: ServerResponse,
@@ -40,12 +41,19 @@ function sendOAuthUrl(
   const supabaseUrl = process.env.SUPABASE_URL || "https://becitrklvpadvjwdbmck.supabase.co";
   const hd = "ucaldas.edu.co"; // restricción de dominio institucional
 
+  // En desarrollo, mapear URLs de Fly.dev a localhost
+  let finalRedirectTo = redirectTo;
+  if (nodeEnv === "development" && finalRedirectTo) {
+    // Reemplazar cualquier dominio fly.dev con localhost:8080
+    finalRedirectTo = finalRedirectTo.replace(/https:\/\/[^/]+\.fly\.dev/g, "http://localhost:8080");
+  }
+
   // Construir URL base de Supabase
   let authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&hd=${hd}&prompt=${encodeURIComponent(prompt)}`;
 
   // Si se proporciona redirectTo, agregarlo como parámetro
-  if (redirectTo) {
-    authUrl += `&redirect_to=${encodeURIComponent(redirectTo)}`;
+  if (finalRedirectTo) {
+    authUrl += `&redirect_to=${encodeURIComponent(finalRedirectTo)}`;
   }
 
   res.writeHead(200);

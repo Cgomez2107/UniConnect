@@ -1,83 +1,52 @@
-import { create } from "zustand";
-import { apiClient } from "../lib/api/client";
-import { UserSessionUI } from "@/types/ui";
-import { mapAuthUserApiToUI } from "@/utils/mappers";
+/**
+ * Wire shared-api + shared-state: createAuthStore factory
+ * This module constructs the transport + clients + storage adapter
+ * and exports a ready-to-use Zustand hook created by the factory.
+ */
 
-interface AuthState {
-  user: UserSessionUI | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
+import { FetchTransport, AuthClient, BaseMessagingClient, RealtimeChatDecorator } from "@uniconnect/shared-api";
+import { createAuthStore, WebStorageAdapter, ConsoleLogger } from "@uniconnect/shared-state";
 
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  setUser: (user: UserSessionUI | null) => void;
-  restoreSession: () => Promise<void>;
-}
+// Build transport pointing to gateway
+const GATEWAY_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
+const AUTH_SESSION_KEY = "uniconnect-auth-session";
 
-const clearStoredSession = () => {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("user");
-  sessionStorage.removeItem("preOAuthLocation");
+const transport = new FetchTransport(GATEWAY_URL);
 
-  Object.keys(localStorage)
-    .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
-    .forEach((key) => localStorage.removeItem(key));
+transport.setAuthProvider(async () => {
+  try {
+    const raw = window.localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { state?: { accessToken?: string | null } };
+    return parsed?.state?.accessToken ?? null;
+  } catch {
+    return null;
+  }
+});
+
+// API clients
+const authClient = new AuthClient(transport);
+const messagingClient = new BaseMessagingClient(transport);
+const realtimeChat = new RealtimeChatDecorator(messagingClient, transport, WS_URL);
+
+// Storage adapter (web)
+const storageAdapter = new WebStorageAdapter(window.localStorage);
+
+// Logger
+const logger = new ConsoleLogger();
+
+// DI container
+const deps = {
+  apiClients: {
+    auth: authClient,
+    messaging: messagingClient,
+    messagingRealtime: realtimeChat,
+  },
+  storage: storageAdapter,
+  logger,
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isLoading: false,
-  isAuthenticated: false,
-
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
-
-  login: async (email: string, password: string) => {
-    set({ isLoading: true });
-    try {
-      const response = await apiClient.post("/auth/signin", {
-        email,
-        password,
-      });
-
-      const { user, access_token } = response.data;
-
-      if (access_token) {
-        localStorage.setItem("accessToken", access_token);
-      }
-
-      const userSession = mapAuthUserApiToUI(user);
-
-      set({ user: userSession, isAuthenticated: true, isLoading: false });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
-  },
-
-  logout: async () => {
-    clearStoredSession();
-    set({ user: null, isAuthenticated: false, isLoading: false });
-  },
-
-  restoreSession: async () => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      set({ isLoading: false });
-      return;
-    }
-
-    try {
-      const response = await apiClient.get("/auth/session");
-      const user = response.data;
-
-      const userSession = mapAuthUserApiToUI(user);
-
-      set({ user: userSession, isAuthenticated: true });
-    } catch (error) {
-      console.error("Failed to restore session:", error);
-      clearStoredSession();
-      set({ user: null, isAuthenticated: false });
-    }
-  },
-}));
+// Export Zustand hook created by factory
+export const useAuthStore = createAuthStore(deps);

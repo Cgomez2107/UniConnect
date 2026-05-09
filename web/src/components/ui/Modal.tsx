@@ -83,13 +83,13 @@ export const Modal: React.FC<ModalProps> = ({
       >
         {/* Header */}
         {title && (
-          <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+          <div className="border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
+            <h2 id="modal-title" className="text-lg font-semibold text-neutral-900">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-neutral-400 hover:text-neutral-600 transition-colors"
               aria-label="Cerrar modal"
             >
               ✕
@@ -104,7 +104,7 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Footer */}
         {footer && (
-          <div className="border-t border-gray-200 px-6 py-4 flex gap-2 justify-end">
+          <div className="border-t border-neutral-200 px-6 py-4 flex gap-2 justify-end">
             {footer}
           </div>
         )}

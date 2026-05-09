@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 import { useAuthStore } from "../store/useAuthStore";
 import { apiClient } from "../lib/api/client";
 import "./LoginPage.css";
@@ -8,7 +9,8 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading } = useAuth();
+  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -23,7 +25,9 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate("/admin");
+      // Redirect based on user role from store
+      const destination = user?.role === "admin" ? "/admin" : "/solicitudes";
+      navigate(destination);
     } catch (err: any) {
       setError(err.response?.data?.message || "Error de autenticaci\u00f3n");
     }
@@ -33,7 +37,9 @@ export const LoginPage: React.FC = () => {
     setGoogleLoading(true);
     setError("");
     try {
-      const redirectUrl = `${window.location.origin}/oauth-callback`;
+      // Force localhost redirect in development to prevent Supabase from redirecting to Fly.dev
+      const isDev = import.meta.env.DEV || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const redirectUrl = isDev ? "http://localhost:8080/oauth-callback" : `${window.location.origin}/oauth-callback`;
       const response = await apiClient.get("/auth/google", {
         params: { redirectTo: redirectUrl, prompt: "select_account" },
       });

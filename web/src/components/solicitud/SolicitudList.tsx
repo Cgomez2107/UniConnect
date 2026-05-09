@@ -21,7 +21,7 @@ export function SolicitudList({
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="h-20 bg-gray-200 rounded-lg animate-pulse"
+            className="h-20 bg-neutral-200 rounded-lg animate-pulse"
           ></div>
         ))}
       </div>
@@ -31,7 +31,7 @@ export function SolicitudList({
   if (solicitudes.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">No hay solicitudes disponibles</p>
+        <p className="text-neutral-600">No hay solicitudes disponibles</p>
       </div>
     );
   }
@@ -42,13 +42,13 @@ export function SolicitudList({
         <button
           key={solicitud.id}
           onClick={() => onSelectSolicitud(solicitud)}
-          className="w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border-l-4 border-l-uc-blue"
+          className="w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border-l-4 border-l-primary-500"
         >
-          <h3 className="font-semibold text-gray-900">{solicitud.subjectName}</h3>
-          <p className="text-sm text-gray-600 mt-1">
+          <h3 className="font-semibold text-neutral-900">{solicitud.subjectName}</h3>
+          <p className="text-sm text-neutral-600 mt-1">
             {solicitud.description}
           </p>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-neutral-500 mt-2">
             {solicitud.memberCount} miembros
           </p>
         </button>

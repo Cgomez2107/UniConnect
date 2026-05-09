@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { mapAuthUserApiToUI } from "@/utils/mappers";
 
 /**
  * OAuthCallbackPage - Maneja el redirect de OAuth desde Supabase
@@ -9,7 +8,6 @@ import { mapAuthUserApiToUI } from "@/utils/mappers";
  */
 export function OAuthCallbackPage() {
   const navigate = useNavigate();
-  const { setUser } = useAuthStore();
 
   React.useEffect(() => {
     const processCallback = async () => {
@@ -42,15 +40,27 @@ export function OAuthCallbackPage() {
             if (response.ok) {
               const data = await response.json();
               if (data.session?.user) {
-                const userData = {
-                  id: data.session.user.id,
-                  email: data.session.user.email,
-                  full_name: data.session.user.user_metadata?.full_name || "",
-                  avatar_url: data.session.user.user_metadata?.avatar_url || "",
-                  role: "estudiante" as const,
-                };
-                localStorage.setItem("user", JSON.stringify(userData));
-                setUser(mapAuthUserApiToUI(userData));
+                const fullName = data.session.user.user_metadata?.full_name || "";
+                const [firstName = "", ...lastParts] = fullName.split(" ");
+                const lastName = lastParts.join(" ");
+
+                useAuthStore.setState({
+                  user: {
+                    id: data.session.user.id,
+                    email: data.session.user.email,
+                    firstName,
+                    lastName,
+                    role: "estudiante" as const,
+                    profileImageUrl: data.session.user.user_metadata?.avatar_url || undefined,
+                    isVerified: true,
+                    isOnboarded: false,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  },
+                  accessToken,
+                  refreshToken,
+                  isAuthenticated: true,
+                });
               }
             }
           } catch (error) {
@@ -81,7 +91,7 @@ export function OAuthCallbackPage() {
     };
 
     processCallback();
-  }, [navigate, setUser]);
+  }, [navigate]);
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
