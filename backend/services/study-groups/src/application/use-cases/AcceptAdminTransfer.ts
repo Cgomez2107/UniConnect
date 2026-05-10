@@ -45,16 +45,23 @@ export class AcceptAdminTransfer {
       this.subject,
     );
 
+    // Determinar el estado anterior (base) para el evento
+    let previousState = "abierta"; // default
+    if (group.membersCount >= group.maxMembers) {
+      previousState = "llena";
+    }
+
     // 3. El estado valida y emite el evento TRANSFERENCIA_ADMIN_ACEPTADA.
-    //    Si el estado no permite la acción → DomainError propagado al controlador → 422.
-    group.acceptAdminTransfer(
+    //    Si el estado no permite la acción → InvalidStateTransitionError propagado al controlador → 422.
+    await group.acceptAdminTransfer(
       transferId,
       input.actorUserId,
       transfer.fromUserId,
       transfer.toUserId,
+      previousState,
     );
 
-    // 4. Solo persistimos si el estado permitió la acción (no lanzó DomainError).
+    // 4. Solo persistimos si el estado permitió la acción (no lanzó error).
     await this.repository.acceptTransfer({
       transferId,
       actorUserId: input.actorUserId,

@@ -1,4 +1,4 @@
-import { DomainError } from "../../../../../shared/libs/errors/DomainError.js";
+import { InvalidStateTransitionError } from "../../../../../shared/libs/errors/InvalidStateTransitionError.js";
 import type { IStudyGroupState, IStudyGroupContext } from "./IStudyGroupState.js";
 import { TransferenciaPendienteState } from "./TransferenciaPendienteState.js";
 import { LlenaState } from "./LlenaState.js";
@@ -59,25 +59,26 @@ export class AbiertaState implements IStudyGroupState {
     }
   }
 
-  requestAdminTransfer(transferId: string, actorUserId: string, targetUserId: string): void {
+  async requestAdminTransfer(transferId: string, actorUserId: string, targetUserId: string, currentState: string): Promise<void> {
     // Transición: Pasamos al estado de transferencia pendiente y guardamos el estado anterior.
     this.context.transitionTo(new TransferenciaPendienteState(this));
     
-    // Emitimos el evento
-    this.context.emit({
+    // Emitimos el evento con el nuevo contrato
+    await this.context.emit({
       type: "TRANSFERENCIA_ADMIN_SOLICITADA",
       version: "1.0",
       timestamp: new Date(),
       transferId,
-      requestId: this.context.requestId,
-      actorUserId,
-      targetUserId,
+      groupId: this.context.requestId,
+      oldAdminId: actorUserId,
+      newAdminId: targetUserId,
+      currentState: currentState,
       groupName: this.context.groupName
     });
   }
 
-  acceptAdminTransfer(_transferId: string, _actorUserId: string, _fromUserId: string, _toUserId: string): void {
-    throw new DomainError("No hay ninguna transferencia de administrador pendiente para aceptar.");
+  async acceptAdminTransfer(_transferId: string, _actorUserId: string, _fromUserId: string, _toUserId: string, _previousState: string): Promise<void> {
+    throw new InvalidStateTransitionError("Abierta", "acceptAdminTransfer", "No hay ninguna transferencia de administrador pendiente para aceptar.");
   }
 
   leaveAdminRole(actorUserId: string): void {

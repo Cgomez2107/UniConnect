@@ -1,4 +1,4 @@
-import { DomainError } from "../../../../../shared/libs/errors/DomainError.js";
+import { InvalidStateTransitionError } from "../../../../../shared/libs/errors/InvalidStateTransitionError.js";
 import type { IStudyGroupState, IStudyGroupContext } from "./IStudyGroupState.js";
 
 export class TransferenciaPendienteState implements IStudyGroupState {
@@ -25,27 +25,28 @@ export class TransferenciaPendienteState implements IStudyGroupState {
     this.previousState.reviewApplication(applicationId, status, reviewerId, applicantId, applicantName);
   }
 
-  requestAdminTransfer(_transferId: string, _actorUserId: string, _targetUserId: string): void {
-    throw new DomainError("Ya existe una transferencia de administrador pendiente para este grupo.");
+  requestAdminTransfer(_transferId: string, _actorUserId: string, _targetUserId: string, _currentState: string): Promise<void> {
+    throw new InvalidStateTransitionError("TransferenciaPendiente", "requestAdminTransfer", "Ya existe una transferencia de administrador pendiente para este grupo.");
   }
 
-  acceptAdminTransfer(transferId: string, actorUserId: string, fromUserId: string, toUserId: string): void {
+  async acceptAdminTransfer(transferId: string, actorUserId: string, fromUserId: string, toUserId: string, previousState: string): Promise<void> {
     // Transición: Volvemos al estado en el que estábamos (Abierta o Llena)
     this.context.transitionTo(this.previousState);
 
-    this.context.emit({
+    await this.context.emit({
       type: "TRANSFERENCIA_ADMIN_ACEPTADA",
       version: "1.0",
       timestamp: new Date(),
       transferId,
-      requestId: this.context.requestId,
-      fromUserId,
-      toUserId,
-      actorUserId
+      groupId: this.context.requestId,
+      oldAdminId: fromUserId,
+      newAdminId: toUserId,
+      newState: previousState,
+      acceptedBy: actorUserId
     });
   }
 
   leaveAdminRole(_actorUserId: string): void {
-    throw new DomainError("No puedes salir del rol de administrador mientras haya una transferencia pendiente.");
+    throw new InvalidStateTransitionError("TransferenciaPendiente", "leaveAdminRole", "No puedes salir del rol de administrador mientras haya una transferencia pendiente.");
   }
 }

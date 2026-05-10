@@ -31,10 +31,9 @@ export class StudyGroup implements IStudyGroupContext {
     this.state.setContext(this);
   }
 
-  public emit(event: StudyGroupEvent): void {
-    this.subject.emit(event).catch((error) => {
-      console.error(`[StudyGroup Context] Error emitiendo evento ${event.type}:`, error);
-    });
+  public emit(event: StudyGroupEvent): Promise<void> {
+    // No tragamos el error; lo propagamos para que el caso de uso pueda manejarlo
+    return this.subject.emit(event);
   }
 
   public applyToGroup(applicationId: string, applicantId: string, applicantName: string, message: string, adminUserId: string): void {
@@ -45,12 +44,12 @@ export class StudyGroup implements IStudyGroupContext {
     this.state.reviewApplication(applicationId, status, reviewerId, applicantId, applicantName);
   }
 
-  public requestAdminTransfer(transferId: string, actorUserId: string, targetUserId: string): void {
-    this.state.requestAdminTransfer(transferId, actorUserId, targetUserId);
+  public requestAdminTransfer(transferId: string, actorUserId: string, targetUserId: string, currentState: string): Promise<void> {
+    return this.state.requestAdminTransfer(transferId, actorUserId, targetUserId, currentState);
   }
 
-  public acceptAdminTransfer(transferId: string, actorUserId: string, fromUserId: string, toUserId: string): void {
-    this.state.acceptAdminTransfer(transferId, actorUserId, fromUserId, toUserId);
+  public acceptAdminTransfer(transferId: string, actorUserId: string, fromUserId: string, toUserId: string, previousState: string): Promise<void> {
+    return this.state.acceptAdminTransfer(transferId, actorUserId, fromUserId, toUserId, previousState);
   }
 
   public leaveAdminRole(actorUserId: string): void {

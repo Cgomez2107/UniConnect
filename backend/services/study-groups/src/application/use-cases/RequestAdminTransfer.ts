@@ -53,7 +53,20 @@ export class RequestAdminTransfer {
       requestId,
       noOpSubject,
     );
-    groupForValidation.requestAdminTransfer("__validation__", input.actorUserId, targetUserId);
+    
+    // Necesitamos el estado actual (nombre) para el evento
+    const currentStudyGroup = await this.studyGroupRepository.loadStudyGroup(
+      requestId,
+      this.subject,
+    );
+    
+    let currentState = "abierta"; // default
+    if (currentStudyGroup.membersCount >= currentStudyGroup.maxMembers) {
+      currentState = "llena";
+    }
+
+    // Validamos la transición sin emitir eventos
+    await groupForValidation.requestAdminTransfer("__validation__", input.actorUserId, targetUserId, currentState);
 
     // 2. Persistir en BD → obtenemos el AdminTransfer con el transferId REAL de la BD.
     const created = await this.repository.requestTransfer({
@@ -64,17 +77,16 @@ export class RequestAdminTransfer {
 
     // 3. Emitir el evento TRANSFERENCIA_ADMIN_SOLICITADA con el ID real de la BD.
     //    El frontend recibirá este UUID y lo usará para aceptar la transferencia.
-    this.subject.emit({
+    await this.subject.emit({
       type: "TRANSFERENCIA_ADMIN_SOLICITADA",
       version: "1.0",
       timestamp: new Date(),
-      transferId: created.id,                    // ← UUID real de la BD
-      requestId: created.requestId,
-      actorUserId: input.actorUserId,
-      targetUserId: created.toUserId,
-      groupName: groupForValidation.groupName,   // ← nombre del grupo del contexto
-    }).catch((error) => {
-      console.error("[RequestAdminTransfer] Error emitiendo evento:", error);
+      transferId: created.id,
+      groupId: created.requestId,
+      oldAdminId: input.actorUserId,
+      newAdminId: created.toUserId,
+      currentState: currentState,
+      groupName: groupForValidation.groupName,
     });
 
     return created;

@@ -60,9 +60,10 @@ export interface TransferenciaAdminSolicitadaEvent {
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly transferId: string;
-  readonly requestId: string;
-  readonly actorUserId: string;
-  readonly targetUserId: string;
+  readonly groupId: string;  // requestId renombrado para claridad
+  readonly oldAdminId: string;  // quien solicita la transferencia
+  readonly newAdminId: string;  // quien recibirá el rol
+  readonly currentState: string;  // estado actual del grupo: "abierta" | "llena" | etc.
   readonly groupName: string;
 }
 
@@ -74,10 +75,11 @@ export interface TransferenciaAdminAceptadaEvent {
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly transferId: string;
-  readonly requestId: string;
-  readonly fromUserId: string;
-  readonly toUserId: string;
-  readonly actorUserId: string;
+  readonly groupId: string;  // requestId renombrado para claridad
+  readonly oldAdminId: string;  // quién era antes
+  readonly newAdminId: string;  // quién es ahora
+  readonly newState: string;  // estado al que vuelve el grupo: "abierta" | "llena"
+  readonly acceptedBy: string;  // quién aceptó (debería ser newAdminId)
 }
 
 /**
