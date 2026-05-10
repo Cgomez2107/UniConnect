@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { LoginPage } from "./pages/LoginPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { OAuthCallbackPage } from "./pages/OAuthCallbackPage";
 import { AdminPage } from "./pages/AdminPage";
 import { ChatPage } from "./pages/ChatPage";
@@ -170,7 +171,7 @@ function App() {
             )
           }
         />
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>
   );

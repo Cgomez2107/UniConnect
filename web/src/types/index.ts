@@ -106,27 +106,23 @@ export type GroupStatus = "abierta" | "llena" | "transferenciaPendiente" | "cerr
 
 export interface StudyRequest {
   id: string;
-  author_id: string;
-  subject_id: string;
+  authorId: string;
+  subjectId: string;
   title: string;
   description: string;
-  max_members: number;
+  maxMembers: number;
   status: RequestStatus;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  // joins
-  profiles?: { full_name: string; avatar_url: string | null; bio?: string | null };
-  subjects?: {
-    name: string;
-    program_subjects?: Array<{
-      programs?: { faculties?: { name: string } | { name: string }[] } | Array<{ faculties?: { name: string } | { name: string }[] }>;
-    }>;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author?: {
+    fullName: string;
+    avatarUrl: string | null;
+    bio?: string | null;
   };
-  applications_count?: number;
-  // campos derivados (feed)
-  faculty_name?: string;
-  subject_name?: string;
+  applicationsCount?: number;
+  subjectName?: string;
+  facultyName?: string;
 }
 
 export interface CreateStudyRequestPayload {

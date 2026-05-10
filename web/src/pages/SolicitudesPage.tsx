@@ -1,28 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import useFeed from "@/hooks/useFeed";
 import { SolicitudCard } from "@/components/solicitud/SolicitudCard";
 import { Button } from "@/components/ui/Button";
+import { StudyRequestUI } from "@/types/ui";
 import { typographyStyles } from "@uniconnect/shared-ui";
 
-/**
- * SolicitudesPage - Display and manage study group requests/solicitudes
- */
 export function SolicitudesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { requests = [], isLoading = false, error = null } = useFeed() as any;
-  const [filteredSolicitudes, setFilteredSolicitudes] = useState<any[]>([]);
+  const { requests = [], applications = [], isLoading = false, error = null } = useFeed({ userId: user?.id });
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    const filtered = (requests || []).filter((sol: any) =>
-      (sol.subject?.name?.toLowerCase() || "").includes(
+  const applicationMap = useMemo(() => {
+    const map = new Map<string, "pendiente" | "aceptada" | "rechazada">();
+    for (const app of applications) {
+      map.set(app.request_id, app.status);
+    }
+    return map;
+  }, [applications]);
+
+  const filteredSolicitudes = useMemo(() => {
+    return (requests as StudyRequestUI[]).filter((sol) =>
+      (sol.subjectName?.toLowerCase() || "").includes(
         searchTerm.toLowerCase()
       ) || (sol.description?.toLowerCase() || "").includes(searchTerm.toLowerCase())
     );
-    setFilteredSolicitudes(filtered);
   }, [searchTerm, requests]);
 
   const handleViewDetails = (id: string) => {
@@ -89,12 +93,13 @@ export function SolicitudesPage() {
         {/* Solicitudes Grid */}
         {!isLoading && filteredSolicitudes.length > 0 && (
           <div className="space-y-4">
-            {filteredSolicitudes.map((solicitud: any) => (
+            {filteredSolicitudes.map((solicitud: StudyRequestUI) => (
               <SolicitudCard
                 key={solicitud.id}
                 solicitud={solicitud}
                 onViewDetails={handleViewDetails}
                 onApply={handleApply}
+                applicationStatus={applicationMap.get(solicitud.id) ?? null}
               />
             ))}
           </div>

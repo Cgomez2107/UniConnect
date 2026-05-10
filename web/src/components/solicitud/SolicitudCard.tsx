@@ -6,15 +6,20 @@ interface SolicitudCardProps {
   solicitud: StudyRequestUI;
   onViewDetails: (id: string) => void;
   onApply?: (id: string) => void;
+  applicationStatus?: "pendiente" | "aceptada" | "rechazada" | null;
 }
 
-/**
- * SolicitudCard component for displaying study group requests/solicitudes
- */
+const applicationStatusConfig: Record<string, { label: string; className: string }> = {
+  pendiente: { label: "En revisión", className: "bg-yellow-100 text-yellow-800" },
+  aceptada: { label: "Aceptada", className: "bg-green-100 text-green-800" },
+  rechazada: { label: "Rechazada", className: "bg-red-100 text-red-800" },
+};
+
 export function SolicitudCard({
   solicitud,
   onViewDetails,
   onApply,
+  applicationStatus,
 }: SolicitudCardProps) {
   const statusLabels: Record<RequestStatusUI, string> = {
     abierta: "Abierto",
@@ -37,6 +42,8 @@ export function SolicitudCard({
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 
+  const appBadge = applicationStatus ? applicationStatusConfig[applicationStatus] : null;
+
   return (
     <article
       className="bg-neutral-50 border border-neutral-200 p-4"
@@ -51,18 +58,24 @@ export function SolicitudCard({
               className="h-12 w-12 rounded-full object-cover border border-neutral-200"
             />
           ) : (
-            <div className="h-12 w-12 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold">
+            <div
+              className="h-12 w-12 rounded-full flex items-center justify-center font-semibold text-white"
+              style={{ backgroundColor: "#0d2852" }}
+            >
               {authorInitials || "U"}
             </div>
           )}
 
           <div>
-            <p className="font-semibold text-neutral-900 uppercase tracking-wide text-sm">
+            <p className="font-semibold text-neutral-900 text-sm">
               {authorName}
             </p>
-            <p className="text-sm text-neutral-700">
+            <span
+              className="inline-block px-2 py-0.5 rounded-full text-xs font-medium text-white"
+              style={{ backgroundColor: "#d4a843" }}
+            >
               {solicitud.subjectName || solicitud.subjects?.name || "Sin materia"}
-            </p>
+            </span>
           </div>
         </div>
 
@@ -81,7 +94,7 @@ export function SolicitudCard({
 
       <div className="flex items-center gap-2 mb-4">
         <span className="px-3 py-1 rounded-full bg-primary-100 text-primary-800 text-xs font-semibold">
-          {solicitud.memberCount || 0}/{solicitud.maxMembers || 0}
+          {solicitud.memberCount || 0} / {solicitud.maxMembers || 0} miembros
         </span>
       </div>
 
@@ -92,14 +105,18 @@ export function SolicitudCard({
         >
           Ver detalles
         </button>
-        {solicitud.status === "abierta" && onApply && (
+        {appBadge ? (
+          <span className={`px-3 py-2 rounded-md text-sm font-medium ${appBadge.className}`}>
+            {appBadge.label}
+          </span>
+        ) : solicitud.status === "abierta" && onApply ? (
           <button
             onClick={() => onApply(solicitud.id)}
             className="flex-1 px-3 py-2 border border-primary-600 text-primary-700 rounded-md text-sm hover:bg-primary-600 hover:text-white transition-colors"
           >
             Postularme
           </button>
-        )}
+        ) : null}
       </div>
     </article>
   );

@@ -39,7 +39,7 @@ export const LoginPage: React.FC = () => {
     try {
       // Force localhost redirect in development to prevent Supabase from redirecting to Fly.dev
       const isDev = import.meta.env.DEV || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-      const redirectUrl = isDev ? "http://localhost:8080/oauth-callback" : `${window.location.origin}/oauth-callback`;
+      const redirectUrl = isDev ? "http://localhost:8081/oauth-callback" : `${window.location.origin}/oauth-callback`;
       const response = await apiClient.get("/auth/google", {
         params: { redirectTo: redirectUrl, prompt: "select_account" },
       });

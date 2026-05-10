@@ -29,9 +29,9 @@ const studyGroupsService = {
   /**
    * Obtiene los detalles de un grupo de estudio por ID
    */
-  async getStudyGroupById(id: string): Promise<StudyGroup> {
+  async getStudyGroupById(id: string): Promise<StudyRequest> {
     try {
-      const response = await apiClient.get<{ data: StudyGroup }>(
+      const response = await apiClient.get<{ data: StudyRequest }>(
         API_ENDPOINTS.STUDY_GROUPS_BY_ID(id)
       );
       return response.data.data;
@@ -102,6 +102,37 @@ const studyGroupsService = {
         `Error fetching applications for group ${groupId}:`,
         error
       );
+      throw error;
+    }
+  },
+
+  /**
+   * Obtiene las aplicaciones del usuario autenticado
+   */
+  async listMyApplications(): Promise<Application[]> {
+    try {
+      const response = await apiClient.get<{ data: Application[] }>(
+        API_ENDPOINTS.APPLICATIONS_LIST
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching my applications:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Postula al usuario actual a un grupo de estudio
+   */
+  async applyToStudyGroup(requestId: string, message: string): Promise<Application> {
+    try {
+      const response = await apiClient.post<{ data: Application }>(
+        API_ENDPOINTS.APPLICATIONS_CREATE,
+        { request_id: requestId, message }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error(`Error applying to study group ${requestId}:`, error);
       throw error;
     }
   },
