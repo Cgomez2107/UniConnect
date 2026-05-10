@@ -23,6 +23,7 @@ export async function handleProfilesCatalogRoutes(
   const studentDetailMatch = requestUrl.pathname.match(
     /^\/api\/v1\/students\/([^/]+)$/,
   );
+  const perfilMatch = requestUrl.pathname.match(/^\/perfil\/([^/]+)$/);
   const subjectsMatch = requestUrl.pathname.match(
     /^\/api\/v1\/catalog\/programs\/([^/]+)\/subjects$/,
   );
@@ -43,6 +44,12 @@ export async function handleProfilesCatalogRoutes(
 
   if (req.method === "GET" && studentDetailMatch) {
     await controller.getStudentProfile(req, res, studentDetailMatch[1]);
+    return true;
+  }
+
+  // Alias para cumplir AC4: endpoint público `/perfil/:id`
+  if (req.method === "GET" && perfilMatch) {
+    await controller.getStudentProfile(req, res, perfilMatch[1]);
     return true;
   }
 
