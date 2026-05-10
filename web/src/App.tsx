@@ -19,6 +19,8 @@ import { EventosPage } from "./pages/EventosPage";
 import { RecursosPage } from "./pages/RecursosPage";
 import { PerfilPage } from "./pages/PerfilPage";
 import { MensajesPage } from "./pages/MensajesPage";
+import { DirectorioPage } from "./pages/DirectorioPage";
+import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import "./App.css";
 
@@ -90,77 +92,23 @@ function App() {
           }
         />
         <Route
-          path="/invitaciones"
           element={
             <PrivateRoute isAuthenticated={isAuthenticated}>
-              <InvitationsPage />
+              <AppLayout />
             </PrivateRoute>
           }
-        />
-        <Route
-          path="/solicitudes"
-          element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <SolicitudesPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/solicitud/:id"
-          element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <SolicitudDetailPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/nueva-solicitud"
-          element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <NuevaSolicitudPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/eventos"
-          element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <EventosPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/recursos"
-          element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <RecursosPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/perfil"
-          element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <PerfilPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/mensajes"
-          element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <MensajesPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/chat/:conversationId"
-          element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <ChatPage />
-            </PrivateRoute>
-          }
-        />
+        >
+          <Route path="/invitaciones" element={<InvitationsPage />} />
+          <Route path="/solicitudes" element={<SolicitudesPage />} />
+          <Route path="/solicitud/:id" element={<SolicitudDetailPage />} />
+          <Route path="/nueva-solicitud" element={<NuevaSolicitudPage />} />
+          <Route path="/eventos" element={<EventosPage />} />
+          <Route path="/recursos" element={<RecursosPage />} />
+          <Route path="/perfil" element={<PerfilPage />} />
+          <Route path="/mensajes" element={<MensajesPage />} />
+          <Route path="/chat/:conversationId" element={<ChatPage />} />
+          <Route path="/directorio" element={<DirectorioPage />} />
+        </Route>
         <Route
           path="/"
           element={
