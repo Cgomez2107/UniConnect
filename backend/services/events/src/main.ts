@@ -7,8 +7,12 @@ import { UpdateEvent } from "./application/use-cases/UpdateEvent.js";
 import { DeleteEvent } from "./application/use-cases/DeleteEvent.js";
 import { loadEventsEnv } from "./config/env.js";
 import { PostgresEventRepository } from "./infrastructure/database/PostgresEventRepository.js";
+import { PostgresSubscriptionRepository } from "./infrastructure/database/PostgresSubscriptionRepository.js";
 import { Database } from "./infrastructure/database/Database.js";
+import { UniversityEventSubject } from "./domain/events/UniversityEventSubject.js";
+import { UniversityEventObserver } from "./domain/events/UniversityEventObserver.js";
 import { EventsController } from "./interfaces/http/controllers/EventsController.js";
+import { SubscriptionController } from "./interfaces/http/controllers/SubscriptionController.js";
 import { handleEventsRoutes } from "./interfaces/http/routes/eventsRoutes.js";
 
 function sendJsonError(statusCode: number, message: string): string {
@@ -23,11 +27,31 @@ function bootstrap(): void {
 
   // Repositorio con inyección de dependencia
   const repository = new PostgresEventRepository(pool);
+  const subscriptionRepository = new PostgresSubscriptionRepository(pool);
+
+  // Sistema de eventos (Observer Pattern)
+  const subject = new UniversityEventSubject();
+  const socketGateway: import("./domain/events/UniversityEventObserver.js").IEventSocketGateway = {
+    emitToUser: async (userId, event, payload) => {
+      console.log(
+        JSON.stringify({
+          service: "events",
+          level: "info",
+          message: `[WS] Emitir ${event} a usuario ${userId}`,
+          event,
+          userId,
+          payload,
+        }),
+      );
+    },
+  };
+  const eventObserver = new UniversityEventObserver(subscriptionRepository, socketGateway);
+  subject.subscribe(eventObserver);
 
   const getAllEvents = new GetAllEvents(repository);
   const getUpcomingEvents = new GetUpcomingEvents(repository);
   const getEventById = new GetEventById(repository);
-  const createEvent = new CreateEvent(repository);
+  const createEvent = new CreateEvent(repository, subject);
   const updateEvent = new UpdateEvent(repository);
   const deleteEvent = new DeleteEvent(repository);
 
@@ -40,9 +64,11 @@ function bootstrap(): void {
     deleteEvent,
   );
 
+  const subscriptionController = new SubscriptionController(subscriptionRepository);
+
   const server = createServer((req, res) => {
     void (async () => {
-      const handled = await handleEventsRoutes(req, res, controller);
+      const handled = await handleEventsRoutes(req, res, controller, subscriptionController);
       if (!handled) {
         res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
         res.end(sendJsonError(404, "Route not found"));
