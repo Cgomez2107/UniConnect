@@ -195,6 +195,247 @@ console.log(final.getMetadata());
   - `src/domain/decorators/ReactionDecorator.ts`
 - Tests: `src/domain/decorators/decorator.test.ts`
 
+## Patrón Chain of Responsibility para Validación de Mensajes
+
+El dominio implementa el **Patrón Chain of Responsibility** para validar mensajes antes de publicarlos. Cada validación es un handler independiente que puede cortar la cadena si la regla se viola.
+
+### Descripción
+
+La cadena se construye en un único punto (`ValidatorFactory`) con 4 handlers en orden estricto:
+
+1. **SizeValidator**: Rechaza mensajes que excedan 500 caracteres (`SIZE_EXCEEDED`)
+2. **ContentValidator**: Rechaza mensajes con palabras prohibidas (`INVALID_CONTENT`)
+3. **MentionsValidator**: Rechaza menciones a usuarios inexistentes (`USER_NOT_FOUND`)
+4. **PermissionsValidator**: Rechaza usuarios baneados (`USER_BANNED`) o sin permiso de escritura (`NO_WRITE_PERMISSION`)
+
+### Características
+
+✅ **Handlers independientes**: Cada uno valida un solo aspecto y delega al siguiente
+✅ **Cortocircuito**:apenas un handler falla, retorna el error sin ejecutar los siguientes
+✅ **Punto único de composición**: La cadena se arma en `ValidatorFactory.createChain()` — el orden es explícito
+✅ **Open/Closed**: Nuevos handlers se agregan sin modificar los existentes (solo se cambia la composición)
+✅ **Integración con Observer**: Si todas las validaciones pasan, el mensaje se decora y se emite vía `ChatSubject`
+
+### Diagrama UML
+
+```mermaid
+classDiagram
+    class IMessageValidatorHandler {
+        <<interface>>
+        +setNext(handler: IMessageValidatorHandler) IMessageValidatorHandler
+        +handle(message: ValidatableMessage) Promise~ValidationResult~
+    }
+
+    class ValidationResult {
+        +isValid: boolean
+        +errorCode: string (opcional)
+    }
+
+    class ValidatableMessage {
+        +content: string
+        +senderId: string
+        +mentionedUserIds: string[]
+        +conversationId: string
+        +metadata: Record~string, unknown~
+    }
+
+    class BaseMessageHandler {
+        <<abstract>>
+        -next: IMessageValidatorHandler | null
+        +setNext(handler) IMessageValidatorHandler
+        +handle(message) Promise~ValidationResult~
+        #doValidate(message) Promise~ValidationResult~*
+        #getErrorCode() string*
+    }
+
+    class SizeValidator {
+        #doValidate(message) Promise~ValidationResult~
+        #getErrorCode() string
+    }
+
+    class ContentValidator {
+        -bannedWordList: IBannedWordList
+        #doValidate(message) Promise~ValidationResult~
+        #getErrorCode() string
+    }
+
+    class MentionsValidator {
+        -userExistenceService: IUserExistenceService
+        #doValidate(message) Promise~ValidationResult~
+        #getErrorCode() string
+    }
+
+    class PermissionsValidator {
+        -chatPermissionService: IChatPermissionService
+        #doValidate(message) Promise~ValidationResult~
+        #getErrorCode() string
+    }
+
+    class AttachmentValidator {
+        <<optional>>
+        #doValidate(message) Promise~ValidationResult~
+        #getErrorCode() string
+    }
+
+    class ValidatorFactory {
+        +createChain(bannedWordList, userExistenceService, chatPermissionService) IMessageValidatorHandler
+    }
+
+    class SendMessage {
+        -validatorChain: IMessageValidatorHandler
+        +execute(conversationId, senderId, content, media) Promise~Message~
+    }
+
+    class ChatSubject {
+        +emit(channel, event) Promise~void~
+    }
+
+    IMessageValidatorHandler <|.. BaseMessageHandler : implements
+    BaseMessageHandler <|-- SizeValidator : extends
+    BaseMessageHandler <|-- ContentValidator : extends
+    BaseMessageHandler <|-- MentionsValidator : extends
+    BaseMessageHandler <|-- PermissionsValidator : extends
+    BaseMessageHandler <|-- AttachmentValidator : extends (opcional)
+    BaseMessageHandler --> IMessageValidatorHandler : next
+    ValidatorFactory --> SizeValidator : crea
+    ValidatorFactory --> ContentValidator : crea
+    ValidatorFactory --> MentionsValidator : crea
+    ValidatorFactory --> PermissionsValidator : crea
+    SendMessage --> IMessageValidatorHandler : validatorChain
+    SendMessage --> ChatSubject : subject
+    ContentValidator --> IBannedWordList : inyectado
+    MentionsValidator --> IUserExistenceService : inyectado
+    PermissionsValidator --> IChatPermissionService : inyectado
+    ValidationResult <-- IMessageValidatorHandler : retorna
+    ValidatableMessage --> IMessageValidatorHandler : recibe
+```
+
+### Diagrama de Secuencia — Caso Exitoso
+
+```mermaid
+sequenceDiagram
+    participant C as Controller
+    participant SM as SendMessage
+    participant SZ as SizeValidator
+    participant CV as ContentValidator
+    participant MV as MentionsValidator
+    participant PV as PermissionsValidator
+    participant R as Repository
+    participant CS as ChatSubject
+
+    C->>SM: execute(conversationId, senderId, content)
+    SM->>SM: normalize input
+    SM->>SZ: handle(validatableMsg)
+
+    SZ->>SZ: doValidate()
+    Note over SZ: content.length <= 500 ✓
+    SZ->>CV: handle(validatableMsg)
+
+    CV->>CV: doValidate()
+    Note over CV: no banned words ✓
+    CV->>MV: handle(validatableMsg)
+
+    MV->>MV: doValidate()
+    Note over MV: all mentions exist ✓
+    MV->>PV: handle(validatableMsg)
+
+    PV->>PV: doValidate()
+    Note over PV: not banned + can write ✓
+    PV-->>SM: { isValid: true }
+
+    SM->>R: createMessage(...)
+    R-->>SM: Message
+    SM->>SM: buildDecoratedPayload(BaseMessage → FileDecorator → MentionDecorator)
+    SM->>CS: emit(channel, event)
+    CS-->>SM: void
+    SM-->>C: Message
+```
+
+### Diagrama de Secuencia — Cortocircuito (falla en ContentValidator)
+
+```mermaid
+sequenceDiagram
+    participant C as Controller
+    participant SM as SendMessage
+    participant SZ as SizeValidator
+    participant CV as ContentValidator
+    participant MV as MentionsValidator
+    participant PV as PermissionsValidator
+    participant R as Repository
+    participant CS as ChatSubject
+
+    C->>SM: execute(conversationId, senderId, content)
+    SM->>SZ: handle(validatableMsg)
+
+    SZ->>SZ: doValidate()
+    Note over SZ: content.length <= 500 ✓
+    SZ->>CV: handle(validatableMsg)
+
+    CV->>CV: doValidate()
+    Note over CV: detects banned word ❌
+    CV-->>SM: { isValid: false, errorCode: "INVALID_CONTENT" }
+
+    Note over SM: CHAIN SHORT-CIRCUITED
+    Note over SM: NO persist, NO decorate, NO emit
+
+    SM-->>C: throw ValidationError("INVALID_CONTENT")
+
+    Note over MV,CS,PV: MentionsValidator y PermissionsValidator<br/>NUNCA se ejecutan<br/>No hay persistencia ni emisión
+```
+
+### Códigos de Error
+
+| Handler | errorCode | Descripción |
+|---|---|---|
+| `SizeValidator` | `SIZE_EXCEEDED` | El mensaje excede los 500 caracteres |
+| `ContentValidator` | `INVALID_CONTENT` | El contenido contiene palabras prohibidas |
+| `MentionsValidator` | `USER_NOT_FOUND` | Uno o más usuarios mencionados no existen |
+| `PermissionsValidator` | `USER_BANNED` | El usuario está baneado de la conversación |
+| `PermissionsValidator` | `NO_WRITE_PERMISSION` | El usuario no tiene permiso de escritura |
+
+### Cómo Extender la Cadena (AC-06)
+
+Para agregar una nueva validación (ej. `AttachmentValidator`) solo se modifica la composición en `ValidatorFactory`:
+
+```typescript
+// 1. Crear el nuevo handler (nueva clase, no toca existentes)
+class AttachmentValidator extends BaseMessageHandler {
+  protected getErrorCode(): string { return "ATTACHMENT_TOO_LARGE"; }
+  protected async doValidate(message: ValidatableMessage): Promise<ValidationResult> {
+    // lógica de validación
+    return { isValid: true };
+  }
+}
+
+// 2. Agregarlo en ValidatorFactory.createChain() (único punto de cambio)
+const size = new SizeValidator();
+const content = new ContentValidator(bannedWordList);
+const mentions = new MentionsValidator(userExistenceService);
+const permissions = new PermissionsValidator(chatPermissionService);
+const attachment = new AttachmentValidator(/* ... */);
+
+size.setNext(content)
+    .setNext(mentions)
+    .setNext(permissions)
+    .setNext(attachment);  // ← solo se agrega esta línea
+
+return size;
+```
+
+No se modifica: `SizeValidator`, `ContentValidator`, `MentionsValidator`, `PermissionsValidator` ni `SendMessage`.
+
+### Ubicación
+
+- Interfaz: `src/domain/validation/IMessageValidatorHandler.ts`
+- Clase abstracta: `src/domain/validation/BaseMessageHandler.ts`
+- Handlers:
+  - `src/domain/validation/SizeValidator.ts`
+  - `src/domain/validation/ContentValidator.ts`
+  - `src/domain/validation/MentionsValidator.ts`
+  - `src/domain/validation/PermissionsValidator.ts`
+- Factoría: `src/domain/validation/ValidatorFactory.ts`
+- Tests: `src/domain/validation/__tests__/chain-of-responsibility.test.ts`
+
 ## Persistencia y compatibilidad
 
 El servicio selecciona repositorio en runtime:

@@ -19,6 +19,8 @@ import { Database } from "./infrastructure/database/Database.js";
 import type { Pool } from "pg";
 import { MessagingController } from "./interfaces/http/controllers/MessagingController.js";
 import { handleMessagingRoutes } from "./interfaces/http/routes/messagingRoutes.js";
+import { ValidatorFactory, ValidationError } from "./domain/validation/index.js";
+import type { IBannedWordList, IUserExistenceService, IChatPermissionService } from "./domain/validation/index.js";
 
 function sendJsonError(statusCode: number, message: string): string {
 	return JSON.stringify({ error: message, statusCode });
@@ -91,6 +93,39 @@ function bootstrap(): void {
 	// chatSubject.subscribe("grupo:ejemplo", realtimeObserver);
 	// chatSubject.subscribe("grupo:ejemplo", idempotencyObserver);
 
+	// ✅ Construir cadena de validación (Chain of Responsibility)
+	const mockBannedWordList: IBannedWordList = {
+		async containsBannedWord(text: string): Promise<boolean> {
+			const banned = ["spam", "insulto", "prohibido"];
+			const lower = text.toLowerCase();
+			return banned.some(w => lower.includes(w));
+		},
+	};
+
+	const mockUserExistenceService: IUserExistenceService = {
+		async allUsersExist(userIds: string[]): Promise<boolean> {
+			// En producción consultaría la BD; mock: todos existen
+			return userIds.every(id => id.length > 0);
+		},
+	};
+
+	const mockChatPermissionService: IChatPermissionService = {
+		async isUserBanned(userId: string, _conversationId: string): Promise<boolean> {
+			// En producción consultaría la BD; mock: nadie baneado
+			return false;
+		},
+		async canWrite(userId: string, _conversationId: string): Promise<boolean> {
+			// En producción consultaría la BD; mock: todos pueden escribir
+			return true;
+		},
+	};
+
+	const validatorChain = ValidatorFactory.createChain(
+		mockBannedWordList,
+		mockUserExistenceService,
+		mockChatPermissionService,
+	);
+
 	const getConversations = new GetConversations(repository);
 	const getConversationById = new GetConversationById(repository);
 	const getOrCreateConversation = new GetOrCreateConversation(repository);
@@ -103,6 +138,7 @@ function bootstrap(): void {
 		chatSubject,
 		realtimeObserver,
 		idempotencyObserver,
+		validatorChain,
 	);
 	const markMessageAsRead = new MarkMessageAsRead(repository);
 	const markConversationAsRead = new MarkConversationAsRead(repository);

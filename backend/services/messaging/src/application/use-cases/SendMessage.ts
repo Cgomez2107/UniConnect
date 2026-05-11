@@ -13,6 +13,8 @@ import {
   extractMentionsFromContent,
   type FileMetadata,
 } from "../../domain/decorators/index.js";
+import type { IMessageValidatorHandler, ValidatableMessage } from "../../domain/validation/index.js";
+import { ValidationError } from "../../domain/validation/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 export class SendMessage {
@@ -21,6 +23,7 @@ export class SendMessage {
     private readonly subject: ChatSubject,
     private readonly realtimeObserver: IChatObserver,
     private readonly idempotencyObserver: IChatObserver,
+    private readonly validatorChain: IMessageValidatorHandler,
   ) {}
 
   private readonly uuidRegex =
@@ -48,8 +51,20 @@ export class SendMessage {
       throw new Error("Debes enviar texto o una imagen.");
     }
 
-    if (normalizedContent.length > 5000) {
-      throw new Error("content excede el máximo de 5000 caracteres.");
+    const mentionIds = extractMentionsFromContent(normalizedContent).map(m => m.userId);
+
+    const validatable: ValidatableMessage = {
+      content: normalizedContent,
+      senderId: normalizedSenderId,
+      mentionedUserIds: mentionIds,
+      conversationId: normalizedConversationId,
+      metadata: {},
+    };
+
+    const validation = await this.validatorChain.handle(validatable);
+
+    if (!validation.isValid) {
+      throw new ValidationError(validation.errorCode!);
     }
 
     const conversation = await this.repository.getConversationById(
