@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { EventsController } from "../controllers/EventsController.js";
+import type { SubscriptionController } from "../controllers/SubscriptionController.js";
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   const body = JSON.stringify(payload);
@@ -14,6 +15,7 @@ export async function handleEventsRoutes(
   req: IncomingMessage,
   res: ServerResponse,
   controller: EventsController,
+  subscriptionController?: SubscriptionController,
 ): Promise<boolean> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   const eventDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/events\/([^/]+)$/);
@@ -49,6 +51,18 @@ export async function handleEventsRoutes(
 
   if (req.method === "DELETE" && eventDetailMatch) {
     await controller.delete(req, res, eventDetailMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && requestUrl.pathname === "/api/v1/eventos/suscribir") {
+    if (!subscriptionController) { sendJson(res, 500, { error: "Subscription not available" }); return true; }
+    await subscriptionController.subscribe(req, res);
+    return true;
+  }
+
+  if (req.method === "DELETE" && requestUrl.pathname === "/api/v1/eventos/suscribir") {
+    if (!subscriptionController) { sendJson(res, 500, { error: "Subscription not available" }); return true; }
+    await subscriptionController.unsubscribe(req, res);
     return true;
   }
 

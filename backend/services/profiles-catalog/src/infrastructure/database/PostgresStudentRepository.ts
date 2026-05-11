@@ -1,5 +1,4 @@
-import { Pool } from "pg";
-import type { ProfilesCatalogEnv } from "../../config/env.js";
+import type { Pool } from "pg";
 import type { Student } from "../../domain/entities/Student.js";
 import type { IStudentRepository } from "../../domain/repositories/IStudentRepository.js";
 
@@ -34,34 +33,12 @@ function mapStudent(row: StudentRow): Student {
   };
 }
 
-function buildPool(env: ProfilesCatalogEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error("Database configuration incomplete");
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
-}
-
 /**
  * Implementación Postgres de IStudentRepository
- * Pool se crea una sola vez (Singleton)
+ * Recibe el Pool vía inyección de dependencias
  */
 export class PostgresStudentRepository implements IStudentRepository {
-  private readonly pool: Pool;
-
-  constructor(env: ProfilesCatalogEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async searchBySubject(subjectId: string, searchTerm?: string, currentUserId?: string): Promise<Student[]> {
     const values: Array<string> = [subjectId];

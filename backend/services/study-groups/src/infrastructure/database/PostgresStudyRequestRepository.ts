@@ -1,13 +1,20 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
 import { ConflictError } from "../../../../../shared/libs/errors/ConflictError.js";
 import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
-import type { StudyGroupsEnv } from "../../config/env.js";
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type {
   IStudyRequestRepository,
   ListOpenFilters,
 } from "../../domain/repositories/IStudyRequestRepository.js";
+import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
+import type { ISubject } from "../../domain/events/observers/ISubject.js";
+import { StudyGroup } from "../../domain/states/StudyGroup.js";
+import { AbiertaState } from "../../domain/states/AbiertaState.js";
+import { LlenaState } from "../../domain/states/LlenaState.js";
+import { CerradaState } from "../../domain/states/CerradaState.js";
+import { ExpiradaState } from "../../domain/states/ExpiradaState.js";
+import { TransferenciaPendienteState } from "../../domain/states/TransferenciaPendienteState.js";
 
 interface StudyRequestRow {
   id: string;
@@ -26,6 +33,15 @@ interface StudyRequestRow {
   author_full_name: string | null;
   author_avatar_url: string | null;
   author_bio: string | null;
+}
+
+interface StudyGroupHydrationRow {
+  id: string;
+  title: string;
+  max_members: number;
+  status: "abierta" | "cerrada" | "expirada";
+  members_count: number;
+  has_pending_transfer: boolean;
 }
 
 function mapStudyRequest(row: StudyRequestRow): StudyRequest {
@@ -56,41 +72,88 @@ function mapStudyRequest(row: StudyRequestRow): StudyRequest {
   };
 }
 
-function buildPool(env: StudyGroupsEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error(
-      "Variables de entorno de base de datos incompletas para PostgresStudyRequestRepository.",
-    );
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
-}
-
 /**
  * Implementación Postgres del repositorio de solicitudes de estudio.
  *
- * El pool de conexiones se crea una única vez en el constructor (Singleton por instancia),
- * lo que garantiza reutilización de conexiones sin abrir una nueva por cada solicitud.
+ * Implementa tanto IStudyRequestRepository (operaciones CRUD estándar) como
+ * IStudyGroupRepository (hidratación del contexto StudyGroup con el estado correcto).
  *
- * El filtro por `subjectIds` se resuelve en el servidor mediante `= ANY($n)`,
- * eliminando el antipatrón de filtrado en el cliente que genera paginación inconsistente.
+ * Recibe el Pool de conexiones por inyección de dependencias (Singleton centralizado),
+ * lo que garantiza reutilización de recursos y facilita el testing.
  */
-export class PostgresStudyRequestRepository implements IStudyRequestRepository {
-  private readonly pool: Pool;
+export class PostgresStudyRequestRepository
+  implements IStudyRequestRepository, IStudyGroupRepository
+{
+  constructor(private readonly pool: Pool) {}
 
-  constructor(env: StudyGroupsEnv) {
-    this.pool = buildPool(env);
+  // ─── IStudyGroupRepository ────────────────────────────────────────────────
+
+  /**
+   * Hidrata el contexto StudyGroup con el estado correcto basándose en la BD.
+   *
+   * Lógica de asignación de estado:
+   *  - status='cerrada'  → CerradaState
+   *  - status='expirada' → ExpiradaState
+   *  - membersCount >= maxMembers → LlenaState (virtual, status sigue 'abierta' en BD)
+   *  - membersCount <  maxMembers → AbiertaState
+   *  Si además hay una transferencia pendiente → TransferenciaPendienteState(estadoBase)
+   */
+  async loadStudyGroup(requestId: string, subject: ISubject): Promise<StudyGroup> {
+    const result = await this.pool.query<StudyGroupHydrationRow>(
+      `
+        SELECT
+          sr.id,
+          sr.title,
+          sr.max_members,
+          sr.status,
+          COALESCE(m.members_count, 0)::int         AS members_count,
+          (t.id IS NOT NULL)                         AS has_pending_transfer
+        FROM study_requests sr
+        LEFT JOIN (
+          SELECT request_id, COUNT(*)::int AS members_count
+          FROM   applications
+          WHERE  status = 'aceptada'
+          GROUP  BY request_id
+        ) m ON m.request_id = sr.id
+        LEFT JOIN study_request_admin_transfers t
+               ON t.request_id = sr.id AND t.status = 'pendiente'
+        WHERE sr.id = $1
+        LIMIT 1
+      `,
+      [requestId],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error(`Grupo de estudio '${requestId}' no encontrado.`);
+    }
+
+    // ── Determinar el estado base ─────────────────────────────────────────
+    let baseState =
+      row.status === "cerrada"
+        ? new CerradaState()
+        : row.status === "expirada"
+          ? new ExpiradaState()
+          : row.members_count >= row.max_members
+            ? new LlenaState()        // estado virtual: capacidad llena
+            : new AbiertaState();
+
+    // ── Envolver con TransferenciaPendienteState si corresponde ───────────
+    const initialState = row.has_pending_transfer
+      ? new TransferenciaPendienteState(baseState)
+      : baseState;
+
+    return new StudyGroup(
+      row.id,
+      row.title,
+      row.max_members,
+      row.members_count,
+      initialState,
+      subject,
+    );
   }
+
+  // ─── IStudyRequestRepository ──────────────────────────────────────────────
 
   async listOpen(filters: ListOpenFilters = {}): Promise<StudyRequest[]> {
     const values: Array<string | number | string[]> = [];

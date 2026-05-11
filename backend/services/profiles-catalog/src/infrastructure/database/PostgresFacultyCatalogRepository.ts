@@ -1,5 +1,4 @@
-import { Pool } from "pg";
-import type { ProfilesCatalogEnv } from "../../config/env.js";
+import type { Pool } from "pg";
 import type { Faculty } from "../../domain/entities/Faculty.js";
 import type { Program } from "../../domain/entities/Program.js";
 import type { Subject } from "../../domain/entities/Subject.js";
@@ -67,30 +66,8 @@ function mapSubject(row: SubjectRow): Subject {
   };
 }
 
-function buildPool(env: ProfilesCatalogEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error("Database configuration incomplete");
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
-}
-
 export class PostgresFacultyCatalogRepository implements IFacultyCatalogRepository {
-  private readonly pool: Pool;
-
-  constructor(env: ProfilesCatalogEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async getAllFaculties(): Promise<Faculty[]> {
     const result = await this.pool.query<FacultyRow>(

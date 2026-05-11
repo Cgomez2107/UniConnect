@@ -9,13 +9,16 @@
     "start": "node dist/services/study-groups/src/main.js",
     "lint": "echo \"study-groups lint config scaffold\"",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"study-groups tests config scaffold\""
+    "test": "jest"
   },
   "dependencies": {
     "pg": "^8.13.1"
   },
   "devDependencies": {
+    "@jest/globals": "^30.0.0",
+    "@types/jest": "^29.5.0",
     "@types/pg": "^8.11.10",
+    "jest": "^30.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "@types/node": "^22.10.1"

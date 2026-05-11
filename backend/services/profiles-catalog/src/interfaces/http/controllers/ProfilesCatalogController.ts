@@ -1,21 +1,18 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { SearchStudentsBySubject } from "../../../application/use-cases/SearchStudentsBySubject.js";
 import type { GetStudentPublicProfile } from "../../../application/use-cases/GetStudentPublicProfile.js";
+import type { GetFullProfile } from "../../../application/use-cases/GetFullProfile.js";
 import type { GetPrograms } from "../../../application/use-cases/GetPrograms.js";
 import type { GetSubjectsByProgram } from "../../../application/use-cases/GetSubjectsByProgram.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 import { DtoValidationError, Validators, validateDto } from "../../../../../../shared/libs/validation/index.js";
 import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
 
-/**
- * Controlador HTTP del dominio profiles-catalog
- * Responsabilidad: traducir HTTP ↔ use cases (Facade pattern)
- * No contiene lógica de negocio
- */
 export class ProfilesCatalogController {
   constructor(
     private readonly searchStudentsUC: SearchStudentsBySubject,
     private readonly getPublicProfile: GetStudentPublicProfile,
+    private readonly getFullProfileUC: GetFullProfile,
     private readonly getProgramsUC: GetPrograms,
     private readonly getSubjectsByProgramUC: GetSubjectsByProgram,
   ) {}
@@ -70,6 +67,7 @@ export class ProfilesCatalogController {
   ): Promise<void> {
     try {
       const requestUrl = new URL(req.url ?? "/", "http://localhost");
+      const vista = requestUrl.searchParams.get("vista");
       const currentUserIdParam = requestUrl.searchParams.get("currentUserId");
       const currentUserIdHeader = req.headers["x-user-id"];
       const currentUserId =
@@ -88,7 +86,12 @@ export class ProfilesCatalogController {
         return;
       }
 
-      sendData(res, 200, result);
+      if (vista === "completa") {
+        const decorado = await this.getFullProfileUC.execute(result);
+        sendData(res, 200, decorado.toJSON());
+      } else {
+        sendData(res, 200, result);
+      }
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

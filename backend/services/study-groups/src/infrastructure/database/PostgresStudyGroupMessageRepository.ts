@@ -1,6 +1,5 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
-import type { StudyGroupsEnv } from "../../config/env.js";
 import type { StudyGroupMessage } from "../../domain/entities/StudyGroupMessage.js";
 import type { IStudyGroupMessageRepository } from "../../domain/repositories/IStudyGroupMessageRepository.js";
 
@@ -17,24 +16,6 @@ interface StudyGroupMessageRow {
   media_filename?: string | null;
   mentions?: any[] | null;
   reactions?: any[] | null;
-}
-
-function buildPool(env: StudyGroupsEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error("Database environment variables are incomplete for PostgresStudyGroupMessageRepository");
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
 }
 
 function mapMessage(row: StudyGroupMessageRow): StudyGroupMessage {
@@ -55,11 +36,7 @@ function mapMessage(row: StudyGroupMessageRow): StudyGroupMessage {
 }
 
 export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRepository {
-  private readonly pool: Pool;
-
-  constructor(env: StudyGroupsEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async listByRequest(input: {
     requestId: string;

@@ -1,6 +1,5 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
-import type { StudyGroupsEnv } from "../../config/env.js";
 import type { UserNotification } from "../../domain/entities/UserNotification.js";
 import type { INotificationRepository } from "../../domain/repositories/INotificationRepository.js";
 
@@ -13,24 +12,6 @@ interface NotificationRow {
   payload: Record<string, unknown> | null;
   created_at: Date | string;
   read_at: Date | string | null;
-}
-
-function buildPool(env: StudyGroupsEnv): Pool {
-  if (!env.dbHost || !env.dbPort || !env.dbName || !env.dbUser || !env.dbPassword) {
-    throw new Error("Database environment variables are incomplete for PostgresNotificationRepository");
-  }
-
-  return new Pool({
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    password: env.dbPassword,
-    ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
 }
 
 function mapNotification(row: NotificationRow): UserNotification {
@@ -47,11 +28,7 @@ function mapNotification(row: NotificationRow): UserNotification {
 }
 
 export class PostgresNotificationRepository implements INotificationRepository {
-  private readonly pool: Pool;
-
-  constructor(env: StudyGroupsEnv) {
-    this.pool = buildPool(env);
-  }
+  constructor(private readonly pool: Pool) {}
 
   async create(input: {
     userId: string;

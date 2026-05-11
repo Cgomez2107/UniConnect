@@ -24,6 +24,7 @@ import type { IApplicationRepository } from "./domain/repositories/IApplicationR
 import type { INotificationRepository } from "./domain/repositories/INotificationRepository.js";
 import type { IMemberRepository } from "./domain/repositories/IMemberRepository.js";
 import type { IStudyGroupMessageRepository } from "./domain/repositories/IStudyGroupMessageRepository.js";
+import type { IStudyGroupRepository } from "./domain/repositories/IStudyGroupRepository.js";
 import { InMemoryStudyRequestRepository } from "./infrastructure/database/InMemoryStudyRequestRepository.js";
 import { InMemoryAdminTransferRepository } from "./infrastructure/database/InMemoryAdminTransferRepository.js";
 import { InMemoryApplicationRepository } from "./infrastructure/database/InMemoryApplicationRepository.js";
@@ -40,6 +41,8 @@ import { NoopStudyGroupSocketGateway } from "./infrastructure/realtime/NoopStudy
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
 import type { IStudyRequestRepository } from "./domain/repositories/IStudyRequestRepository.js";
+import { Database } from "./infrastructure/database/Database.js";
+import type { Pool } from "pg";
 import {
   ChatSubject as GroupChatSubject,
   RealtimeObserver as GroupRealtimeObserver,
@@ -52,11 +55,19 @@ function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message });
 }
 
-function createRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IStudyRequestRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
+interface Repositories {
+  studyRequest: IStudyRequestRepository;
+  studyGroup: IStudyGroupRepository;
+}
 
-  if (hasDatabaseConfig) {
-    return new PostgresStudyRequestRepository(env);
+function createRepository(
+  env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
+): Repositories {
+  if (pool) {
+    // PostgresStudyRequestRepository implementa ambas interfaces
+    const repo = new PostgresStudyRequestRepository(pool);
+    return { studyRequest: repo, studyGroup: repo };
   }
 
   console.log(
@@ -67,34 +78,39 @@ function createRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IStudyReq
     }),
   );
 
-  return new InMemoryStudyRequestRepository();
+  // En modo in-memory la hidratación no aplica; usamos el mismo repo como stub
+  const inMemoryRepo = new InMemoryStudyRequestRepository();
+  return { studyRequest: inMemoryRepo, studyGroup: inMemoryRepo as unknown as IStudyGroupRepository };
 }
 
-function createApplicationRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IApplicationRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresApplicationRepository(env);
+function createApplicationRepository(
+  env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
+): IApplicationRepository {
+  if (pool) {
+    return new PostgresApplicationRepository(pool);
   }
 
   return new InMemoryApplicationRepository();
 }
 
-function createMemberRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IMemberRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresMemberRepository(env);
+function createMemberRepository(
+  env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
+): IMemberRepository {
+  if (pool) {
+    return new PostgresMemberRepository(pool);
   }
 
   return new InMemoryMemberRepository();
 }
 
-function createAdminTransferRepository(env: ReturnType<typeof loadStudyGroupsEnv>): IAdminTransferRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresAdminTransferRepository(env);
+function createAdminTransferRepository(
+  env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
+): IAdminTransferRepository {
+  if (pool) {
+    return new PostgresAdminTransferRepository(pool);
   }
 
   return new InMemoryAdminTransferRepository();
@@ -102,11 +118,10 @@ function createAdminTransferRepository(env: ReturnType<typeof loadStudyGroupsEnv
 
 function createStudyGroupMessageRepository(
   env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
 ): IStudyGroupMessageRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresStudyGroupMessageRepository(env);
+  if (pool) {
+    return new PostgresStudyGroupMessageRepository(pool);
   }
 
   return new InMemoryStudyGroupMessageRepository();
@@ -114,11 +129,10 @@ function createStudyGroupMessageRepository(
 
 function createNotificationRepository(
   env: ReturnType<typeof loadStudyGroupsEnv>,
+  pool: Pool | null,
 ): INotificationRepository {
-  const hasDatabaseConfig = !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresNotificationRepository(env);
+  if (pool) {
+    return new PostgresNotificationRepository(pool);
   }
 
   return new InMemoryNotificationRepository();
@@ -127,12 +141,19 @@ function createNotificationRepository(
 function bootstrap(): void {
   const env = loadStudyGroupsEnv();
 
-  const repository = createRepository(env);
-  const applicationRepository = createApplicationRepository(env);
-  const memberRepository = createMemberRepository(env);
-  const adminTransferRepository = createAdminTransferRepository(env);
-  const messageRepository = createStudyGroupMessageRepository(env);
-  const notificationRepository = createNotificationRepository(env);
+  const hasDatabaseConfig =
+    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
+  const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
+
+  // createRepository devuelve { studyRequest, studyGroup }.
+  // En modo Postgres ambas apuntan al mismo objeto (PostgresStudyRequestRepository
+  // implementa IStudyRequestRepository + IStudyGroupRepository).
+  const { studyRequest: repository, studyGroup: studyGroupRepository } = createRepository(env, pool);
+  const applicationRepository = createApplicationRepository(env, pool);
+  const memberRepository = createMemberRepository(env, pool);
+  const adminTransferRepository = createAdminTransferRepository(env, pool);
+  const messageRepository = createStudyGroupMessageRepository(env, pool);
+  const notificationRepository = createNotificationRepository(env, pool);
   const subject = new StudyGroupSubject();
   const socketGateway = new NoopStudyGroupSocketGateway();
   subject.subscribe(new NotificationObserver(notificationRepository));
@@ -178,16 +199,21 @@ function bootstrap(): void {
   const applyToStudyRequest = new ApplyToStudyRequest(
     applicationRepository,
     repository,
+    studyGroupRepository,  // ← IStudyGroupRepository para hidratación + validación de estado
     subject,
   );
   const reviewApplication = new ReviewApplication(
     applicationRepository,
-    repository,
+    studyGroupRepository,  // ← IStudyGroupRepository en lugar de studyRequestRepository
     memberRepository,
     subject,
   );
-  const requestAdminTransfer = new RequestAdminTransfer(adminTransferRepository, repository, subject);
-  const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, subject);
+  const requestAdminTransfer = new RequestAdminTransfer(
+    adminTransferRepository,
+    studyGroupRepository,  // ← IStudyGroupRepository en lugar de studyRequestRepository
+    subject,
+  );
+  const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
@@ -245,6 +271,33 @@ function bootstrap(): void {
       }),
     );
   });
+
+  // --- Graceful Shutdown ---
+  const shutdown = async (signal: string) => {
+    console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio study-groups...`);
+    
+    server.close(() => {
+      console.log("[Shutdown] Servidor HTTP cerrado.");
+    });
+
+    try {
+      subject.clear();
+      groupChatSubject.clear();
+      
+      if (hasDatabaseConfig) {
+        await Database.getInstance().close();
+      }
+      
+      console.log("[Shutdown] Limpieza de recursos completada con éxito.");
+      process.exit(0);
+    } catch (error) {
+      console.error("[Shutdown] Error durante el cierre de recursos:", error);
+      process.exit(1);
+    }
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
 bootstrap();

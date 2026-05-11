@@ -9,7 +9,9 @@ import { loadResourcesEnv } from "./config/env.ts";
 import type { IStudyResourceRepository } from "./domain/repositories/IStudyResourceRepository.js";
 import { InMemoryStudyResourceRepository } from "./infrastructure/database/InMemoryStudyResourceRepository.js";
 import { PostgresStudyResourceRepository } from "./infrastructure/database/PostgresStudyResourceRepository.js";
+import { Database } from "./infrastructure/database/Database.js";
 import { SupabaseStorageCleaner } from "./infrastructure/storage/SupabaseStorageCleaner.js";
+import type { Pool } from "pg";
 import { ResourcesController } from "./interfaces/http/controllers/ResourcesController.js";
 import { handleResourcesRoutes } from "./interfaces/http/routes/resourcesRoutes.js";
 
@@ -17,16 +19,12 @@ function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message, statusCode });
 }
 
-function createRepository(env: ReturnType<typeof loadResourcesEnv>): IStudyResourceRepository {
-  const hasDatabaseConfig =
-    !!env.dbHost &&
-    !!env.dbPort &&
-    !!env.dbName &&
-    !!env.dbUser &&
-    !!env.dbPassword;
-
-  if (hasDatabaseConfig) {
-    return new PostgresStudyResourceRepository(env);
+function createRepository(
+  env: ReturnType<typeof loadResourcesEnv>,
+  pool: Pool | null,
+): IStudyResourceRepository {
+  if (pool) {
+    return new PostgresStudyResourceRepository(pool);
   }
 
   console.log(
@@ -43,7 +41,11 @@ function createRepository(env: ReturnType<typeof loadResourcesEnv>): IStudyResou
 function bootstrap(): void {
   const env = loadResourcesEnv();
 
-  const repository = createRepository(env);
+  const hasDatabaseConfig =
+    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
+  const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
+
+  const repository = createRepository(env, pool);
   const listStudyResources = new ListStudyResources(repository);
   const getStudyResourceById = new GetStudyResourceById(repository);
   const createStudyResource = new CreateStudyResource(repository);
@@ -84,6 +86,30 @@ function bootstrap(): void {
       }),
     );
   });
+
+  // --- Graceful Shutdown ---
+  const shutdown = async (signal: string) => {
+    console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio resources...`);
+
+    server.close(() => {
+      console.log("[Shutdown] Servidor HTTP cerrado.");
+    });
+
+    try {
+      if (hasDatabaseConfig) {
+        await Database.getInstance().close();
+      }
+
+      console.log("[Shutdown] Limpieza de recursos completada con éxito.");
+      process.exit(0);
+    } catch (error) {
+      console.error("[Shutdown] Error durante el cierre de recursos:", error);
+      process.exit(1);
+    }
+  };
+
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
 bootstrap();
