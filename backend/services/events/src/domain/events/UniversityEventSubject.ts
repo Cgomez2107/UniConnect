@@ -25,11 +25,14 @@ export class UniversityEventSubject implements ISubject {
   }
 
   async emit(event: UniversityEvent): Promise<void> {
-    const promises = [...this.observers].map(o =>
-      o.handle(event).catch(err => {
-        console.error(`[${this.name}] Observer "${o.name}" failed:`, err);
-      }),
+    const promises: Promise<void>[] = [...this.observers].map((o) =>
+      o
+        .handle(event)
+        .catch((err) => {
+          console.error(`[${this.name}] Observer "${o.name}" failed:`, err);
+        }),
     );
+
     await Promise.all(promises);
   }
 

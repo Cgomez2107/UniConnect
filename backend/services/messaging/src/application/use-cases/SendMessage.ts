@@ -15,6 +15,7 @@ import {
 } from "../../domain/decorators/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 import { ValidatorFactory } from "../../../../../shared/patterns/chain/message/ValidatorFactory.js";
+import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
 
 export class SendMessage {
   private readonly validator = ValidatorFactory.createChain(5000);
@@ -60,7 +61,7 @@ export class SendMessage {
     );
 
     if (!conversation) {
-      throw new Error("Conversacion no encontrada.");
+      throw new NotFoundError("Conversacion no encontrada.");
     }
 
     const created = await this.repository.createMessage({

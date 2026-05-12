@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ISubscriptionRepository } from "../../../domain/events/subscriptions/ISubscriptionRepository.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
+import type { EventCategory } from "../../../domain/entities/Event.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
@@ -36,7 +37,7 @@ export class SubscriptionController {
     }
 
     try {
-      const body = await readJsonBody<{ categoria?: string }>(req);
+      const body = await readJsonBody<{ categoria?: EventCategory }>(req);
       const categoria = body.categoria;
 
       if (!categoria || !VALID_CATEGORIES.includes(categoria)) {
@@ -44,8 +45,9 @@ export class SubscriptionController {
         return;
       }
 
-      await this.subscriptionRepository.subscribe(actorUserId, categoria as any);
-      sendData(res, 200, { success: true, message: `Suscrito a ${categoria}` });
+      await this.subscriptionRepository.subscribe(actorUserId, categoria as EventCategory);
+      // Creación de recurso: devolvemos 201 Created
+      sendData(res, 201, { success: true, message: `Suscrito a ${categoria}` });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -60,7 +62,7 @@ export class SubscriptionController {
     }
 
     try {
-      const body = await readJsonBody<{ categoria?: string }>(req);
+      const body = await readJsonBody<{ categoria?: EventCategory }>(req);
       const categoria = body.categoria;
 
       if (!categoria || !VALID_CATEGORIES.includes(categoria)) {
@@ -68,7 +70,7 @@ export class SubscriptionController {
         return;
       }
 
-      await this.subscriptionRepository.unsubscribe(actorUserId, categoria as any);
+      await this.subscriptionRepository.unsubscribe(actorUserId, categoria as EventCategory);
       sendData(res, 200, { success: true, message: `Desuscrito de ${categoria}` });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
