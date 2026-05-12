@@ -1,12 +1,12 @@
 import { describe, it, expect } from "@jest/globals";
-import { AbiertaState } from "../../src/domain/states/AbiertaState.js";
-import { LlenaState } from "../../src/domain/states/LlenaState.js";
-import { CerradaState } from "../../src/domain/states/CerradaState.js";
-import { ExpiradaState } from "../../src/domain/states/ExpiradaState.js";
-import { TransferenciaPendienteState } from "../../src/domain/states/TransferenciaPendienteState.js";
-import { StudyGroup } from "../../src/domain/states/StudyGroup.js";
-import { InvalidStateTransitionError } from "../../../../../shared/libs/errors/InvalidStateTransitionError.js";
-import type { ISubject } from "../../src/domain/events/observers/ISubject.js";
+import { AbiertaState } from "../src/domain/states/AbiertaState.js";
+import { LlenaState } from "../src/domain/states/LlenaState.js";
+import { CerradaState } from "../src/domain/states/CerradaState.js";
+import { ExpiradaState } from "../src/domain/states/ExpiradaState.js";
+import { TransferenciaPendienteState } from "../src/domain/states/TransferenciaPendienteState.js";
+import { StudyGroup } from "../src/domain/states/StudyGroup.js";
+import { InvalidStateTransitionError } from "../../../shared/libs/errors/InvalidStateTransitionError.js";
+import type { ISubject } from "../src/domain/events/observers/ISubject.js";
 
 const mockSubject: ISubject = {
   subscribe: () => {},
@@ -94,7 +94,7 @@ describe("LlenaState", () => {
 
     expect(() => {
       state.applyToGroup("app-1", "user-123", "John Doe", "Hola", "admin-1");
-    }).toThrowError(InvalidStateTransitionError);
+    }).toThrow(InvalidStateTransitionError);
   });
 
   it("rechaza reviewApplication(approved) con InvalidStateTransitionError", () => {
@@ -105,7 +105,7 @@ describe("LlenaState", () => {
 
     expect(() => {
       state.reviewApplication("app-1", "approved", "admin-1", "user-123");
-    }).toThrowError(InvalidStateTransitionError);
+    }).toThrow(InvalidStateTransitionError);
   });
 
   it("permite requestAdminTransfer y emite evento", async () => {
@@ -138,15 +138,15 @@ describe("LlenaState", () => {
 });
 
 describe("CerradaState", () => {
-  it("rechaza cualquier acción de transferencia", () => {
+  it("rechaza cualquier acción de transferencia", async () => {
     const state = new CerradaState();
     state.setContext(
       new StudyGroup("group-1", "Test Group", 5, 3, state, mockSubject),
     );
 
-    expect(() => {
-      state.requestAdminTransfer("transfer-1", "admin-old", "admin-new", "cerrada");
-    }).toThrowError(InvalidStateTransitionError);
+    await expect(
+      state.requestAdminTransfer("transfer-1", "admin-old", "admin-new", "cerrada"),
+    ).rejects.toBeInstanceOf(InvalidStateTransitionError);
   });
 
   it("rechaza applyToGroup", () => {
@@ -157,7 +157,7 @@ describe("CerradaState", () => {
 
     expect(() => {
       state.applyToGroup("app-1", "user-123", "John Doe", "Hola", "admin-1");
-    }).toThrowError(InvalidStateTransitionError);
+    }).toThrow(InvalidStateTransitionError);
   });
 
   it("rechaza reviewApplication", () => {
@@ -168,20 +168,20 @@ describe("CerradaState", () => {
 
     expect(() => {
       state.reviewApplication("app-1", "approved", "admin-1", "user-123");
-    }).toThrowError(InvalidStateTransitionError);
+    }).toThrow(InvalidStateTransitionError);
   });
 });
 
 describe("ExpiradaState", () => {
-  it("rechaza cualquier acción de transferencia", () => {
+  it("rechaza cualquier acción de transferencia", async () => {
     const state = new ExpiradaState();
     state.setContext(
       new StudyGroup("group-1", "Test Group", 5, 3, state, mockSubject),
     );
 
-    expect(() => {
-      state.requestAdminTransfer("transfer-1", "admin-old", "admin-new", "expirada");
-    }).toThrowError(InvalidStateTransitionError);
+    await expect(
+      state.requestAdminTransfer("transfer-1", "admin-old", "admin-new", "expirada"),
+    ).rejects.toBeInstanceOf(InvalidStateTransitionError);
   });
 
   it("rechaza applyToGroup", () => {
@@ -192,7 +192,7 @@ describe("ExpiradaState", () => {
 
     expect(() => {
       state.applyToGroup("app-1", "user-123", "John Doe", "Hola", "admin-1");
-    }).toThrowError(InvalidStateTransitionError);
+    }).toThrow(InvalidStateTransitionError);
   });
 
   it("rechaza reviewApplication", () => {
@@ -203,21 +203,21 @@ describe("ExpiradaState", () => {
 
     expect(() => {
       state.reviewApplication("app-1", "approved", "admin-1", "user-123");
-    }).toThrowError(InvalidStateTransitionError);
+    }).toThrow(InvalidStateTransitionError);
   });
 });
 
 describe("TransferenciaPendienteState", () => {
-  it("rechaza requestAdminTransfer con InvalidStateTransitionError", () => {
+  it("rechaza requestAdminTransfer con InvalidStateTransitionError", async () => {
     const baseState = new AbiertaState();
     const state = new TransferenciaPendienteState(baseState);
     state.setContext(
       new StudyGroup("group-1", "Test Group", 5, 3, state, mockSubject),
     );
 
-    expect(() => {
-      state.requestAdminTransfer("transfer-1", "admin-old", "admin-new", "abierta");
-    }).toThrowError(InvalidStateTransitionError);
+    await expect(
+      state.requestAdminTransfer("transfer-1", "admin-old", "admin-new", "abierta"),
+    ).rejects.toBeInstanceOf(InvalidStateTransitionError);
   });
 
   it("permite acceptAdminTransfer y emite evento", async () => {
@@ -268,6 +268,6 @@ describe("TransferenciaPendienteState", () => {
 
     expect(() => {
       state.leaveAdminRole("admin-1");
-    }).toThrowError(InvalidStateTransitionError);
+    }).toThrow(InvalidStateTransitionError);
   });
 });

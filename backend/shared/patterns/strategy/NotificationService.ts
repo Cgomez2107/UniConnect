@@ -23,7 +23,19 @@ export class NotificationService {
     );
 
     const resultados = await Promise.allSettled(
-      estrategiasActivas.map(s => s.enviar(notificacion)),
+      estrategiasActivas.map(async (s) => {
+        try {
+          return await s.enviar(notificacion);
+        } catch (error) {
+          const rawMsg = (error as Error)?.message ?? "Unknown error";
+          return {
+            canal: s.canal,
+            exitoso: false,
+            error: rawMsg.replace(/SG\.[A-Za-z0-9._-]+/g, "SG.**REDACTED**"),
+            timestamp: new Date().toISOString(),
+          };
+        }
+      }),
     );
 
     return this.compilarResumen(resultados);
