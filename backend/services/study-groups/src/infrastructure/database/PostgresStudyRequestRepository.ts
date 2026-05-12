@@ -319,4 +319,50 @@ export class PostgresStudyRequestRepository
     );
     return Number(result.rows[0].count);
   }
+
+  async listByAuthorId(authorId: string): Promise<StudyRequest[]> {
+    const result = await this.pool.query<StudyRequestRow>(
+      `
+        SELECT
+          sr.id,
+          sr.author_id,
+          sr.subject_id,
+          sr.title,
+          sr.description,
+          sr.max_members,
+          sr.status,
+          sr.is_active,
+          sr.created_at,
+          sr.updated_at,
+          s.name                                        AS subject_name,
+          (
+            SELECT f.name
+            FROM   program_subjects ps
+            JOIN   programs         p  ON p.id  = ps.program_id
+            JOIN   faculties        f  ON f.id  = p.faculty_id
+            WHERE  ps.subject_id = sr.subject_id
+            ORDER  BY p.name ASC
+            LIMIT  1
+          )                                             AS faculty_name,
+          COALESCE(a.accepted_count, 0) + 1             AS applications_count,
+          pr.full_name                                  AS author_full_name,
+          pr.avatar_url                                 AS author_avatar_url,
+          pr.bio                                        AS author_bio
+        FROM study_requests sr
+        LEFT JOIN subjects  s  ON s.id  = sr.subject_id
+        LEFT JOIN profiles  pr ON pr.id = sr.author_id
+        LEFT JOIN (
+          SELECT request_id, COUNT(*)::int AS accepted_count
+          FROM   applications
+          WHERE  status = 'aceptada'
+          GROUP  BY request_id
+        ) a ON a.request_id = sr.id
+        WHERE sr.author_id = $1 AND sr.is_active = true
+        ORDER BY sr.created_at DESC
+      `,
+      [authorId],
+    );
+
+    return result.rows.map(mapStudyRequest);
+  }
 }

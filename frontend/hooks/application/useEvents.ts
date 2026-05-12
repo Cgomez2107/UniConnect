@@ -28,7 +28,8 @@ export function useEvents() {
         data = await useCase.execute()
       }
       setEvents(data)
-    } catch {
+    } catch (error) {
+      console.warn("[useEvents] Error loading events:", error instanceof Error ? error.message : String(error))
       setEvents([])
     } finally {
       setIsLoading(false)

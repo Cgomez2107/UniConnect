@@ -1,91 +1,92 @@
-import { useState, useCallback, useEffect } from "react";
-import { Profile, EditProfileFormData } from "@/types";
+import { useState, useEffect, useCallback, useRef } from "react";
+import useAuth from "@/hooks/useAuth";
 import profilesService from "@/lib/services/profiles.service";
+import studyGroupsService from "@/lib/services/studyGroups.service";
+import type { UserProgram, UserSubject, StudyRequest, Profile } from "@/types";
 
-interface UseProfileState {
+export interface UseProfileData {
   profile: Profile | null;
+  programs: UserProgram[];
+  subjects: UserSubject[];
+  publications: StudyRequest[];
   isLoading: boolean;
   error: string | null;
+  primaryProgram: UserProgram | null;
+  initials: string;
 }
 
-/**
- * Hook para gestionar el perfil del usuario actual
- *
- * @param {Object} options - Opciones de configuración
- * @param {boolean} options.autoLoad - Cargar automáticamente al montar (default: true)
- *
- * @returns {Object} Estado y métodos del perfil
- * @returns {Profile|null} profile - Perfil del usuario
- * @returns {boolean} isLoading - Estado de carga
- * @returns {string|null} error - Mensaje de error
- * @returns {Function} updateProfile - Actualiza el perfil
- * @returns {Function} refresh - Recarga el perfil
- *
- * @example
- * const { profile, updateProfile, refresh } = useProfile();
- * await updateProfile({ full_name: "Juan Pérez" });
- */
-export default function useProfile(options = { autoLoad: true }) {
-  const [state, setState] = useState<UseProfileState>({
-    profile: null,
-    isLoading: false,
-    error: null,
-  });
+function getInitials(fullName: string): string {
+  return fullName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
 
-  const loadProfile = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
-    try {
-      const data = await profilesService.getProfile();
-      setState({ profile: data, isLoading: false, error: null });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Error cargando perfil";
-      console.error("Error loading profile:", err);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage,
-      }));
+export default function useProfile(): UseProfileData {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [programs, setPrograms] = useState<UserProgram[]>([]);
+  const [subjects, setSubjects] = useState<UserSubject[]>([]);
+  const [publications, setPublications] = useState<StudyRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const loaded = useRef(false);
+
+  const loadAll = useCallback(async () => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
     }
-  }, []);
 
-  const updateProfile = useCallback(
-    async (data: EditProfileFormData) => {
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const [profileData, programsData, subjectsData] = await Promise.all([
+        profilesService.getProfile().catch(() => null),
+        profilesService.getMyPrograms().catch(() => [] as UserProgram[]),
+        profilesService.getMySubjects().catch(() => [] as UserSubject[]),
+      ]);
+
+      let publicationsData: StudyRequest[] = [];
       try {
-        const updated = await profilesService.updateProfile(data);
-        setState({ profile: updated, isLoading: false, error: null });
-        return updated;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Error actualizando perfil";
-        console.error("Error updating profile:", err);
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: errorMessage,
-        }));
-        throw err;
+        publicationsData = await studyGroupsService.listMyStudyRequests();
+      } catch {
+        publicationsData = [];
       }
-    },
-    []
-  );
 
-  const refresh = useCallback(() => {
-    return loadProfile();
-  }, [loadProfile]);
+      setProfile(profileData);
+      setPrograms(programsData);
+      setSubjects(subjectsData);
+      setPublications(publicationsData);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error cargando datos del perfil";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
-    if (options.autoLoad) {
-      loadProfile();
+    if (!loaded.current) {
+      loaded.current = true;
+      loadAll();
     }
-  }, [options.autoLoad, loadProfile]);
+  }, [loadAll]);
+
+  const primaryProgram = programs.find((p) => p.is_primary) ?? programs[0] ?? null;
+  const initials = getInitials(user?.name || user?.email || "U");
 
   return {
-    profile: state.profile,
-    isLoading: state.isLoading,
-    error: state.error,
-    updateProfile,
-    refresh,
+    profile,
+    programs,
+    subjects,
+    publications,
+    isLoading,
+    error,
+    primaryProgram,
+    initials,
   };
 }

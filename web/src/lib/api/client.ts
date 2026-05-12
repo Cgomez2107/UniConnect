@@ -1,52 +1,203 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
-
-export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_URL,
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+/**
+ * ============================================================================
+ * CONFIGURACIÓN CENTRALIZADA DE API HTTP CLIENT
+ * ============================================================================
+ * 
+ * Esta es la ÚNICA fuente de verdad para configuración HTTP.
+ * Evita duplicaciones de rutas y proporciona un punto central para:
+ * - Autenticación
+ * - Interceptores
+ * - Manejo de errores
+ * - Logging
+ */
 
 // ============================================================================
-// REQUEST INTERCEPTOR: Agregar token de autenticación
+// CONSTANTS & ENV VARIABLES
 // ============================================================================
 
-apiClient.interceptors.request.use((config) => {
+/**
+ * Gateway URL - SOLO incluye el scheme + host + puerto
+ * NO incluye /api/v1 - ese prefijo se añade en los endpoints
+ * 
+ * Ejemplos:
+ * - Development: http://localhost:3000
+ * - Production: https://api.example.com
+ */
+const GATEWAY_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/api\/v1\/?$/, "") || "http://localhost:3000";
+
+/**
+ * API Prefix - es el prefijo de versionado
+ * Se combina con GATEWAY_BASE_URL para crear el baseURL completo
+ */
+const API_PREFIX = "/api/v1";
+
+/**
+ * Base URL completa para Axios
+ * INVARIANTE: baseURL DEBE ser gateway + prefix, nunca duplicado
+ */
+const API_BASE_URL = `${GATEWAY_BASE_URL}${API_PREFIX}`;
+
+/**
+ * Key para almacenar el token en localStorage
+ * Usado por los interceptores
+ */
+const AUTH_SESSION_KEY = "uniconnect-auth-session";
+
+/**
+ * Versión de la API para debugging
+ */
+const API_VERSION = "v1";
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Obtiene el token de acceso desde storage
+ * Intenta múltiples ubicaciones para retrocompatibilidad
+ */
+function getAccessToken(): string | null {
   try {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Intenta primero el almacenamiento Zustand
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { state?: { accessToken?: string | null } };
+      if (parsed?.state?.accessToken) {
+        return parsed.state.accessToken;
+      }
     }
   } catch (error) {
-    console.error("Error al obtener token:", error);
+    console.warn("[API] Error parsing Zustand state:", error);
   }
-  return config;
-});
+
+  // Fallback al localStorage directo
+  return localStorage.getItem("accessToken");
+}
+
+/**
+ * Valida que una URL no tenga duplicación de prefijo
+ * Útil para debugging y validación defensiva
+ */
+function validateUrlNoDuplication(url: string): void {
+  const API_V1_COUNT = (url.match(/\/api\/v1/g) || []).length;
+  if (API_V1_COUNT > 1) {
+    console.error(
+      `[API-ERROR] URL con duplicación detectada: "${url}"`,
+      `Contiene /api/v1 ${API_V1_COUNT} veces. Verificar baseURL + endpoint.`
+    );
+  }
+}
 
 // ============================================================================
-// RESPONSE INTERCEPTOR: Manejar errores globales
+// AXIOS CLIENT FACTORY
+// ============================================================================
+
+/**
+ * Factory function para crear la instancia de Axios
+ * Permite reutilizar la configuración en diferentes contextos
+ */
+function createApiClient(): AxiosInstance {
+  const client = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 15000, // 15 segundos
+    withCredentials: true, // Necesario para CORS con cookies
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Version": API_VERSION,
+    },
+  });
+
+  return client;
+}
+
+// Crear la instancia única
+export const apiClient: AxiosInstance = createApiClient();
+
+// ============================================================================
+// REQUEST INTERCEPTOR: Autenticación
+// ============================================================================
+
+apiClient.interceptors.request.use(
+  (config) => {
+    try {
+      const token = getAccessToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error("[API] Error obteniendo token:", error);
+    }
+
+    // Validación defensiva (DEBUG)
+    if (config.url) {
+      const fullUrl = config.baseURL + config.url;
+      validateUrlNoDuplication(fullUrl);
+    }
+
+    return config;
+  },
+  (error) => {
+    console.error("[API] Error en request interceptor:", error);
+    return Promise.reject(error);
+  }
+);
+
+// ============================================================================
+// RESPONSE INTERCEPTOR: Manejo global de errores
 // ============================================================================
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log exitoso en desarrollo
+    if (import.meta.env.DEV) {
+      console.debug(
+        `[API] ${response.config.method?.toUpperCase()} ${response.config.url} → ${response.status}`
+      );
+    }
+    return response;
+  },
   async (error: AxiosError) => {
-    // Si es 401, el usuario no está autenticado
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const url = error.config?.url;
+
+    // Log del error
+    console.error(
+      `[API-ERROR] ${error.config?.method?.toUpperCase()} ${url} → ${status}`,
+      error.response?.data || error.message
+    );
+
+    // 401 Unauthorized - Token expirado/inválido
+    if (status === 401) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
+      localStorage.removeItem(AUTH_SESSION_KEY);
       window.location.href = "/login";
     }
-    
-    // Si es 403, no tiene permisos
-    if (error.response?.status === 403) {
-      console.error("Acceso prohibido:", error.response.data);
+
+    // 403 Forbidden - Acceso prohibido
+    if (status === 403) {
+      console.error("[API] Acceso prohibido (403):", error.response?.data);
+    }
+
+    // 404 Not Found
+    if (status === 404) {
+      console.error("[API] Recurso no encontrado (404):", url);
+    }
+
+    // 500+ Server Error
+    if (status && status >= 500) {
+      console.error("[API] Error del servidor:", error.response?.data);
     }
 
     return Promise.reject(error);
   }
 );
 
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+export { GATEWAY_BASE_URL, API_PREFIX, API_BASE_URL, API_VERSION };
 export default apiClient;

@@ -15,9 +15,9 @@ export class PostgreSQLAuthRepository implements IAuthRepository {
     return this.users.get(id) || null;
   }
 
-  async create(user: Omit<User, "id" | "createdAt" | "updatedAt">): Promise<User> {
+  async create(user: Omit<User, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<User> {
     // TODO: INSERT INTO users (...) VALUES (...)
-    const id = crypto.randomUUID();
+    const id = user.id ?? crypto.randomUUID();
     const newUser: User = {
       ...user,
       id,

@@ -92,4 +92,8 @@ export class InMemoryStudyRequestRepository implements IStudyRequestRepository {
       (r) => r.subjectId === subjectId && r.status === "abierta" && r.isActive,
     ).length;
   }
+
+  async listByAuthorId(authorId: string): Promise<StudyRequest[]> {
+    return this.requests.filter((r) => r.authorId === authorId && r.isActive);
+  }
 }

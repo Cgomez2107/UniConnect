@@ -9,6 +9,8 @@ import { ListStudyGroupMessages } from "../../../application/use-cases/ListStudy
 import { ListUserNotifications } from "../../../application/use-cases/ListUserNotifications.js";
 import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
+import { ListMyStudyRequests } from "../../../application/use-cases/ListMyStudyRequests.js";
+import { ListMyApplications } from "../../../application/use-cases/ListMyApplications.js";
 import { LeaveAdminRole } from "../../../application/use-cases/LeaveAdminRole.js";
 import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
@@ -51,6 +53,8 @@ export class StudyGroupsController {
     private readonly requestAdminTransfer: RequestAdminTransfer,
     private readonly acceptAdminTransfer: AcceptAdminTransfer,
     private readonly leaveAdminRole: LeaveAdminRole,
+    private readonly listMyStudyRequestsUC: ListMyStudyRequests,
+    private readonly listMyApplicationsUC: ListMyApplications,
   ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -424,6 +428,38 @@ export class StudyGroupsController {
       });
 
       sendData(res, 200, { message: "Salida de administracion registrada." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listMyStudyRequests(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Autenticación requerida");
+      return;
+    }
+
+    try {
+      const requests = await this.listMyStudyRequestsUC.execute(actorUserId);
+      sendData(res, 200, requests, { total: requests.length });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listMyApplications(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Autenticación requerida");
+      return;
+    }
+
+    try {
+      const applications = await this.listMyApplicationsUC.execute(actorUserId);
+      sendData(res, 200, applications, { total: applications.length });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

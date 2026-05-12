@@ -18,8 +18,10 @@ import { NuevaSolicitudPage } from "./pages/NuevaSolicitudPage";
 import { EventosPage } from "./pages/EventosPage";
 import { RecursosPage } from "./pages/RecursosPage";
 import { PerfilPage } from "./pages/PerfilPage";
+import { EditProfilePage } from "./pages/EditProfilePage";
 import { MensajesPage } from "./pages/MensajesPage";
-import { DirectorioPage } from "./pages/DirectorioPage";
+import { CompanionsPage } from "./pages/CompanionsPage";
+import DirectorioPage from "./pages/DirectorioPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import "./App.css";
@@ -105,9 +107,11 @@ function App() {
           <Route path="/eventos" element={<EventosPage />} />
           <Route path="/recursos" element={<RecursosPage />} />
           <Route path="/perfil" element={<PerfilPage />} />
+          <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/mensajes" element={<MensajesPage />} />
           <Route path="/chat/:conversationId" element={<ChatPage />} />
-          <Route path="/directorio" element={<DirectorioPage />} />
+          <Route path="/directorio" element={<CompanionsPage />} />
+          <Route path="/companions" element={<CompanionsPage />} />
         </Route>
         <Route
           path="/"

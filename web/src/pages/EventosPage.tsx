@@ -66,12 +66,10 @@ export function EventosPage() {
             className="px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
           >
             <option value="all">Todas las categorías</option>
-            <option value="WORKSHOP">Taller</option>
-            <option value="CONFERENCE">Conferencia</option>
-            <option value="SOCIAL">Social</option>
-            <option value="SPORTS">Deporte</option>
-            <option value="CULTURAL">Cultural</option>
-            <option value="ACADEMIC">Académico</option>
+            <option value="academico">Académico</option>
+            <option value="cultural">Cultural</option>
+            <option value="deportivo">Deporte</option>
+            <option value="otro">Otro</option>
           </select>
           <Button onClick={() => navigate("/crear-evento")}>
             + Nuevo Evento

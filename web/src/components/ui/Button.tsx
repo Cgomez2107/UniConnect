@@ -45,7 +45,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantStyles = {
     primary: disabled
-      ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+      ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
       : 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
     secondary: disabled
       ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'

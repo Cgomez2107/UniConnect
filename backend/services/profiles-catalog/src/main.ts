@@ -4,6 +4,9 @@ import { GetStudentPublicProfile } from "./application/use-cases/GetStudentPubli
 import { GetFullProfile } from "./application/use-cases/GetFullProfile.js";
 import { GetPrograms } from "./application/use-cases/GetPrograms.js";
 import { GetSubjectsByProgram } from "./application/use-cases/GetSubjectsByProgram.js";
+import { GetMyPrograms } from "./application/use-cases/GetMyPrograms.js";
+import { CreateStudentProfile } from "./application/use-cases/CreateStudentProfile.js";
+import { UpdateStudentProfile } from "./application/use-cases/UpdateStudentProfile.js";
 import { loadProfilesCatalogEnv } from "./config/env.js";
 import { PostgresStudentRepository } from "./infrastructure/database/PostgresStudentRepository.js";
 import { PostgresFacultyCatalogRepository } from "./infrastructure/database/PostgresFacultyCatalogRepository.js";
@@ -30,6 +33,9 @@ function bootstrap(): void {
   const getFullProfile = new GetFullProfile(indicatorsRepository);
   const getPrograms = new GetPrograms(catalogRepository);
   const getSubjectsByProgram = new GetSubjectsByProgram(catalogRepository);
+  const getMyProgramsUC = new GetMyPrograms(studentRepository);
+  const createProfileUC = new CreateStudentProfile(studentRepository);
+  const updateProfileUC = new UpdateStudentProfile(studentRepository);
 
   const controller = new ProfilesCatalogController(
     searchStudents,
@@ -37,6 +43,10 @@ function bootstrap(): void {
     getFullProfile,
     getPrograms,
     getSubjectsByProgram,
+    getMyProgramsUC,
+    createProfileUC,
+    updateProfileUC,
+    studentRepository,
   );
 
   const server = createServer((req, res) => {

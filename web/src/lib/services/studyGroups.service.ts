@@ -122,13 +122,28 @@ const studyGroupsService = {
   },
 
   /**
+   * Obtiene las solicitudes de estudio del usuario autenticado
+   */
+  async listMyStudyRequests(): Promise<StudyRequest[]> {
+    try {
+      const response = await apiClient.get<{ data: StudyRequest[] }>(
+        API_ENDPOINTS.MY_STUDY_REQUESTS
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching my study requests:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Postula al usuario actual a un grupo de estudio
    */
   async applyToStudyGroup(requestId: string, message: string): Promise<Application> {
     try {
       const response = await apiClient.post<{ data: Application }>(
-        API_ENDPOINTS.APPLICATIONS_CREATE,
-        { request_id: requestId, message }
+        `/study-groups/${requestId}/apply`,
+        { message }
       );
       return response.data.data;
     } catch (error) {

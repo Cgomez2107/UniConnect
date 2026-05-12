@@ -7,9 +7,11 @@ export interface Student {
   readonly fullName: string;
   readonly avatarUrl: string | null;
   readonly bio: string | null;
+  readonly phoneNumber: string | null;
   readonly semester: number | null;
-  readonly programId: string;
+  readonly programId: string | null;
   readonly programName?: string;
+  readonly facultyName?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly sharedSubjects?: { id: string; name: string }[];

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { apiClient } from "../lib/httpClient";
+import { apiClient } from "@/lib/api/client";
 
 interface StudyGroup {
   id: string;

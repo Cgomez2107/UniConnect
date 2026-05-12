@@ -46,10 +46,15 @@ export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
   const loadRequests = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const [data, apps] = await Promise.all([
+      let apps: Application[] = [];
+      const [data] = await Promise.all([
         studyGroupsService.listStudyGroups(),
-        userId ? studyGroupsService.listMyApplications() : Promise.resolve([]),
       ]);
+      try {
+        apps = userId ? await studyGroupsService.listMyApplications() : [];
+      } catch {
+        apps = [];
+      }
       const mapped = data.map(mapStudyRequestApiToUI);
       setState({ requests: mapped, applications: apps, isLoading: false, error: null });
     } catch (err) {

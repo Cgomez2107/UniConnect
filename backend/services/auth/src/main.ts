@@ -1,5 +1,7 @@
 import { createServer } from "node:http";
 import type { ServerResponse } from "node:http";
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { PostgreSQLAuthRepository } from "./infrastructure/repositories/PostgreSQLAuthRepository.js";
 import { PostgreSQLTokenRepository } from "./infrastructure/repositories/PostgreSQLTokenRepository.js";
 import { JWTService } from "./infrastructure/jwt/JWTService.js";
@@ -9,12 +11,34 @@ import { RefreshTokenUseCase } from "./application/use-cases/RefreshTokenUseCase
 import { AuthController } from "./interfaces/http/AuthController.js";
 import { requireEnv } from "../../../shared/libs/config/requiredEnv.js";
 
+function loadEnvFileFallback(): void {
+  const envPath = resolve(process.cwd(), ".env");
+  if (!existsSync(envPath)) return;
+  const content = readFileSync(envPath, "utf-8");
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIndex = trimmed.indexOf("=");
+    if (eqIndex === -1) continue;
+    const key = trimmed.slice(0, eqIndex).trim();
+    let value = trimmed.slice(eqIndex + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
 try {
   if (typeof process.loadEnvFile === "function") {
     process.loadEnvFile(".env");
+  } else {
+    loadEnvFileFallback();
   }
 } catch {
-  // Ignore missing .env on environments where vars are injected externally.
+  loadEnvFileFallback();
 }
 
 const portRaw = process.env.PORT ?? process.env.AUTH_SERVICE_PORT;
@@ -60,13 +84,57 @@ function sendOAuthUrl(
   res.end(JSON.stringify({ url: authUrl }));
 }
 
+/**
+ * Decodifica el payload de un JWT de Supabase sin verificar la firma.
+ * El token de acceso de Supabase es un JWT estándar: header.payload.signature.
+ * El payload contiene el `sub` (ID del usuario en auth.users) y `email`.
+ */
+function decodeSupabaseToken(token: string): { sub: string; email: string } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+    if (!payload.sub) return null;
+    return { sub: payload.sub, email: payload.email ?? "" };
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   // Inyección de dependencias
   const authRepository = new PostgreSQLAuthRepository();
   const tokenRepository = new PostgreSQLTokenRepository();
   const jwtService = new JWTService();
 
-  const signUpUseCase = new SignUpUseCase(authRepository, tokenRepository, jwtService);
+  const profilesCatalogBaseUrl = process.env.PROFILES_CATALOG_BASE_URL ?? "http://localhost:3105";
+  const supabaseUrl = process.env.SUPABASE_URL ?? "https://becitrklvpadvjwdbmck.supabase.co";
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+
+  const createProfile = async (userId: string, fullName: string): Promise<void> => {
+    const token = jwtService.generateTokens(userId).accessToken;
+    const response = await fetch(`${profilesCatalogBaseUrl}/api/v1/students/profile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ fullName }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error(`Failed to create profile: ${err.error}`);
+    }
+  };
+
+  const signUpUseCase = new SignUpUseCase(
+    authRepository,
+    tokenRepository,
+    jwtService,
+    createProfile,
+    supabaseUrl,
+    supabaseServiceRoleKey,
+  );
   const signInUseCase = new SignInUseCase(authRepository, tokenRepository, jwtService);
   const refreshTokenUseCase = new RefreshTokenUseCase(tokenRepository, authRepository, jwtService);
 
@@ -76,11 +144,25 @@ async function main() {
   const server = createServer(async (req, res) => {
     const path = req.url?.split("?")[0] || "";
     const method = req.method || "GET";
+    const origin = req.headers.origin;
 
-    // Headers CORS
-    //res.setHeader("Content-Type", "application/json");
-    //res.setHeader("Access-Control-Allow-Origin", "*");
-    //res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    // Headers CORS - Permitir solo orígenes específicos con credenciales
+    const allowedOrigins = [
+      "http://localhost:8081",
+      "http://localhost:8082",
+      "http://127.0.0.1:8081",
+      "http://127.0.0.1:8082",
+      "http://192.168.140.38:8081",
+      "http://192.168.140.38:8082",
+    ];
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+    
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization, X-Requested-With, bypass-tunnel-reminder, ngrok-skip-browser-warning",
@@ -106,21 +188,73 @@ async function main() {
     } else if (method === "POST" && path === "/refresh") {
       await authController.refreshToken(req, res);
     } else if (method === "GET" && path === "/session") {
-      // Endpoint para recuperar sesión basada en cookies (Criterio 2)
-      // En una implementación real, esto validaría el token de la cookie
-      // y devolvería la sesión. Por ahora, si llegamos aquí es porque el Gateway
-      // ya validó el token (o no).
       const auth = req.headers.authorization;
       if (auth?.startsWith("Bearer ")) {
-        // En un caso real buscaríamos el usuario en la DB
-        // Aquí devolvemos un mock basado en que el Gateway pasó el token
-        res.writeHead(200);
-        res.end(JSON.stringify({
-          session: { user: { email: "usuario@ucaldas.edu.co" }, access_token: auth.substring(7) }
-        }));
+        try {
+          const token = auth.substring(7);
+          const payload = jwtService.verifyAccessToken(token);
+          if (payload) {
+            const user = await authRepository.findById(payload.sub);
+            if (user) {
+              res.writeHead(200, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({
+                session: {
+                  user: {
+                    id: user.id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    role: user.role,
+                  },
+                  access_token: token,
+                }
+              }));
+            } else {
+              res.writeHead(404);
+              res.end(JSON.stringify({ error: "User not found" }));
+            }
+          } else {
+            res.writeHead(401);
+            res.end(JSON.stringify({ error: "Invalid or expired token" }));
+          }
+        } catch {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: "Internal server error" }));
+        }
       } else {
         res.writeHead(401);
         res.end(JSON.stringify({ error: "No session found" }));
+      }
+    } else if (method === "GET" && path === "/me") {
+      const auth = req.headers.authorization;
+      if (auth?.startsWith("Bearer ")) {
+        try {
+          const token = auth.substring(7);
+          const payload = jwtService.verifyAccessToken(token);
+          if (payload) {
+            const user = await authRepository.findById(payload.sub);
+            if (user) {
+              res.writeHead(200, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({
+                id: user.id,
+                email: user.email,
+                full_name: user.fullName,
+                role: user.role,
+              }));
+            } else {
+              res.writeHead(404);
+              res.end(JSON.stringify({ error: "User not found" }));
+            }
+          } else {
+            res.writeHead(401);
+            res.end(JSON.stringify({ error: "Invalid or expired token" }));
+          }
+        } catch {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: "Internal server error" }));
+        }
+      } else {
+        res.writeHead(401);
+        res.end(JSON.stringify({ error: "Authorization header required" }));
       }
     } else if ((method === "POST" || method === "GET") && path === "/google") {
       // Endpoint unificado para Google OAuth
@@ -149,6 +283,98 @@ async function main() {
         redirectTo = urlObj.searchParams.get("redirectTo") || undefined;
         sendOAuthUrl(res, redirectTo);
       }
+    } else if (method === "POST" && path === "/oauth/callback") {
+      // Endpoint para intercambiar token de Supabase por JWT del backend
+      let body = "";
+      req.on("data", (chunk) => {
+        body += chunk.toString();
+      });
+      req.on("end", async () => {
+        try {
+          const { accessToken, email } = JSON.parse(body);
+          
+          if (!accessToken || !email) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: "Missing accessToken or email" }));
+            return;
+          }
+
+          // Obtener el ID real del usuario en Supabase Auth
+          // Primero: decodificar el JWT localmente (más confiable, sin llamada HTTP)
+          const decoded = decodeSupabaseToken(accessToken);
+          let supabaseUserId: string | undefined = decoded?.sub;
+
+          // Fallback: si el JWT no se pudo decodificar, intentar vía API
+          if (!supabaseUserId) {
+            try {
+              const supabaseUserResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              });
+              if (supabaseUserResponse.ok) {
+                const supabaseUser = await supabaseUserResponse.json() as { id: string };
+                supabaseUserId = supabaseUser.id;
+              }
+            } catch {
+              console.warn("Supabase user fetch fallback also failed");
+            }
+          }
+
+          if (!supabaseUserId) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: "Could not resolve Supabase user ID from token" }));
+            return;
+          }
+
+          let user = await authRepository.findByEmail(email);
+          let isNewUser = false;
+          if (!user) {
+            isNewUser = true;
+            user = await authRepository.create({
+              id: supabaseUserId,
+              email,
+              fullName: "",
+              passwordHash: "",
+              role: "estudiante" as const,
+              isActive: true,
+            });
+          }
+
+          // Generar JWT del backend
+          const { accessToken: jwtToken, refreshToken } = jwtService.generateTokens(user.id);
+
+          // Crear perfil si es usuario nuevo
+          if (isNewUser) {
+            try {
+              await createProfile(user.id, user.fullName || email.split("@")[0]);
+            } catch (profileErr) {
+              console.error("OAuth profile creation error:", profileErr);
+            }
+          }
+
+          // Guardar refresh token
+          await tokenRepository.create({
+            userId: user.id,
+            token: refreshToken,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+          });
+
+          res.writeHead(200);
+          res.end(JSON.stringify({
+            accessToken: jwtToken,
+            refreshToken,
+            user: {
+              id: user.id,
+              email: user.email,
+              fullName: user.fullName,
+              role: user.role,
+            },
+          }));
+        } catch (error) {
+          console.error("OAuth callback error:", error);
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: "Failed to process OAuth callback" }));
+        }
+      });
     } else {
       res.writeHead(404);
       res.end(JSON.stringify({ error: "Not found" }));

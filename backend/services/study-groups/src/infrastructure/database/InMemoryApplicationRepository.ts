@@ -39,4 +39,8 @@ export class InMemoryApplicationRepository implements IApplicationRepository {
       reviewedAt: new Date().toISOString(),
     };
   }
+
+  async getByApplicantId(applicantId: string): Promise<Application[]> {
+    return this.applications.filter((app) => app.applicantId === applicantId);
+  }
 }

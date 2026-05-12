@@ -45,10 +45,10 @@ export const LoginPage: React.FC = () => {
       });
 
       if (response.data?.url) {
-        sessionStorage.setItem("preOAuthLocation", "/admin");
+        sessionStorage.setItem("preOAuthLocation", "/solicitudes"); // Redirigir a solicitudes después de OAuth
         window.location.href = response.data.url;
       } else {
-        setError("No se pudo iniciar la sesi\u00f3n con Google.");
+        setError("No se pudo iniciar la sesión con Google.");
       }
     } catch (err: any) {
       setError(

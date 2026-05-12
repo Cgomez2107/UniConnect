@@ -94,4 +94,18 @@ export class PostgresApplicationRepository implements IApplicationRepository {
       input.status,
     ]);
   }
+
+  async getByApplicantId(applicantId: string): Promise<Application[]> {
+    const result = await this.pool.query<ApplicationRow>(
+      `
+        SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
+        FROM applications
+        WHERE applicant_id = $1
+        ORDER BY created_at DESC
+      `,
+      [applicantId],
+    );
+
+    return result.rows.map(mapApplication);
+  }
 }

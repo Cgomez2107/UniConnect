@@ -42,7 +42,7 @@ export default function useFaculties() {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
       const response = await apiClient.get<{ data: Faculty[] }>(
-        "/academic-catalog/faculties"
+        "/api/v1/catalog/faculties"
       );
       setState((prev) => ({
         ...prev,
@@ -65,7 +65,7 @@ export default function useFaculties() {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
       const response = await apiClient.get<{ data: Program[] }>(
-        `/academic-catalog/faculties/${facultyId}/programs`
+        `/api/v1/catalog/faculties/${facultyId}/programs`
       );
       setState((prev) => ({
         ...prev,
@@ -88,7 +88,7 @@ export default function useFaculties() {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
       const response = await apiClient.get<{ data: Subject[] }>(
-        `/academic-catalog/programs/${programId}/subjects`
+        `/api/v1/catalog/programs/${programId}/subjects`
       );
       setState((prev) => ({
         ...prev,

@@ -5,15 +5,17 @@ import {
   EditProfileFormData,
   StudentPublicProfile,
   StudentSearchResult,
+  UserProgram,
+  UserSubject,
+  Program,
+  Subject,
+  StudyRequest,
 } from "@/types";
 
 /**
  * Servicio de gestión de perfiles de usuario
  */
 const profilesService = {
-  /**
-   * Obtiene el perfil del usuario autenticado
-   */
   async getProfile(): Promise<Profile> {
     try {
       const response = await apiClient.get<{ data: Profile }>(
@@ -26,9 +28,18 @@ const profilesService = {
     }
   },
 
-  /**
-   * Actualiza el perfil del usuario autenticado
-   */
+  async getFullProfile(userId: string): Promise<any> {
+    try {
+      const response = await apiClient.get<{ data: any }>(
+        `/students/${userId}?vista=completa`
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching full profile:", error);
+      throw error;
+    }
+  },
+
   async updateProfile(data: EditProfileFormData): Promise<Profile> {
     try {
       const response = await apiClient.patch<{ data: Profile }>(
@@ -42,13 +53,10 @@ const profilesService = {
     }
   },
 
-  /**
-   * Obtiene el perfil de un usuario por su ID
-   */
   async getProfileById(userId: string): Promise<Profile> {
     try {
       const response = await apiClient.get<{ data: Profile }>(
-        API_ENDPOINTS.PROFILE_BY_ID(userId)
+        `/students/${userId}`
       );
       return response.data.data;
     } catch (error) {
@@ -57,35 +65,114 @@ const profilesService = {
     }
   },
 
-  /**
-   * Obtiene el perfil público de un usuario (con materias compartidas)
-   */
   async getPublicProfile(userId: string): Promise<StudentPublicProfile> {
     try {
       const response = await apiClient.get<{ data: StudentPublicProfile }>(
-        API_ENDPOINTS.PROFILE_PUBLIC(userId)
+        `/students/${userId}`
       );
       return response.data.data;
     } catch (error) {
-      console.error(
-        `Error fetching public profile for user ${userId}:`,
-        error
-      );
+      console.error(`Error fetching public profile for user ${userId}:`, error);
       throw error;
     }
   },
 
-  /**
-   * Busca estudiantes que comparten una materia
-   */
   async searchStudents(subjectId: string): Promise<StudentSearchResult[]> {
     try {
       const response = await apiClient.get<{ data: StudentSearchResult[] }>(
-        `/subjects/${subjectId}/students`
+        `/students?subjectId=${subjectId}`
       );
       return response.data.data;
     } catch (error) {
       console.error(`Error searching students for subject ${subjectId}:`, error);
+      throw error;
+    }
+  },
+
+  async getMyPrograms(): Promise<UserProgram[]> {
+    try {
+      const response = await apiClient.get<{ data: UserProgram[] }>(
+        API_ENDPOINTS.MY_PROGRAMS
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching my programs:", error);
+      throw error;
+    }
+  },
+
+  async getMySubjects(): Promise<UserSubject[]> {
+    try {
+      const response = await apiClient.get<{ data: UserSubject[] }>(
+        API_ENDPOINTS.MY_SUBJECTS
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching my subjects:", error);
+      throw error;
+    }
+  },
+
+  async setPrimaryProgram(programId: string): Promise<void> {
+    try {
+      await apiClient.patch(API_ENDPOINTS.SET_PRIMARY_PROGRAM, { program_id: programId });
+    } catch (error) {
+      console.error("Error setting primary program:", error);
+      throw error;
+    }
+  },
+
+  async uploadAvatar(userId: string, base64Data: string): Promise<string> {
+    try {
+      const response = await apiClient.post<{ data: { url: string } }>(
+        API_ENDPOINTS.UPLOAD_AVATAR,
+        { user_id: userId, image: base64Data }
+      );
+      return response.data.data.url;
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      throw error;
+    }
+  },
+
+  async addMySubject(subjectId: string): Promise<void> {
+    try {
+      await apiClient.post(API_ENDPOINTS.ADD_MY_SUBJECT, { subject_id: subjectId });
+    } catch (error) {
+      console.error("Error adding subject:", error);
+      throw error;
+    }
+  },
+
+  async removeMySubject(subjectId: string): Promise<void> {
+    try {
+      await apiClient.delete(API_ENDPOINTS.REMOVE_MY_SUBJECT(subjectId));
+    } catch (error) {
+      console.error(`Error removing subject ${subjectId}:`, error);
+      throw error;
+    }
+  },
+
+  async getPrograms(): Promise<Program[]> {
+    try {
+      const response = await apiClient.get<{ data: Program[] }>(
+        API_ENDPOINTS.PROGRAMS
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching programs:", error);
+      throw error;
+    }
+  },
+
+  async getSubjectsByProgram(programId: string): Promise<Subject[]> {
+    try {
+      const response = await apiClient.get<{ data: Subject[] }>(
+        API_ENDPOINTS.SUBJECTS_BY_PROGRAM(programId)
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error(`Error fetching subjects for program ${programId}:`, error);
       throw error;
     }
   },

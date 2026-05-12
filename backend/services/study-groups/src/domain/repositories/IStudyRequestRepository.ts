@@ -31,4 +31,5 @@ export interface IStudyRequestRepository {
     maxMembers: number;
   }): Promise<StudyRequest>;
   countBySubject(subjectId: string): Promise<number>;
+  listByAuthorId(authorId: string): Promise<StudyRequest[]>;
 }

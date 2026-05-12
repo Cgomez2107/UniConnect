@@ -35,7 +35,7 @@ export const Badge: React.FC<BadgeProps> = ({
       outline: 'border-2 border-primary-600 text-primary-600 bg-transparent',
     },
     gold: {
-      solid: 'bg-secondary-500 text-primary-700',
+      solid: 'bg-secondary-500 text-white',
       outline: 'border-2 border-secondary-500 text-secondary-500 bg-transparent',
     },
     green: {
@@ -47,8 +47,8 @@ export const Badge: React.FC<BadgeProps> = ({
       outline: 'border-2 border-error-500 text-error-500 bg-transparent',
     },
     gray: {
-      solid: 'bg-neutral-300 text-neutral-700',
-      outline: 'border-2 border-neutral-300 text-neutral-700 bg-transparent',
+      solid: 'bg-neutral-500 text-white',
+      outline: 'border-2 border-neutral-500 text-neutral-500 bg-transparent',
     },
   };
 

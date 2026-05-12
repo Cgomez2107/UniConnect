@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { apiClient } from "../lib/httpClient";
+import { apiClient } from "@/lib/api/client";
 import { GroupStatusBadge, isActionAvailable } from "../components/GroupStatusBadge";
 import "./InvitationsPage.css";
 
@@ -25,8 +25,9 @@ export const InvitationsPage: React.FC = () => {
   );
 
   useEffect(() => {
+    if (!user) return;
     loadGroups();
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   const loadGroups = async () => {
     try {
@@ -43,7 +44,16 @@ export const InvitationsPage: React.FC = () => {
   };
 
   if (!user) {
-    return null;
+    return (
+      <div className="invitations-page">
+        <div className="invitations-header">
+          <h1>Mis Solicitudes</h1>
+        </div>
+        <div className="empty-state">
+          <p>Inicia sesión para ver tus solicitudes.</p>
+        </div>
+      </div>
+    );
   }
 
   return (

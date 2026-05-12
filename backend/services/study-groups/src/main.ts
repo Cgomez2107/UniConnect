@@ -9,6 +9,8 @@ import { ListStudyGroupMessages } from "./application/use-cases/ListStudyGroupMe
 import { ListUserNotifications } from "./application/use-cases/ListUserNotifications.js";
 import { ListMembersByRequest } from "./application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
+import { ListMyStudyRequests } from "./application/use-cases/ListMyStudyRequests.js";
+import { ListMyApplications } from "./application/use-cases/ListMyApplications.js";
 import { LeaveAdminRole } from "./application/use-cases/LeaveAdminRole.js";
 import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
@@ -215,6 +217,8 @@ function bootstrap(): void {
   );
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
+  const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
+  const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -229,13 +233,27 @@ function bootstrap(): void {
     requestAdminTransfer,
     acceptAdminTransfer,
     leaveAdminRole,
+    listMyStudyRequestsUC,
+    listMyApplicationsUC,
   );
 
   const server = createServer((req, res) => {
     const resp = res as any;
-    // Manejo de CORS
-    const origin = req.headers.origin || "*";
-    resp.setHeader("Access-Control-Allow-Origin", origin);
+    // Manejo de CORS - Permitir solo orígenes específicos con credenciales
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "http://localhost:8081",
+      "http://localhost:8082",
+      "http://127.0.0.1:8081",
+      "http://127.0.0.1:8082",
+      "http://192.168.140.38:8081",
+      "http://192.168.140.38:8082",
+    ];
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      resp.setHeader("Access-Control-Allow-Origin", origin);
+    }
+    
     resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning, bypass-tunnel-reminder");
     resp.setHeader("Access-Control-Allow-Credentials", "true");

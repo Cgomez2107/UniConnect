@@ -19,7 +19,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   return (
     <aside
-      className={`flex flex-col bg-[#0d2852] text-white transition-all duration-300 h-full ${
+      className={`flex flex-col bg-primary-900 text-white transition-all duration-300 h-full ${
         collapsed ? "w-16" : "w-60"
       }`}
     >
@@ -51,13 +51,13 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               onClick={() => handleNavigate(item.route)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                 isActive
-                  ? "bg-white/10 text-[#d4a843]"
+                  ? "bg-white/10 text-primary-300"
                   : "text-white/80 hover:bg-white/5 hover:text-white"
               }`}
             >
               <Icon
                 size={22}
-                className={isActive ? "text-[#d4a843]" : "text-white/70"}
+                className={isActive ? "text-primary-300" : "text-white/70"}
               />
               {!collapsed && (
                 <span className="text-sm font-medium whitespace-nowrap">

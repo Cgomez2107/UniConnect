@@ -37,6 +37,16 @@ export async function handleStudyGroupsRoutes(
     return true;
   }
 
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/study-groups/me") {
+    await controller.listMyStudyRequests(req, res);
+    return true;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/study-groups/applications") {
+    await controller.listMyApplications(req, res);
+    return true;
+  }
+
   if (req.method === "GET" && requestUrl.pathname === "/api/v1/study-groups") {
     await controller.list(req, res);
     return true;

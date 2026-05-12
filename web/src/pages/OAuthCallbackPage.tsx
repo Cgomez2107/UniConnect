@@ -1,6 +1,24 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
+import { GATEWAY_BASE_URL, API_PREFIX } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import axios from "axios";
+
+/**
+ * Decodifica un JWT sin verificar la firma (solo para obtener claims)
+ */
+function decodeJWT(token: string): any {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    
+    const decoded = atob(parts[1]);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * OAuthCallbackPage - Maneja el redirect de OAuth desde Supabase
@@ -16,74 +34,93 @@ export function OAuthCallbackPage() {
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
 
-        const accessToken = params.get("access_token");
-        const refreshToken = params.get("refresh_token");
+        const supabaseAccessToken = params.get("access_token");
+        const supabaseRefreshToken = params.get("refresh_token");
 
-        if (accessToken) {
-          // Guardar tokens
-          localStorage.setItem("accessToken", accessToken);
-          if (refreshToken) {
-            localStorage.setItem("refreshToken", refreshToken);
+        if (supabaseAccessToken) {
+          // Decodificar el JWT de Supabase para obtener el email
+          const claims = decodeJWT(supabaseAccessToken);
+          const email = claims?.email || claims?.user_email;
+
+          if (!email) {
+            console.error("[OAuthCallback] No email found in Supabase token");
+            navigate("/login", { state: { error: "No se pudo obtener el email del usuario" } });
+            return;
           }
 
-          // Obtener información del usuario desde el backend
+          // Intercambiar token de Supabase por JWT del backend
+          // NOTA: Creamos un cliente temporal sin interceptores de auth
+          // porque aún no tenemos nuestro JWT válido
+          const tempClient = axios.create({
+            baseURL: `${GATEWAY_BASE_URL}${API_PREFIX}`,
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
           try {
-            const response = await fetch(
-              `${import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1"}/auth/session`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
+            const response = await tempClient.post(API_ENDPOINTS.AUTH_OAUTH_CALLBACK, {
+              accessToken: supabaseAccessToken,
+              email,
+            });
+
+            const data = response.data;
+            
+            if (data.accessToken) {
+              // Guardar nuestro JWT
+              localStorage.setItem("accessToken", data.accessToken);
+              if (data.refreshToken) {
+                localStorage.setItem("refreshToken", data.refreshToken);
               }
-            );
 
-            if (response.ok) {
-              const data = await response.json();
-              if (data.session?.user) {
-                const fullName = data.session.user.user_metadata?.full_name || "";
-                const [firstName = "", ...lastParts] = fullName.split(" ");
-                const lastName = lastParts.join(" ");
-
+              // Actualizar store
+              if (data.user) {
                 useAuthStore.setState({
                   user: {
-                    id: data.session.user.id,
-                    email: data.session.user.email,
-                    firstName,
-                    lastName,
-                    role: "estudiante" as const,
-                    profileImageUrl: data.session.user.user_metadata?.avatar_url || undefined,
+                    id: data.user.id,
+                    email: data.user.email,
+                    firstName: data.user.fullName?.split(" ")[0] || "",
+                    lastName: data.user.fullName?.split(" ").slice(1).join(" ") || "",
+                    role: (data.user.role as any) || "estudiante",
+                    profileImageUrl: undefined,
                     isVerified: true,
                     isOnboarded: false,
                     createdAt: new Date(),
                     updatedAt: new Date(),
                   },
-                  accessToken,
-                  refreshToken,
+                  accessToken: data.accessToken,
+                  refreshToken: data.refreshToken,
                   isAuthenticated: true,
                 });
               }
+
+              // Redirigir al dashboard
+              const preOAuthLocation = sessionStorage.getItem("preOAuthLocation") || "/solicitudes";
+              sessionStorage.removeItem("preOAuthLocation");
+
+              // Limpiar el hash de la URL
+              window.history.replaceState({}, document.title, window.location.pathname);
+
+              navigate(preOAuthLocation);
+            } else {
+              console.error("[OAuthCallback] No JWT token returned from backend");
+              navigate("/login", { state: { error: "No se generó el token" } });
             }
-          } catch (error) {
-            console.error("Error fetching user session:", error);
-            // Continuar de todas formas
+          } catch (error: any) {
+            console.error("[OAuthCallback] Error exchanging OAuth token:", error.message);
+            const errorMessage = error.response?.data?.error || "Error al procesar OAuth";
+            navigate("/login", { state: { error: errorMessage } });
           }
-
-          // Redirigir a donde estaba antes o al dashboard
-          const preOAuthLocation = sessionStorage.getItem("preOAuthLocation") || "/admin";
-          sessionStorage.removeItem("preOAuthLocation");
-
-          // Limpiar el hash de la URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-
-          navigate(preOAuthLocation);
         } else {
           // Sin token, redirigir a login
+          console.warn("[OAuthCallback] No access token received from OAuth provider");
           navigate("/login", {
             state: { error: "No se completó la autenticación" },
           });
         }
       } catch (error) {
-        console.error("OAuth callback error:", error);
+        console.error("[OAuthCallback] Unexpected error:", error);
         navigate("/login", {
           state: { error: "Error durante la autenticación" },
         });

@@ -47,8 +47,8 @@ export default function useResources() {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
         const endpoint = subjectId
-          ? `/resources?subjectId=${subjectId}`
-          : "/resources";
+          ? `/api/v1/resources?subjectId=${subjectId}`
+          : "/api/v1/resources";
         const response = await apiClient.get<{ data: Resource[] }>(endpoint);
         setState({ resources: response.data.data, isLoading: false, error: null });
       } catch (err) {
@@ -70,7 +70,7 @@ export default function useResources() {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
         const response = await apiClient.post<{ data: Resource }>(
-          "/resources",
+          "/api/v1/resources",
           data
         );
         setState((prev) => ({
@@ -97,7 +97,7 @@ export default function useResources() {
   const deleteResource = useCallback(async (resourceId: string) => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      await apiClient.delete(`/resources/${resourceId}`);
+      await apiClient.delete(`/api/v1/resources/${resourceId}`);
       setState((prev) => ({
         ...prev,
         resources: prev.resources.filter((r) => r.id !== resourceId),

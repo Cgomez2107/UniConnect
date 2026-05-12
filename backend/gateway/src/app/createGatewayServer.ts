@@ -64,7 +64,17 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
   const appVersion = getAppVersion();
 
-  if (origin) {
+  // CORS - Permitir solo orígenes específicos cuando hay credenciales
+  const allowedOrigins = [
+    "http://localhost:8081",
+    "http://localhost:8082",
+    "http://127.0.0.1:8081",
+    "http://127.0.0.1:8082",
+    "http://192.168.140.38:8081",
+    "http://192.168.140.38:8082",
+  ];
+
+  if (origin && allowedOrigins.includes(origin)) {
     setHeader(res, "Access-Control-Allow-Origin", origin);
     setHeader(res, "Access-Control-Allow-Credentials", "true");
     setHeader(res, "Vary", "Origin");
@@ -75,7 +85,7 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
     setHeader(
       res,
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With, bypass-tunnel-reminder, ngrok-skip-browser-warning",
+      "Content-Type, Authorization, X-Requested-With, bypass-tunnel-reminder, ngrok-skip-browser-warning, x-api-version, X-API-Version",
     );
     res.writeHead(204);
     res.end();
@@ -109,6 +119,11 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
   if (!payload) {
     // El middleware ya envió la respuesta de error
     return;
+  }
+
+  // Inyectar x-user-id desde el JWT para que los downstream services sepan quién es el usuario
+  if (payload.sub) {
+    req.headers["x-user-id"] = payload.sub;
   }
 
   if (isStudyGroupsRoute(requestUrl.pathname)) {
