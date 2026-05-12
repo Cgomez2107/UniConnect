@@ -1,5 +1,6 @@
 import type { INotificationStrategy, NotificacionDTO, ResultadoEnvio } from "./INotificationStrategy.js";
 import type { IPreferenceService } from "./IPreferenceService.js";
+import { sanitizeError } from "../../libs/errors/sanitizeError.js";
 
 export interface ResumenNotificacion {
   readonly total: number;
@@ -23,19 +24,7 @@ export class NotificationService {
     );
 
     const resultados = await Promise.allSettled(
-      estrategiasActivas.map(async (s) => {
-        try {
-          return await s.enviar(notificacion);
-        } catch (error) {
-          const rawMsg = (error as Error)?.message ?? "Unknown error";
-          return {
-            canal: s.canal,
-            exitoso: false,
-            error: rawMsg.replace(/SG\.[A-Za-z0-9._-]+/g, "SG.**REDACTED**"),
-            timestamp: new Date().toISOString(),
-          };
-        }
-      }),
+      estrategiasActivas.map(s => s.enviar(notificacion)),
     );
 
     return this.compilarResumen(resultados);
@@ -45,7 +34,7 @@ export class NotificationService {
     const envios: ResultadoEnvio[] = resultados.map(r =>
       r.status === "fulfilled"
         ? r.value
-        : { canal: "unknown", exitoso: false, error: (r.reason as Error)?.message ?? "Unknown error", timestamp: new Date().toISOString() },
+        : { canal: "unknown", exitoso: false, error: sanitizeError(r.reason), timestamp: new Date().toISOString() },
     );
 
     return {

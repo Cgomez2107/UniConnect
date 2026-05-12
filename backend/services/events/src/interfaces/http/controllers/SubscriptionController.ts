@@ -12,6 +12,22 @@ export class SubscriptionController {
     private readonly subscriptionRepository: ISubscriptionRepository,
   ) {}
 
+  async getSubscriptions(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Authentication required");
+      return;
+    }
+
+    try {
+      const categories = await this.subscriptionRepository.getUserSubscriptions(actorUserId);
+      sendData(res, 200, { userId: actorUserId, categories });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async subscribe(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {

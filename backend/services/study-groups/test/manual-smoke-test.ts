@@ -5,6 +5,7 @@ import { SendGridEmailGateway } from "../src/infrastructure/gateways/SendGridEma
 import { SupabasePushGateway } from "../src/infrastructure/gateways/SupabasePushGateway.js";
 import { SupabaseRealtimeGateway } from "../src/infrastructure/realtime/SupabaseRealtimeGateway.js";
 import { PostgresNotificationRepository } from "../src/infrastructure/database/PostgresNotificationRepository.js";
+import { PostgresUserRepository } from "../src/infrastructure/database/PostgresUserRepository.js";
 import { EmailInstitucionalStrategy } from "../../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
 import { InAppWebSocketStrategy } from "../../../shared/patterns/strategy/InAppWebSocketStrategy.js";
 import { PushMovilStrategy } from "../../../shared/patterns/strategy/PushMovilStrategy.js";
@@ -94,9 +95,10 @@ const realtimeGateway = new SupabaseRealtimeGateway(supabaseUrl, supabaseKey);
 const pushGateway = new SupabasePushGateway(`${supabaseUrl}/functions/v1/notifications`, supabaseKey);
 
 // ── Strategies ──
-const emailStrategy = new EmailInstitucionalStrategy(emailGateway);
+const userRepository = new PostgresUserRepository(pool);
+const emailStrategy = new EmailInstitucionalStrategy(emailGateway, userRepository);
 const wsStrategy = new InAppWebSocketStrategy(realtimeGateway);
-const pushStrategy = new PushMovilStrategy(pushGateway);
+const pushStrategy = new PushMovilStrategy(pushGateway, userRepository);
 
 const strategies = [emailStrategy, wsStrategy, pushStrategy];
 console.log(`\nEstrategias inyectadas: ${strategies.length}`);

@@ -49,6 +49,7 @@ import { SupabasePushGateway } from "./infrastructure/gateways/SupabasePushGatew
 import { SupabaseRealtimeGateway } from "./infrastructure/realtime/SupabaseRealtimeGateway.js";
 import { PreferenceService } from "./application/services/PreferenceService.js";
 import { NotificationMapper } from "./application/services/NotificationMapper.js";
+import { PostgresUserRepository } from "./infrastructure/database/PostgresUserRepository.js";
 
 import {
   ChatSubject as GroupChatSubject,
@@ -183,15 +184,19 @@ function bootstrap(): void {
     ? new SupabasePushGateway(`${supabaseUrl}/functions/v1/notifications`, env.supabaseServiceRoleKey)
     : null;
 
+  const userRepository = pool
+    ? new PostgresUserRepository(pool)
+    : null;
+
   const strategies = [
     realtimeGateway
       ? new InAppWebSocketStrategy(realtimeGateway)
       : null,
-    emailGateway
-      ? new EmailInstitucionalStrategy(emailGateway)
+    emailGateway && userRepository
+      ? new EmailInstitucionalStrategy(emailGateway, userRepository)
       : null,
-    pushGateway
-      ? new PushMovilStrategy(pushGateway)
+    pushGateway && userRepository
+      ? new PushMovilStrategy(pushGateway, userRepository)
       : null,
   ].filter((s): s is NonNullable<typeof s> => s !== null);
 

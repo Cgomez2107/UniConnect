@@ -1,4 +1,5 @@
 import type { INotificationStrategy, NotificacionDTO, ResultadoEnvio } from "./INotificationStrategy.js";
+import { sanitizeError } from "../../libs/errors/sanitizeError.js";
 
 export interface IStudyGroupSocketGateway {
   emitToUser(userId: string, event: string, payload: Record<string, unknown>): Promise<void>;
@@ -25,7 +26,7 @@ export class InAppWebSocketStrategy implements INotificationStrategy {
       return {
         canal: this.canal,
         exitoso: false,
-        error: (error as Error).message,
+        error: sanitizeError(error),
         timestamp: new Date().toISOString(),
       };
     }
