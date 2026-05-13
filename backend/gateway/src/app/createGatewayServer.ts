@@ -42,12 +42,20 @@ function isMessagingRoute(pathname: string): boolean {
 function isProfilesCatalogRoute(pathname: string): boolean {
   return (
     pathname.startsWith("/api/v1/students") ||
-    pathname.startsWith("/api/v1/catalog")
+    pathname.startsWith("/api/v1/catalog") ||
+    pathname.startsWith("/perfil/") ||
+    pathname === "/perfil"
   );
 }
 
 function isEventsRoute(pathname: string): boolean {
-  return pathname === "/api/v1/events" || pathname.startsWith("/api/v1/events/");
+  return (
+    pathname === "/api/v1/events" ||
+    pathname.startsWith("/api/v1/events/") ||
+    pathname === "/api/v1/eventos/suscribir" ||
+    pathname === "/api/v1/eventos/suscribir/" ||
+    pathname === "/api/v1/eventos/suscripciones"
+  );
 }
 
 function isAuthRoute(pathname: string): boolean {

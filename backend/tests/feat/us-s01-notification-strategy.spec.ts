@@ -2,6 +2,7 @@ import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import type { INotificationStrategy, NotificacionDTO, ResultadoEnvio } from "../../shared/patterns/strategy/INotificationStrategy.js";
 import type { IPreferenceService } from "../../shared/patterns/strategy/IPreferenceService.js";
+import type { IUserRepository } from "../../shared/patterns/strategy/IUserRepository.js";
 import { InAppWebSocketStrategy, type IStudyGroupSocketGateway } from "../../shared/patterns/strategy/InAppWebSocketStrategy.js";
 import { EmailInstitucionalStrategy, type IEmailGateway } from "../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
 import { PushMovilStrategy, type IPushGateway } from "../../shared/patterns/strategy/PushMovilStrategy.js";
@@ -18,6 +19,14 @@ const dummyNotificacion: NotificacionDTO = {
   body: "Este es un cuerpo de prueba",
   payload: { key: "value" },
 };
+
+class MockUserRepository implements IUserRepository {
+  async getContactInfo(userId: string) {
+    return { email: `${userId}@ucaldas.edu.co`, pushToken: `push_${userId}` };
+  }
+}
+
+const mockUserRepository = new MockUserRepository();
 
 class MockStrategy implements INotificationStrategy {
   readonly canal: string;
@@ -140,8 +149,8 @@ describe("AC-02: Las 3 estrategias concretas implementan INotificationStrategy",
     const mockPush: IPushGateway = { enviarPush: async () => {} };
 
     wsStrategy = new InAppWebSocketStrategy(mockGateway);
-    emailStrategy = new EmailInstitucionalStrategy(mockEmail);
-    pushStrategy = new PushMovilStrategy(mockPush);
+    emailStrategy = new EmailInstitucionalStrategy(mockEmail, mockUserRepository);
+    pushStrategy = new PushMovilStrategy(mockPush, mockUserRepository);
   });
 
   it("InAppWebSocketStrategy existe y tiene canal 'in_app_websocket'", () => {
@@ -305,8 +314,8 @@ describe("AC-04: Filtro por preferencias - solo canales activos se ejecutan", ()
     const service = new NotificationService(
       [
         new InAppWebSocketStrategy(mockGateway),
-        new EmailInstitucionalStrategy(mockEmail),
-        new PushMovilStrategy(mockPush),
+        new EmailInstitucionalStrategy(mockEmail, mockUserRepository),
+        new PushMovilStrategy(mockPush, mockUserRepository),
       ],
       preferenceService,
     );
@@ -404,7 +413,7 @@ describe("AC-05: Aislamiento de fallos - fallo en un canal no detiene otros", ()
     preferenceService.setCanales(dummyNotificacion.userId, dummyNotificacion.type, ["email_institucional"]);
 
     const service = new NotificationService(
-      [new EmailInstitucionalStrategy(new FailingEmailGateway())],
+      [new EmailInstitucionalStrategy(new FailingEmailGateway(), mockUserRepository)],
       preferenceService,
     );
 
@@ -436,7 +445,7 @@ describe("AC-06: Open/Closed - agregar estrategia no requiere modificar Notifica
 
     const mockEmail: IEmailGateway = { enviarEmail: async () => {} };
     const service = new NotificationService(
-      [new SmsStrategy(), new EmailInstitucionalStrategy(mockEmail)],
+      [new SmsStrategy(), new EmailInstitucionalStrategy(mockEmail, mockUserRepository)],
       preferenceService,
     );
 
@@ -461,7 +470,7 @@ describe("AC-06: Open/Closed - agregar estrategia no requiere modificar Notifica
 
     const mockPush: IPushGateway = { enviarPush: async () => {} };
     const service = new NotificationService(
-      [new SlackStrategy(), new PushMovilStrategy(mockPush)],
+      [new SlackStrategy(), new PushMovilStrategy(mockPush, mockUserRepository)],
       preferenceService,
     );
 
@@ -496,7 +505,7 @@ describe("AC-06: Open/Closed - agregar estrategia no requiere modificar Notifica
 
     const mockEmail: IEmailGateway = { enviarEmail: async () => {} };
     const service = new NotificationService(
-      [new SlackStrategy(), new TeamsStrategy(), new EmailInstitucionalStrategy(mockEmail)],
+      [new SlackStrategy(), new TeamsStrategy(), new EmailInstitucionalStrategy(mockEmail, mockUserRepository)],
       preferenceService,
     );
 
@@ -523,8 +532,8 @@ describe("STRESS TESTS: Escenarios críticos de producción", () => {
     const mockGateway: IStudyGroupSocketGateway = { emitToUser: async () => {} };
     const service = new NotificationService(
       [
-        new EmailInstitucionalStrategy(new FailingEmailGateway()), // falla
-        new PushMovilStrategy(new FailingPushGateway()),           // falla
+        new EmailInstitucionalStrategy(new FailingEmailGateway(), mockUserRepository), // falla
+        new PushMovilStrategy(new FailingPushGateway(), mockUserRepository),           // falla
         new InAppWebSocketStrategy(mockGateway),                   // exitoso
       ],
       preferenceService,
@@ -550,8 +559,8 @@ describe("STRESS TESTS: Escenarios críticos de producción", () => {
 
     const service = new NotificationService(
       [
-        new EmailInstitucionalStrategy(new FailingEmailGateway()),
-        new PushMovilStrategy(new FailingPushGateway()),
+        new EmailInstitucionalStrategy(new FailingEmailGateway(), mockUserRepository),
+        new PushMovilStrategy(new FailingPushGateway(), mockUserRepository),
         new InAppWebSocketStrategy(new FailingWebSocketGateway()),
       ],
       preferenceService,
@@ -598,8 +607,8 @@ describe("STRESS TESTS: Escenarios críticos de producción", () => {
     const mockGateway: IStudyGroupSocketGateway = { emitToUser: async () => {} };
     const service = new NotificationService(
       [
-        new EmailInstitucionalStrategy(new FailingEmailGateway()),
-        new PushMovilStrategy(new FailingPushGateway()),
+        new EmailInstitucionalStrategy(new FailingEmailGateway(), mockUserRepository),
+        new PushMovilStrategy(new FailingPushGateway(), mockUserRepository),
         new InAppWebSocketStrategy(mockGateway),
       ],
       preferenceService,
@@ -668,8 +677,8 @@ describe("FLUJO COMPLETO: Evento Observer -> NotificationService -> Filtrado -> 
     const service = new NotificationService(
       [
         new InAppWebSocketStrategy(mockGateway),
-        new EmailInstitucionalStrategy(mockEmail),
-        new PushMovilStrategy(mockPush),
+        new EmailInstitucionalStrategy(mockEmail, mockUserRepository),
+        new PushMovilStrategy(mockPush, mockUserRepository),
       ],
       preferenceService,
     );
@@ -716,8 +725,8 @@ describe("FLUJO COMPLETO: Evento Observer -> NotificationService -> Filtrado -> 
     const service = new NotificationService(
       [
         new InAppWebSocketStrategy(mockGateway),
-        new EmailInstitucionalStrategy(mockEmail),
-        new PushMovilStrategy(mockPush),
+        new EmailInstitucionalStrategy(mockEmail, mockUserRepository),
+        new PushMovilStrategy(mockPush, mockUserRepository),
       ],
       preferenceService,
     );
@@ -757,8 +766,8 @@ describe("FLUJO COMPLETO: Evento Observer -> NotificationService -> Filtrado -> 
     const service = new NotificationService(
       [
         new InAppWebSocketStrategy(mockGateway),
-        new EmailInstitucionalStrategy(new FailingEmailGateway()),
-        new PushMovilStrategy(mockPush),
+        new EmailInstitucionalStrategy(new FailingEmailGateway(), mockUserRepository),
+        new PushMovilStrategy(mockPush, mockUserRepository),
       ],
       preferenceService,
     );

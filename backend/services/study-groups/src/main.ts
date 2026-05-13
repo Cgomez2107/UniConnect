@@ -14,11 +14,7 @@ import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransf
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
-import {
-  NotificationObserver,
-  StudyGroupSubject,
-  WebSocketNotificationObserver,
-} from "./domain/events/index.js";
+import { NotificationObserver, StudyGroupSubject } from "./domain/events/index.js";
 import type { IAdminTransferRepository } from "./domain/repositories/IAdminTransferRepository.js";
 import type { IApplicationRepository } from "./domain/repositories/IApplicationRepository.js";
 import type { INotificationRepository } from "./domain/repositories/INotificationRepository.js";
@@ -37,12 +33,24 @@ import { PostgresMemberRepository } from "./infrastructure/database/PostgresMemb
 import { PostgresNotificationRepository } from "./infrastructure/database/PostgresNotificationRepository.js";
 import { PostgresStudyGroupMessageRepository } from "./infrastructure/database/PostgresStudyGroupMessageRepository.js";
 import { PostgresStudyRequestRepository } from "./infrastructure/database/PostgresStudyRequestRepository.js";
-import { NoopStudyGroupSocketGateway } from "./infrastructure/realtime/NoopStudyGroupSocketGateway.js";
+import { PostgresPreferenceRepository } from "./infrastructure/database/PostgresPreferenceRepository.js";
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
 import type { IStudyRequestRepository } from "./domain/repositories/IStudyRequestRepository.js";
 import { Database } from "./infrastructure/database/Database.js";
 import type { Pool } from "pg";
+
+import { NotificationService } from "../../../shared/patterns/strategy/NotificationService.js";
+import { InAppWebSocketStrategy } from "../../../shared/patterns/strategy/InAppWebSocketStrategy.js";
+import { EmailInstitucionalStrategy } from "../../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
+import { PushMovilStrategy } from "../../../shared/patterns/strategy/PushMovilStrategy.js";
+import { SendGridEmailGateway } from "./infrastructure/gateways/SendGridEmailGateway.js";
+import { SupabasePushGateway } from "./infrastructure/gateways/SupabasePushGateway.js";
+import { SupabaseRealtimeGateway } from "./infrastructure/realtime/SupabaseRealtimeGateway.js";
+import { PreferenceService } from "./application/services/PreferenceService.js";
+import { NotificationMapper } from "./application/services/NotificationMapper.js";
+import { PostgresUserRepository } from "./infrastructure/database/PostgresUserRepository.js";
+
 import {
   ChatSubject as GroupChatSubject,
   RealtimeObserver as GroupRealtimeObserver,
@@ -60,12 +68,17 @@ interface Repositories {
   studyGroup: IStudyGroupRepository;
 }
 
+const ALL_CHANNEL_NAMES: readonly string[] = [
+  "in_app_websocket",
+  "email_institucional",
+  "push_movil",
+];
+
 function createRepository(
   env: ReturnType<typeof loadStudyGroupsEnv>,
   pool: Pool | null,
 ): Repositories {
   if (pool) {
-    // PostgresStudyRequestRepository implementa ambas interfaces
     const repo = new PostgresStudyRequestRepository(pool);
     return { studyRequest: repo, studyGroup: repo };
   }
@@ -78,7 +91,6 @@ function createRepository(
     }),
   );
 
-  // En modo in-memory la hidratación no aplica; usamos el mismo repo como stub
   const inMemoryRepo = new InMemoryStudyRequestRepository();
   return { studyRequest: inMemoryRepo, studyGroup: inMemoryRepo as unknown as IStudyGroupRepository };
 }
@@ -90,7 +102,6 @@ function createApplicationRepository(
   if (pool) {
     return new PostgresApplicationRepository(pool);
   }
-
   return new InMemoryApplicationRepository();
 }
 
@@ -101,7 +112,6 @@ function createMemberRepository(
   if (pool) {
     return new PostgresMemberRepository(pool);
   }
-
   return new InMemoryMemberRepository();
 }
 
@@ -112,7 +122,6 @@ function createAdminTransferRepository(
   if (pool) {
     return new PostgresAdminTransferRepository(pool);
   }
-
   return new InMemoryAdminTransferRepository();
 }
 
@@ -123,7 +132,6 @@ function createStudyGroupMessageRepository(
   if (pool) {
     return new PostgresStudyGroupMessageRepository(pool);
   }
-
   return new InMemoryStudyGroupMessageRepository();
 }
 
@@ -134,7 +142,6 @@ function createNotificationRepository(
   if (pool) {
     return new PostgresNotificationRepository(pool);
   }
-
   return new InMemoryNotificationRepository();
 }
 
@@ -145,19 +152,60 @@ function bootstrap(): void {
     !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
   const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
 
-  // createRepository devuelve { studyRequest, studyGroup }.
-  // En modo Postgres ambas apuntan al mismo objeto (PostgresStudyRequestRepository
-  // implementa IStudyRequestRepository + IStudyGroupRepository).
   const { studyRequest: repository, studyGroup: studyGroupRepository } = createRepository(env, pool);
   const applicationRepository = createApplicationRepository(env, pool);
   const memberRepository = createMemberRepository(env, pool);
   const adminTransferRepository = createAdminTransferRepository(env, pool);
   const messageRepository = createStudyGroupMessageRepository(env, pool);
   const notificationRepository = createNotificationRepository(env, pool);
+  const preferenceRepository = pool
+    ? new PostgresPreferenceRepository(pool)
+    : null;
+
+  const preferenceService = new PreferenceService(
+    preferenceRepository ?? {
+      async getCanalesActivos(_userId: string, _eventType: string): Promise<string[] | null> {
+        return null;
+      },
+      async setCanalActivo(_userId: string, _eventType: string, _canal: string, _activo: boolean): Promise<void> {},
+    },
+  );
+
+  const realtimeGateway = (env.supabaseUrl && env.supabaseServiceRoleKey)
+    ? new SupabaseRealtimeGateway(env.supabaseUrl, env.supabaseServiceRoleKey)
+    : null;
+
+  const emailGateway = (env.sendgridApiKey && env.emailFrom)
+    ? new SendGridEmailGateway(env.sendgridApiKey, env.emailFrom, env.emailFromName ?? "UniConnect")
+    : null;
+
+  const supabaseUrl = env.supabaseUrl ?? "https://becitrklvpadvjwdbmck.supabase.co";
+  const pushGateway = env.supabaseServiceRoleKey
+    ? new SupabasePushGateway(`${supabaseUrl}/functions/v1/notifications`, env.supabaseServiceRoleKey)
+    : null;
+
+  const userRepository = pool
+    ? new PostgresUserRepository(pool)
+    : null;
+
+  const strategies = [
+    realtimeGateway
+      ? new InAppWebSocketStrategy(realtimeGateway)
+      : null,
+    emailGateway && userRepository
+      ? new EmailInstitucionalStrategy(emailGateway, userRepository)
+      : null,
+    pushGateway && userRepository
+      ? new PushMovilStrategy(pushGateway, userRepository)
+      : null,
+  ].filter((s): s is NonNullable<typeof s> => s !== null);
+
+  const notificationService = new NotificationService(strategies, preferenceService);
+  const mapper = new NotificationMapper();
+  const notificationObserver = new NotificationObserver(notificationRepository, notificationService, mapper);
+
   const subject = new StudyGroupSubject();
-  const socketGateway = new NoopStudyGroupSocketGateway();
-  subject.subscribe(new NotificationObserver(notificationRepository));
-  subject.subscribe(new WebSocketNotificationObserver(socketGateway));
+  subject.subscribe(notificationObserver);
 
   const groupChatSubject = new GroupChatSubject("study-groups-chat");
   const mockRealtimeService: IGroupRealtimeService = {
@@ -199,18 +247,18 @@ function bootstrap(): void {
   const applyToStudyRequest = new ApplyToStudyRequest(
     applicationRepository,
     repository,
-    studyGroupRepository,  // ← IStudyGroupRepository para hidratación + validación de estado
+    studyGroupRepository,
     subject,
   );
   const reviewApplication = new ReviewApplication(
     applicationRepository,
-    studyGroupRepository,  // ← IStudyGroupRepository en lugar de studyRequestRepository
+    studyGroupRepository,
     memberRepository,
     subject,
   );
   const requestAdminTransfer = new RequestAdminTransfer(
     adminTransferRepository,
-    studyGroupRepository,  // ← IStudyGroupRepository en lugar de studyRequestRepository
+    studyGroupRepository,
     subject,
   );
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
@@ -233,7 +281,6 @@ function bootstrap(): void {
 
   const server = createServer((req, res) => {
     const resp = res as any;
-    // Manejo de CORS
     const origin = req.headers.origin || "*";
     resp.setHeader("Access-Control-Allow-Origin", origin);
     resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -258,7 +305,6 @@ function bootstrap(): void {
     });
   });
 
-
   (server as any).listen({ port: env.port, host: "::" }, () => {
     console.log(
       JSON.stringify({
@@ -268,14 +314,14 @@ function bootstrap(): void {
         port: env.port,
         host: "::",
         nodeEnv: env.nodeEnv,
+        strategies: strategies.map(s => s.canal),
       }),
     );
   });
 
-  // --- Graceful Shutdown ---
   const shutdown = async (signal: string) => {
     console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio study-groups...`);
-    
+
     server.close(() => {
       console.log("[Shutdown] Servidor HTTP cerrado.");
     });
@@ -283,12 +329,16 @@ function bootstrap(): void {
     try {
       subject.clear();
       groupChatSubject.clear();
-      
+
+      if (realtimeGateway) {
+        realtimeGateway.dispose();
+      }
+
       if (hasDatabaseConfig) {
         await Database.getInstance().close();
       }
-      
-      console.log("[Shutdown] Limpieza de recursos completada con éxito.");
+
+      console.log("[Shutdown] Limpieza de recursos completada con exito.");
       process.exit(0);
     } catch (error) {
       console.error("[Shutdown] Error durante el cierre de recursos:", error);

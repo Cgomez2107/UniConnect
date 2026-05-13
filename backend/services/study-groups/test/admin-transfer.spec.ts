@@ -1,77 +1,108 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
-import { RequestAdminTransfer } from "../../src/application/use-cases/RequestAdminTransfer.js";
-import { AcceptAdminTransfer } from "../../src/application/use-cases/AcceptAdminTransfer.js";
-import type { IAdminTransferRepository } from "../../src/domain/repositories/IAdminTransferRepository.js";
-import type { IStudyGroupRepository } from "../../src/domain/repositories/IStudyGroupRepository.js";
-import type { StudyGroupSubject } from "../../src/domain/events/index.js";
-import type { AdminTransfer } from "../../src/domain/entities/AdminTransfer.js";
-import { AbiertaState } from "../../src/domain/states/AbiertaState.js";
-import { StudyGroup } from "../../src/domain/states/StudyGroup.js";
-import type { ISubject } from "../../src/domain/events/observers/ISubject.js";
-import { InvalidStateTransitionError } from "../../../../../shared/libs/errors/InvalidStateTransitionError.js";
-import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
+import { RequestAdminTransfer } from "../src/application/use-cases/RequestAdminTransfer.js";
+import { AcceptAdminTransfer } from "../src/application/use-cases/AcceptAdminTransfer.js";
+import type { IAdminTransferRepository } from "../src/domain/repositories/IAdminTransferRepository.js";
+import type { IStudyGroupRepository } from "../src/domain/repositories/IStudyGroupRepository.js";
+import type { IStudyGroupState } from "../src/domain/states/IStudyGroupState.js";
+import type { AdminTransfer } from "../src/domain/entities/AdminTransfer.js";
+import type { StudyGroupSubject } from "../src/domain/events/index.js";
+import type { ISubject } from "../src/domain/events/observers/ISubject.js";
+import { AbiertaState } from "../src/domain/states/AbiertaState.js";
+import { StudyGroup } from "../src/domain/states/StudyGroup.js";
+import { InvalidStateTransitionError } from "../../../shared/libs/errors/InvalidStateTransitionError.js";
+import { NotFoundError } from "../../../shared/libs/errors/NotFoundError.js";
 
-describe("RequestAdminTransfer (Integration)", () => {
-  let mockRepository: jest.Mocked<IAdminTransferRepository>;
-  let mockStudyGroupRepository: jest.Mocked<IStudyGroupRepository>;
-  let mockSubject: jest.Mocked<ISubject>;
+// ---------------------------------------------------------------------------
+// Shared test data
+// ---------------------------------------------------------------------------
+
+const BASE_GROUP_PROPS: ISubject = { emit: async () => {}, subscribe: () => {}, unsubscribe: () => {} };
+
+const MOCK_TRANSFER: AdminTransfer = {
+  id: "transfer-1",
+  requestId: "group-1",
+  fromUserId: "admin-old",
+  toUserId: "admin-new",
+  status: "pendiente",
+  createdAt: new Date().toISOString(),
+  respondedAt: null,
+};
+
+// ---------------------------------------------------------------------------
+// Factory functions — plain jest.fn() objects cast via unknown.
+// Do NOT chain .mockResolvedValue() here — use jest.mocked() in beforeEach.
+// ---------------------------------------------------------------------------
+
+function createMockRepository(): IAdminTransferRepository {
+  return {
+    getById: jest.fn(),
+    requestTransfer: jest.fn(),
+    acceptTransfer: jest.fn(),
+    leaveAdminRole: jest.fn(),
+  } as unknown as IAdminTransferRepository;
+}
+
+function createMockSubject(): StudyGroupSubject {
+  return {
+    observers: new Set(),
+    name: "mock-subject",
+    emit: jest.fn(),
+    subscribe: jest.fn(),
+    unsubscribe: jest.fn(),
+    getObserverCount: jest.fn(),
+    clear: jest.fn(),
+  } as unknown as StudyGroupSubject;
+}
+
+function createMockStudyGroupRepo(): IStudyGroupRepository {
+  return {
+    loadStudyGroup: jest.fn(),
+  } as unknown as IStudyGroupRepository;
+}
+
+// ---------------------------------------------------------------------------
+// RequestAdminTransfer
+// ---------------------------------------------------------------------------
+
+describe("RequestAdminTransfer", () => {
+  let mockRepository: IAdminTransferRepository;
+  let mockSubject: StudyGroupSubject;
+  let mockStudyGroupRepository: IStudyGroupRepository;
   let useCase: RequestAdminTransfer;
 
   beforeEach(() => {
-    mockRepository = {
-      getById: jest.fn(),
-      requestTransfer: jest.fn(),
-      acceptTransfer: jest.fn(),
-      leaveAdminRole: jest.fn(),
-    };
+    jest.clearAllMocks();
 
-    const mockStudyGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      new AbiertaState(),
-      { emit: async () => {}, subscribe: () => {}, unsubscribe: () => {} },
-    );
+    mockRepository = createMockRepository();
+    mockSubject = createMockSubject();
+    mockStudyGroupRepository = createMockStudyGroupRepo();
 
-    mockStudyGroupRepository = {
-      loadStudyGroup: jest.fn().mockResolvedValue(mockStudyGroup),
-    };
+    const mockStudyGroup = new StudyGroup("group-1", "Test Group", 5, 3, new AbiertaState(), BASE_GROUP_PROPS);
+    jest.mocked(mockStudyGroupRepository).loadStudyGroup.mockResolvedValue(mockStudyGroup);
 
-    mockSubject = {
-      emit: jest.fn().mockResolvedValue(undefined),
-      subscribe: jest.fn(),
-      unsubscribe: jest.fn(),
-    };
-
-    useCase = new RequestAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject as any,
-    );
+    useCase = new RequestAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
   });
 
-  it("emite el evento correcto tras una transferencia exitosa", async () => {
-    const mockTransfer: AdminTransfer = {
-      id: "transfer-1",
-      requestId: "group-1",
-      fromUserId: "admin-old",
-      toUserId: "admin-new",
-      status: "pendiente",
-      createdAt: new Date().toISOString(),
-      respondedAt: null,
-    };
+  it("emite evento TRANSFERENCIA_ADMIN_SOLICITADA tras persistir", async () => {
+    jest.mocked(mockRepository).requestTransfer.mockResolvedValue(MOCK_TRANSFER);
 
-    mockRepository.requestTransfer.mockResolvedValue(mockTransfer);
-
-    await useCase.execute({
+    const result = await useCase.execute({
       requestId: "group-1",
       actorUserId: "admin-old",
       targetUserId: "admin-new",
     });
 
-    expect(mockSubject.emit).toHaveBeenCalledTimes(1);
-    expect(mockSubject.emit).toHaveBeenCalledWith(
+    expect(result).toEqual(MOCK_TRANSFER);
+
+    expect(jest.mocked(mockRepository).requestTransfer).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(mockRepository).requestTransfer).toHaveBeenCalledWith({
+      requestId: "group-1",
+      actorUserId: "admin-old",
+      targetUserId: "admin-new",
+    });
+
+    expect(jest.mocked(mockSubject).emit).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(mockSubject).emit).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "TRANSFERENCIA_ADMIN_SOLICITADA",
         transferId: "transfer-1",
@@ -82,163 +113,81 @@ describe("RequestAdminTransfer (Integration)", () => {
         groupName: "Test Group",
       }),
     );
-
-    expect(mockRepository.requestTransfer).toHaveBeenCalledTimes(1);
-    expect(mockRepository.requestTransfer).toHaveBeenCalledWith({
-      requestId: "group-1",
-      actorUserId: "admin-old",
-      targetUserId: "admin-new",
-    });
   });
 
-  it("lanza error al pedir transferencia en estado prohibido (Cerrada)", async () => {
-    const { CerradaState } = await import("../../src/domain/states/CerradaState.js");
-    const mockClosedGroup = new StudyGroup(
-      "group-closed",
-      "Closed Group",
-      5,
-      3,
-      new CerradaState(),
-      { emit: async () => {}, subscribe: () => {}, unsubscribe: () => {} },
-    );
-
-    mockStudyGroupRepository.loadStudyGroup.mockResolvedValue(mockClosedGroup);
+  it("lanza InvalidStateTransitionError si el grupo esta Cerrada", async () => {
+    const { CerradaState } = await import("../src/domain/states/CerradaState.js");
+    const closedGroup = new StudyGroup("group-closed", "Closed Group", 5, 3, new CerradaState(), BASE_GROUP_PROPS);
+    jest.mocked(mockStudyGroupRepository).loadStudyGroup.mockResolvedValue(closedGroup);
 
     await expect(
-      useCase.execute({
-        requestId: "group-closed",
-        actorUserId: "admin-old",
-        targetUserId: "admin-new",
-      }),
-    ).rejects.toThrowError(InvalidStateTransitionError);
+      useCase.execute({ requestId: "group-closed", actorUserId: "admin-old", targetUserId: "admin-new" }),
+    ).rejects.toThrow(InvalidStateTransitionError);
 
-    expect(mockRepository.requestTransfer).not.toHaveBeenCalled();
-    expect(mockSubject.emit).not.toHaveBeenCalled();
+    expect(jest.mocked(mockRepository).requestTransfer).not.toHaveBeenCalled();
+    expect(jest.mocked(mockSubject).emit).not.toHaveBeenCalled();
   });
 
-  it("no persiste ni emite si la validación de estado falla", async () => {
-    const { TransferenciaPendienteState } = await import("../../src/domain/states/TransferenciaPendienteState.js");
-    const baseState = new AbiertaState();
-    const pendingState = new TransferenciaPendienteState(baseState);
-    const mockPendingGroup = new StudyGroup(
-      "group-pending",
-      "Pending Transfer Group",
-      5,
-      3,
-      pendingState,
-      { emit: async () => {}, subscribe: () => {}, unsubscribe: () => {} },
-    );
-
-    mockStudyGroupRepository.loadStudyGroup.mockResolvedValue(mockPendingGroup);
+  it("lanza InvalidStateTransitionError si ya hay una transferencia pendiente", async () => {
+    const { TransferenciaPendienteState } = await import("../src/domain/states/TransferenciaPendienteState.js");
+    const pendingGroup = new StudyGroup("group-pending", "Pending Group", 5, 3, new TransferenciaPendienteState(new AbiertaState()), BASE_GROUP_PROPS);
+    jest.mocked(mockStudyGroupRepository).loadStudyGroup.mockResolvedValue(pendingGroup);
 
     await expect(
-      useCase.execute({
-        requestId: "group-pending",
-        actorUserId: "admin-old",
-        targetUserId: "admin-new",
-      }),
-    ).rejects.toThrowError(InvalidStateTransitionError);
+      useCase.execute({ requestId: "group-pending", actorUserId: "admin-old", targetUserId: "admin-new" }),
+    ).rejects.toThrow(InvalidStateTransitionError);
 
-    expect(mockRepository.requestTransfer).not.toHaveBeenCalled();
+    expect(jest.mocked(mockRepository).requestTransfer).not.toHaveBeenCalled();
   });
 
-  it("retorna el objeto AdminTransfer persistido", async () => {
-    const mockTransfer: AdminTransfer = {
-      id: "transfer-uuid",
-      requestId: "group-1",
-      fromUserId: "admin-old",
-      toUserId: "admin-new",
-      status: "pendiente",
-      createdAt: new Date().toISOString(),
-      respondedAt: null,
-    };
+  it("no persiste ni emite si la validacion de estado falla", async () => {
+    const { CerradaState } = await import("../src/domain/states/CerradaState.js");
+    const closedGroup = new StudyGroup("group-closed", "Closed", 5, 3, new CerradaState(), BASE_GROUP_PROPS);
+    jest.mocked(mockStudyGroupRepository).loadStudyGroup.mockResolvedValue(closedGroup);
 
-    mockRepository.requestTransfer.mockResolvedValue(mockTransfer);
+    await expect(
+      useCase.execute({ requestId: "group-closed", actorUserId: "admin-old", targetUserId: "admin-new" }),
+    ).rejects.toThrow(InvalidStateTransitionError);
 
-    const result = await useCase.execute({
-      requestId: "group-1",
-      actorUserId: "admin-old",
-      targetUserId: "admin-new",
-    });
-
-    expect(result).toEqual(mockTransfer);
+    expect(jest.mocked(mockRepository).requestTransfer).not.toHaveBeenCalled();
+    expect(jest.mocked(mockSubject).emit).not.toHaveBeenCalled();
   });
 });
 
-describe("AcceptAdminTransfer (Integration)", () => {
-  let mockRepository: jest.Mocked<IAdminTransferRepository>;
-  let mockStudyGroupRepository: jest.Mocked<IStudyGroupRepository>;
-  let mockSubject: jest.Mocked<ISubject>;
+// ---------------------------------------------------------------------------
+// AcceptAdminTransfer
+// ---------------------------------------------------------------------------
+
+describe("AcceptAdminTransfer", () => {
+  let mockRepository: IAdminTransferRepository;
+  let mockSubject: StudyGroupSubject;
+  let mockStudyGroupRepository: IStudyGroupRepository;
   let useCase: AcceptAdminTransfer;
 
   beforeEach(() => {
-    mockRepository = {
-      getById: jest.fn(),
-      requestTransfer: jest.fn(),
-      acceptTransfer: jest.fn(),
-      leaveAdminRole: jest.fn(),
-    };
+    jest.clearAllMocks();
 
-    const mockStudyGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      new AbiertaState(),
-      { emit: async () => {}, subscribe: () => {}, unsubscribe: () => {} },
-    );
+    mockRepository = createMockRepository();
+    mockSubject = createMockSubject();
+    mockStudyGroupRepository = createMockStudyGroupRepo();
 
-    mockStudyGroupRepository = {
-      loadStudyGroup: jest.fn().mockResolvedValue(mockStudyGroup),
-    };
+    const mockStudyGroup = new StudyGroup("group-1", "Test Group", 5, 3, new AbiertaState(), BASE_GROUP_PROPS);
+    jest.mocked(mockStudyGroupRepository).loadStudyGroup.mockResolvedValue(mockStudyGroup);
 
-    mockSubject = {
-      emit: jest.fn().mockResolvedValue(undefined),
-      subscribe: jest.fn(),
-      unsubscribe: jest.fn(),
-    };
-
-    useCase = new AcceptAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject as any,
-    );
+    useCase = new AcceptAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
   });
 
-  it("emite el evento correcto tras aceptación exitosa", async () => {
-    const mockTransfer: AdminTransfer = {
-      id: "transfer-1",
-      requestId: "group-1",
-      fromUserId: "admin-old",
-      toUserId: "admin-new",
-      status: "pendiente",
-      createdAt: new Date().toISOString(),
-      respondedAt: null,
-    };
+  it("emite evento TRANSFERENCIA_ADMIN_ACEPTADA tras aceptar y persiste", async () => {
+    jest.mocked(mockRepository).getById.mockResolvedValue(MOCK_TRANSFER);
 
-    mockRepository.getById.mockResolvedValue(mockTransfer);
+    const { TransferenciaPendienteState } = await import("../src/domain/states/TransferenciaPendienteState.js");
+    const pendingGroup = new StudyGroup("group-1", "Test Group", 5, 3, new TransferenciaPendienteState(new AbiertaState()), mockSubject);
+    jest.mocked(mockStudyGroupRepository).loadStudyGroup.mockResolvedValue(pendingGroup);
 
-    const { TransferenciaPendienteState } = await import("../../src/domain/states/TransferenciaPendienteState.js");
-    const baseState = new AbiertaState();
-    const pendingState = new TransferenciaPendienteState(baseState);
-    const mockPendingGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      pendingState,
-      mockSubject as any,
-    );
+    await useCase.execute({ transferId: "transfer-1", actorUserId: "admin-new" });
 
-    mockStudyGroupRepository.loadStudyGroup.mockResolvedValue(mockPendingGroup);
-
-    await useCase.execute({
-      transferId: "transfer-1",
-      actorUserId: "admin-new",
-    });
-
-    expect(mockSubject.emit).toHaveBeenCalledTimes(1);
-    expect(mockSubject.emit).toHaveBeenCalledWith(
+    expect(jest.mocked(mockSubject).emit).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(mockSubject).emit).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "TRANSFERENCIA_ADMIN_ACEPTADA",
         transferId: "transfer-1",
@@ -250,104 +199,56 @@ describe("AcceptAdminTransfer (Integration)", () => {
       }),
     );
 
-    expect(mockRepository.acceptTransfer).toHaveBeenCalledTimes(1);
-    expect(mockRepository.acceptTransfer).toHaveBeenCalledWith({
+    expect(jest.mocked(mockRepository).acceptTransfer).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(mockRepository).acceptTransfer).toHaveBeenCalledWith({
       transferId: "transfer-1",
       actorUserId: "admin-new",
     });
   });
 
   it("lanza NotFoundError si la transferencia no existe", async () => {
-    mockRepository.getById.mockResolvedValue(null);
+    jest.mocked(mockRepository).getById.mockResolvedValue(null);
 
     await expect(
-      useCase.execute({
-        transferId: "nonexistent",
-        actorUserId: "admin-new",
-      }),
-    ).rejects.toThrowError(NotFoundError);
+      useCase.execute({ transferId: "nonexistent", actorUserId: "admin-new" }),
+    ).rejects.toThrow(NotFoundError);
 
-    expect(mockRepository.acceptTransfer).not.toHaveBeenCalled();
-    expect(mockSubject.emit).not.toHaveBeenCalled();
+    expect(jest.mocked(mockRepository).acceptTransfer).not.toHaveBeenCalled();
+    expect(jest.mocked(mockSubject).emit).not.toHaveBeenCalled();
   });
 
-  it("lanza error al aceptar en estado prohibido (no hay transferencia pendiente)", async () => {
-    const mockTransfer: AdminTransfer = {
-      id: "transfer-1",
-      requestId: "group-1",
-      fromUserId: "admin-old",
-      toUserId: "admin-new",
-      status: "pendiente",
-      createdAt: new Date().toISOString(),
-      respondedAt: null,
-    };
-
-    mockRepository.getById.mockResolvedValue(mockTransfer);
-
-    // El grupo está en estado Abierta (sin transferencia pendiente)
-    const mockAbiertaGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      new AbiertaState(),
-      { emit: async () => {}, subscribe: () => {}, unsubscribe: () => {} },
-    );
-
-    mockStudyGroupRepository.loadStudyGroup.mockResolvedValue(mockAbiertaGroup);
+  it("lanza InvalidStateTransitionError si el grupo no esta en estado de transferencia pendiente", async () => {
+    jest.mocked(mockRepository).getById.mockResolvedValue(MOCK_TRANSFER);
 
     await expect(
-      useCase.execute({
-        transferId: "transfer-1",
-        actorUserId: "admin-new",
-      }),
-    ).rejects.toThrowError(InvalidStateTransitionError);
+      useCase.execute({ transferId: "transfer-1", actorUserId: "admin-new" }),
+    ).rejects.toThrow(InvalidStateTransitionError);
 
-    expect(mockRepository.acceptTransfer).not.toHaveBeenCalled();
+    expect(jest.mocked(mockRepository).acceptTransfer).not.toHaveBeenCalled();
   });
 
-  it("no persiste si la emisión del evento falla", async () => {
-    const mockTransfer: AdminTransfer = {
-      id: "transfer-1",
-      requestId: "group-1",
-      fromUserId: "admin-old",
-      toUserId: "admin-new",
-      status: "pendiente",
-      createdAt: new Date().toISOString(),
-      respondedAt: null,
-    };
+  it("no persiste si la emision del evento falla", async () => {
+    jest.mocked(mockRepository).getById.mockResolvedValue(MOCK_TRANSFER);
 
-    mockRepository.getById.mockResolvedValue(mockTransfer);
-
-    const { TransferenciaPendienteState } = await import("../../src/domain/states/TransferenciaPendienteState.js");
-    const baseState = new AbiertaState();
-    const pendingState = new TransferenciaPendienteState(baseState);
-
-    // Mock el subject para que lance un error
-    const failingSubject: ISubject = {
-      emit: jest.fn().mockRejectedValue(new Error("Event emission failed")),
+    const failingSubject: StudyGroupSubject = {
+      observers: new Set(),
+      name: "failing-subject",
+      emit: jest.fn(),
       subscribe: jest.fn(),
       unsubscribe: jest.fn(),
-    };
+      getObserverCount: jest.fn().mockReturnValue(0),
+      clear: jest.fn(),
+    } as unknown as StudyGroupSubject;
+    jest.mocked(failingSubject).emit.mockRejectedValue(new Error("Event emission failed"));
 
-    const mockPendingGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      pendingState,
-      failingSubject,
-    );
-
-    mockStudyGroupRepository.loadStudyGroup.mockResolvedValue(mockPendingGroup);
+    const { TransferenciaPendienteState } = await import("../src/domain/states/TransferenciaPendienteState.js");
+    const pendingGroup = new StudyGroup("group-1", "Test Group", 5, 3, new TransferenciaPendienteState(new AbiertaState()), failingSubject);
+    jest.mocked(mockStudyGroupRepository).loadStudyGroup.mockResolvedValue(pendingGroup);
 
     await expect(
-      useCase.execute({
-        transferId: "transfer-1",
-        actorUserId: "admin-new",
-      }),
-    ).rejects.toThrowError("Event emission failed");
+      useCase.execute({ transferId: "transfer-1", actorUserId: "admin-new" }),
+    ).rejects.toThrow("Event emission failed");
 
-    expect(mockRepository.acceptTransfer).not.toHaveBeenCalled();
+    expect(jest.mocked(mockRepository).acceptTransfer).not.toHaveBeenCalled();
   });
 });

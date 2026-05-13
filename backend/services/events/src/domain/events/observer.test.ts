@@ -209,6 +209,58 @@ describe("AC-03 y AC-04: UniversityEventObserver filtra por categoría", () => {
   });
 });
 
+describe("US-O03 - Escenario crítico: filtro por categoría impide fuga de notificaciones", () => {
+  it("Usuario A suscrito a Sistemas, B a Artes, evento en Sistemas -> B NO debe recibir notificación", async () => {
+    const repo = new InMemorySubscriptionRepository();
+    const emitted: Array<{ userId: string; event: string }> = [];
+
+    const gateway: IEventSocketGateway = {
+      emitToUser: async (userId, event, _payload) => { emitted.push({ userId, event }); },
+    };
+
+    // Usuario A suscrito a "academico" (simula "Sistemas")
+    await repo.subscribe("user_A", "academico");
+    // Usuario B suscrito a "deportivo" (simula "Artes")
+    await repo.subscribe("user_B", "deportivo");
+
+    const observer = new UniversityEventObserver(repo, gateway);
+    const eventoSistemas: UniversityEvent = {
+      ...baseEvent,
+      category: "academico",
+      payload: { ...baseEvent.payload, category: "academico" },
+    };
+
+    await observer.handle(eventoSistemas);
+
+    const notifiedUserIds = emitted.map(e => e.userId);
+    // User_A debe recibir
+    assert.ok(notifiedUserIds.includes("user_A"), "User A (Sistemas) debería recibir la notificación");
+    // User_B NO debe recibir — si está en la lista, el test FALLA
+    assert.equal(notifiedUserIds.includes("user_B"), false, "User B (Artes) NO debería recibir la notificación");
+    // Solo user_A debe estar en la lista
+    assert.equal(emitted.length, 1, "Solo un usuario debería ser notificado");
+  });
+
+  it("evento sin categoría válida no debe notificar a nadie", async () => {
+    const repo = new InMemorySubscriptionRepository();
+    const emitted: Array<{ userId: string; event: string }> = [];
+
+    const gateway: IEventSocketGateway = {
+      emitToUser: async (userId, event, _payload) => { emitted.push({ userId, event }); },
+    };
+
+    await repo.subscribe("user_X", "academico");
+    await repo.subscribe("user_Y", "deportivo");
+
+    const observer = new UniversityEventObserver(repo, gateway);
+    const eventoSinCategoria = { ...baseEvent, category: "otro" as const, payload: { ...baseEvent.payload, category: "otro" as const } };
+    await observer.handle(eventoSinCategoria);
+
+    // Nadie suscrito a "otro" -> nadie notificado
+    assert.equal(emitted.length, 0);
+  });
+});
+
 describe("CreateEvent con subject integrado", () => {
   it("CreateEvent.execute debe emitir NUEVO_EVENTO cuando hay subject y category", async () => {
     const subject = new UniversityEventSubject();

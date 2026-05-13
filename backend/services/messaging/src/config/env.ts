@@ -9,6 +9,8 @@ export interface MessagingEnv {
   readonly dbUser?: string;
   readonly dbPassword?: string;
   readonly dbSsl: boolean;
+  readonly supabaseUrl?: string;
+  readonly supabaseServiceRoleKey?: string;
 }
 
 export function loadMessagingEnv(source: NodeJS.ProcessEnv = process.env): MessagingEnv {
@@ -46,5 +48,7 @@ export function loadMessagingEnv(source: NodeJS.ProcessEnv = process.env): Messa
     dbUser: source.DB_USER,
     dbPassword: source.DB_PASSWORD,
     dbSsl: source.DB_SSL === "true",
+    supabaseUrl: source.SUPABASE_URL,
+    supabaseServiceRoleKey: source.SUPABASE_SERVICE_ROLE_KEY,
   };
 }

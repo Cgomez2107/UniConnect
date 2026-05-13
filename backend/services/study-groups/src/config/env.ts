@@ -9,6 +9,11 @@ export interface StudyGroupsEnv {
   readonly dbUser?: string;
   readonly dbPassword?: string;
   readonly dbSsl: boolean;
+  readonly sendgridApiKey?: string;
+  readonly emailFrom?: string;
+  readonly emailFromName?: string;
+  readonly supabaseUrl?: string;
+  readonly supabaseServiceRoleKey?: string;
 }
 
 export function loadStudyGroupsEnv(source: NodeJS.ProcessEnv = process.env): StudyGroupsEnv {
@@ -44,5 +49,10 @@ export function loadStudyGroupsEnv(source: NodeJS.ProcessEnv = process.env): Stu
     dbUser: requireEnv(source, "DB_USER"),
     dbPassword: requireEnv(source, "DB_PASSWORD"),
     dbSsl: source.DB_SSL === "true",
+    sendgridApiKey: source.SENDGRID_API_KEY,
+    emailFrom: source.EMAIL_FROM,
+    emailFromName: source.EMAIL_FROM_NAME,
+    supabaseUrl: source.SUPABASE_URL,
+    supabaseServiceRoleKey: source.SUPABASE_SERVICE_ROLE_KEY,
   };
 }

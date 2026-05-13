@@ -12,15 +12,17 @@
     "test": "jest"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "@supabase/supabase-js": "^2.105.4",
     "pg": "^8.13.1"
   },
   "devDependencies": {
     "@jest/globals": "^30.0.0",
     "@types/jest": "^29.5.0",
+    "@types/node": "^22.10.1",
     "@types/pg": "^8.11.10",
     "jest": "^30.0.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "@types/node": "^22.10.1"
+    "typescript": "^5.7.2"
   }
 }

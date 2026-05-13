@@ -17,7 +17,10 @@ import type { CreateMessageDto } from "../dto/CreateMessageDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
-import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+import { ContentError } from "../../../../../../shared/libs/errors/ContentError.js";
+import { SizeError } from "../../../../../../shared/libs/errors/SizeError.js";
+import { MediaError } from "../../../../../../shared/libs/errors/MediaError.js";
+import { sendJson, sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
 function toApiConversation(conversation: ConversationSummary) {
   return {
@@ -227,6 +230,10 @@ export class MessagingController {
 
       sendData(res, 201, toApiMessage(message));
     } catch (error) {
+      if (error instanceof ContentError || error instanceof SizeError || error instanceof MediaError) {
+        sendJson(res, error.statusCode, { error: error.message, reason: error.reason, name: error.name });
+        return;
+      }
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

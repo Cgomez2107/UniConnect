@@ -15,6 +15,8 @@
     "../../shared/libs/validation/ValidationError.ts",
     "../../shared/libs/validation/validators.ts",
     "../../shared/libs/validation/validateDto.ts",
-    "../../shared/libs/validation/index.ts"
+    "../../shared/libs/validation/index.ts",
+    "../../shared/patterns/strategy/*.ts",
+    "../../shared/patterns/decorator/notification/*.ts"
   ]
 }
