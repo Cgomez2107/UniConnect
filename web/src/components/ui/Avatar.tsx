@@ -1,83 +1,75 @@
-import React from 'react';
+import { useMemo, useState } from "react";
 
-/**
- * Props para el componente Avatar
- */
+const BG_COLORS = [
+  "bg-primary-600",
+  "bg-emerald-500",
+  "bg-amber-500",
+  "bg-rose-500",
+  "bg-violet-500",
+  "bg-cyan-500",
+  "bg-orange-500",
+  "bg-pink-500",
+  "bg-teal-500",
+  "bg-indigo-500",
+];
+
+function hashName(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash);
+}
+
 export interface AvatarProps {
-  /** URL de la imagen del avatar */
   src?: string;
-  /** Nombre del usuario (para generar iniciales) */
   name?: string;
-  /** Texto alternativo para la imagen */
   alt?: string;
-  /** Tamaño del avatar */
-  size?: 'sm' | 'md' | 'lg';
-  /** Texto de fallback (ej: iniciales) */
-  fallback?: string;
-  /** Clases CSS adicionales */
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
-/**
- * Componente Avatar - Avatar de usuario con soporte para fallback
- * 
- * @example
- * <Avatar
- *   src="https://example.com/avatar.jpg"
- *   alt="Juan Pérez"
- *   fallback="JP"
- *   size="md"
- * />
- * 
- * @example
- * <Avatar fallback="CD" size="lg" />
- */
-export const Avatar: React.FC<AvatarProps> = ({
-  src,
-  name,
-  alt = 'Avatar',
-  size = 'md',
-  fallback,
-  className = '',
-}) => {
-  const sizeStyles = {
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-12 h-12 text-sm',
-    lg: 'w-16 h-16 text-base',
-  };
+const sizeMap = {
+  sm: "w-8 h-8 text-xs",
+  md: "w-10 h-10 text-sm",
+  lg: "w-14 h-14 text-lg",
+  xl: "w-20 h-20 text-2xl",
+};
 
-  const showImage = src && src.length > 0;
-  
-  // Generate initials from name
+export function Avatar({ src, name, alt = "Avatar", size = "md", className = "" }: AvatarProps) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const colorClass = useMemo(() => {
+    const displayName = name || "?";
+    return BG_COLORS[hashName(displayName) % BG_COLORS.length];
+  }, [name]);
+
   const getInitials = (n: string) => {
     return n
-      .split(' ')
+      .split(" ")
       .slice(0, 2)
-      .map(word => word[0])
-      .join('')
+      .map((word) => word[0])
+      .join("")
       .toUpperCase();
   };
 
-  const displayText = fallback || (name ? getInitials(name) : '?');
+  const initials = name ? getInitials(name) : "?";
+
+  if (src && !imgFailed) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        onError={() => setImgFailed(true)}
+        className={`rounded-full object-cover flex-shrink-0 ${sizeMap[size]} ${className}`}
+      />
+    );
+  }
 
   return (
     <div
-      className={`
-        ${sizeStyles[size]}
-        rounded-full flex items-center justify-center flex-shrink-0
-        overflow-hidden bg-primary-600 text-white font-semibold
-        ${className}
-      `}
+      className={`rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold ${colorClass} ${sizeMap[size]} ${className}`}
     >
-      {showImage ? (
-        <img
-          src={src}
-          alt={alt}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <span>{displayText}</span>
-      )}
+      {initials}
     </div>
   );
-};
+}

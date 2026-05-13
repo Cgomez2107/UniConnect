@@ -5,7 +5,6 @@ import useFeed from "@/hooks/useFeed";
 import { SolicitudCard } from "@/components/solicitud/SolicitudCard";
 import { Button } from "@/components/ui/Button";
 import { StudyRequestUI } from "@/types/ui";
-import { typographyStyles } from "@uniconnect/shared-ui";
 
 export function SolicitudesPage() {
   const navigate = useNavigate();
@@ -38,34 +37,29 @@ export function SolicitudesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 animate-fade-in">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1
-            className="text-neutral-900 mb-2"
-            style={{
-              fontSize: typographyStyles.h1.fontSize,
-              fontWeight: typographyStyles.h1.fontWeight,
-              lineHeight: typographyStyles.h1.lineHeight,
-            }}
-          >
+          <h1 className="text-2xl font-bold text-neutral-900 mb-2">
             Solicitudes de Grupos de Estudio
           </h1>
-          <p className="text-neutral-700">
+          <p className="text-neutral-500">
             Encuentra y únete a grupos de estudio activos
           </p>
         </div>
 
         {/* Search and Filter */}
         <div className="mb-6 flex gap-3">
-          <input
-            type="text"
-            placeholder="Buscar por materia o descripción..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-4 py-3 bg-neutral-50 text-neutral-900 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-600"
-          />
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Buscar por materia o descripción..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
+            />
+          </div>
           <Button onClick={() => navigate("/nueva-solicitud")}>
             + Nueva Solicitud
           </Button>
@@ -75,17 +69,14 @@ export function SolicitudesPage() {
         {isLoading && (
           <div className="space-y-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-40 bg-neutral-100 border border-neutral-200 rounded-lg animate-pulse"
-              ></div>
+              <div key={i} className="h-36 skeleton rounded-lg" />
             ))}
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="bg-error-50 border border-error-200 rounded-lg p-4 text-error-700">
+          <div className="bg-error-50 border border-error-200 rounded-lg p-4 text-error-700 text-sm">
             {error}
           </div>
         )}
@@ -108,7 +99,7 @@ export function SolicitudesPage() {
         {/* Empty State */}
         {!isLoading && filteredSolicitudes.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-neutral-700 mb-4">
+            <p className="text-neutral-500 mb-4">
               {searchTerm
                 ? "No hay solicitudes que coincidan con tu búsqueda"
                 : "No hay solicitudes disponibles"}

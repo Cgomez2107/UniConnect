@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { apiClient } from "@/lib/api/client";
 import { MessageBubble } from "@/components/chat/MessageBubble";
+import { Avatar } from "@/components/ui/Avatar";
 import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 
@@ -17,6 +18,7 @@ interface Message {
 interface Conversation {
   id: string;
   otherUserName: string;
+  otherUserAvatar?: string;
   type?: "direct" | "group";
   groupId?: string;
   participants?: { id: string; fullName: string }[];
@@ -174,7 +176,10 @@ export const ChatPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-neutral-50">
-        <p className="text-neutral-600">Cargando conversación...</p>
+        <div className="text-center animate-fade-in">
+          <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-500 text-sm">Cargando conversación...</p>
+        </div>
       </div>
     );
   }
@@ -186,12 +191,19 @@ export const ChatPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="text-neutral-600 hover:text-neutral-900"
+            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+            aria-label="Volver"
           >
-            ←
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5m7-7l-7 7 7 7" />
+            </svg>
           </button>
+          <Avatar
+            name={conversation?.otherUserName}
+            size="sm"
+          />
           <div>
-            <h1 className="text-lg font-bold text-neutral-900">{chatTitle}</h1>
+            <h1 className="text-base font-bold text-neutral-900">{chatTitle}</h1>
             {isGroup && conversation?.participants && (
               <p className="text-xs text-neutral-500">
                 {conversation.participants.length} miembros
@@ -199,21 +211,13 @@ export const ChatPage: React.FC = () => {
             )}
           </div>
         </div>
-        {isGroup && (
-          <button
-            className="text-sm text-primary-600 hover:text-primary-700"
-            onClick={() => {/* could show group info modal */}}
-          >
-            Info
-          </button>
-        )}
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
         {messages.length === 0 ? (
-          <div className="text-center text-neutral-500 py-8">
-            No hay mensajes aún. ¡Inicia la conversación!
+          <div className="text-center text-neutral-500 py-12">
+            <p>No hay mensajes aún. ¡Inicia la conversación!</p>
           </div>
         ) : (
           messages.map((msg, index) => (
@@ -235,8 +239,11 @@ export const ChatPage: React.FC = () => {
           ))
         )}
         {typingUsers.length > 0 && (
-          <div className="text-sm text-neutral-500 italic">
-            {typingUsers.join(", ")} {typingUsers.length === 1 ? "está" : "están"} escribiendo...
+          <div className="text-sm text-neutral-500 italic animate-fade-in">
+            <span className="inline-flex items-center gap-1">
+              {typingUsers.join(", ")} {typingUsers.length === 1 ? "está" : "están"} escribiendo
+              <span className="animate-pulse">...</span>
+            </span>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -244,15 +251,17 @@ export const ChatPage: React.FC = () => {
 
       {/* Input */}
       <form onSubmit={handleSendMessage} className="bg-white border-t border-neutral-200 p-4">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Escribe un mensaje..."
-            className="flex-1 px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
-            disabled={isSending}
-          />
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Escribe un mensaje..."
+              className="w-full px-4 py-2.5 pr-10 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
+              disabled={isSending}
+            />
+          </div>
           <Button
             type="submit"
             disabled={isSending || !newMessage.trim()}
