@@ -359,6 +359,7 @@ export interface EditProfileFormData {
   bio?: string;
   phone_number?: string;
   avatar_url?: string;
+  semester?: number;
 }
 
 export interface CreateEventFormData {

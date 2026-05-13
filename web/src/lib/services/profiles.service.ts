@@ -123,19 +123,11 @@ const profilesService = {
   },
 
   async uploadAvatar(userId: string, base64Data: string): Promise<string> {
-    try {
-      // Remove existing avatar first (silently ignores 404)
-      await apiClient.delete(API_ENDPOINTS.UPLOAD_AVATAR).catch(() => {});
-
-      const response = await apiClient.post<{ data: { url: string } }>(
-        API_ENDPOINTS.UPLOAD_AVATAR,
-        { user_id: userId, image: base64Data }
-      );
-      return response.data.data.url;
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      throw error;
-    }
+    const response = await apiClient.post<{ data: { url: string } }>(
+      API_ENDPOINTS.UPLOAD_AVATAR,
+      { user_id: userId, image: base64Data }
+    );
+    return response.data.data.url;
   },
 
   async addMySubject(subjectId: string): Promise<void> {

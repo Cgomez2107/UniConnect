@@ -12,6 +12,7 @@ export interface EditProfileFormState {
   name: string;
   phone: string;
   bio: string;
+  semester: string;
   avatarFile: File | null;
   avatarPreview: string;
   selectedProgramId: string;
@@ -46,6 +47,7 @@ export default function useEditProfileForm() {
     name: user?.name || user?.email?.split("@")[0] || "",
     phone: "",
     bio: "",
+    semester: "",
     avatarFile: null,
     avatarPreview: "",
     selectedProgramId: "",
@@ -99,6 +101,7 @@ export default function useEditProfileForm() {
           name: profileData?.full_name || user?.name || "",
           phone: profileData?.phone_number || "",
           bio: profileData?.bio || "",
+          semester: profileData?.semester ? String(profileData.semester) : "",
           avatarPreview: profileData?.avatar_url || user?.profileImage || "",
           selectedProgramId: primaryProgram?.program_id || "",
           selectedSubjectIds: currentSubjects,
@@ -160,6 +163,10 @@ export default function useEditProfileForm() {
       state.bio.length <= MAX_BIO_LENGTH
     );
   }, [state.name, state.phone, state.bio]);
+
+  const handleSemesterChange = useCallback((value: string) => {
+    setState((prev) => ({ ...prev, semester: value }));
+  }, []);
 
   const handleNameChange = useCallback((value: string) => {
     setState((prev) => ({ ...prev, name: value }));
@@ -258,17 +265,22 @@ export default function useEditProfileForm() {
         full_name: state.name.trim(),
         bio: state.bio.trim() || undefined,
         phone_number: state.phone.trim() || undefined,
+        semester: state.semester ? Number(state.semester) : undefined,
       });
 
       if (avatarChanged.current && state.avatarFile && user?.id) {
-        const file = state.avatarFile;
-        const reader = new FileReader();
-        const base64 = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        await profilesService.uploadAvatar(user.id, base64);
+        try {
+          const file = state.avatarFile;
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          await profilesService.uploadAvatar(user.id, base64);
+        } catch (avatarErr) {
+          console.warn("Avatar upload failed, but profile was saved:", avatarErr);
+        }
       }
 
       if (state.selectedProgramId && state.selectedProgramId !== initialProgramId.current) {
@@ -327,6 +339,7 @@ export default function useEditProfileForm() {
     setSubjectSearch,
     programChangeConfirm,
     bioRemaining: MAX_BIO_LENGTH - state.bio.length,
+    handleSemesterChange,
     handleNameChange,
     handlePhoneChange,
     handleBioChange,

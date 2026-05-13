@@ -6,6 +6,7 @@ export interface UpdateProfileData {
   bio?: string | null;
   phoneNumber?: string | null;
   avatarUrl?: string | null;
+  semester?: number | null;
 }
 
 export class UpdateStudentProfile {
@@ -17,6 +18,7 @@ export class UpdateStudentProfile {
       bio: data.bio,
       phoneNumber: data.phoneNumber,
       avatarUrl: data.avatarUrl,
+      semester: data.semester,
     });
   }
 }

@@ -217,6 +217,7 @@ export class ProfilesCatalogController {
             bio: data.bio ?? null,
             phoneNumber: data.phone_number ?? null,
             avatarUrl: data.avatar_url ?? null,
+            semester: data.semester !== undefined ? Number(data.semester) : undefined,
           });
 
           if (!profile) {
@@ -410,7 +411,7 @@ export class ProfilesCatalogController {
           const uploadUrl = `${supabaseUrl}/storage/v1/object/avatars/${uploadPath}`;
 
           const uploadResponse = await fetch(uploadUrl, {
-            method: "POST",
+            method: "PUT",
             headers: {
               Authorization: `Bearer ${serviceRoleKey}`,
               "Content-Type": mimeType,

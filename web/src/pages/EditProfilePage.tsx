@@ -23,6 +23,7 @@ export function EditProfilePage() {
     setSubjectSearch,
     programChangeConfirm,
     bioRemaining,
+    handleSemesterChange,
     handleNameChange,
     handlePhoneChange,
     handleBioChange,
@@ -147,6 +148,19 @@ export function EditProfilePage() {
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 ml-auto">{bioRemaining}/500</p>
               </div>
             </div>
+
+            {/* Semester Field */}
+            <Input
+              type="number"
+              label="Semestre"
+              value={state.semester}
+              onChange={(e) => handleSemesterChange(e.target.value)}
+              placeholder="Ej: 5"
+              disabled={saving}
+              min={1}
+              max={12}
+              name="semester"
+            />
 
             {/* Program Selector */}
             <div>

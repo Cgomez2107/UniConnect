@@ -39,7 +39,7 @@ export interface IStudentRepository {
   /**
    * Actualizar perfil de estudiante
    */
-  update(id: string, data: { fullName?: string; bio?: string | null; phoneNumber?: string | null; avatarUrl?: string | null }): Promise<Student | null>;
+  update(id: string, data: { fullName?: string; bio?: string | null; phoneNumber?: string | null; avatarUrl?: string | null; semester?: number | null }): Promise<Student | null>;
 
   /**
    * Establecer programa principal de forma atómica

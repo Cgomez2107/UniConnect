@@ -183,7 +183,7 @@ export class PostgresStudentRepository implements IStudentRepository {
     return mapStudent(result.rows[0]);
   }
 
-  async update(id: string, data: { fullName?: string; bio?: string | null; phoneNumber?: string | null; avatarUrl?: string | null }): Promise<Student | null> {
+  async update(id: string, data: { fullName?: string; bio?: string | null; phoneNumber?: string | null; avatarUrl?: string | null; semester?: number | null }): Promise<Student | null> {
     const setClauses: string[] = [];
     const values: unknown[] = [];
     let paramIndex = 1;
@@ -203,6 +203,10 @@ export class PostgresStudentRepository implements IStudentRepository {
     if (data.avatarUrl !== undefined) {
       setClauses.push(`avatar_url = $${paramIndex++}`);
       values.push(data.avatarUrl);
+    }
+    if (data.semester !== undefined) {
+      setClauses.push(`semester = $${paramIndex++}`);
+      values.push(data.semester);
     }
 
     if (setClauses.length === 0) {
