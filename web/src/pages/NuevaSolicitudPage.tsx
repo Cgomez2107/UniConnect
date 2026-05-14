@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import useForm from "@/hooks/useForm";
 import studyGroupsService from "@/lib/services/studyGroups.service";
-import { apiClient } from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import profilesService from "@/lib/services/profiles.service";
 import type { Subject } from "@/types";
 
 interface NuevaSolicitudFormData {
@@ -24,10 +23,16 @@ export function NuevaSolicitudPage() {
     let cancelled = false;
     (async () => {
       try {
-        const response = await apiClient.get<{ data: Subject[] }>(API_ENDPOINTS.SUBJECTS);
-        if (!cancelled) setSubjects(response.data.data);
+        const userSubjects = await profilesService.getMySubjects();
+        if (!cancelled) {
+          setSubjects(
+            userSubjects
+              .filter((us) => us.subjects?.id && us.subjects?.name)
+              .map((us) => ({ id: us.subjects!.id, name: us.subjects!.name }))
+          );
+        }
       } catch {
-        if (!cancelled) setError("Error al cargar las materias.");
+        if (!cancelled) setError("Error al cargar tus materias.");
       } finally {
         if (!cancelled) setSubjectsLoading(false);
       }
