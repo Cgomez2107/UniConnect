@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
 import studyGroupsService from "@/lib/services/studyGroups.service";
+import type { Application } from "@/types";
 
 function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return "Fecha no disponible";
@@ -28,22 +29,36 @@ export function SolicitudDetailPage() {
   const [solicitud, setSolicitud] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [applications, setApplications] = useState<any[]>([]);
-  const [applicationMessage, setApplicationMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [hasApplied, setHasApplied] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [myAppStatus, setMyAppStatus] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    const fetchSolicitud = async () => {
+
+    const fetchAll = async () => {
       try {
         setLoading(true);
         setFetchError(null);
-        const data = await studyGroupsService.getStudyGroupById(id);
-        if (!cancelled) setSolicitud(data);
+
+        const data: any = await studyGroupsService.getStudyGroupById(id);
+        if (cancelled) return;
+        setSolicitud(data);
+
+        if (user?.id) {
+          const myApps: Application[] = await studyGroupsService.listMyApplications();
+          if (cancelled) return;
+          const myApp = myApps.find((a: Application) => a.request_id === id);
+          if (myApp) setMyAppStatus(myApp.status);
+
+          if (user.id === (data.author_id || data.authorId)) {
+            const apps = await studyGroupsService.getStudyGroupApplications(id);
+            if (!cancelled) setApplications(apps);
+          }
+        }
       } catch (err: any) {
         if (!cancelled) {
           if (err.response?.status === 404) {
@@ -56,54 +71,73 @@ export function SolicitudDetailPage() {
         if (!cancelled) setLoading(false);
       }
     };
-    fetchSolicitud();
+
+    fetchAll();
     return () => { cancelled = true; };
+  }, [id, user?.id]);
+
+  const refreshApplications = useCallback(async () => {
+    if (!id) return;
+    try {
+      const apps = await studyGroupsService.getStudyGroupApplications(id);
+      setApplications(apps);
+    } catch {
+    }
   }, [id]);
 
-  useEffect(() => {
-    if (!id || !user?.id || !solicitud?.author_id) return;
-    if (user.id !== solicitud.author_id) return;
-    let cancelled = false;
-    const fetchApplications = async () => {
-      try {
-        const apps = await studyGroupsService.getStudyGroupApplications(id);
-        if (!cancelled) {
-          setApplications(apps);
-          const userApp = apps.find((a: any) => a.applicant_id === user.id);
-          if (userApp) setHasApplied(true);
-        }
-      } catch {
-        // 403 o cualquier error: lista vacía
-      }
-    };
-    fetchApplications();
-    return () => { cancelled = true; };
-  }, [id, user?.id, solicitud?.author_id]);
-
-  const handleApply = async () => {
-    if (!id || !applicationMessage.trim()) return;
-    setSubmitting(true);
-    setSubmitError(null);
+  const handleReview = useCallback(async (applicationId: string, decision: "aceptada" | "rechazada") => {
+    setActionLoading(applicationId);
+    setError(null);
     try {
-      await studyGroupsService.applyToStudyGroup(id, applicationMessage);
-      setHasApplied(true);
-      setShowApplicationModal(false);
-      setApplicationMessage("");
+      if (decision === "aceptada") {
+        await studyGroupsService.acceptApplication(applicationId);
+      } else {
+        await studyGroupsService.rejectApplication(applicationId);
+      }
+      await refreshApplications();
     } catch (err: any) {
-      setSubmitError(
-        err.response?.data?.message || "Error al enviar la postulación. Intenta de nuevo."
-      );
+      setError(err?.response?.data?.message || "Error al procesar la postulación.");
     } finally {
-      setSubmitting(false);
+      setActionLoading(null);
+    }
+  }, [refreshApplications]);
+
+  const handleCancelRequest = async () => {
+    if (!id) return;
+    setActionLoading("cancel");
+    setError(null);
+    try {
+      await studyGroupsService.cancelStudyRequest(id);
+      const data = await studyGroupsService.getStudyGroupById(id);
+      setSolicitud(data);
+      setShowCancelConfirm(false);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Error al cancelar la solicitud.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!id) return;
+    setActionLoading("leave");
+    setError(null);
+    try {
+      await studyGroupsService.cancelMyApplication(id);
+      navigate("/solicitudes");
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Error al salir del grupo.");
+    } finally {
+      setActionLoading(null);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
         <div className="text-center animate-fade-in">
           <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-neutral-500 text-sm">Cargando solicitud...</p>
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm">Cargando solicitud...</p>
         </div>
       </div>
     );
@@ -111,9 +145,9 @@ export function SolicitudDetailPage() {
 
   if (fetchError) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-error-600 mb-4">{fetchError}</p>
+          <p className="text-error-600 dark:text-error-400 mb-4">{fetchError}</p>
           <Button onClick={() => navigate("/solicitudes")}>Volver a solicitudes</Button>
         </div>
       </div>
@@ -122,32 +156,32 @@ export function SolicitudDetailPage() {
 
   if (!solicitud) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-neutral-500 mb-4">Solicitud no encontrada</p>
+          <p className="text-neutral-500 dark:text-neutral-400 mb-4">Solicitud no encontrada</p>
           <Button onClick={() => navigate("/solicitudes")}>Volver a solicitudes</Button>
         </div>
       </div>
     );
   }
 
-  const title = solicitud.title || solicitud.subjects?.name || solicitud.subject_name || "Grupo de estudio";
-  const creatorName = solicitud.profiles?.full_name || "Usuario";
-  const memberCount = solicitud.applications_count || 0;
-  const groupStatus = solicitud.status;
-  const createdAt = solicitud.created_at;
-  const authorId = solicitud.author_id;
-  const subjectName = solicitud.subjects?.name || solicitud.subject_name || "";
-  const facultyName = solicitud.faculty_name || solicitud.subjects?.program_subjects?.[0]?.programs?.faculties?.name || "";
+  const title = solicitud.title || "Grupo de estudio";
+  const creatorName = solicitud.profiles?.full_name || solicitud.author?.fullName || "Usuario";
+  const subjectName = solicitud.subjects?.name || solicitud.subject_name || solicitud.subjectName || "";
   const description = solicitud.description || "";
-  const isOpen = groupStatus === "abierta" || groupStatus === "OPEN";
+  const isOpen = solicitud.status === "abierta";
+  const isAuthor = user?.id === (solicitud.author_id || solicitud.authorId);
+  const isMember = myAppStatus === "aceptada";
+  const hasApplied = myAppStatus !== null;
+  const pendingApps = applications.filter((a: any) => a.status === "pendiente");
+  const acceptedApps = applications.filter((a: any) => a.status === "aceptada");
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <button
           onClick={() => navigate("/solicitudes")}
-          className="text-primary-700 hover:text-primary-800 text-sm font-medium mb-4 transition-colors"
+          className="text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium mb-4 transition-colors"
         >
           ← Volver a solicitudes
         </button>
@@ -167,15 +201,10 @@ export function SolicitudDetailPage() {
                 {subjectName}
               </span>
             )}
-            {facultyName && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-secondary-500 text-primary-900">
-                {facultyName}
-              </span>
-            )}
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
               isOpen ? "bg-secondary-500/20 text-secondary-300" : "bg-white/10 text-white/60"
             }`}>
-              {isOpen ? "Abierta" : groupStatus}
+              {isOpen ? "Abierta" : (solicitud.status || "Cerrada")}
             </span>
           </div>
 
@@ -188,45 +217,117 @@ export function SolicitudDetailPage() {
           <div className="grid grid-cols-2 gap-4 p-4 bg-primary-800 rounded-lg mb-6">
             <div>
               <p className="text-xs text-white/60">Postulaciones</p>
-              <p className="font-bold text-lg mt-0.5">{memberCount}</p>
+              <p className="font-bold text-lg mt-0.5">{solicitud.applications_count ?? solicitud.applicationsCount ?? 0}</p>
             </div>
             <div>
               <p className="text-xs text-white/60">Creado</p>
-              <p className="font-bold text-lg mt-0.5">{formatDate(createdAt)}</p>
+              <p className="font-bold text-lg mt-0.5">{formatDate(solicitud.created_at || solicitud.createdAt)}</p>
             </div>
           </div>
 
-          {isOpen && !hasApplied && (
-            <Button onClick={() => setShowApplicationModal(true)} variant="primary">
-              Postularme
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-3">
+            {isOpen && !hasApplied && !isAuthor && (
+              <Button onClick={() => navigate(`/postular/${id}`)} variant="primary">
+                Postularme
+              </Button>
+            )}
 
-          {hasApplied && (
-            <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 rounded-lg text-sm font-medium">
-              <svg className="w-4 h-4 text-secondary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              Tu postulación está en revisión
-            </div>
-          )}
+            {hasApplied && !isAuthor && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 rounded-lg text-sm font-medium">
+                  <svg className="w-4 h-4 text-secondary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  {isMember ? "Eres miembro del grupo" : "Postulación en revisión"}
+                </span>
+                {(isMember || myAppStatus === "pendiente") && (
+                  <Button variant="danger" size="sm" onClick={handleLeave} loading={actionLoading === "leave"}>
+                    {isMember ? "Salir del grupo" : "Cancelar postulación"}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {isAuthor && isOpen && (
+              <Button variant="danger" size="sm" onClick={() => setShowCancelConfirm(true)}>
+                Cancelar solicitud
+              </Button>
+            )}
+          </div>
         </div>
 
-        {user?.id === authorId && (
-          <div className="card p-6 animate-slide-up">
-            <h2 className="text-lg font-bold text-primary-900 mb-4">
+        {error && (
+          <div className="bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg p-3 text-error-700 dark:text-error-300 text-sm mb-6">
+            {error}
+          </div>
+        )}
+
+        {isAuthor && (
+          <div className="card p-6 animate-slide-up mb-6">
+            <h2 className="text-lg font-bold text-primary-900 dark:text-white mb-4">
               Postulaciones ({applications.length})
+              {pendingApps.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-neutral-500">
+                  ({pendingApps.length} pendientes)
+                </span>
+              )}
             </h2>
+
             {applications.length === 0 ? (
-              <p className="text-neutral-500 text-sm">Sin postulaciones aún</p>
+              <p className="text-neutral-500 dark:text-neutral-400 text-sm">Sin postulaciones aún</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {applications.map((app: any) => (
-                  <div key={app.id} className="border-l-4 border-secondary-500 pl-4 py-2">
-                    <p className="font-semibold text-primary-900 text-sm">
-                      {app.profiles?.full_name || app.applicantName || "Usuario"}
-                    </p>
-                    <p className="text-sm text-neutral-600 mt-1">{app.message}</p>
+                  <div key={app.id} className="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Avatar
+                        name={app.profiles?.full_name || "Usuario"}
+                        size="sm"
+                      />
+                      <div className="flex-1">
+                        <p className="font-semibold text-primary-900 dark:text-white text-sm">
+                          {app.profiles?.full_name || "Usuario"}
+                        </p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {formatDate(app.created_at)}
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        app.status === "pendiente" ? "bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-300" :
+                        app.status === "aceptada" ? "bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300" :
+                        "bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-300"
+                      }`}>
+                        {app.status === "pendiente" ? "Pendiente" :
+                         app.status === "aceptada" ? "Aceptada" : "Rechazada"}
+                      </span>
+                    </div>
+
+                    {app.message && (
+                      <p className="text-sm text-neutral-600 dark:text-neutral-300 ml-11">{app.message}</p>
+                    )}
+
+                    {app.status === "pendiente" && (
+                      <div className="flex gap-2 mt-3 ml-11">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleReview(app.id, "aceptada")}
+                          loading={actionLoading === app.id}
+                          disabled={actionLoading === app.id}
+                        >
+                          Aceptar
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleReview(app.id, "rechazada")}
+                          loading={actionLoading === app.id}
+                          disabled={actionLoading === app.id}
+                        >
+                          Rechazar
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -234,42 +335,51 @@ export function SolicitudDetailPage() {
           </div>
         )}
 
-        <Modal
-          isOpen={showApplicationModal}
-          onClose={() => setShowApplicationModal(false)}
-          title="Postularse al grupo de estudio"
-        >
-          <div className="space-y-4">
-            {submitError && (
-              <div className="p-3 bg-error-50 border border-error-200 text-error-700 rounded-lg text-sm">
-                {submitError}
+        {acceptedApps.length > 0 && (
+          <div className="card p-6 animate-slide-up mb-6">
+            <h2 className="text-lg font-bold text-primary-900 dark:text-white mb-4">
+              Miembros ({acceptedApps.length + 1})
+            </h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                <Avatar name={creatorName} size="sm" />
+                <div>
+                  <p className="font-semibold text-primary-900 dark:text-white text-sm">{creatorName}</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Creador</p>
+                </div>
               </div>
-            )}
-            <textarea
-              placeholder="Cuéntanos por qué quieres unirte a este grupo..."
-              value={applicationMessage}
-              onChange={(e) => setApplicationMessage(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 resize-vertical"
-            />
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="secondary"
-                onClick={() => { setShowApplicationModal(false); setApplicationMessage(""); setSubmitError(null); }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleApply}
-                disabled={submitting || !applicationMessage.trim()}
-                loading={submitting}
-              >
-                {submitting ? "Enviando..." : "Enviar postulación"}
-              </Button>
+              {acceptedApps.map((app: any) => (
+                <div key={app.id} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
+                  <Avatar name={app.profiles?.full_name || "Usuario"} size="sm" />
+                  <p className="font-semibold text-primary-900 dark:text-white text-sm">
+                    {app.profiles?.full_name || "Usuario"}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        </Modal>
+        )}
       </div>
+
+      <Modal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        title="Cancelar solicitud"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowCancelConfirm(false)}>
+              Volver
+            </Button>
+            <Button variant="danger" onClick={handleCancelRequest} loading={actionLoading === "cancel"}>
+              Cancelar solicitud
+            </Button>
+          </>
+        }
+      >
+        <p className="text-neutral-600 dark:text-neutral-300">
+          ¿Estás seguro de que deseas cancelar esta solicitud? Los miembros serán notificados.
+        </p>
+      </Modal>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { InvitationsPage } from "./pages/InvitationsPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { SolicitudDetailPage } from "./pages/SolicitudDetailPage";
 import { NuevaSolicitudPage } from "./pages/NuevaSolicitudPage";
+import { PostularPage } from "./pages/PostularPage";
 import { EventosPage } from "./pages/EventosPage";
 import { RecursosPage } from "./pages/RecursosPage";
 import { PerfilPage } from "./pages/PerfilPage";
@@ -104,6 +105,7 @@ function App() {
           <Route path="/solicitudes" element={<SolicitudesPage />} />
           <Route path="/solicitud/:id" element={<SolicitudDetailPage />} />
           <Route path="/nueva-solicitud" element={<NuevaSolicitudPage />} />
+          <Route path="/postular/:id" element={<PostularPage />} />
           <Route path="/eventos" element={<EventosPage />} />
           <Route path="/recursos" element={<RecursosPage />} />
           <Route path="/perfil" element={<PerfilPage />} />

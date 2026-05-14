@@ -119,7 +119,7 @@ export const InvitationsPage: React.FC = () => {
                   <button
                     className="w-full px-4 py-2.5 border-2 border-primary-600 text-primary-700 font-semibold rounded-lg text-sm hover:bg-primary-600 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-primary-700"
                     disabled={!canJoin && group.status === "llena"}
-                    onClick={() => navigate(`/chat/${group.id}`)}
+                    onClick={() => navigate(`/solicitud/${group.id}`)}
                     title={
                       !canJoin && group.status === "llena"
                         ? "Grupo lleno - no puedes unirte"

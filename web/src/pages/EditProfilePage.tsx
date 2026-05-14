@@ -157,8 +157,6 @@ export function EditProfilePage() {
               onChange={(e) => handleSemesterChange(e.target.value)}
               placeholder="Ej: 5"
               disabled={saving}
-              min={1}
-              max={12}
               name="semester"
             />
 

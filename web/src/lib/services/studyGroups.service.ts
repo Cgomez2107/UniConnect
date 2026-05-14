@@ -151,6 +151,56 @@ const studyGroupsService = {
       throw error;
     }
   },
+
+  /**
+   * Acepta una postulación
+   */
+  async acceptApplication(applicationId: string): Promise<void> {
+    try {
+      await apiClient.post(API_ENDPOINTS.APPLICATIONS_ACCEPT(applicationId));
+    } catch (error) {
+      console.error(`Error accepting application ${applicationId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Rechaza una postulación
+   */
+  async rejectApplication(applicationId: string): Promise<void> {
+    try {
+      await apiClient.post(API_ENDPOINTS.APPLICATIONS_REJECT(applicationId));
+    } catch (error) {
+      console.error(`Error rejecting application ${applicationId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cancela/cierra una solicitud de grupo de estudio (solo autor)
+   */
+  async cancelStudyRequest(requestId: string): Promise<void> {
+    try {
+      await apiClient.patch(API_ENDPOINTS.STUDY_GROUPS_BY_ID(requestId), {
+        status: "cerrada",
+      });
+    } catch (error) {
+      console.error(`Error cancelling study request ${requestId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cancela mi postulación a un grupo
+   */
+  async cancelMyApplication(requestId: string): Promise<void> {
+    try {
+      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_LEAVE(requestId));
+    } catch (error) {
+      console.error(`Error cancelling application for ${requestId}:`, error);
+      throw error;
+    }
+  },
 };
 
 export default studyGroupsService;

@@ -316,6 +316,7 @@ export default function useEditProfileForm() {
       name: user?.name || "",
       phone: "",
       bio: "",
+      semester: "",
       avatarFile: null,
       avatarPreview: "",
       selectedProgramId: initialProgramId.current,
