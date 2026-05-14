@@ -97,6 +97,17 @@ export interface Subject {
 }
 
 export type MemberRole = "autor" | "admin" | "miembro";
+export type AdminTransferStatus = "pendiente" | "aceptada" | "rechazada" | "cancelada";
+
+export interface AdminTransfer {
+  id: string;
+  requestId: string;
+  fromUserId: string;
+  toUserId: string;
+  status: AdminTransferStatus;
+  createdAt: string;
+  respondedAt: string | null;
+}
 
 export interface Member {
   userId: string;

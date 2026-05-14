@@ -82,7 +82,15 @@ export function NotificationsPage() {
                   <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
                     {formatDate(n.createdAt)}
                   </p>
-                  {n.payload?.requestId && (
+                  {n.type === "transferencia_admin_solicitada" && n.payload?.requestId && (
+                    <button
+                      onClick={() => navigate(`/grupo/${n.payload?.requestId}?acceptTransfer=${n.payload?.transferId}`)}
+                      className="text-xs text-primary-600 hover:text-primary-700 font-medium mt-1"
+                    >
+                      Ver grupo →
+                    </button>
+                  )}
+                  {n.type !== "transferencia_admin_solicitada" && n.payload?.requestId && (
                     <button
                       onClick={() => navigate(`/solicitud/${n.payload?.requestId}`)}
                       className="text-xs text-primary-600 hover:text-primary-700 font-medium mt-1"

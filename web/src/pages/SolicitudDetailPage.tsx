@@ -89,11 +89,7 @@ export function SolicitudDetailPage() {
     setActionLoading(applicationId);
     setError(null);
     try {
-      if (decision === "aceptada") {
-        await studyGroupsService.acceptApplication(applicationId);
-      } else {
-        await studyGroupsService.rejectApplication(applicationId);
-      }
+      await studyGroupsService.reviewApplication(applicationId, decision);
       await refreshApplications();
     } catch (err: any) {
       setError(err?.response?.data?.message || "Error al procesar la postulación.");

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -37,6 +37,7 @@ const roleBadgeColors: Record<string, string> = {
 export function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
   const [solicitud, setSolicitud] = useState<any>(null);
@@ -45,6 +46,16 @@ export function GroupDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferSuccess, setTransferSuccess] = useState(false);
+  const [acceptTransferLoading, setAcceptTransferLoading] = useState(false);
+  const [acceptTransferError, setAcceptTransferError] = useState<string | null>(null);
+  const [acceptTransferSuccess, setAcceptTransferSuccess] = useState(false);
+
+  const pendingTransferId = searchParams.get("acceptTransfer");
 
   useEffect(() => {
     if (!id) return;
@@ -93,6 +104,50 @@ export function GroupDetailPage() {
       setShowLeaveConfirm(false);
     }
   };
+
+  const handleRequestTransfer = useCallback(async () => {
+    if (!id || !transferTargetId) return;
+    setTransferLoading(true);
+    setTransferError(null);
+    setTransferSuccess(false);
+    try {
+      await studyGroupsService.requestAdminTransfer(id, transferTargetId);
+      setTransferSuccess(true);
+      setTransferTargetId(null);
+      setTimeout(() => {
+        setShowTransferModal(false);
+        setTransferSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      setTransferError(err?.response?.data?.message || "Error al solicitar la transferencia.");
+    } finally {
+      setTransferLoading(false);
+    }
+  }, [id, transferTargetId]);
+
+  const handleAcceptTransfer = useCallback(async () => {
+    if (!pendingTransferId) return;
+    setAcceptTransferLoading(true);
+    setAcceptTransferError(null);
+    setAcceptTransferSuccess(false);
+    try {
+      await studyGroupsService.acceptAdminTransfer(pendingTransferId);
+      setAcceptTransferSuccess(true);
+      // Refresh to get updated roles
+      const [data, membersData] = await Promise.all([
+        studyGroupsService.getStudyGroupById(id!),
+        studyGroupsService.getStudyGroupMembers(id!),
+      ]);
+      setSolicitud(data);
+      setMembers(membersData);
+      // Clean URL
+      navigate(`/grupo/${id}`, { replace: true });
+    } catch (err: any) {
+      setAcceptTransferError(err?.response?.data?.message || "Error al aceptar la transferencia.");
+    } finally {
+      setAcceptTransferLoading(false);
+    }
+  }, [pendingTransferId, id, navigate]);
 
   if (loading) {
     return (
@@ -193,6 +248,25 @@ export function GroupDetailPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
+            {(currentMember?.role === "autor" || currentMember?.role === "admin") && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowTransferModal(true)}
+              >
+                Transferir admin
+              </Button>
+            )}
+            {pendingTransferId && currentMember && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAcceptTransfer}
+                loading={acceptTransferLoading}
+              >
+                Aceptar transferencia
+              </Button>
+            )}
             <Button
               variant="danger"
               size="sm"
@@ -202,6 +276,12 @@ export function GroupDetailPage() {
               Salir del grupo
             </Button>
           </div>
+          {acceptTransferError && (
+            <p className="text-error-400 text-sm mt-2">{acceptTransferError}</p>
+          )}
+          {acceptTransferSuccess && (
+            <p className="text-success-400 text-sm mt-2">Transferencia aceptada correctamente.</p>
+          )}
         </div>
 
         <div className="card p-6 animate-slide-up">
@@ -261,6 +341,67 @@ export function GroupDetailPage() {
         <p className="text-neutral-600 dark:text-neutral-300">
           ¿Estás seguro de que deseas salir de este grupo de estudio?
         </p>
+      </Modal>
+
+      <Modal
+        isOpen={showTransferModal}
+        onClose={() => { setShowTransferModal(false); setTransferError(null); setTransferSuccess(false); setTransferTargetId(null); }}
+        title="Transferir administración"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setShowTransferModal(false); setTransferError(null); setTransferTargetId(null); }}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleRequestTransfer}
+              loading={transferLoading}
+              disabled={!transferTargetId || transferSuccess}
+            >
+              {transferSuccess ? "Transferida" : "Transferir"}
+            </Button>
+          </>
+        }
+      >
+        {transferSuccess ? (
+          <p className="text-success-600 dark:text-success-400">
+            Solicitud de transferencia enviada. El usuario seleccionado recibirá una notificación.
+          </p>
+        ) : (
+          <>
+            <p className="text-neutral-600 dark:text-neutral-300 mb-4">
+              Selecciona el miembro al que deseas transferir la administración del grupo.
+            </p>
+            {transferError && (
+              <p className="text-error-600 dark:text-error-400 text-sm mb-3">{transferError}</p>
+            )}
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {members
+                .filter((m) => m.role !== "autor" && m.userId !== user?.id)
+                .map((member) => (
+                  <button
+                    key={member.userId}
+                    onClick={() => setTransferTargetId(member.userId)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                      transferTargetId === member.userId
+                        ? "bg-primary-50 dark:bg-primary-900/30 border border-primary-300 dark:border-primary-700"
+                        : "bg-neutral-50 dark:bg-neutral-700/50 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                    }`}
+                  >
+                    <Avatar name={member.fullName || "Usuario"} size="sm" />
+                    <span className="font-medium text-primary-900 dark:text-white text-sm">
+                      {member.fullName || "Usuario"}
+                    </span>
+                  </button>
+                ))}
+              {members.filter((m) => m.role !== "autor" && m.userId !== user?.id).length === 0 && (
+                <p className="text-neutral-500 dark:text-neutral-400 text-sm text-center py-4">
+                  No hay otros miembros para transferir.
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );

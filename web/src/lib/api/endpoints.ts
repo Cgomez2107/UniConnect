@@ -49,14 +49,15 @@ export const API_ENDPOINTS = {
   STUDY_GROUPS_LEAVE: (id: string) => `/study-groups/${id}/leave`,
   STUDY_GROUPS_CANCEL: (id: string) => `/study-groups/${id}/cancel`,
   STUDY_GROUPS_MEMBERS: (id: string) => `/study-groups/${id}/members`,
+  STUDY_GROUPS_TRANSFER: (id: string) => `/study-groups/${id}/transfer`,
+  STUDY_GROUPS_TRANSFER_ACCEPT: (id: string) => `/study-groups/transfers/${id}/accept`,
 
   // ========================================================================
   // APPLICATIONS (Study Group Requests)
   // ========================================================================
   APPLICATIONS_LIST: "/study-groups/applications",
   APPLICATIONS_BY_ID: (id: string) => `/study-groups/applications/${id}`,
-  APPLICATIONS_ACCEPT: (id: string) => `/study-groups/applications/${id}/accept`,
-  APPLICATIONS_REJECT: (id: string) => `/study-groups/applications/${id}/reject`,
+  APPLICATIONS_REVIEW: (id: string) => `/study-groups/applications/${id}/review`,
   APPLICATIONS_CREATE: "/study-groups/applications",
 
   // ========================================================================

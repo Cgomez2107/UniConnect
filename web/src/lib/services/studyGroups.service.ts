@@ -170,25 +170,13 @@ const studyGroupsService = {
   },
 
   /**
-   * Acepta una postulación
+   * Revisa una postulación (aceptar o rechazar)
    */
-  async acceptApplication(applicationId: string): Promise<void> {
+  async reviewApplication(applicationId: string, status: "aceptada" | "rechazada"): Promise<void> {
     try {
-      await apiClient.post(API_ENDPOINTS.APPLICATIONS_ACCEPT(applicationId));
+      await apiClient.put(API_ENDPOINTS.APPLICATIONS_REVIEW(applicationId), { status });
     } catch (error) {
-      console.error(`Error accepting application ${applicationId}:`, error);
-      throw error;
-    }
-  },
-
-  /**
-   * Rechaza una postulación
-   */
-  async rejectApplication(applicationId: string): Promise<void> {
-    try {
-      await apiClient.post(API_ENDPOINTS.APPLICATIONS_REJECT(applicationId));
-    } catch (error) {
-      console.error(`Error rejecting application ${applicationId}:`, error);
+      console.error(`Error reviewing application ${applicationId}:`, error);
       throw error;
     }
   },
@@ -216,6 +204,34 @@ const studyGroupsService = {
       return response.data.data;
     } catch (error) {
       console.error("Error fetching notifications:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Solicita transferencia de admin a otro miembro
+   */
+  async requestAdminTransfer(groupId: string, targetUserId: string): Promise<{ id: string }> {
+    try {
+      const response = await apiClient.post<{ data: { id: string } }>(
+        API_ENDPOINTS.STUDY_GROUPS_TRANSFER(groupId),
+        { targetUserId }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error(`Error requesting admin transfer for group ${groupId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Acepta una transferencia de admin pendiente
+   */
+  async acceptAdminTransfer(transferId: string): Promise<void> {
+    try {
+      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_TRANSFER_ACCEPT(transferId));
+    } catch (error) {
+      console.error(`Error accepting admin transfer ${transferId}:`, error);
       throw error;
     }
   },
