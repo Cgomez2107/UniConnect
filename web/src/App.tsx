@@ -9,6 +9,7 @@ import { useAuthStore } from "./store/useAuthStore";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { OAuthCallbackPage } from "./pages/OAuthCallbackPage";
+import { ViewerPage } from "./pages/ViewerPage";
 import { AdminPage } from "./pages/AdminPage";
 import { ChatPage } from "./pages/ChatPage";
 import { InvitationsPage } from "./pages/InvitationsPage";
@@ -97,6 +98,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/oauth-callback" element={<OAuthCallbackPage />} />
+        <Route path="/viewer" element={<ViewerPage />} />
         <Route
           path="/admin"
           element={
