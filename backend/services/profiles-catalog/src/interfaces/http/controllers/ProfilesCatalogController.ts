@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { SearchStudentsBySubject } from "../../../application/use-cases/SearchStudentsBySubject.js";
 import type { GetStudentPublicProfile } from "../../../application/use-cases/GetStudentPublicProfile.js";
 import type { GetFullProfile } from "../../../application/use-cases/GetFullProfile.js";
+import type { GetAllSubjects } from "../../../application/use-cases/GetAllSubjects.js";
 import type { GetPrograms } from "../../../application/use-cases/GetPrograms.js";
 import type { GetSubjectsByProgram } from "../../../application/use-cases/GetSubjectsByProgram.js";
 import type { GetMyPrograms } from "../../../application/use-cases/GetMyPrograms.js";
@@ -18,6 +19,7 @@ export class ProfilesCatalogController {
     private readonly searchStudentsUC: SearchStudentsBySubject,
     private readonly getPublicProfile: GetStudentPublicProfile,
     private readonly getFullProfileUC: GetFullProfile,
+    private readonly getAllSubjectsUC: GetAllSubjects,
     private readonly getProgramsUC: GetPrograms,
     private readonly getSubjectsByProgramUC: GetSubjectsByProgram,
     private readonly getMyProgramsUC: GetMyPrograms,
@@ -92,6 +94,16 @@ export class ProfilesCatalogController {
       } else {
         sendData(res, 200, result);
       }
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async getAllSubjects(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const result = await this.getAllSubjectsUC.execute();
+      sendData(res, 200, result, { total: result.length });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

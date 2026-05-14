@@ -102,6 +102,11 @@ export async function handleProfilesCatalogRoutes(
     return true;
   }
 
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/catalog/subjects") {
+    await controller.getAllSubjects(req, res);
+    return true;
+  }
+
   if (req.method === "GET" && requestUrl.pathname === "/api/v1/catalog/programs") {
     await controller.getPrograms(req, res);
     return true;
