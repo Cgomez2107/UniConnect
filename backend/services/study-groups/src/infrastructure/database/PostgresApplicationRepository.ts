@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 
-import { AuthorizationError } from "../../../../../shared/libs/errors/index.js";
+import { AuthorizationError, ConflictError } from "../../../../../shared/libs/errors/index.js";
 import type { Application } from "../../domain/entities/Application.js";
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
 
@@ -80,7 +80,7 @@ export class PostgresApplicationRepository implements IApplicationRepository {
       return mapApplication(result.rows[0]);
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code === "23505") {
-        throw new Error("Ya te postulaste a esta solicitud.");
+        throw new ConflictError("Ya te postulaste a esta solicitud.");
       }
 
       throw error;

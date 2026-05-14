@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 
 import { ConflictError } from "../../../../../shared/libs/errors/ConflictError.js";
+import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
 import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type {
@@ -125,7 +126,7 @@ export class PostgresStudyRequestRepository
 
     const row = result.rows[0];
     if (!row) {
-      throw new Error(`Grupo de estudio '${requestId}' no encontrado.`);
+      throw new NotFoundError(`Grupo de estudio '${requestId}' no encontrado.`);
     }
 
     // ── Determinar el estado base ─────────────────────────────────────────

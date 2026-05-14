@@ -288,8 +288,8 @@ export class StudyGroupsController {
       return;
     }
 
-    const body = await readJsonBody<ApplyToStudyGroupDto>(req);
     try {
+      const body = await readJsonBody<ApplyToStudyGroupDto>(req);
       const created = await this.applyToStudyRequest.execute({
         requestId,
         applicantId: actorUserId,

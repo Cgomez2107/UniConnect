@@ -4,6 +4,7 @@ import type { IStudyRequestRepository } from "../../domain/repositories/IStudyRe
 import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
 import type { StudyGroupSubject } from "../../domain/events/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
+import { NotFoundError } from "../../../../../shared/libs/errors/index.js";
 
 /**
  * Caso de Uso: Postularse a un grupo de estudio.
@@ -35,7 +36,7 @@ export class ApplyToStudyRequest {
     // Obtenemos datos del grupo (incluyendo authorId para saber quién recibe la notificación)
     const request = await this.studyRequestRepository.getById(requestId);
     if (!request) {
-      throw new Error("Solicitud de estudio no encontrada.");
+      throw new NotFoundError("Solicitud de estudio no encontrada.");
     }
 
     // Cargamos el contexto StudyGroup con el estado correcto (hidratado desde BD)
