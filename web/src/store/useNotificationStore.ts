@@ -1,40 +1,27 @@
 import { create } from "zustand";
-
-interface Notification {
-  id: string;
-  type: "success" | "error" | "info" | "warning";
-  message: string;
-  timestamp: number;
-}
+import type { AppNotification } from "@/types";
+import studyGroupsService from "@/lib/services/studyGroups.service";
 
 interface NotificationStore {
-  notifications: Notification[];
-  addNotification: (notification: Omit<Notification, "id" | "timestamp">) => void;
-  removeNotification: (id: string) => void;
-  clearNotifications: () => void;
+  notifications: AppNotification[];
+  unreadCount: number;
+  loading: boolean;
+  fetchNotifications: () => Promise<void>;
 }
 
 export const useNotificationStore = create<NotificationStore>((set) => ({
   notifications: [],
+  unreadCount: 0,
+  loading: false,
 
-  addNotification: (notification) =>
-    set((state) => ({
-      notifications: [
-        ...state.notifications,
-        {
-          ...notification,
-          id: `notif-${Date.now()}`,
-          timestamp: Date.now(),
-        },
-      ],
-    })),
-
-  removeNotification: (id) =>
-    set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id),
-    })),
-
-  clearNotifications: () => set({ notifications: [] }),
+  fetchNotifications: async () => {
+    set({ loading: true });
+    try {
+      const data = await studyGroupsService.listNotifications();
+      const unread = data.filter((n) => !n.readAt).length;
+      set({ notifications: data, unreadCount: unread, loading: false });
+    } catch {
+      set({ loading: false });
+    }
+  },
 }));
-
-export default useNotificationStore;

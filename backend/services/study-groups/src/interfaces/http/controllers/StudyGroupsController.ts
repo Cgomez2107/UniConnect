@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { ApplyToStudyRequest } from "../../../application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "../../../application/use-cases/AcceptAdminTransfer.js";
+import { CancelStudyRequest } from "../../../application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "../../../application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequestById.js";
 import { ListApplicationsByRequest } from "../../../application/use-cases/ListApplicationsByRequest.js";
@@ -55,6 +56,7 @@ export class StudyGroupsController {
     private readonly leaveAdminRole: LeaveAdminRole,
     private readonly listMyStudyRequestsUC: ListMyStudyRequests,
     private readonly listMyApplicationsUC: ListMyApplications,
+    private readonly cancelStudyRequestUC: CancelStudyRequest,
   ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -460,6 +462,26 @@ export class StudyGroupsController {
     try {
       const applications = await this.listMyApplicationsUC.execute(actorUserId);
       sendData(res, 200, applications, { total: applications.length });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async cancelStudyRequest(
+    req: IncomingMessage,
+    res: ServerResponse,
+    requestId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const updated = await this.cancelStudyRequestUC.execute(requestId);
+      sendData(res, 200, updated);
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

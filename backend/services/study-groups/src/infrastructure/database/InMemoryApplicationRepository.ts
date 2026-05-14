@@ -1,3 +1,4 @@
+import { ConflictError } from "../../../../../shared/libs/errors/ConflictError.js";
 import type { Application } from "../../domain/entities/Application.js";
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
 
@@ -13,6 +14,25 @@ export class InMemoryApplicationRepository implements IApplicationRepository {
   }
 
   async create(input: { requestId: string; applicantId: string; message: string }): Promise<Application> {
+    const existing = this.applications.find(
+      (a) => a.requestId === input.requestId && a.applicantId === input.applicantId
+    );
+    if (existing && existing.status !== "rechazada") {
+      throw new ConflictError("Ya te postulaste a esta solicitud.");
+    }
+    if (existing && existing.status === "rechazada") {
+      const updated: Application = {
+        ...existing,
+        message: input.message,
+        status: "pendiente",
+        reviewedAt: null,
+        createdAt: new Date().toISOString(),
+      };
+      const idx = this.applications.findIndex((a) => a.id === existing.id);
+      this.applications[idx] = updated;
+      return updated;
+    }
+
     const created: Application = {
       id: crypto.randomUUID(),
       requestId: input.requestId,

@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 
 import { ApplyToStudyRequest } from "./application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "./application/use-cases/AcceptAdminTransfer.js";
+import { CancelStudyRequest } from "./application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "./application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById.js";
 import { ListApplicationsByRequest } from "./application/use-cases/ListApplicationsByRequest.js";
@@ -217,6 +218,7 @@ function bootstrap(): void {
   );
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
+  const cancelStudyRequestUC = new CancelStudyRequest(repository);
   const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const controller = new StudyGroupsController(
@@ -235,6 +237,7 @@ function bootstrap(): void {
     leaveAdminRole,
     listMyStudyRequestsUC,
     listMyApplicationsUC,
+    cancelStudyRequestUC,
   );
 
   const server = createServer((req, res) => {

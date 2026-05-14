@@ -49,16 +49,16 @@ export function usePostulationForm(requestId?: string): PostulationFormData {
   );
 
   const handlePostular = useCallback(async () => {
-    if (!user || !requestId) return;
+    if (!user || !requestId) {
+      throw new Error("Debes iniciar sesión para postularte.");
+    }
 
     if (!request || request.status !== "abierta") {
-      setSubmitError("Esta convocatoria ya no está activa.");
-      return;
+      throw new Error("Esta convocatoria ya no está activa.");
     }
 
     if (message.trim().length < 10) {
-      setSubmitError("Escribe al menos 10 caracteres para presentarte.");
-      return;
+      throw new Error("Escribe al menos 10 caracteres para presentarte.");
     }
 
     setSending(true);
@@ -66,10 +66,9 @@ export function usePostulationForm(requestId?: string): PostulationFormData {
 
     try {
       const myApps: Application[] = await studyGroupsService.listMyApplications();
-      const alreadyApplied = myApps.some((a) => a.request_id === requestId);
-      if (alreadyApplied) {
-        setSubmitError("Ya te postulaste a esta solicitud.");
-        return;
+      const existingApp = myApps.find((a) => a.requestId === requestId);
+      if (existingApp && existingApp.status !== "rechazada") {
+        throw new Error("Ya te postulaste a esta solicitud.");
       }
 
       await studyGroupsService.applyToStudyGroup(requestId, message.trim());

@@ -47,6 +47,8 @@ export const API_ENDPOINTS = {
   STUDY_GROUPS_BY_ID: (id: string) => `/study-groups/${id}`,
   STUDY_GROUPS_INVITE: (id: string) => `/study-groups/${id}/invite`,
   STUDY_GROUPS_LEAVE: (id: string) => `/study-groups/${id}/leave`,
+  STUDY_GROUPS_CANCEL: (id: string) => `/study-groups/${id}/cancel`,
+  STUDY_GROUPS_MEMBERS: (id: string) => `/study-groups/${id}/members`,
 
   // ========================================================================
   // APPLICATIONS (Study Group Requests)
@@ -115,6 +117,11 @@ export const API_ENDPOINTS = {
   ADMIN_RESOURCES: "/admin/resources",
   ADMIN_EVENTS: "/admin/events",
   ADMIN_METRICS: "/admin/metrics",
+
+  // ========================================================================
+  // NOTIFICATIONS
+  // ========================================================================
+  NOTIFICATIONS_LIST: "/notifications",
 } as const;
 
 // ============================================================================

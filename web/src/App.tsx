@@ -14,6 +14,7 @@ import { ChatPage } from "./pages/ChatPage";
 import { InvitationsPage } from "./pages/InvitationsPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { SolicitudDetailPage } from "./pages/SolicitudDetailPage";
+import { GroupDetailPage } from "./pages/GroupDetailPage";
 import { NuevaSolicitudPage } from "./pages/NuevaSolicitudPage";
 import { PostularPage } from "./pages/PostularPage";
 import { EventosPage } from "./pages/EventosPage";
@@ -22,9 +23,11 @@ import { PerfilPage } from "./pages/PerfilPage";
 import { EditProfilePage } from "./pages/EditProfilePage";
 import { MensajesPage } from "./pages/MensajesPage";
 import { CompanionsPage } from "./pages/CompanionsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 import DirectorioPage from "./pages/DirectorioPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
+import { useNotificationStore } from "./store/useNotificationStore";
 import "./App.css";
 
 function PrivateRoute({
@@ -53,6 +56,8 @@ function App() {
   const { isAuthenticated, hydrate, user } = useAuthStore();
   const [isHydrating, setIsHydrating] = useState(true);
 
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+
   useEffect(() => {
     (async () => {
       try {
@@ -62,6 +67,12 @@ function App() {
       }
     })();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchNotifications();
+    }
+  }, [isAuthenticated, fetchNotifications]);
 
   // Block rendering until hydration completes
   if (isHydrating) {
@@ -106,6 +117,7 @@ function App() {
           <Route path="/solicitud/:id" element={<SolicitudDetailPage />} />
           <Route path="/nueva-solicitud" element={<NuevaSolicitudPage />} />
           <Route path="/postular/:id" element={<PostularPage />} />
+          <Route path="/grupo/:id" element={<GroupDetailPage />} />
           <Route path="/eventos" element={<EventosPage />} />
           <Route path="/recursos" element={<RecursosPage />} />
           <Route path="/perfil" element={<PerfilPage />} />
@@ -114,6 +126,7 @@ function App() {
           <Route path="/chat/:conversationId" element={<ChatPage />} />
           <Route path="/directorio" element={<CompanionsPage />} />
           <Route path="/companions" element={<CompanionsPage />} />
+          <Route path="/notificaciones" element={<NotificationsPage />} />
         </Route>
         <Route
           path="/"

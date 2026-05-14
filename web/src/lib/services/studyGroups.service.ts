@@ -5,6 +5,8 @@ import {
   StudyGroup,
   CreateStudyRequestPayload,
   Application,
+  Member,
+  AppNotification,
 } from "@/types";
 
 /**
@@ -72,6 +74,21 @@ const studyGroupsService = {
         `Error inviting user ${userId} to group ${groupId}:`,
         error
       );
+      throw error;
+    }
+  },
+
+  /**
+   * Obtiene la lista de miembros de un grupo de estudio
+   */
+  async getStudyGroupMembers(groupId: string): Promise<Member[]> {
+    try {
+      const response = await apiClient.get<{ data: Member[] }>(
+        API_ENDPOINTS.STUDY_GROUPS_MEMBERS(groupId)
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error(`Error fetching members for group ${groupId}:`, error);
       throw error;
     }
   },
@@ -181,9 +198,7 @@ const studyGroupsService = {
    */
   async cancelStudyRequest(requestId: string): Promise<void> {
     try {
-      await apiClient.patch(API_ENDPOINTS.STUDY_GROUPS_BY_ID(requestId), {
-        status: "cerrada",
-      });
+      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_CANCEL(requestId));
     } catch (error) {
       console.error(`Error cancelling study request ${requestId}:`, error);
       throw error;
@@ -193,6 +208,18 @@ const studyGroupsService = {
   /**
    * Cancela mi postulación a un grupo
    */
+  async listNotifications(): Promise<AppNotification[]> {
+    try {
+      const response = await apiClient.get<{ data: AppNotification[] }>(
+        API_ENDPOINTS.NOTIFICATIONS_LIST
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      throw error;
+    }
+  },
+
   async cancelMyApplication(requestId: string): Promise<void> {
     try {
       await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_LEAVE(requestId));

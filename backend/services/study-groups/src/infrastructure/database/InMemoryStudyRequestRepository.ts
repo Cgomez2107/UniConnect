@@ -1,3 +1,5 @@
+import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
+import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type { IStudyRequestRepository } from "../../domain/repositories/IStudyRequestRepository.js";
 
@@ -95,5 +97,22 @@ export class InMemoryStudyRequestRepository implements IStudyRequestRepository {
 
   async listByAuthorId(authorId: string): Promise<StudyRequest[]> {
     return this.requests.filter((r) => r.authorId === authorId && r.isActive);
+  }
+
+  async cancel(id: string): Promise<StudyRequest> {
+    const idx = this.requests.findIndex((r) => r.id === id);
+    if (idx === -1) {
+      throw new NotFoundError(`Solicitud de estudio '${id}' no encontrada.`);
+    }
+    const request = this.requests[idx];
+    if (request.status !== "abierta") {
+      throw new ValidationError("Solo se pueden cancelar solicitudes abiertas.");
+    }
+    this.requests[idx] = {
+      ...request,
+      status: "cerrada",
+      updatedAt: new Date().toISOString(),
+    };
+    return this.requests[idx];
   }
 }

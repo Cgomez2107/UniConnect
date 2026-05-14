@@ -51,10 +51,10 @@ export function SolicitudDetailPage() {
         if (user?.id) {
           const myApps: Application[] = await studyGroupsService.listMyApplications();
           if (cancelled) return;
-          const myApp = myApps.find((a: Application) => a.request_id === id);
+          const myApp = myApps.find((a: Application) => a.requestId === id);
           if (myApp) setMyAppStatus(myApp.status);
 
-          if (user.id === (data.author_id || data.authorId)) {
+          if (user.id === data.authorId) {
             const apps = await studyGroupsService.getStudyGroupApplications(id);
             if (!cancelled) setApplications(apps);
           }
@@ -166,11 +166,11 @@ export function SolicitudDetailPage() {
   }
 
   const title = solicitud.title || "Grupo de estudio";
-  const creatorName = solicitud.profiles?.full_name || solicitud.author?.fullName || "Usuario";
-  const subjectName = solicitud.subjects?.name || solicitud.subject_name || solicitud.subjectName || "";
+  const creatorName = solicitud.author?.fullName || "Usuario";
+  const subjectName = solicitud.subjectName || "";
   const description = solicitud.description || "";
   const isOpen = solicitud.status === "abierta";
-  const isAuthor = user?.id === (solicitud.author_id || solicitud.authorId);
+  const isAuthor = user?.id === solicitud.authorId;
   const isMember = myAppStatus === "aceptada";
   const hasApplied = myAppStatus !== null;
   const pendingApps = applications.filter((a: any) => a.status === "pendiente");
@@ -202,7 +202,7 @@ export function SolicitudDetailPage() {
               </span>
             )}
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-              isOpen ? "bg-secondary-500/20 text-secondary-300" : "bg-white/10 text-white/60"
+              isOpen ? "bg-secondary-500/25 text-secondary-200" : "bg-white/20 text-white/70"
             }`}>
               {isOpen ? "Abierta" : (solicitud.status || "Cerrada")}
             </span>
@@ -217,34 +217,54 @@ export function SolicitudDetailPage() {
           <div className="grid grid-cols-2 gap-4 p-4 bg-primary-800 rounded-lg mb-6">
             <div>
               <p className="text-xs text-white/60">Postulaciones</p>
-              <p className="font-bold text-lg mt-0.5">{solicitud.applications_count ?? solicitud.applicationsCount ?? 0}</p>
+              <p className="font-bold text-lg mt-0.5">{solicitud.applicationsCount ?? 0}</p>
             </div>
             <div>
               <p className="text-xs text-white/60">Creado</p>
-              <p className="font-bold text-lg mt-0.5">{formatDate(solicitud.created_at || solicitud.createdAt)}</p>
+              <p className="font-bold text-lg mt-0.5">{formatDate(solicitud.createdAt)}</p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {isOpen && !hasApplied && !isAuthor && (
+            {isOpen && (!hasApplied || myAppStatus === "rechazada") && !isAuthor && (
               <Button onClick={() => navigate(`/postular/${id}`)} variant="primary">
                 Postularme
               </Button>
             )}
 
-            {hasApplied && !isAuthor && (
+            {hasApplied && myAppStatus !== "rechazada" && !isAuthor && (
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 rounded-lg text-sm font-medium">
-                  <svg className="w-4 h-4 text-secondary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <span className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium ${
+                  isMember ? "bg-success-500/20 text-success-300" : "bg-warning-500/20 text-warning-300"
+                }`}>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                   {isMember ? "Eres miembro del grupo" : "Postulación en revisión"}
                 </span>
+                {isMember && (
+                  <Button variant="primary" size="sm" onClick={() => navigate(`/grupo/${id}`)}>
+                    Ver grupo
+                  </Button>
+                )}
                 {(isMember || myAppStatus === "pendiente") && (
                   <Button variant="danger" size="sm" onClick={handleLeave} loading={actionLoading === "leave"}>
                     {isMember ? "Salir del grupo" : "Cancelar postulación"}
                   </Button>
                 )}
+              </div>
+            )}
+
+            {hasApplied && myAppStatus === "rechazada" && !isAuthor && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-error-500/20 text-error-300">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  Postulación rechazada
+                </span>
               </div>
             )}
 
@@ -289,13 +309,13 @@ export function SolicitudDetailPage() {
                           {app.profiles?.full_name || "Usuario"}
                         </p>
                         <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                          {formatDate(app.created_at)}
+                          {formatDate(app.createdAt)}
                         </p>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        app.status === "pendiente" ? "bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-300" :
-                        app.status === "aceptada" ? "bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300" :
-                        "bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-300"
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                        app.status === "pendiente" ? "bg-warning-50 text-warning-800 border-warning-200 dark:bg-warning-900/30 dark:text-warning-300 dark:border-warning-800" :
+                        app.status === "aceptada" ? "bg-success-50 text-success-800 border-success-200 dark:bg-success-900/30 dark:text-success-300 dark:border-success-800" :
+                        "bg-error-50 text-error-800 border-error-200 dark:bg-error-900/30 dark:text-error-300 dark:border-error-800"
                       }`}>
                         {app.status === "pendiente" ? "Pendiente" :
                          app.status === "aceptada" ? "Aceptada" : "Rechazada"}

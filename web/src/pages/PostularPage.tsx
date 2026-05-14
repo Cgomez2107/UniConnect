@@ -61,7 +61,7 @@ export function PostularPage() {
               </p>
               <h2 className="text-lg font-bold text-neutral-900 dark:text-white">{request.title}</h2>
               <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
-                {request.subjects?.name || request.subject_name || request.subjectName || ""} · por {request.profiles?.full_name || request.author?.fullName || "Usuario"}
+                {request.subjectName || ""} · por {request.author?.fullName || "Usuario"}
               </p>
               {isClosed && (
                 <p className="text-error-600 dark:text-error-400 text-sm font-bold mt-2">

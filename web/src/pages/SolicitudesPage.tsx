@@ -15,7 +15,7 @@ export function SolicitudesPage() {
   const applicationMap = useMemo(() => {
     const map = new Map<string, "pendiente" | "aceptada" | "rechazada">();
     for (const app of applications) {
-      map.set(app.request_id, app.status);
+      map.set(app.requestId, app.status);
     }
     return map;
   }, [applications]);

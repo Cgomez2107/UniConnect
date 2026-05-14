@@ -366,4 +366,28 @@ export class PostgresStudyRequestRepository
 
     return result.rows.map(mapStudyRequest);
   }
+
+  async cancel(id: string): Promise<StudyRequest> {
+    const result = await this.pool.query(
+      `UPDATE study_requests
+       SET status = 'cerrada', updated_at = NOW()
+       WHERE id = $1 AND status = 'abierta'
+       RETURNING id`,
+      [id],
+    );
+
+    if (result.rows.length === 0) {
+      const existing = await this.getById(id);
+      if (!existing) {
+        throw new NotFoundError(`Solicitud de estudio '${id}' no encontrada.`);
+      }
+      throw new ValidationError("Solo se pueden cancelar solicitudes abiertas.");
+    }
+
+    const updated = await this.getById(id);
+    if (!updated) {
+      throw new Error("La solicitud fue cancelada pero no pudo ser recuperada.");
+    }
+    return updated;
+  }
 }

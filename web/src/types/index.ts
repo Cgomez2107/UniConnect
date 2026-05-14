@@ -96,6 +96,16 @@ export interface Subject {
   programs?: Program[];
 }
 
+export type MemberRole = "autor" | "admin" | "miembro";
+
+export interface Member {
+  userId: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+  role: MemberRole;
+  joinedAt: string | null;
+}
+
 // ============================================================================
 // GRUPOS DE ESTUDIO
 // ============================================================================
@@ -145,15 +155,12 @@ export interface StudyGroup {
 
 export interface Application {
   id: string;
-  request_id: string;
-  applicant_id: string;
+  requestId: string;
+  applicantId: string;
   message: string;
   status: ApplicationStatus;
-  reviewed_at: string | null;
-  created_at: string;
-  // joins
-  profiles?: { full_name: string; avatar_url: string | null };
-  study_requests?: { title: string; status: RequestStatus; subjects?: { name: string } };
+  reviewedAt: string | null;
+  createdAt: string;
 }
 
 // ============================================================================
@@ -343,6 +350,21 @@ export interface AdminEvent {
   category: EventCategory;
   created_at: string;
   creator_name: string;
+}
+
+// ============================================================================
+// NOTIFICACIONES
+// ============================================================================
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  payload: Record<string, unknown> | null;
+  createdAt: string;
+  readAt: string | null;
 }
 
 // ============================================================================
