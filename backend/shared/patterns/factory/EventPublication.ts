@@ -5,7 +5,7 @@
  * Campos específicos: fecha, ubicación, capacidad, categoría
  */
 
-import { Publication } from './Publication';
+import { Publication } from './Publication.js';
 
 export type EventCategory = 'taller' | 'conferencia' | 'capacitacion' | 'seminario' | 'networking' | 'competencia' | 'otro';
 

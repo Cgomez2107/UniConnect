@@ -10,6 +10,8 @@
     "../../shared/http/sendJson.ts",
     "../../shared/libs/config/requiredEnv.ts",
     "../../shared/libs/errors/*.ts",
-    "../../shared/libs/validation/*.ts"
+    "../../shared/libs/validation/*.ts",
+    "../../shared/patterns/factory/*.ts",
+    "../../shared/patterns/observer/*.ts"
   ]
 }

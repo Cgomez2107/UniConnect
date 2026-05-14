@@ -8,7 +8,7 @@
  * porque necesita userId del request
  */
 
-import Middleware, { Request, Response, NextFunction } from './Middleware';
+import Middleware, { Request, Response, NextFunction } from './Middleware.js';
 
 export class EmailVerificationMiddleware extends Middleware {
   

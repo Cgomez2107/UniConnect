@@ -6,8 +6,8 @@
  * - DatabaseHandler: Conexión única al pool de BD compartida por todos los servicios
  */
 
-export * from './logging';
-export * from './database';
-export * from './config';
-export * from './errors';
-export * from './validation';
+export * from './logging/index.js';
+export * from './database/index.js';
+export * from './config/index.js';
+export * from './errors/index.js';
+export * from './validation/index.js';

@@ -11,11 +11,11 @@
  * ✅ Facil de testear cada tipo por separado
  */
 
-import { Publication } from './Publication';
-import { StudyCompanionPublication, StudyCompanionSpecificFields } from './StudyCompanionPublication';
-import { ProjectTeamPublication, ProjectTeamSpecificFields } from './ProjectTeamPublication';
-import { ResourcePublication, ResourcePublicationSpecificFields } from './ResourcePublication';
-import { EventPublication, EventPublicationSpecificFields } from './EventPublication';
+import { Publication } from './Publication.js';
+import { StudyCompanionPublication, StudyCompanionSpecificFields } from './StudyCompanionPublication.js';
+import { ProjectTeamPublication, ProjectTeamSpecificFields } from './ProjectTeamPublication.js';
+import { ResourcePublication, ResourcePublicationSpecificFields } from './ResourcePublication.js';
+import { EventPublication, EventPublicationSpecificFields } from './EventPublication.js';
 
 export type PublicationType = 'busco_companero' | 'busco_equipo_proyecto' | 'recurso' | 'evento';
 

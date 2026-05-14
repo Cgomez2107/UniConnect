@@ -8,7 +8,7 @@
  * porque necesita userId para consultar BD
  */
 
-import Middleware, { Request, Response, NextFunction } from './Middleware';
+import Middleware, { Request, Response, NextFunction } from './Middleware.js';
 
 export class SemesterCheckMiddleware extends Middleware {
   

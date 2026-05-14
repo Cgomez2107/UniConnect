@@ -152,8 +152,6 @@ const resumen = await wsPushService.notificar({ ...dto, userId: SMOKE_USER_ID })
 console.log("Enviando email a " + TARGET_EMAIL + " ...");
 const emailResult = await emailStrategy.enviar({ ...dto, userId: TARGET_EMAIL });
 resumen.resultados.push(emailResult);
-if (emailResult.exitoso) resumen.exitosos++;
-else resumen.fallidos++;
 
 console.log("---");
 console.log("Resultado del envío:");

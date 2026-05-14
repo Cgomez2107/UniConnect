@@ -38,3 +38,12 @@ yarn-error.*
 *.tsbuildinfo
 
 app-examples/
+
+openspec/*
+.agent/*
+.agents/*
+.gpt/*
+.gemini/*
+.github/*
+.opencode/*
+skills-lock.json

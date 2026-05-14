@@ -1,0 +1,15 @@
+{
+  "name": "@uniconnect/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "echo \"@uniconnect/shared: included by services\"",
+    "lint": "echo \"@uniconnect/shared lint scaffold\"",
+    "test": "echo \"@uniconnect/shared tests scaffold\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.1"
+  }
+}

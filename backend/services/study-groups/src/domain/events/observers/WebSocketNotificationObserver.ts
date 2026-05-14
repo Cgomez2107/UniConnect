@@ -60,24 +60,24 @@ export class WebSocketNotificationObserver implements IObserver {
 
       case "TRANSFERENCIA_ADMIN_SOLICITADA":
         await this.socketGateway.emitToUser(
-          event.targetUserId,
+          event.newAdminId,
           "study-group:admin-transfer:requested",
           {
             transferId: event.transferId,
-            requestId: event.requestId,
-            actorUserId: event.actorUserId,
+            requestId: event.groupId,
+            actorUserId: event.oldAdminId,
           },
         );
         break;
 
       case "TRANSFERENCIA_ADMIN_ACEPTADA":
         await this.socketGateway.emitToUser(
-          event.fromUserId,
+          event.oldAdminId,
           "study-group:admin-transfer:accepted",
           {
             transferId: event.transferId,
-            requestId: event.requestId,
-            toUserId: event.toUserId,
+            requestId: event.groupId,
+            toUserId: event.newAdminId,
           },
         );
         break;
