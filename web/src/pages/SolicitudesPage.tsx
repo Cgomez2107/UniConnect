@@ -61,7 +61,7 @@ export function SolicitudesPage() {
             />
           </div>
           <Button onClick={() => navigate("/nueva-solicitud")}>
-            + Nueva Solicitud
+            + Nuevo Grupo
           </Button>
         </div>
 
@@ -105,7 +105,7 @@ export function SolicitudesPage() {
                 : "No hay solicitudes disponibles"}
             </p>
             <Button onClick={() => navigate("/nueva-solicitud")}>
-              Crear la primera solicitud
+              Crear el primer grupo
             </Button>
           </div>
         )}

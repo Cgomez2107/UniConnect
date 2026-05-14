@@ -1,100 +1,144 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import useForm from "@/hooks/useForm";
+import studyGroupsService from "@/lib/services/studyGroups.service";
+import { apiClient } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import type { Subject } from "@/types";
 
 interface NuevaSolicitudFormData {
+  title: string;
   subjectId: string;
   description: string;
   maxMembers: number;
 }
 
-/**
- * NuevaSolicitudPage - Create a new study group request
- */
 export function NuevaSolicitudPage() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(true);
 
-  const { values, handleChange, handleSubmit } = useForm<NuevaSolicitudFormData>(
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await apiClient.get<{ data: Subject[] }>(API_ENDPOINTS.SUBJECTS);
+        if (!cancelled) setSubjects(response.data.data);
+      } catch {
+        if (!cancelled) setError("Error al cargar las materias.");
+      } finally {
+        if (!cancelled) setSubjectsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const { values, handleChange, handleSubmit, isSubmitting } = useForm<NuevaSolicitudFormData>(
     {
+      title: "",
       subjectId: "",
       description: "",
       maxMembers: 5,
     },
-    async (values) => {
-      setLoading(true);
+    async (formValues) => {
       setError(null);
       try {
-        // TODO: Implement actual API call
-        navigate("/invitaciones");
-      } catch (err) {
-        setError("Error al crear la solicitud");
-      } finally {
-        setLoading(false);
+        await studyGroupsService.createStudyGroup({
+          subjectId: formValues.subjectId,
+          title: formValues.title.trim(),
+          description: formValues.description.trim(),
+          maxMembers: formValues.maxMembers,
+        });
+        navigate("/solicitudes");
+      } catch (err: any) {
+        throw new Error(err?.response?.data?.message || "Error al crear el grupo.");
       }
     }
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
+      <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
         <button
-          onClick={() => navigate("/invitaciones")}
-          className="text-primary-600 hover:underline mb-4"
+          onClick={() => navigate("/solicitudes")}
+          className="text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium mb-4 transition-colors"
         >
-          ← Volver
+          ← Volver a solicitudes
         </button>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h1 className="text-3xl font-bold text-neutral-900 mb-6">
-            Crear nueva solicitud
+        <div className="card p-6 sm:p-8">
+          <h1 className="text-3xl font-bold text-primary-900 dark:text-white mb-6">
+            Crear nuevo grupo
           </h1>
 
           {error && (
-            <div className="mb-4 p-4 bg-error-50 border border-error-200 rounded-lg text-error-700">
+            <div className="mb-4 p-4 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg text-error-700 dark:text-error-300 text-sm">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                Título del grupo
+              </label>
+              <input
+                type="text"
+                name="title"
+                value={values.title}
+                onChange={handleChange}
+                placeholder="Ej: Grupo de estudio de Cálculo I"
+                className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-primary-500"
+                required
+              />
+            </div>
+
             {/* Subject Selection */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                 Materia
               </label>
               <select
                 name="subjectId"
                 value={values.subjectId}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-primary-500"
                 required
+                disabled={subjectsLoading}
               >
-                <option value="">Selecciona una materia</option>
-                {/* TODO: Load from API */}
+                <option value="">
+                  {subjectsLoading ? "Cargando materias..." : "Selecciona una materia"}
+                </option>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
               </select>
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                 Descripción
               </label>
               <textarea
                 name="description"
                 value={values.description}
                 onChange={handleChange}
-                placeholder="Describe el propósito del grupo..."
+                placeholder="Describe el propósito del grupo, los temas a estudiar, horarios planeados..."
                 rows={5}
-                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-primary-500"
                 required
               />
             </div>
 
             {/* Max Members */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                 Máximo de miembros
               </label>
               <input
@@ -104,22 +148,22 @@ export function NuevaSolicitudPage() {
                 onChange={handleChange}
                 min="2"
                 max="20"
-                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-primary-500"
                 required
               />
             </div>
 
             {/* Form Actions */}
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-end pt-2">
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => navigate("/invitaciones")}
+                onClick={() => navigate("/solicitudes")}
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary" loading={loading}>
-                Crear solicitud
+              <Button type="submit" variant="primary" loading={isSubmitting}>
+                Crear grupo
               </Button>
             </div>
           </form>

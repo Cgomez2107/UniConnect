@@ -44,7 +44,7 @@ const studyGroupsService = {
   },
 
   /**
-   * Crea una nueva solicitud de grupo de estudio
+   * Crea un nuevo grupo de estudio
    */
   async createStudyGroup(
     data: CreateStudyRequestPayload

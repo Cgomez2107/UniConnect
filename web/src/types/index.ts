@@ -147,10 +147,10 @@ export interface StudyRequest {
 }
 
 export interface CreateStudyRequestPayload {
-  subject_id: string;
+  subjectId: string;
   title: string;
   description: string;
-  max_members: number;
+  maxMembers: number;
 }
 
 export interface StudyGroup {
