@@ -6,4 +6,5 @@ packages:
   - "services/messaging"
   - "services/profiles-catalog"
   - "services/events"
+  - "services/academic-qna"
   - "shared/*"
