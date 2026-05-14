@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
+import { useProfileNames } from "@/hooks/useProfileNames";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
+import { RoleBadge } from "@/components/ui/RoleBadge";
+import { MemberListItem } from "@/components/ui/MemberListItem";
+import { GroupStatusBadge } from "@/components/GroupStatusBadge";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 import type { Member } from "@/types";
 
@@ -21,18 +25,6 @@ function formatDate(dateStr: string | null | undefined): string {
     return "";
   }
 }
-
-const roleLabels: Record<string, string> = {
-  autor: "Creador",
-  admin: "Admin",
-  miembro: "Miembro",
-};
-
-const roleBadgeColors: Record<string, string> = {
-  autor: "bg-secondary-500/20 text-secondary-300",
-  admin: "bg-blue-500/20 text-blue-300",
-  miembro: "bg-neutral-500/20 text-neutral-300",
-};
 
 export function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -149,6 +141,13 @@ export function GroupDetailPage() {
     }
   }, [pendingTransferId, id, navigate]);
 
+  const memberIds = useMemo(
+    () => members.filter((m) => !m.fullName).map((m) => m.userId),
+    [members],
+  );
+
+  const profileNames = useProfileNames(memberIds);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
@@ -182,18 +181,50 @@ export function GroupDetailPage() {
     );
   }
 
+  const resolveName = (userId: string, fallback: string | null): string => {
+    if (fallback) return fallback;
+    const data = profileNames.get(userId);
+    return data?.fullName || "Usuario";
+  };
+
+  const resolveAvatar = (userId: string): string | null => {
+    const data = profileNames.get(userId);
+    return data?.avatarUrl || null;
+  };
+
   const title = solicitud.title || "Grupo de estudio";
-  const creatorName = solicitud.author?.fullName || "Usuario";
+  const creatorName = resolveName(solicitud.authorId, solicitud.author?.fullName) || "Usuario";
   const subjectName = solicitud.subjectName || "";
   const description = solicitud.description || "";
 
   const currentMember = members.find((m) => m.userId === user?.id);
   const isAuthor = currentMember?.role === "autor";
 
-  const sortedMembers = [...members].sort((a, b) => {
-    const order: Record<string, number> = { autor: 0, admin: 1, miembro: 2 };
-    return (order[a.role] ?? 3) - (order[b.role] ?? 3);
-  });
+  const sortedMembers = useMemo(
+    () =>
+      [...members]
+        .map((m) => ({
+          ...m,
+          fullName: m.fullName || resolveName(m.userId, null),
+          avatarUrl: m.avatarUrl || resolveAvatar(m.userId),
+        }))
+        .sort((a, b) => {
+          const order: Record<string, number> = { autor: 0, admin: 1, miembro: 2 };
+          return (order[a.role] ?? 3) - (order[b.role] ?? 3);
+        }),
+    [members, profileNames],
+  );
+
+  const groupStatus: "abierta" | "llena" | "transferenciaPendiente" | "cerrada" | "expirada" =
+    solicitud.hasPendingTransfer
+      ? "transferenciaPendiente"
+      : solicitud.status === "cerrada"
+        ? "cerrada"
+        : solicitud.status === "expirada"
+          ? "expirada"
+          : members.length >= (solicitud.maxMembers || 0)
+            ? "llena"
+            : "abierta";
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
@@ -220,9 +251,7 @@ export function GroupDetailPage() {
                 {subjectName}
               </span>
             )}
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-secondary-500/25 text-secondary-200">
-              {solicitud.status === "abierta" ? "Abierta" : solicitud.status || "Cerrada"}
-            </span>
+            <GroupStatusBadge status={groupStatus} size="small" />
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white">
               {members.length} miembro{members.length !== 1 ? "s" : ""}
             </span>
@@ -294,29 +323,11 @@ export function GroupDetailPage() {
           ) : (
             <div className="space-y-2">
               {sortedMembers.map((member) => (
-                <div
+                <MemberListItem
                   key={member.userId}
-                  className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg"
-                >
-                  <Avatar name={member.fullName || "Usuario"} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-primary-900 dark:text-white text-sm truncate">
-                      {member.fullName || "Usuario"}
-                      {member.userId === user?.id && (
-                        <span className="text-neutral-400 dark:text-neutral-500 font-normal ml-1">
-                          (tú)
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${
-                      roleBadgeColors[member.role] || "bg-neutral-500/20 text-neutral-300"
-                    }`}
-                  >
-                    {roleLabels[member.role] || member.role}
-                  </span>
-                </div>
+                  member={member}
+                  isCurrentUser={member.userId === user?.id}
+                />
               ))}
             </div>
           )}
@@ -326,21 +337,41 @@ export function GroupDetailPage() {
       <Modal
         isOpen={showLeaveConfirm}
         onClose={() => setShowLeaveConfirm(false)}
-        title="Salir del grupo"
+        title={currentMember?.role === "autor" ? "Transferir administración" : "Salir del grupo"}
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowLeaveConfirm(false)}>
               Cancelar
             </Button>
-            <Button variant="danger" onClick={handleLeave} loading={leaveLoading}>
-              Salir del grupo
-            </Button>
+            {currentMember?.role === "autor" ? (
+              <Button
+                variant="primary"
+                onClick={() => { setShowLeaveConfirm(false); setShowTransferModal(true); }}
+              >
+                Transferir admin
+              </Button>
+            ) : (
+              <Button variant="danger" onClick={handleLeave} loading={leaveLoading}>
+                Salir del grupo
+              </Button>
+            )}
           </>
         }
       >
-        <p className="text-neutral-600 dark:text-neutral-300">
-          ¿Estás seguro de que deseas salir de este grupo de estudio?
-        </p>
+        {currentMember?.role === "autor" ? (
+          <div>
+            <p className="text-neutral-600 dark:text-neutral-300 mb-3">
+              Como creador del grupo, no puedes salir sin antes transferir la administración a otro miembro.
+            </p>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm">
+              Usa "Transferir admin" para seleccionar quién tomará el control del grupo. Una vez aceptada la transferencia, podrás salir.
+            </p>
+          </div>
+        ) : (
+          <p className="text-neutral-600 dark:text-neutral-300">
+            ¿Estás seguro de que deseas salir de este grupo de estudio?
+          </p>
+        )}
       </Modal>
 
       <Modal

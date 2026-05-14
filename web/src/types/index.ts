@@ -144,6 +144,7 @@ export interface StudyRequest {
   applicationsCount?: number;
   subjectName?: string;
   facultyName?: string;
+  hasPendingTransfer?: boolean;
 }
 
 export interface CreateStudyRequestPayload {

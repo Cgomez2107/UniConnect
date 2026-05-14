@@ -1,12 +1,14 @@
 import React from "react";
 import { StudyRequestUI, RequestStatusUI } from "@/types/ui";
 import { Avatar } from "@/components/ui/Avatar";
+import { RoleBadge } from "@/components/ui/RoleBadge";
 
 interface SolicitudCardProps {
   solicitud: StudyRequestUI;
   onViewDetails: (id: string) => void;
   onApply?: (id: string) => void;
   applicationStatus?: "pendiente" | "aceptada" | "rechazada" | null;
+  isAuthor?: boolean;
 }
 
 const applicationStatusConfig: Record<string, { label: string; className: string }> = {
@@ -20,6 +22,7 @@ export function SolicitudCard({
   onViewDetails,
   onApply,
   applicationStatus,
+  isAuthor,
 }: SolicitudCardProps) {
   const statusLabels: Record<RequestStatusUI, string> = {
     abierta: "Abierto",
@@ -42,7 +45,7 @@ export function SolicitudCard({
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3">
           <Avatar
-            src={solicitud.profiles?.avatarUrl}
+            src={solicitud.profiles?.avatarUrl ?? undefined}
             name={authorName}
             size="md"
           />
@@ -62,9 +65,13 @@ export function SolicitudCard({
         </span>
       </div>
 
-      <h3 className="font-semibold text-lg text-neutral-900 mb-2">
+      <h3 className="font-semibold text-lg text-neutral-900 mb-1">
         {solicitud.title || "Solicitud"}
       </h3>
+
+      <p className="text-xs text-neutral-500 mb-2">
+        Creado por <span className="font-medium text-neutral-700">{authorName}</span>
+      </p>
 
       <p className="text-sm text-neutral-600 mb-4 line-clamp-2">
         {solicitud.description || "Sin descripción"}
@@ -83,7 +90,9 @@ export function SolicitudCard({
         >
           Ver detalles
         </button>
-        {appBadge ? (
+        {isAuthor ? (
+          <RoleBadge role="autor" />
+        ) : appBadge ? (
           <span className={`px-3 py-2 rounded-md text-sm font-medium ${appBadge.className}`}>
             {appBadge.label}
           </span>

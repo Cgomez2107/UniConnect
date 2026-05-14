@@ -56,6 +56,9 @@ export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
         apps = [];
       }
       const mapped = data.map(mapStudyRequestApiToUI);
+      if (data.length > 0) {
+        console.debug("[useFeed] Primer item raw:", JSON.stringify(data[0], null, 2));
+      }
       setState({ requests: mapped, applications: apps, isLoading: false, error: null });
     } catch (err) {
       const errorMessage =

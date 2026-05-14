@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import useFeed from "@/hooks/useFeed";
+import { useProfileNames } from "@/hooks/useProfileNames";
 import { SolicitudCard } from "@/components/solicitud/SolicitudCard";
 import { Button } from "@/components/ui/Button";
 import { StudyRequestUI } from "@/types/ui";
@@ -12,6 +13,27 @@ export function SolicitudesPage() {
   const { requests = [], applications = [], isLoading = false, error = null } = useFeed({ userId: user?.id });
   const [searchTerm, setSearchTerm] = useState("");
 
+  const requestsWithMissingAuthor = useMemo(
+    () => requests.filter((r) => !r.creatorName && !r.profiles?.fullName).map((r) => r.authorId),
+    [requests],
+  );
+  const profileNames = useProfileNames(requestsWithMissingAuthor);
+
+  const enrichedRequests = useMemo(
+    () =>
+      requests.map((r) => {
+        if (r.creatorName || r.profiles?.fullName) return r;
+        const data = profileNames.get(r.authorId);
+        if (!data?.fullName) return r;
+        return {
+          ...r,
+          creatorName: data.fullName,
+          profiles: { fullName: data.fullName, avatarUrl: data.avatarUrl },
+        };
+      }),
+    [requests, profileNames],
+  );
+
   const applicationMap = useMemo(() => {
     const map = new Map<string, "pendiente" | "aceptada" | "rechazada">();
     for (const app of applications) {
@@ -21,12 +43,12 @@ export function SolicitudesPage() {
   }, [applications]);
 
   const filteredSolicitudes = useMemo(() => {
-    return (requests as StudyRequestUI[]).filter((sol) =>
+    return (enrichedRequests as StudyRequestUI[]).filter((sol) =>
       (sol.subjectName?.toLowerCase() || "").includes(
         searchTerm.toLowerCase()
       ) || (sol.description?.toLowerCase() || "").includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm, requests]);
+  }, [searchTerm, enrichedRequests]);
 
   const handleViewDetails = (id: string) => {
     navigate(`/solicitud/${id}`);
@@ -91,6 +113,7 @@ export function SolicitudesPage() {
                 onViewDetails={handleViewDetails}
                 onApply={handleApply}
                 applicationStatus={applicationMap.get(solicitud.id) ?? null}
+                isAuthor={solicitud.authorId === user?.id}
               />
             ))}
           </div>

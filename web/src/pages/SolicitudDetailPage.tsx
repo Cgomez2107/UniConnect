@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
+import { useProfileNames } from "@/hooks/useProfileNames";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
+import { RoleBadge } from "@/components/ui/RoleBadge";
+import { MemberListItem } from "@/components/ui/MemberListItem";
 import studyGroupsService from "@/lib/services/studyGroups.service";
-import type { Application } from "@/types";
+import type { Application, Member } from "@/types";
 
 function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return "Fecha no disponible";
@@ -128,6 +131,17 @@ export function SolicitudDetailPage() {
     }
   };
 
+  const allUserIds = useMemo(() => {
+    const ids: string[] = [];
+    if (solicitud?.authorId) ids.push(solicitud.authorId);
+    for (const app of applications) {
+      if (app.applicantId) ids.push(app.applicantId);
+    }
+    return ids;
+  }, [solicitud?.authorId, applications]);
+
+  const profileNames = useProfileNames(allUserIds);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
@@ -161,8 +175,19 @@ export function SolicitudDetailPage() {
     );
   }
 
+  const getDisplayName = (userId: string, fallback: string): string => {
+    if (fallback !== "Usuario") return fallback;
+    const data = profileNames.get(userId);
+    return data?.fullName || fallback;
+  };
+
+  const getAvatarUrl = (userId: string): string | null => {
+    const data = profileNames.get(userId);
+    return data?.avatarUrl || null;
+  };
+
   const title = solicitud.title || "Grupo de estudio";
-  const creatorName = solicitud.author?.fullName || "Usuario";
+  const creatorName = getDisplayName(solicitud.authorId, solicitud.author?.fullName || "Usuario");
   const subjectName = solicitud.subjectName || "";
   const description = solicitud.description || "";
   const isOpen = solicitud.status === "abierta";
@@ -264,6 +289,11 @@ export function SolicitudDetailPage() {
               </div>
             )}
 
+            {isAuthor && (
+              <Button variant="primary" size="sm" onClick={() => navigate(`/grupo/${id}`)}>
+                Ver grupo
+              </Button>
+            )}
             {isAuthor && isOpen && (
               <Button variant="danger" size="sm" onClick={() => setShowCancelConfirm(true)}>
                 Cancelar solicitud
@@ -297,12 +327,12 @@ export function SolicitudDetailPage() {
                   <div key={app.id} className="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-2">
                       <Avatar
-                        name={app.profiles?.full_name || "Usuario"}
+                        name={getDisplayName(app.applicantId, "Usuario")}
                         size="sm"
                       />
                       <div className="flex-1">
                         <p className="font-semibold text-primary-900 dark:text-white text-sm">
-                          {app.profiles?.full_name || "Usuario"}
+                          {getDisplayName(app.applicantId, "Usuario")}
                         </p>
                         <p className="text-xs text-neutral-500 dark:text-neutral-400">
                           {formatDate(app.createdAt)}
@@ -356,21 +386,29 @@ export function SolicitudDetailPage() {
             <h2 className="text-lg font-bold text-primary-900 dark:text-white mb-4">
               Miembros ({acceptedApps.length + 1})
             </h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                <Avatar name={creatorName} size="sm" />
-                <div>
-                  <p className="font-semibold text-primary-900 dark:text-white text-sm">{creatorName}</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Creador</p>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <MemberListItem
+                member={{
+                  userId: solicitud.authorId,
+                  fullName: creatorName,
+                  avatarUrl: solicitud.author?.avatarUrl || null,
+                  role: "autor",
+                  joinedAt: solicitud.createdAt,
+                }}
+                isCurrentUser={user?.id === solicitud.authorId}
+              />
               {acceptedApps.map((app: any) => (
-                <div key={app.id} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
-                  <Avatar name={app.profiles?.full_name || "Usuario"} size="sm" />
-                  <p className="font-semibold text-primary-900 dark:text-white text-sm">
-                    {app.profiles?.full_name || "Usuario"}
-                  </p>
-                </div>
+                <MemberListItem
+                  key={app.id}
+                  member={{
+                    userId: app.applicantId,
+                    fullName: getDisplayName(app.applicantId, "Usuario"),
+                    avatarUrl: getAvatarUrl(app.applicantId),
+                    role: "miembro",
+                    joinedAt: app.createdAt,
+                  }}
+                  isCurrentUser={user?.id === app.applicantId}
+                />
               ))}
             </div>
           </div>

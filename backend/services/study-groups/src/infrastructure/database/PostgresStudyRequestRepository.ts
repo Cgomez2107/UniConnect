@@ -34,6 +34,7 @@ interface StudyRequestRow {
   author_full_name: string | null;
   author_avatar_url: string | null;
   author_bio: string | null;
+  has_pending_transfer: boolean;
 }
 
 interface StudyGroupHydrationRow {
@@ -63,6 +64,7 @@ function mapStudyRequest(row: StudyRequestRow): StudyRequest {
       row.applications_count == null
         ? undefined
         : Number(row.applications_count),
+    hasPendingTransfer: row.has_pending_transfer,
     author: row.author_full_name
       ? {
         fullName: row.author_full_name,
@@ -211,7 +213,8 @@ export class PostgresStudyRequestRepository
           COALESCE(a.accepted_count, 0) + 1             AS applications_count,
           pr.full_name                                  AS author_full_name,
           pr.avatar_url                                 AS author_avatar_url,
-          pr.bio                                        AS author_bio
+          pr.bio                                        AS author_bio,
+          (t.id IS NOT NULL)                            AS has_pending_transfer
         FROM study_requests sr
         LEFT JOIN subjects  s  ON s.id  = sr.subject_id
         LEFT JOIN profiles  pr ON pr.id = sr.author_id
@@ -221,6 +224,8 @@ export class PostgresStudyRequestRepository
           WHERE  status = 'aceptada'
           GROUP  BY request_id
         ) a ON a.request_id = sr.id
+        LEFT JOIN study_request_admin_transfers t
+               ON t.request_id = sr.id AND t.status = 'pendiente'
         WHERE ${conditions.join(" AND ")}
         ORDER BY sr.created_at DESC
         ${limitClause}
@@ -259,7 +264,8 @@ export class PostgresStudyRequestRepository
           COALESCE(a.accepted_count, 0) + 1             AS applications_count,
           pr.full_name                                  AS author_full_name,
           pr.avatar_url                                 AS author_avatar_url,
-          pr.bio                                        AS author_bio
+          pr.bio                                        AS author_bio,
+          (t.id IS NOT NULL)                            AS has_pending_transfer
         FROM study_requests sr
         LEFT JOIN subjects  s  ON s.id  = sr.subject_id
         LEFT JOIN profiles  pr ON pr.id = sr.author_id
@@ -269,6 +275,8 @@ export class PostgresStudyRequestRepository
           WHERE  status = 'aceptada'
           GROUP  BY request_id
         ) a ON a.request_id = sr.id
+        LEFT JOIN study_request_admin_transfers t
+               ON t.request_id = sr.id AND t.status = 'pendiente'
         WHERE sr.id = $1
         LIMIT 1
       `,
@@ -348,7 +356,8 @@ export class PostgresStudyRequestRepository
           COALESCE(a.accepted_count, 0) + 1             AS applications_count,
           pr.full_name                                  AS author_full_name,
           pr.avatar_url                                 AS author_avatar_url,
-          pr.bio                                        AS author_bio
+          pr.bio                                        AS author_bio,
+          (t.id IS NOT NULL)                            AS has_pending_transfer
         FROM study_requests sr
         LEFT JOIN subjects  s  ON s.id  = sr.subject_id
         LEFT JOIN profiles  pr ON pr.id = sr.author_id
@@ -358,6 +367,8 @@ export class PostgresStudyRequestRepository
           WHERE  status = 'aceptada'
           GROUP  BY request_id
         ) a ON a.request_id = sr.id
+        LEFT JOIN study_request_admin_transfers t
+               ON t.request_id = sr.id AND t.status = 'pendiente'
         WHERE sr.author_id = $1 AND sr.is_active = true
         ORDER BY sr.created_at DESC
       `,
