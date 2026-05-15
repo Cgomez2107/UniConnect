@@ -38,3 +38,8 @@ yarn-error.*
 *.tsbuildinfo
 
 app-examples/
+
+# Ignore local agent/tooling folders
+.agent/
+.opencode/
+.github/

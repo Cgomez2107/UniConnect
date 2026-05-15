@@ -12,6 +12,7 @@
     "test": "echo \"profiles-catalog tests config scaffold\""
   },
   "dependencies": {
+    "@uniconnect/shared-types": "file:../../../packages/shared-types",
     "pg": "^8.13.1"
   },
   "devDependencies": {

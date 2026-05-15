@@ -1,0 +1,43 @@
+{
+  "name": "@uniconnect/shared-types",
+  "version": "0.2.0",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schemas/*": {
+      "types": "./dist/schemas/*.schema.d.ts",
+      "import": "./dist/schemas/*.schema.js",
+      "default": "./dist/schemas/*.schema.js"
+    },
+    "./contracts/*": {
+      "types": "./dist/api/*.contract.d.ts",
+      "import": "./dist/api/*.contract.js",
+      "default": "./dist/api/*.contract.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:contracts": "vitest run tests/contracts/"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

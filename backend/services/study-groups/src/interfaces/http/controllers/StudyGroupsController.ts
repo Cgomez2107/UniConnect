@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { z, ZodError } from "zod";
 
 import { ApplyToStudyRequest } from "../../../application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "../../../application/use-cases/AcceptAdminTransfer.js";
@@ -13,16 +14,23 @@ import { LeaveAdminRole } from "../../../application/use-cases/LeaveAdminRole.js
 import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
-import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
 import type { CreateStudyGroupMessageDto } from "../dto/CreateStudyGroupMessageDto.js";
-import type { CreateStudyGroupDto } from "../dto/CreateStudyGroupDto.js";
-import type { RequestAdminTransferDto } from "../dto/RequestAdminTransferDto.js";
-import type { ReviewApplicationDto } from "../dto/ReviewApplicationDto.js";
+import { CreateGroupRequestSchema } from "@uniconnect/shared-types/contracts/study-group";
+import type { CreateGroupRequest } from "@uniconnect/shared-types/contracts/study-group";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
+import { validateBody } from "../../../middleware/validationMiddleware.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
-import { DtoValidationError, Validators, validateDto } from "../../../../../../shared/libs/validation/index.js";
-import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
+import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
+
+const ReviewApplicationBodySchema = z.object({
+  status: z.enum(["aceptada", "rechazada"]),
+});
+
+const RequestTransferBodySchema = z.object({
+  targetUserId: z.string().min(1),
+});
 
 /**
  * Controlador HTTP del dominio study-groups.
@@ -106,14 +114,19 @@ export class StudyGroupsController {
       return;
     }
 
-    const body = await readJsonBody<CreateStudyGroupDto>(req);
+    const body = await readJsonBody<ApplyToStudyGroupDto>(req);
     try {
+      const parsed = validateBody<CreateGroupRequest["body"]>(CreateGroupRequestSchema.shape.body, body, res);
+      if (!parsed) {
+        return;
+      }
+
       const created = await this.createStudyRequest.execute({
         actorUserId,
-        subjectId: body.subjectId ?? "",
-        title: body.title ?? "",
-        description: body.description ?? "",
-        maxMembers: body.maxMembers ?? Number.NaN,
+        subjectId: parsed.subjectId,
+        title: parsed.name,
+        description: parsed.description,
+        maxMembers: parsed.maxMembers,
       });
 
       sendData(res, 201, created);
@@ -212,11 +225,6 @@ export class StudyGroupsController {
 
       sendData(res, 201, created);
     } catch (error) {
-      if (error instanceof DtoValidationError) {
-        sendJson(res, 400, { error: error.message, fields: error.fields });
-        return;
-      }
-
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
@@ -311,30 +319,20 @@ export class StudyGroupsController {
       return;
     }
 
-    const body = await readJsonBody<ReviewApplicationDto>(req);
+    const body = await readJsonBody(req);
     try {
-      validateDto(
-        body,
-        {
-          status: [
-            (value) => Validators.required(value, "status"),
-            (value) => Validators.oneOf(value, ["aceptada", "rechazada"], "status"),
-          ],
-        },
-      );
-
-      const validatedStatus = body.status as "aceptada" | "rechazada";
+      const parsed = ReviewApplicationBodySchema.parse(body);
 
       await this.reviewApplication.execute({
         applicationId,
         actorUserId,
-        status: validatedStatus,
+        status: parsed.status,
       });
 
       sendData(res, 200, { message: "Postulación revisada correctamente." });
     } catch (error) {
-      if (error instanceof DtoValidationError) {
-        sendJson(res, 400, { error: error.message, fields: error.fields });
+      if (error instanceof ZodError) {
+        sendError(res, 400, "Error de validación: el campo 'status' debe ser 'aceptada' o 'rechazada'.");
         return;
       }
 
@@ -354,26 +352,21 @@ export class StudyGroupsController {
       return;
     }
 
-    const body = await readJsonBody<RequestAdminTransferDto>(req);
+    const body = await readJsonBody(req);
 
     try {
-      validateDto(
-        body,
-        {
-          targetUserId: [(value) => Validators.required(value, "targetUserId")],
-        },
-      );
+      const parsed = RequestTransferBodySchema.parse(body);
 
       const created = await this.requestAdminTransfer.execute({
         requestId,
         actorUserId,
-        targetUserId: body.targetUserId as string,
+        targetUserId: parsed.targetUserId,
       });
 
       sendData(res, 201, created);
     } catch (error) {
-      if (error instanceof DtoValidationError) {
-        sendJson(res, 400, { error: error.message, fields: error.fields });
+      if (error instanceof ZodError) {
+        sendError(res, 400, "Error de validación: el campo 'targetUserId' es requerido.");
         return;
       }
 

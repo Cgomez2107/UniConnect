@@ -12,8 +12,11 @@
     "test": "echo \"gateway tests config scaffold\""
   },
   "devDependencies": {
+    "@types/node": "^22.10.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "@types/node": "^22.10.1"
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@uniconnect/shared-types": "file:..\\..\\packages\\shared-types"
   }
 }

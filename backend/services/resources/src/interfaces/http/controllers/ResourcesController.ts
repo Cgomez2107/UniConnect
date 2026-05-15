@@ -1,16 +1,27 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { z, ZodError } from "zod";
 
 import { CreateStudyResource } from "../../../application/use-cases/CreateStudyResource.js";
 import { DeleteStudyResource } from "../../../application/use-cases/DeleteStudyResource.js";
 import { GetStudyResourceById } from "../../../application/use-cases/GetStudyResourceById.js";
 import { ListStudyResources } from "../../../application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "../../../application/use-cases/UpdateStudyResource.js";
-import type { CreateResourceDto } from "../dto/CreateResourceDto.js";
 import type { UpdateResourceDto } from "../dto/UpdateResourceDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+
+const CreateResourceBodySchema = z.object({
+  programId: z.string().min(1),
+  subjectId: z.string().min(1),
+  title: z.string().min(1).max(200),
+  description: z.string().optional(),
+  fileUrl: z.string().min(1),
+  fileName: z.string().min(1),
+  fileType: z.string().optional(),
+  fileSizeKb: z.number().positive().optional(),
+});
 
 export class ResourcesController {
   constructor(
@@ -70,22 +81,27 @@ export class ResourcesController {
         return;
       }
 
-      const body = await readJsonBody<CreateResourceDto>(req);
+      const body = await readJsonBody(req);
+      const parsed = CreateResourceBodySchema.parse(body);
 
       const created = await this.createStudyResource.execute({
         actorUserId,
-        programId: body.programId ?? "",
-        subjectId: body.subjectId ?? "",
-        title: body.title ?? "",
-        description: body.description,
-        fileUrl: body.fileUrl ?? "",
-        fileName: body.fileName ?? "",
-        fileType: body.fileType,
-        fileSizeKb: body.fileSizeKb,
+        programId: parsed.programId,
+        subjectId: parsed.subjectId,
+        title: parsed.title,
+        description: parsed.description,
+        fileUrl: parsed.fileUrl,
+        fileName: parsed.fileName,
+        fileType: parsed.fileType,
+        fileSizeKb: parsed.fileSizeKb,
       });
 
       sendData(res, 201, created);
     } catch (error) {
+      if (error instanceof ZodError) {
+        sendError(res, 400, "Error de validación: todos los campos requeridos deben estar presentes.");
+        return;
+      }
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

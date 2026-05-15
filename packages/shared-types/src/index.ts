@@ -1,0 +1,23 @@
+export * from "./schemas/_common.schema.js";
+export * from "./schemas/auth.schema.js";
+export * from "./schemas/user.schema.js";
+export * from "./schemas/study-group.schema.js";
+export * from "./schemas/messaging.schema.js";
+export * from "./schemas/resource.schema.js";
+export * from "./schemas/event.schema.js";
+export * from "./schemas/notification.schema.js";
+
+export * from "./api/_base.contract.js";
+export * from "./api/auth.contract.js";
+export * from "./api/study-group.contract.js";
+export * from "./api/resource.contract.js";
+export * from "./api/messaging.contract.js";
+export * from "./api/event.contract.js";
+export * from "./api/notification.contract.js";
+
+export * from "./types/domain.js";
+export * from "./types/dto.js";
+export * from "./lib/mappers.js";
+export * from "./lib/errors.js";
+
+export const SHARED_TYPES_VERSION = "0.2.0";
