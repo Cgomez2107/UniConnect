@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { CreateQuestion } from "../../../application/use-cases/CreateQuestion.js";
 import { CreateAnswer } from "../../../application/use-cases/CreateAnswer.js";
 import { CastVote } from "../../../application/use-cases/CastVote.js";
+import { MarcarComoSolucion } from "../../../application/use-cases/MarcarComoSolucion.js";
 import { ListQuestions } from "../../../application/use-cases/ListQuestions.js";
 import { GetQuestionDetail } from "../../../application/use-cases/GetQuestionDetail.js";
 import { ListAnswers } from "../../../application/use-cases/ListAnswers.js";
@@ -27,11 +28,16 @@ interface CastVoteBody {
   voteType?: string;
 }
 
+interface MarcarSolucionBody {
+  answerId?: string;
+}
+
 export class ForumController {
   constructor(
     private readonly createQuestionUseCase: CreateQuestion,
     private readonly createAnswerUseCase: CreateAnswer,
     private readonly castVoteUseCase: CastVote,
+    private readonly marcarComoSolucionUseCase: MarcarComoSolucion,
     private readonly listQuestionsUseCase: ListQuestions,
     private readonly getQuestionDetailUseCase: GetQuestionDetail,
     private readonly listAnswersUseCase: ListAnswers,
@@ -160,6 +166,28 @@ export class ForumController {
       });
 
       sendData(res, 200, { voteCount });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async marcarComoSolucion(req: IncomingMessage, res: ServerResponse, questionId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const body = await readJsonBody<MarcarSolucionBody>(req);
+      await this.marcarComoSolucionUseCase.execute({
+        questionId,
+        answerId: body.answerId ?? "",
+        userId: actorUserId,
+      });
+
+      sendData(res, 200, { message: "Respuesta marcada como solución." });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

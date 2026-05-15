@@ -20,6 +20,7 @@ export async function handleForumRoutes(
   const questionsListMatch = req.method === "GET" && requestUrl.pathname === "/api/v1/forum/questions";
   const questionsDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)$/);
   const answersMatch = requestUrl.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)\/answers$/);
+  const solutionMatch = requestUrl.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)\/solution$/);
   const votesMatch = req.method === "POST" && requestUrl.pathname === "/api/v1/forum/votes";
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
@@ -53,6 +54,11 @@ export async function handleForumRoutes(
 
   if (req.method === "GET" && answersMatch) {
     await controller.listAnswers(req, res, answersMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && solutionMatch) {
+    await controller.marcarComoSolucion(req, res, solutionMatch[1]);
     return true;
   }
 

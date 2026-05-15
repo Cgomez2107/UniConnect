@@ -17,7 +17,7 @@ describe("Perf: comparar latencia entre vista base y completa (lógica)", () => 
     // Simulate DB latency in indicators repo
     let indicatorsCalled = 0;
     const slowIndicatorsRepo = {
-      getIndicators: async () => { indicatorsCalled++; await delay(50); return { gruposCreados: 2, gruposParticipa: 1, mensajesEnviados: 5 }; },
+      getIndicators: async () => { indicatorsCalled++; await delay(50); return { gruposBajoAdministracion: 2, gruposParticipa: 1, mensajesEnviados: 5 }; },
       getBadges: async () => { indicatorsCalled++; await delay(20); return []; },
     } as any;
 

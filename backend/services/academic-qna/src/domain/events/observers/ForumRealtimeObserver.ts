@@ -11,20 +11,33 @@ export class ForumRealtimeObserver implements Observer {
   }
 
   getInterestedEvents(): string[] {
-    return ['VOTO_RECIBIDO'];
+    return ['VOTO_RECIBIDO', 'SOLUCION_MARCADA'];
   }
 
   async handle(event: DomainEvent): Promise<void> {
     const targetAuthorId = event.aggregateId;
     const payload = event.data;
 
-    await this.realtimeGateway.emitToUser(targetAuthorId, 'VOTE_RECEIVED', {
-      targetType: payload.targetType,
-      targetId: payload.targetId,
-      voteType: payload.voteType,
-      newVoteCount: payload.newVoteCount,
-      voterId: payload.voterId,
-      timestamp: event.timestamp.toISOString(),
-    });
+    switch (event.eventType) {
+      case 'VOTO_RECIBIDO':
+        await this.realtimeGateway.emitToUser(targetAuthorId, 'VOTE_RECEIVED', {
+          targetType: payload.targetType,
+          targetId: payload.targetId,
+          voteType: payload.voteType,
+          newVoteCount: payload.newVoteCount,
+          voterId: payload.voterId,
+          timestamp: event.timestamp.toISOString(),
+        });
+        break;
+
+      case 'SOLUCION_MARCADA':
+        await this.realtimeGateway.emitToUser(targetAuthorId, 'ANSWER_MARKED_AS_SOLUTION', {
+          questionId: payload.questionId,
+          answerId: payload.answerId,
+          marcadoPor: payload.marcadoPor,
+          timestamp: event.timestamp.toISOString(),
+        });
+        break;
+    }
   }
 }

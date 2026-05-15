@@ -66,7 +66,7 @@ classDiagram
 
     class IPreferenceService {
         <<interface>>
-        +getCanalesActivos(userId, eventType) Promise~string[]~
+        +getCanalesActivos(userId, eventType, priority?) Promise~string[]~
         +setCanalActivo(userId, eventType, canal, activo) Promise~void~
     }
 

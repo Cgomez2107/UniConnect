@@ -7,4 +7,6 @@ export interface IForumQuestionRepository {
   findSummariesBySubject(subjectId: string, page: number, limit: number): Promise<QuestionSummary[]>;
   findBySubject(subjectId: string, page: number, limit: number): Promise<ForumQuestion[]>;
   incrementAnswerCount(id: string): Promise<void>;
+  markAsSolved(id: string): Promise<void>;
+  isAdminOfStudyGroup(questionId: string, userId: string): Promise<boolean>;
 }

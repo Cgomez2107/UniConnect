@@ -150,7 +150,7 @@ const resumen = await wsPushService.notificar({ ...dto, userId: SMOKE_USER_ID })
 
 // 3. Email por separado (userId debe ser la direccion email)
 console.log("Enviando email a " + TARGET_EMAIL + " ...");
-const emailResult = await emailStrategy.enviar({ ...dto, userId: TARGET_EMAIL });
+    const emailResult = await emailStrategy.enviar({ ...dto, userId: SMOKE_USER_ID });
 resumen.resultados.push(emailResult);
 
 console.log("---");

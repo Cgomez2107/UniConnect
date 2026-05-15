@@ -121,4 +121,29 @@ export class PostgresForumQuestionRepository implements IForumQuestionRepository
       [id],
     );
   }
+
+  async markAsSolved(id: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE forum_questions SET status = 'solved', updated_at = NOW() WHERE id = $1`,
+      [id],
+    );
+  }
+
+  async isAdminOfStudyGroup(questionId: string, userId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        SELECT 1
+        FROM forum_questions fq
+        JOIN study_requests sr ON sr.id = fq.subject_id
+        WHERE fq.id = $1
+          AND (sr.author_id = $2 OR EXISTS (
+            SELECT 1 FROM study_request_admins sra
+            WHERE sra.request_id = sr.id AND sra.user_id = $2
+          ))
+        LIMIT 1
+      `,
+      [questionId, userId],
+    );
+    return result.rows.length > 0;
+  }
 }

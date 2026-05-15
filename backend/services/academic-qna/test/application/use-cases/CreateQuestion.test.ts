@@ -24,6 +24,8 @@ describe("CreateQuestion use case", () => {
       findSummariesBySubject: jest.fn(),
       findBySubject: jest.fn(),
       incrementAnswerCount: jest.fn(),
+      markAsSolved: jest.fn(),
+      isAdminOfStudyGroup: jest.fn(),
     };
 
     const enrollmentRepo: IEnrollmentRepository = {

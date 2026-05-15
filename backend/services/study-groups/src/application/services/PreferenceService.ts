@@ -10,10 +10,13 @@ const ALL_CHANNELS: readonly string[] = [
 export class PreferenceService implements IPreferenceService {
   constructor(private readonly repository: IPreferenceRepository) {}
 
-  async getCanalesActivos(userId: string, eventType: string): Promise<string[]> {
+  async getCanalesActivos(userId: string, eventType: string, priority?: string): Promise<string[]> {
     const canales = await this.repository.getCanalesActivos(userId, eventType);
 
     if (canales === null) {
+      if (priority === "normal") {
+        return ALL_CHANNELS.filter(c => c !== "email_institucional");
+      }
       return [...ALL_CHANNELS];
     }
 

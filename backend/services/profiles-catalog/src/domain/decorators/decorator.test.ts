@@ -36,7 +36,7 @@ console.log("\n📊 PASO 2: Envolver con StatisticsDecorator");
 console.log("-".repeat(80));
 
 const indicators: Indicators = {
-  gruposCreados: 3,
+  gruposBajoAdministracion: 3,
   gruposParticipa: 5,
   mensajesEnviados: 42,
 };
@@ -45,7 +45,7 @@ const conEstadisticas = new StatisticsDecorator(base, indicators);
 
 console.log("StatisticsDecorator aplicado:");
 console.log(`  Render: ${conEstadisticas.render()}`);
-console.log(`  Grupos creados: ${conEstadisticas.getIndicators().gruposCreados}`);
+console.log(`  Grupos administrados: ${conEstadisticas.getIndicators().gruposBajoAdministracion}`);
 console.log(`  Grupos participa: ${conEstadisticas.getIndicators().gruposParticipa}`);
 console.log(`  Mensajes enviados: ${conEstadisticas.getIndicators().mensajesEnviados}`);
 
@@ -103,7 +103,7 @@ console.log(`  ✅ AC-01 (BaseProfile): ${hasBaseFields ? "OK" : "FALLA"}`);
 const hasStats = metadataKeys.includes("indicadores");
 const statsValid =
   hasStats &&
-  (metadata.indicadores as Indicators).gruposCreados !== undefined &&
+  (metadata.indicadores as Indicators).gruposBajoAdministracion !== undefined &&
   (metadata.indicadores as Indicators).gruposParticipa !== undefined &&
   (metadata.indicadores as Indicators).mensajesEnviados !== undefined;
 console.log(`  ✅ AC-02 (Statistics): ${statsValid ? "OK" : "FALLA"}`);
@@ -128,7 +128,7 @@ Cadena de decoradores creada exitosamente:
 
   BaseProfile [Carlos Pérez - Ingeniería de Sistemas (Semestre 6)]
     ↓ (envuelto por)
-  StatisticsDecorator [3 grupos creados, 5 participa, 42 msgs]
+  StatisticsDecorator [3 grupos administrados, 5 participa, 42 msgs]
     ↓ (envuelto por)
   BadgesDecorator [2 badges: Primer Mensaje, Colaborador]
     ↓ (resultado final)
@@ -136,7 +136,7 @@ Cadena de decoradores creada exitosamente:
 
 Validaciones:
   ✅ AC-01: BaseProfile con nombre, carrera, semestre y asignaturas activas
-  ✅ AC-02: StatisticsDecorator con gruposCreados, gruposParticipa, mensajesEnviados
+  ✅ AC-02: StatisticsDecorator con gruposBajoAdministracion, gruposParticipa, mensajesEnviados
   ✅ AC-03: BadgesDecorator con array de badges
   ✅ AC-04: Render compuesto preserva capas inferiores
   ✅ getMetadata() retorna información de todos los decoradores

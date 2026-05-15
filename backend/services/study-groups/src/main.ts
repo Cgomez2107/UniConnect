@@ -52,11 +52,14 @@ import { SupabaseRealtimeGateway } from "./infrastructure/realtime/SupabaseRealt
 import { PreferenceService } from "./application/services/PreferenceService.js";
 import { NotificationMapper } from "./application/services/NotificationMapper.js";
 import { PostgresUserRepository } from "./infrastructure/database/PostgresUserRepository.js";
+import type { IUserRepository as IStrategyUserRepository } from "../../../shared/patterns/strategy/IUserRepository.js";
+import { GroupPermissionRepository } from "./infrastructure/database/GroupPermissionRepository.js";
 
 import {
   ChatSubject as GroupChatSubject,
   RealtimeObserver as GroupRealtimeObserver,
   IdempotencyObserver as GroupIdempotencyObserver,
+  ChatNotificationObserver as GroupChatNotificationObserver,
   type IRealtimeService as IGroupRealtimeService,
   type IIdempotencyStore as IGroupIdempotencyStore,
 } from "../../messaging/src/domain/events/index.js";
@@ -215,6 +218,33 @@ function bootstrap(): void {
   const membershipService = new StudyGroupMembershipService(subject);
 
   const groupChatSubject = new GroupChatSubject("study-groups-chat");
+
+  const groupUserRepository: IStrategyUserRepository = {
+    async getContactInfo(userId: string) {
+      if (!pool) return {};
+      try {
+        const result = await pool.query(
+          `SELECT email, push_token FROM profiles WHERE id = $1`,
+          [userId],
+        );
+        if (result.rows.length === 0) return {};
+        return {
+          email: result.rows[0].email as string | undefined,
+          pushToken: result.rows[0].push_token as string | undefined,
+        };
+      } catch {
+        return {};
+      }
+    },
+  };
+
+  const groupChatNotificationObserver = new GroupChatNotificationObserver(
+    notificationService,
+    groupUserRepository,
+  );
+
+  const groupPermissionRepo = new GroupPermissionRepository(pool);
+
   const mockRealtimeService: IGroupRealtimeService = {
     async broadcast(channel, message) {
       console.log(
@@ -249,6 +279,9 @@ function bootstrap(): void {
     groupChatSubject,
     realtimeObserver,
     idempotencyObserver,
+    groupChatNotificationObserver,
+    groupPermissionRepo,
+    groupPermissionRepo,
   );
   const listUserNotifications = new ListUserNotifications(notificationRepository);
   const applyToStudyRequest = new ApplyToStudyRequest(

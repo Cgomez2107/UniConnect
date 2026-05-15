@@ -9,3 +9,13 @@ export interface VotoRecibidoEvent {
   readonly voterId: string;
   readonly targetAuthorId: string;
 }
+
+export interface RespuestaMarcadaSolucionEvent {
+  readonly type: 'SOLUCION_MARCADA';
+  readonly version: '1.0';
+  readonly timestamp: Date;
+  readonly questionId: string;
+  readonly answerId: string;
+  readonly marcadoPor: string;
+  readonly answerAuthorId: string;
+}
