@@ -31,6 +31,8 @@ export interface EventsEnv {
   readonly dbUser: string;
   readonly dbPassword: string;
   readonly dbSsl: boolean;
+  readonly supabaseUrl?: string;
+  readonly supabaseServiceRoleKey?: string;
 }
 
 export function loadEventsEnv(source: NodeJS.ProcessEnv = process.env): EventsEnv {
@@ -74,5 +76,7 @@ export function loadEventsEnv(source: NodeJS.ProcessEnv = process.env): EventsEn
     dbUser,
     dbPassword,
     dbSsl,
+    supabaseUrl: source.SUPABASE_URL,
+    supabaseServiceRoleKey: source.SUPABASE_SERVICE_ROLE_KEY,
   };
 }

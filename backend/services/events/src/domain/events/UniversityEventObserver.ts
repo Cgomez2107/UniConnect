@@ -4,6 +4,7 @@ import type { ISubscriptionRepository } from "./subscriptions/ISubscriptionRepos
 
 export interface IEventSocketGateway {
   emitToUser(userId: string, event: string, payload: Record<string, unknown>): Promise<void>;
+  dispose?(): void;
 }
 
 export class UniversityEventObserver implements IObserver {
@@ -11,11 +12,12 @@ export class UniversityEventObserver implements IObserver {
 
   constructor(
     private readonly subscriptionRepository: ISubscriptionRepository,
-    private readonly socketGateway: IEventSocketGateway,
+    private readonly socketGateway: IEventSocketGateway | null,
   ) {}
 
   async handle(event: UniversityEvent): Promise<void> {
     if (event.type !== "NUEVO_EVENTO") return;
+    if (!this.socketGateway) return;
 
     const category = event.category;
     const subscribers = await this.subscriptionRepository.getSubscribersByCategory(category);

@@ -14,13 +14,18 @@ import {
   type FileMetadata,
 } from "../../domain/decorators/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
+import { ValidatorFactory } from "../../../../../shared/patterns/chain/message/ValidatorFactory.js";
+import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
 
 export class SendMessage {
+  private readonly validator = ValidatorFactory.createChain(5000);
+
   constructor(
     private readonly repository: IMessagingRepository,
     private readonly subject: ChatSubject,
     private readonly realtimeObserver: IChatObserver,
     private readonly idempotencyObserver: IChatObserver,
+    private readonly chatNotificationObserver: IChatObserver,
   ) {}
 
   private readonly uuidRegex =
@@ -44,13 +49,11 @@ export class SendMessage {
     const normalizedContent = content.trim();
     const normalizedMediaUrl = media?.mediaUrl?.trim() ?? "";
 
-    if (!normalizedContent && !normalizedMediaUrl) {
-      throw new Error("Debes enviar texto o una imagen.");
-    }
-
-    if (normalizedContent.length > 5000) {
-      throw new Error("content excede el máximo de 5000 caracteres.");
-    }
+    await this.validator.validate(normalizedContent, {
+      mediaUrl: normalizedMediaUrl || undefined,
+      mediaType: media?.mediaType?.trim() || undefined,
+      mediaFilename: media?.mediaFilename?.trim() || undefined,
+    });
 
     const conversation = await this.repository.getConversationById(
       normalizedConversationId,
@@ -58,7 +61,7 @@ export class SendMessage {
     );
 
     if (!conversation) {
-      throw new Error("Conversacion no encontrada.");
+      throw new NotFoundError("Conversacion no encontrada.");
     }
 
     const created = await this.repository.createMessage({
@@ -78,6 +81,7 @@ export class SendMessage {
     const channel = createDMChannel(conversation.participantA, conversation.participantB);
     this.subject.subscribe(channel, this.idempotencyObserver);
     this.subject.subscribe(channel, this.realtimeObserver);
+    this.subject.subscribe(channel, this.chatNotificationObserver);
 
     const payload = buildDecoratedPayload(created, {
       mediaUrl: created.mediaUrl,

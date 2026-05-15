@@ -2,6 +2,7 @@ import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import type { INotificationStrategy, NotificacionDTO, ResultadoEnvio } from "../INotificationStrategy.js";
 import type { IPreferenceService } from "../IPreferenceService.js";
+import type { IUserRepository } from "../IUserRepository.js";
 import { InAppWebSocketStrategy, type IStudyGroupSocketGateway } from "../InAppWebSocketStrategy.js";
 import { EmailInstitucionalStrategy, type IEmailGateway } from "../EmailInstitucionalStrategy.js";
 import { PushMovilStrategy, type IPushGateway } from "../PushMovilStrategy.js";
@@ -14,6 +15,14 @@ const dummyNotificacion: NotificacionDTO = {
   body: "Este es un cuerpo de prueba",
   payload: { key: "value" },
 };
+
+class MockUserRepository implements IUserRepository {
+  async getContactInfo(userId: string) {
+    return { email: `${userId}@ucaldas.edu.co`, pushToken: `push_${userId}` };
+  }
+}
+
+const mockUserRepository = new MockUserRepository();
 
 class MockStrategy implements INotificationStrategy {
   readonly canal: string;
@@ -88,8 +97,8 @@ describe("AC-02: Estrategias concretas tienen canal definido y retornan Resultad
     const mockPush: IPushGateway = { enviarPush: async () => {} };
 
     wsStrategy = new InAppWebSocketStrategy(mockGateway);
-    emailStrategy = new EmailInstitucionalStrategy(mockEmail);
-    pushStrategy = new PushMovilStrategy(mockPush);
+    emailStrategy = new EmailInstitucionalStrategy(mockEmail, mockUserRepository);
+    pushStrategy = new PushMovilStrategy(mockPush, mockUserRepository);
   });
 
   it("InAppWebSocketStrategy tiene canal 'in_app_websocket'", () => {
@@ -142,8 +151,8 @@ describe("AC-03: NotificationService no instancia estrategias internamente", () 
     const service = new NotificationService([], preferenceService);
 
     // Verificar que no existe método addStrategy
-    assert.equal((service as Record<string, unknown>).addStrategy, undefined);
-    assert.equal((service as Record<string, unknown>).addStrategies, undefined);
+    assert.equal((service as unknown as Record<string, unknown>).addStrategy, undefined);
+    assert.equal((service as unknown as Record<string, unknown>).addStrategies, undefined);
   });
 });
 
@@ -264,7 +273,7 @@ describe("AC-06: Open/Closed - nueva estrategia se añade sin modificar Notifica
     const preferenceService = new MockPreferenceService();
     preferenceService.setCanales(dummyNotificacion.userId, dummyNotificacion.type, ["slack", "email_institucional"]);
 
-    const service = new NotificationService([new SlackStrategy(), new EmailInstitucionalStrategy(mockEmail)], preferenceService);
+    const service = new NotificationService([new SlackStrategy(), new EmailInstitucionalStrategy(mockEmail, mockUserRepository)], preferenceService);
     const resumen = await service.notificar(dummyNotificacion);
 
     assert.equal(resumen.total, 2);

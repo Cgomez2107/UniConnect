@@ -25,7 +25,7 @@ export class TransferenciaPendienteState implements IStudyGroupState {
     this.previousState.reviewApplication(applicationId, status, reviewerId, applicantId, applicantName);
   }
 
-  requestAdminTransfer(_transferId: string, _actorUserId: string, _targetUserId: string, _currentState: string): Promise<void> {
+  async requestAdminTransfer(_transferId: string, _actorUserId: string, _targetUserId: string, _currentState: string): Promise<void> {
     throw new InvalidStateTransitionError("TransferenciaPendiente", "requestAdminTransfer", "Ya existe una transferencia de administrador pendiente para este grupo.");
   }
 

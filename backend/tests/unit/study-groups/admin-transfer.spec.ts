@@ -5,6 +5,7 @@ import { AcceptAdminTransfer } from "../../../services/study-groups/src/applicat
 import type { IAdminTransferRepository } from "../../../services/study-groups/src/domain/repositories/IAdminTransferRepository.js";
 import type { IStudyGroupRepository } from "../../../services/study-groups/src/domain/repositories/IStudyGroupRepository.js";
 import type { AdminTransfer } from "../../../services/study-groups/src/domain/entities/AdminTransfer.js";
+import type { StudyGroupSubject } from "../../../services/study-groups/src/domain/events/index.js";
 import { AbiertaState } from "../../../services/study-groups/src/domain/states/AbiertaState.js";
 import { CerradaState } from "../../../services/study-groups/src/domain/states/CerradaState.js";
 import { TransferenciaPendienteState } from "../../../services/study-groups/src/domain/states/TransferenciaPendienteState.js";
@@ -13,33 +14,75 @@ import type { ISubject } from "../../../services/study-groups/src/domain/events/
 import { InvalidStateTransitionError } from "../../../shared/libs/errors/InvalidStateTransitionError.js";
 import { NotFoundError } from "../../../shared/libs/errors/NotFoundError.js";
 
-const createMockRepository = (): IAdminTransferRepository => ({
-  getById: mock.fn(),
-  requestTransfer: mock.fn(),
-  acceptTransfer: mock.fn(),
-  leaveAdminRole: mock.fn(),
-});
+// ---------------------------------------------------------------------------
+// Mock refs — keep a reference to each mock.fn() so we can read .mock.calls
+// ---------------------------------------------------------------------------
 
-const createMockStudyGroupRepository = (): IStudyGroupRepository => ({
-  loadStudyGroup: mock.fn(),
-});
+interface MockRefs {
+  getById: ReturnType<typeof mock.fn>;
+  requestTransfer: ReturnType<typeof mock.fn>;
+  acceptTransfer: ReturnType<typeof mock.fn>;
+  leaveAdminRole: ReturnType<typeof mock.fn>;
+  emit: ReturnType<typeof mock.fn>;
+  loadStudyGroup: ReturnType<typeof mock.fn>;
+}
 
-const createMockSubject = (): ISubject => ({
-  subscribe: mock.fn(),
-  unsubscribe: mock.fn(),
-  emit: mock.fn(async () => {}),
-});
+function createMockRefs(): MockRefs {
+  return {
+    getById: mock.fn(),
+    requestTransfer: mock.fn(),
+    acceptTransfer: mock.fn(),
+    leaveAdminRole: mock.fn(),
+    emit: mock.fn(),
+    loadStudyGroup: mock.fn(),
+  };
+}
+
+function buildRepository(refs: MockRefs): IAdminTransferRepository {
+  return {
+    getById: refs.getById as unknown as IAdminTransferRepository["getById"],
+    requestTransfer: refs.requestTransfer as unknown as IAdminTransferRepository["requestTransfer"],
+    acceptTransfer: refs.acceptTransfer as unknown as IAdminTransferRepository["acceptTransfer"],
+    leaveAdminRole: refs.leaveAdminRole as unknown as IAdminTransferRepository["leaveAdminRole"],
+  };
+}
+
+function buildSubject(refs: MockRefs): StudyGroupSubject {
+  return {
+    observers: new Set(),
+    name: "mock",
+    emit: refs.emit,
+    subscribe: mock.fn(),
+    unsubscribe: mock.fn(),
+    getObserverCount: mock.fn(() => 0),
+    clear: mock.fn(),
+  } as unknown as StudyGroupSubject;
+}
+
+function buildStudyGroupRepo(refs: MockRefs): IStudyGroupRepository {
+  return {
+    loadStudyGroup: refs.loadStudyGroup as unknown as IStudyGroupRepository["loadStudyGroup"],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// RequestAdminTransfer (Integration)
+// ---------------------------------------------------------------------------
 
 describe("RequestAdminTransfer (Integration)", () => {
   it("emite el evento correcto tras una transferencia exitosa", async () => {
-    const mockStudyGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      new AbiertaState(),
-      createMockSubject(),
-    );
+    const refs = createMockRefs();
+    const mockSubject = buildSubject(refs);
+    const mockRepository = buildRepository(refs);
+    const mockStudyGroupRepository = buildStudyGroupRepo(refs);
+
+    const validationGroup = new StudyGroup("group-1", "Test Group", 5, 3, new AbiertaState(), { emit: async () => {}, subscribe: () => {}, unsubscribe: () => {} });
+    const mockStudyGroup = new StudyGroup("group-1", "Test Group", 5, 3, new AbiertaState(), mockSubject);
+    // First loadStudyGroup call uses a noOpSubject (validation), second uses mockSubject
+    const noOpSubject: ISubject = { emit: async () => {}, subscribe: () => {}, unsubscribe: () => {} };
+    refs.loadStudyGroup.mock.mockImplementation(async (_id: string, subject: ISubject) => {
+      return subject === mockSubject ? mockStudyGroup : validationGroup;
+    });
 
     const mockTransfer: AdminTransfer = {
       id: "transfer-1",
@@ -50,25 +93,9 @@ describe("RequestAdminTransfer (Integration)", () => {
       createdAt: new Date().toISOString(),
       respondedAt: null,
     };
+    refs.requestTransfer.mock.mockImplementation(async () => mockTransfer);
 
-    const mockRepository: IAdminTransferRepository = {
-      getById: mock.fn(),
-      requestTransfer: mock.fn(async () => mockTransfer),
-      acceptTransfer: mock.fn(),
-      leaveAdminRole: mock.fn(),
-    };
-
-    const mockStudyGroupRepository: IStudyGroupRepository = {
-      loadStudyGroup: mock.fn(async () => mockStudyGroup),
-    };
-
-    const mockSubject = mockStudyGroup.getSubject?.() || createMockSubject();
-
-    const useCase = new RequestAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject,
-    );
+    const useCase = new RequestAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
 
     await useCase.execute({
       requestId: "group-1",
@@ -76,9 +103,8 @@ describe("RequestAdminTransfer (Integration)", () => {
       targetUserId: "admin-new",
     });
 
-    // Validar que emit fue llamado
-    assert.strictEqual(mockSubject.emit.mock.calls.length, 1);
-    const emittedEvent = mockSubject.emit.mock.calls[0].arguments[0];
+    assert.strictEqual(refs.emit.mock.calls.length, 1);
+    const emittedEvent = refs.emit.mock.calls[0].arguments[0] as Record<string, unknown>;
     assert.strictEqual(emittedEvent.type, "TRANSFERENCIA_ADMIN_SOLICITADA");
     assert.strictEqual(emittedEvent.transferId, "transfer-1");
     assert.strictEqual(emittedEvent.groupId, "group-1");
@@ -87,106 +113,56 @@ describe("RequestAdminTransfer (Integration)", () => {
     assert.strictEqual(emittedEvent.currentState, "abierta");
     assert.strictEqual(emittedEvent.groupName, "Test Group");
 
-    // Validar que requestTransfer fue llamado
-    assert.strictEqual(mockRepository.requestTransfer.mock.calls.length, 1);
+    assert.strictEqual(refs.requestTransfer.mock.calls.length, 1);
   });
 
   it("lanza error al pedir transferencia en estado prohibido (Cerrada)", async () => {
-    const mockSubject = createMockSubject();
-    const mockClosedGroup = new StudyGroup(
-      "group-closed",
-      "Closed Group",
-      5,
-      3,
-      new CerradaState(),
-      mockSubject,
-    );
+    const refs = createMockRefs();
+    const mockSubject = buildSubject(refs);
+    const mockRepository = buildRepository(refs);
+    const mockStudyGroupRepository = buildStudyGroupRepo(refs);
 
-    const mockRepository: IAdminTransferRepository = {
-      getById: mock.fn(),
-      requestTransfer: mock.fn(),
-      acceptTransfer: mock.fn(),
-      leaveAdminRole: mock.fn(),
-    };
+    const mockClosedGroup = new StudyGroup("group-closed", "Closed Group", 5, 3, new CerradaState(), mockSubject);
+    refs.loadStudyGroup.mock.mockImplementation(async () => mockClosedGroup);
 
-    const mockStudyGroupRepository: IStudyGroupRepository = {
-      loadStudyGroup: mock.fn(async () => mockClosedGroup),
-    };
-
-    const useCase = new RequestAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject,
-    );
+    const useCase = new RequestAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
 
     await assert.rejects(
-      () =>
-        useCase.execute({
-          requestId: "group-closed",
-          actorUserId: "admin-old",
-          targetUserId: "admin-new",
-        }),
+      () => useCase.execute({ requestId: "group-closed", actorUserId: "admin-old", targetUserId: "admin-new" }),
       InvalidStateTransitionError,
     );
 
-    // Validar que no se llamó a requestTransfer
-    assert.strictEqual(mockRepository.requestTransfer.mock.calls.length, 0);
+    assert.strictEqual(refs.requestTransfer.mock.calls.length, 0);
   });
 
-  it("no persiste ni emite si la validación de estado falla", async () => {
-    const mockSubject = createMockSubject();
-    const baseState = new AbiertaState();
-    const pendingState = new TransferenciaPendienteState(baseState);
-    const mockPendingGroup = new StudyGroup(
-      "group-pending",
-      "Pending Transfer Group",
-      5,
-      3,
-      pendingState,
-      mockSubject,
-    );
+  it("no persiste ni emite si la validacion de estado falla", async () => {
+    const refs = createMockRefs();
+    const mockSubject = buildSubject(refs);
+    const mockRepository = buildRepository(refs);
+    const mockStudyGroupRepository = buildStudyGroupRepo(refs);
 
-    const mockRepository: IAdminTransferRepository = {
-      getById: mock.fn(),
-      requestTransfer: mock.fn(),
-      acceptTransfer: mock.fn(),
-      leaveAdminRole: mock.fn(),
-    };
+    const pendingState = new TransferenciaPendienteState(new AbiertaState());
+    const mockPendingGroup = new StudyGroup("group-pending", "Pending Transfer Group", 5, 3, pendingState, mockSubject);
+    refs.loadStudyGroup.mock.mockImplementation(async () => mockPendingGroup);
 
-    const mockStudyGroupRepository: IStudyGroupRepository = {
-      loadStudyGroup: mock.fn(async () => mockPendingGroup),
-    };
-
-    const useCase = new RequestAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject,
-    );
+    const useCase = new RequestAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
 
     await assert.rejects(
-      () =>
-        useCase.execute({
-          requestId: "group-pending",
-          actorUserId: "admin-old",
-          targetUserId: "admin-new",
-        }),
+      () => useCase.execute({ requestId: "group-pending", actorUserId: "admin-old", targetUserId: "admin-new" }),
       InvalidStateTransitionError,
     );
 
-    // Validar que no se persistió
-    assert.strictEqual(mockRepository.requestTransfer.mock.calls.length, 0);
+    assert.strictEqual(refs.requestTransfer.mock.calls.length, 0);
   });
 
   it("retorna el objeto AdminTransfer persistido", async () => {
-    const mockSubject = createMockSubject();
-    const mockStudyGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      new AbiertaState(),
-      mockSubject,
-    );
+    const refs = createMockRefs();
+    const mockSubject = buildSubject(refs);
+    const mockRepository = buildRepository(refs);
+    const mockStudyGroupRepository = buildStudyGroupRepo(refs);
+
+    const mockStudyGroup = new StudyGroup("group-1", "Test Group", 5, 3, new AbiertaState(), mockSubject);
+    refs.loadStudyGroup.mock.mockImplementation(async () => mockStudyGroup);
 
     const mockTransfer: AdminTransfer = {
       id: "transfer-uuid",
@@ -197,23 +173,9 @@ describe("RequestAdminTransfer (Integration)", () => {
       createdAt: new Date().toISOString(),
       respondedAt: null,
     };
+    refs.requestTransfer.mock.mockImplementation(async () => mockTransfer);
 
-    const mockRepository: IAdminTransferRepository = {
-      getById: mock.fn(),
-      requestTransfer: mock.fn(async () => mockTransfer),
-      acceptTransfer: mock.fn(),
-      leaveAdminRole: mock.fn(),
-    };
-
-    const mockStudyGroupRepository: IStudyGroupRepository = {
-      loadStudyGroup: mock.fn(async () => mockStudyGroup),
-    };
-
-    const useCase = new RequestAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject,
-    );
+    const useCase = new RequestAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
 
     const result = await useCase.execute({
       requestId: "group-1",
@@ -225,19 +187,20 @@ describe("RequestAdminTransfer (Integration)", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// AcceptAdminTransfer (Integration)
+// ---------------------------------------------------------------------------
+
 describe("AcceptAdminTransfer (Integration)", () => {
-  it("emite el evento correcto tras aceptación exitosa", async () => {
-    const mockSubject = createMockSubject();
-    const baseState = new AbiertaState();
-    const pendingState = new TransferenciaPendienteState(baseState);
-    const mockPendingGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      pendingState,
-      mockSubject,
-    );
+  it("emite el evento correcto tras aceptacion exitosa", async () => {
+    const refs = createMockRefs();
+    const mockSubject = buildSubject(refs);
+    const mockRepository = buildRepository(refs);
+    const mockStudyGroupRepository = buildStudyGroupRepo(refs);
+
+    const pendingState = new TransferenciaPendienteState(new AbiertaState());
+    const mockPendingGroup = new StudyGroup("group-1", "Test Group", 5, 3, pendingState, mockSubject);
+    refs.loadStudyGroup.mock.mockImplementation(async () => mockPendingGroup);
 
     const mockTransfer: AdminTransfer = {
       id: "transfer-1",
@@ -248,32 +211,14 @@ describe("AcceptAdminTransfer (Integration)", () => {
       createdAt: new Date().toISOString(),
       respondedAt: null,
     };
+    refs.getById.mock.mockImplementation(async () => mockTransfer);
 
-    const mockRepository: IAdminTransferRepository = {
-      getById: mock.fn(async () => mockTransfer),
-      requestTransfer: mock.fn(),
-      acceptTransfer: mock.fn(),
-      leaveAdminRole: mock.fn(),
-    };
+    const useCase = new AcceptAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
 
-    const mockStudyGroupRepository: IStudyGroupRepository = {
-      loadStudyGroup: mock.fn(async () => mockPendingGroup),
-    };
+    await useCase.execute({ transferId: "transfer-1", actorUserId: "admin-new" });
 
-    const useCase = new AcceptAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject,
-    );
-
-    await useCase.execute({
-      transferId: "transfer-1",
-      actorUserId: "admin-new",
-    });
-
-    // Validar que emit fue llamado
-    assert.strictEqual(mockSubject.emit.mock.calls.length, 1);
-    const emittedEvent = mockSubject.emit.mock.calls[0].arguments[0];
+    assert.strictEqual(refs.emit.mock.calls.length, 1);
+    const emittedEvent = refs.emit.mock.calls[0].arguments[0] as Record<string, unknown>;
     assert.strictEqual(emittedEvent.type, "TRANSFERENCIA_ADMIN_ACEPTADA");
     assert.strictEqual(emittedEvent.transferId, "transfer-1");
     assert.strictEqual(emittedEvent.groupId, "group-1");
@@ -282,54 +227,34 @@ describe("AcceptAdminTransfer (Integration)", () => {
     assert.strictEqual(emittedEvent.newState, "abierta");
     assert.strictEqual(emittedEvent.acceptedBy, "admin-new");
 
-    // Validar que acceptTransfer fue llamado
-    assert.strictEqual(mockRepository.acceptTransfer.mock.calls.length, 1);
+    assert.strictEqual(refs.acceptTransfer.mock.calls.length, 1);
   });
 
   it("lanza NotFoundError si la transferencia no existe", async () => {
-    const mockSubject = createMockSubject();
+    const refs = createMockRefs();
+    const mockSubject = buildSubject(refs);
+    const mockRepository = buildRepository(refs);
+    const mockStudyGroupRepository = buildStudyGroupRepo(refs);
+    refs.getById.mock.mockImplementation(async () => null);
 
-    const mockRepository: IAdminTransferRepository = {
-      getById: mock.fn(async () => null),
-      requestTransfer: mock.fn(),
-      acceptTransfer: mock.fn(),
-      leaveAdminRole: mock.fn(),
-    };
-
-    const mockStudyGroupRepository: IStudyGroupRepository = {
-      loadStudyGroup: mock.fn(),
-    };
-
-    const useCase = new AcceptAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject,
-    );
+    const useCase = new AcceptAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
 
     await assert.rejects(
-      () =>
-        useCase.execute({
-          transferId: "nonexistent",
-          actorUserId: "admin-new",
-        }),
+      () => useCase.execute({ transferId: "nonexistent", actorUserId: "admin-new" }),
       NotFoundError,
     );
 
-    // Validar que no se persistió
-    assert.strictEqual(mockRepository.acceptTransfer.mock.calls.length, 0);
+    assert.strictEqual(refs.acceptTransfer.mock.calls.length, 0);
   });
 
   it("lanza error al aceptar en estado prohibido (no hay transferencia pendiente)", async () => {
-    const mockSubject = createMockSubject();
-    // El grupo está en estado Abierta (sin transferencia pendiente)
-    const mockAbiertaGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      new AbiertaState(),
-      mockSubject,
-    );
+    const refs = createMockRefs();
+    const mockSubject = buildSubject(refs);
+    const mockRepository = buildRepository(refs);
+    const mockStudyGroupRepository = buildStudyGroupRepo(refs);
+
+    const mockAbiertaGroup = new StudyGroup("group-1", "Test Group", 5, 3, new AbiertaState(), mockSubject);
+    refs.loadStudyGroup.mock.mockImplementation(async () => mockAbiertaGroup);
 
     const mockTransfer: AdminTransfer = {
       id: "transfer-1",
@@ -340,57 +265,38 @@ describe("AcceptAdminTransfer (Integration)", () => {
       createdAt: new Date().toISOString(),
       respondedAt: null,
     };
+    refs.getById.mock.mockImplementation(async () => mockTransfer);
 
-    const mockRepository: IAdminTransferRepository = {
-      getById: mock.fn(async () => mockTransfer),
-      requestTransfer: mock.fn(),
-      acceptTransfer: mock.fn(),
-      leaveAdminRole: mock.fn(),
-    };
-
-    const mockStudyGroupRepository: IStudyGroupRepository = {
-      loadStudyGroup: mock.fn(async () => mockAbiertaGroup),
-    };
-
-    const useCase = new AcceptAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      mockSubject,
-    );
+    const useCase = new AcceptAdminTransfer(mockRepository, mockStudyGroupRepository, mockSubject);
 
     await assert.rejects(
-      () =>
-        useCase.execute({
-          transferId: "transfer-1",
-          actorUserId: "admin-new",
-        }),
+      () => useCase.execute({ transferId: "transfer-1", actorUserId: "admin-new" }),
       InvalidStateTransitionError,
     );
 
-    // Validar que no se persistió
-    assert.strictEqual(mockRepository.acceptTransfer.mock.calls.length, 0);
+    assert.strictEqual(refs.acceptTransfer.mock.calls.length, 0);
   });
 
-  it("no persiste si la emisión del evento falla", async () => {
-    // Mock el subject para que lance un error
-    const failingSubject: ISubject = {
-      emit: mock.fn(async () => {
-        throw new Error("Event emission failed");
-      }),
+  it("no persiste si la emision del evento falla", async () => {
+    const refs = createMockRefs();
+    const mockRepository = buildRepository(refs);
+    const mockStudyGroupRepository = buildStudyGroupRepo(refs);
+
+    const emitRef = mock.fn(async () => { throw new Error("Event emission failed"); });
+
+    const failingSubject: StudyGroupSubject = {
+      observers: new Set(),
+      name: "failing",
+      emit: emitRef,
       subscribe: mock.fn(),
       unsubscribe: mock.fn(),
-    };
+      getObserverCount: mock.fn(() => 0),
+      clear: mock.fn(),
+    } as unknown as StudyGroupSubject;
 
-    const baseState = new AbiertaState();
-    const pendingState = new TransferenciaPendienteState(baseState);
-    const mockPendingGroup = new StudyGroup(
-      "group-1",
-      "Test Group",
-      5,
-      3,
-      pendingState,
-      failingSubject,
-    );
+    const pendingState = new TransferenciaPendienteState(new AbiertaState());
+    const mockPendingGroup = new StudyGroup("group-1", "Test Group", 5, 3, pendingState, failingSubject);
+    refs.loadStudyGroup.mock.mockImplementation(async () => mockPendingGroup);
 
     const mockTransfer: AdminTransfer = {
       id: "transfer-1",
@@ -401,35 +307,15 @@ describe("AcceptAdminTransfer (Integration)", () => {
       createdAt: new Date().toISOString(),
       respondedAt: null,
     };
+    refs.getById.mock.mockImplementation(async () => mockTransfer);
 
-    const mockRepository: IAdminTransferRepository = {
-      getById: mock.fn(async () => mockTransfer),
-      requestTransfer: mock.fn(),
-      acceptTransfer: mock.fn(),
-      leaveAdminRole: mock.fn(),
-    };
-
-    const mockStudyGroupRepository: IStudyGroupRepository = {
-      loadStudyGroup: mock.fn(async () => mockPendingGroup),
-    };
-
-    const useCase = new AcceptAdminTransfer(
-      mockRepository,
-      mockStudyGroupRepository,
-      failingSubject,
-    );
+    const useCase = new AcceptAdminTransfer(mockRepository, mockStudyGroupRepository, failingSubject);
 
     await assert.rejects(
-      () =>
-        useCase.execute({
-          transferId: "transfer-1",
-          actorUserId: "admin-new",
-        }),
+      () => useCase.execute({ transferId: "transfer-1", actorUserId: "admin-new" }),
       Error,
     );
 
-    // Validar que no se persistió
-    assert.strictEqual(mockRepository.acceptTransfer.mock.calls.length, 0);
+    assert.strictEqual(refs.acceptTransfer.mock.calls.length, 0);
   });
 });
-

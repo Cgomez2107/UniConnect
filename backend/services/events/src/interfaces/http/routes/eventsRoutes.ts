@@ -60,6 +60,12 @@ export async function handleEventsRoutes(
     return true;
   }
 
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/eventos/suscripciones") {
+    if (!subscriptionController) { sendJson(res, 500, { error: "Subscription not available" }); return true; }
+    await subscriptionController.getSubscriptions(req, res);
+    return true;
+  }
+
   if (req.method === "DELETE" && requestUrl.pathname === "/api/v1/eventos/suscribir") {
     if (!subscriptionController) { sendJson(res, 500, { error: "Subscription not available" }); return true; }
     await subscriptionController.unsubscribe(req, res);

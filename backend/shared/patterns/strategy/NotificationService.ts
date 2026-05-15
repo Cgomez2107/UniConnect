@@ -1,5 +1,6 @@
 import type { INotificationStrategy, NotificacionDTO, ResultadoEnvio } from "./INotificationStrategy.js";
 import type { IPreferenceService } from "./IPreferenceService.js";
+import { sanitizeError } from "../../libs/errors/sanitizeError.js";
 
 export interface ResumenNotificacion {
   readonly total: number;
@@ -33,7 +34,7 @@ export class NotificationService {
     const envios: ResultadoEnvio[] = resultados.map(r =>
       r.status === "fulfilled"
         ? r.value
-        : { canal: "unknown", exitoso: false, error: (r.reason as Error)?.message ?? "Unknown error", timestamp: new Date().toISOString() },
+        : { canal: "unknown", exitoso: false, error: sanitizeError(r.reason), timestamp: new Date().toISOString() },
     );
 
     return {

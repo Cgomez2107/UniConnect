@@ -79,6 +79,7 @@ export class EventsController {
         startAt: body.startAt ?? "",
         endAt: body.endAt ?? "",
         category: body.category,
+        imageUrl: body.imageUrl,
         maxCapacity: body.maxCapacity,
       });
 
