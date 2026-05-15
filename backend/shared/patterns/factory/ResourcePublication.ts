@@ -5,7 +5,7 @@
  * Campos específicos: tipo de recurso, materia, archivo, licencia
  */
 
-import { Publication } from './Publication';
+import { Publication } from './Publication.js';
 
 export type ResourceType = 'apuntes' | 'ejercicios' | 'resumen' | 'examen' | 'presentacion' | 'libro' | 'otro';
 

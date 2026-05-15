@@ -39,7 +39,11 @@ yarn-error.*
 
 app-examples/
 
-.agent/
-.opencode/
-openspec/
-.gemini/
+openspec/*
+.agent/*
+.agents/*
+.gpt/*
+.gemini/*
+.github/*
+.opencode/*
+skills-lock.json

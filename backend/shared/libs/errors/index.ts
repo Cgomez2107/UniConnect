@@ -8,6 +8,7 @@ export { DomainError } from "./DomainError.js";
 export { ContentError } from "./ContentError.js";
 export { SizeError } from "./SizeError.js";
 export { MediaError } from "./MediaError.js";
+export { PermissionError } from "./PermissionError.js";
 export { mapErrorToHttpStatus } from "./mapHttpStatus.js";
 export { sanitizeError } from "./sanitizeError.js";
 
@@ -21,4 +22,5 @@ export type ErrorType =
   | "ContentError"
   | "SizeError"
   | "MediaError"
+  | "PermissionError"
   | "Unknown";

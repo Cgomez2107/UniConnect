@@ -61,6 +61,10 @@ function isEventsRoute(pathname: string): boolean {
   );
 }
 
+function isForumRoute(pathname: string): boolean {
+  return pathname === "/api/v1/forum" || pathname.startsWith("/api/v1/forum/");
+}
+
 function isAuthRoute(pathname: string): boolean {
   return pathname.startsWith("/api/v1/auth");
 }
@@ -285,6 +289,11 @@ async function handleRequest(
 
   if (isEventsRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.eventsBaseUrl);
+    return;
+  }
+
+  if (isForumRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.forumBaseUrl);
     return;
   }
 

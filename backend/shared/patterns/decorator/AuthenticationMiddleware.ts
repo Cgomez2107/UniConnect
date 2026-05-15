@@ -5,7 +5,7 @@
  * Extrae userId del token y lo agrega al request
  */
 
-import Middleware, { Request, Response, NextFunction } from './Middleware';
+import Middleware, { Request, Response, NextFunction } from './Middleware.js';
 
 export class AuthenticationMiddleware extends Middleware {
   

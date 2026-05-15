@@ -10,7 +10,7 @@ export {
   IEmailService,
   IProfileService,
   IConfigurationService,
-} from './RegistrationFacade';
+} from './RegistrationFacade.js';
 
 export {
   StudyGroupFacade,
@@ -20,4 +20,4 @@ export {
   IGroupMembershipService,
   IGroupConfigService,
   INotificationService,
-} from './StudyGroupFacade';
+} from './StudyGroupFacade.js';

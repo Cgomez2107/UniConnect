@@ -2,9 +2,9 @@
  * Exports del patrón Observer
  */
 
-export { EventEmitter, Observer, DomainEvent } from './EventEmitter';
-export { AppNotificationObserver } from './AppNotificationObserver';
-export { EmailNotificationObserver } from './EmailNotificationObserver';
-export { PendingCounterObserver } from './PendingCounterObserver';
-export { EventBus, EventBusBuilder } from './EventBus';
-export { EventFactory } from './EventFactory';
+export { EventEmitter, Observer, DomainEvent } from './EventEmitter.js';
+export { AppNotificationObserver } from './AppNotificationObserver.js';
+export { EmailNotificationObserver } from './EmailNotificationObserver.js';
+export { PendingCounterObserver } from './PendingCounterObserver.js';
+export { EventBus, EventBusBuilder } from './EventBus.js';
+export { EventFactory } from './EventFactory.js';

@@ -17,13 +17,14 @@ export class UniversityEventObserver implements IObserver {
 
   async handle(event: UniversityEvent): Promise<void> {
     if (event.type !== "NUEVO_EVENTO") return;
-    if (!this.socketGateway) return;
+    const gateway = this.socketGateway;
+    if (!gateway) return;
 
     const category = event.category;
     const subscribers = await this.subscriptionRepository.getSubscribersByCategory(category);
 
     const promises = subscribers.map(userId =>
-      this.socketGateway.emitToUser(userId, "NUEVO_EVENTO", event.payload as unknown as Record<string, unknown>)
+      gateway.emitToUser(userId, "NUEVO_EVENTO", event.payload as unknown as Record<string, unknown>)
         .catch(err => {
           console.error(`[UniversityEventObserver] Failed to emit to user ${userId}:`, err);
         }),

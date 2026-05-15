@@ -66,7 +66,7 @@ class MockPreferenceService implements IPreferenceService {
     this.canales.set(`${userId}:${eventType}`, canales);
   }
 
-  async getCanalesActivos(userId: string, eventType: string): Promise<string[]> {
+  async getCanalesActivos(userId: string, eventType: string, _priority?: string): Promise<string[]> {
     return this.canales.get(`${userId}:${eventType}`) ?? [];
   }
 

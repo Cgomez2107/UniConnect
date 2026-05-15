@@ -34,7 +34,7 @@ function createSpy<Args extends unknown[], Return>(): SpyFn<Args, Return> {
 }
 
 const DUMMY_EVENT: StudyGroupEvent = {
-  type: "SOLICITUD_INGRESO",
+  type: "JOIN_REQUEST",
   version: "1.0",
   timestamp: new Date("2026-05-11T12:00:00.000Z"),
   requestId: "req-integration",

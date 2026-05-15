@@ -41,7 +41,7 @@
  * TODO SIMULTÁNEAMENTE, sin que el Use Case sepa de ellos.
  */
 
-import { EventEmitter, DomainEvent, Observer } from './EventEmitter';
+import { EventEmitter, DomainEvent, Observer } from './EventEmitter.js';
 
 export class EventBus extends EventEmitter {
   private static instance: EventBus;

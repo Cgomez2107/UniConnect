@@ -16,6 +16,8 @@
     "../../shared/libs/validation/validateDto.ts",
     "../../shared/libs/validation/index.ts",
     "../../shared/patterns/strategy/*.ts",
-    "../../shared/patterns/decorator/notification/*.ts"
+    "../../shared/patterns/decorator/notification/*.ts",
+    "../../shared/patterns/observer/*.ts",
+    "../../shared/patterns/facade/StudyGroupFacade.ts"
   ]
 }

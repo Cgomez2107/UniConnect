@@ -10,10 +10,10 @@ function makeEvent(overrides: Partial<StudyGroupEvent> & { type: StudyGroupEvent
   return overrides as StudyGroupEvent;
 }
 
-describe("NotificationMapper — SOLICITUD_INGRESO", () => {
+describe("NotificationMapper — JOIN_REQUEST", () => {
   it("mapea correctamente un evento completo", () => {
     const event: StudyGroupEvent = {
-      type: "SOLICITUD_INGRESO",
+      type: "JOIN_REQUEST",
       version: "1.0",
       timestamp: BASE_TIME,
       requestId: "req-001",
@@ -43,7 +43,7 @@ describe("NotificationMapper — SOLICITUD_INGRESO", () => {
 
   it("persistence y dto comparten userId, type, title, body, payload", () => {
     const event: StudyGroupEvent = {
-      type: "SOLICITUD_INGRESO",
+      type: "JOIN_REQUEST",
       version: "1.0",
       timestamp: BASE_TIME,
       requestId: "req-002",
@@ -64,10 +64,10 @@ describe("NotificationMapper — SOLICITUD_INGRESO", () => {
   });
 });
 
-describe("NotificationMapper — MIEMBRO_ACEPTADO", () => {
+describe("NotificationMapper — MEMBER_ACCEPTED", () => {
   it("mapea correctamente", () => {
     const event: StudyGroupEvent = {
-      type: "MIEMBRO_ACEPTADO",
+      type: "MEMBER_ACCEPTED",
       version: "1.0",
       timestamp: BASE_TIME,
       applicationId: "app-001",
@@ -87,10 +87,10 @@ describe("NotificationMapper — MIEMBRO_ACEPTADO", () => {
   });
 });
 
-describe("NotificationMapper — MIEMBRO_RECHAZADO", () => {
+describe("NotificationMapper — MEMBER_REJECTED", () => {
   it("mapea correctamente sin groupName", () => {
     const event: StudyGroupEvent = {
-      type: "MIEMBRO_RECHAZADO",
+      type: "MEMBER_REJECTED",
       version: "1.0",
       timestamp: BASE_TIME,
       applicationId: "app-002",
@@ -108,17 +108,17 @@ describe("NotificationMapper — MIEMBRO_RECHAZADO", () => {
   });
 });
 
-describe("NotificationMapper — TRANSFERENCIA_ADMIN_SOLICITADA", () => {
+describe("NotificationMapper — ADMIN_TRANSFER_REQUESTED", () => {
   it("mapea usando newAdminId como destinatario y priority urgente", () => {
     const event: StudyGroupEvent = {
-      type: "TRANSFERENCIA_ADMIN_SOLICITADA",
+      type: "ADMIN_TRANSFER_REQUESTED",
       version: "1.0",
       timestamp: BASE_TIME,
       transferId: "trf-001",
       groupId: "grp-001",
       oldAdminId: "user-old-admin",
       newAdminId: "user-new-admin",
-      currentState: "abierta",
+      newState: "PendienteTransferencia",
       groupName: "Grupo de Quimica",
     };
 
@@ -132,17 +132,17 @@ describe("NotificationMapper — TRANSFERENCIA_ADMIN_SOLICITADA", () => {
   });
 });
 
-describe("NotificationMapper — TRANSFERENCIA_ADMIN_ACEPTADA", () => {
+describe("NotificationMapper — ADMIN_TRANSFER_ACCEPTED", () => {
   it("mapea usando oldAdminId como destinatario", () => {
     const event: StudyGroupEvent = {
-      type: "TRANSFERENCIA_ADMIN_ACEPTADA",
+      type: "ADMIN_TRANSFER_ACCEPTED",
       version: "1.0",
       timestamp: BASE_TIME,
       transferId: "trf-002",
       groupId: "grp-001",
       oldAdminId: "user-old-admin",
       newAdminId: "user-new-admin",
-      newState: "abierta",
+      newState: "TransferenciaAceptada",
       acceptedBy: "user-new-admin",
     };
 
@@ -161,28 +161,28 @@ describe("NotificationMapper — edge cases", () => {
   it("cada mapeo retorna tanto persistence como dto", () => {
     const events: StudyGroupEvent[] = [
       {
-        type: "SOLICITUD_INGRESO", version: "1.0", timestamp: BASE_TIME,
+        type: "JOIN_REQUEST", version: "1.0", timestamp: BASE_TIME,
         requestId: "r", applicantId: "a", recipientUserId: "b",
         message: "m", groupName: "g", applicantName: "n",
       },
       {
-        type: "MIEMBRO_ACEPTADO", version: "1.0", timestamp: BASE_TIME,
+        type: "MEMBER_ACCEPTED", version: "1.0", timestamp: BASE_TIME,
         applicationId: "a", requestId: "r", applicantId: "b",
         applicantName: "n", approvedBy: "ab", groupName: "g",
       },
       {
-        type: "MIEMBRO_RECHAZADO", version: "1.0", timestamp: BASE_TIME,
+        type: "MEMBER_REJECTED", version: "1.0", timestamp: BASE_TIME,
         applicationId: "a", requestId: "r", applicantId: "b", rejectedBy: "rb",
       },
       {
-        type: "TRANSFERENCIA_ADMIN_SOLICITADA", version: "1.0", timestamp: BASE_TIME,
+        type: "ADMIN_TRANSFER_REQUESTED", version: "1.0", timestamp: BASE_TIME,
         transferId: "t", groupId: "g", oldAdminId: "oa", newAdminId: "na",
-        currentState: "abierta", groupName: "gn",
+        newState: "PendienteTransferencia", groupName: "gn",
       },
       {
-        type: "TRANSFERENCIA_ADMIN_ACEPTADA", version: "1.0", timestamp: BASE_TIME,
+        type: "ADMIN_TRANSFER_ACCEPTED", version: "1.0", timestamp: BASE_TIME,
         transferId: "t", groupId: "g", oldAdminId: "oa", newAdminId: "na",
-        newState: "abierta", acceptedBy: "ab",
+        newState: "TransferenciaAceptada", acceptedBy: "ab",
       },
     ];
 

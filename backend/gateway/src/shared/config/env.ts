@@ -31,6 +31,7 @@ export interface GatewayEnv {
   readonly profilesCatalogBaseUrl: string;
   readonly eventsBaseUrl: string;
   readonly authBaseUrl: string;
+  readonly forumBaseUrl: string;
   readonly jwtAccessSecret: string;
 }
 
@@ -62,6 +63,7 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
 
   const profilesCatalogBaseUrl = requireEnv(source, "PROFILES_CATALOG_BASE_URL");
   const eventsBaseUrl = requireEnv(source, "EVENTS_BASE_URL");
+  const forumBaseUrl = requireEnv(source, "FORUM_BASE_URL");
   const authBaseUrl = requireEnv(source, "AUTH_BASE_URL");
   const jwtAccessSecret = requireEnv(source, "JWT_ACCESS_SECRET");
 
@@ -73,6 +75,7 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
     messagingBaseUrl,
     profilesCatalogBaseUrl,
     eventsBaseUrl,
+    forumBaseUrl,
     authBaseUrl,
     jwtAccessSecret,
   };

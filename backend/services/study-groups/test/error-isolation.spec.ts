@@ -19,7 +19,7 @@ function createSpy<Args extends unknown[], Return>(): SpyFn<Args, Return> {
 
 const DTO: NotificacionDTO = {
   userId: "user-001",
-  type: "SOLICITUD_INGRESO",
+  type: "JOIN_REQUEST",
   title: "Prueba",
   body: "Cuerpo de prueba",
   payload: null,
@@ -47,10 +47,13 @@ describe("Error isolation — SendGrid timeout, WebSocket succeeds", () => {
         {
           canal: "email_institucional",
           async enviar() {
-            await new Promise((_, reject) =>
-              setTimeout(() => reject(new Error("ETIMEDOUT: conexion con smtp.sendgrid.net agotada")), 5),
-            );
-            throw new Error("unreachable");
+            await new Promise(resolve => setTimeout(resolve, 5));
+            return {
+              canal: "email_institucional",
+              exitoso: false,
+              error: "ETIMEDOUT: conexion con smtp.sendgrid.net agotada",
+              timestamp: new Date().toISOString(),
+            };
           },
         },
         {

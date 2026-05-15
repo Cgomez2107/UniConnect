@@ -7,7 +7,7 @@
  * - Mostrar notificación in-app
  */
 
-import { Observer, DomainEvent } from './EventEmitter';
+import { Observer, DomainEvent } from './EventEmitter.js';
 
 export class AppNotificationObserver implements Observer {
   

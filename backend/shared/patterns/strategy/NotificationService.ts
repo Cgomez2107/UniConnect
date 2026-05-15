@@ -17,14 +17,25 @@ export class NotificationService {
 
   async notificar(notificacion: NotificacionDTO): Promise<ResumenNotificacion> {
     const canalesActivos = await this.preferenceService
-      .getCanalesActivos(notificacion.userId, notificacion.type);
+      .getCanalesActivos(notificacion.userId, notificacion.type, notificacion.priority);
 
     const estrategiasActivas = this.strategies.filter(
       s => canalesActivos.includes(s.canal),
     );
 
     const resultados = await Promise.allSettled(
-      estrategiasActivas.map(s => s.enviar(notificacion)),
+      estrategiasActivas.map(async s => {
+        try {
+          return await s.enviar(notificacion);
+        } catch (err) {
+          return {
+            canal: s.canal,
+            exitoso: false,
+            error: sanitizeError(err),
+            timestamp: new Date().toISOString(),
+          } as ResultadoEnvio;
+        }
+      }),
     );
 
     return this.compilarResumen(resultados);

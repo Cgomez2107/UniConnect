@@ -5,7 +5,7 @@
  * Campos específicos: materia, horarios disponibles, modalidad (presencial/virtual)
  */
 
-import { Publication } from './Publication';
+import { Publication } from './Publication.js';
 
 export interface StudyCompanionSpecificFields {
   subjectId: string;

@@ -169,3 +169,40 @@ describe("CH01 — ValidatorFactory", () => {
     assert.equal(content, "  hola  ");
   });
 });
+
+describe("CH01 — manejar() retorna ResultadoValidacion", () => {
+  it("retorna valido:true cuando la validacion pasa", async () => {
+    const chain = ValidatorFactory.createChain(5000, ["spam"]);
+    const res = await chain.manejar("Hola mundo");
+    assert.equal(res.valido, true);
+    assert.equal(res.codigoError, undefined);
+  });
+
+  it("retorna valido:false con codigoError cuando falla por contenido", async () => {
+    const chain = ValidatorFactory.createChain(5000, ["spam"]);
+    const res = await chain.manejar("mensaje con spam");
+    assert.equal(res.valido, false);
+    assert.equal(res.codigoError, "ContentError");
+  });
+
+  it("retorna valido:false con codigoError cuando falla por tamaño", async () => {
+    const chain = ValidatorFactory.createChain(5, []);
+    const res = await chain.manejar("123456");
+    assert.equal(res.valido, false);
+    assert.equal(res.codigoError, "SizeError");
+  });
+
+  it("retorna valido:false con codigoError cuando falla por media", async () => {
+    const chain = ValidatorFactory.createChain(5000, []);
+    const res = await chain.manejar("", { mediaUrl: "file.exe", mediaType: "application/x-msdownload" });
+    assert.equal(res.valido, false);
+    assert.equal(res.codigoError, "MediaError");
+  });
+
+  it("retorna valido:false con mensajeError descriptivo", async () => {
+    const chain = ValidatorFactory.createChain(5, []);
+    const res = await chain.manejar("123456");
+    assert.equal(res.valido, false);
+    assert.ok(res.mensajeError!.includes("demasiado largo"));
+  });
+});

@@ -10,6 +10,14 @@
     "src/**/*.ts",
     "src/**/*.d.ts",
     "test/**/*.ts",
-    "../shared/libs/config/requiredEnv.ts"
+    "../shared/libs/config/requiredEnv.ts",
+    "../shared/patterns/decorator/*.ts",
+    "../shared/patterns/facade/*.ts",
+    "../shared/libs/logging/Logger.ts",
+    "../shared/libs/database/DatabaseHandler.ts",
+    "../shared/http/index.ts",
+    "../shared/libs/config/index.ts",
+    "../shared/libs/index.ts",
+    "../shared/patterns/index.ts"
   ]
 }

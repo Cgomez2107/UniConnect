@@ -2,8 +2,8 @@
  * Exports del patrón Decorator
  */
 
-export { Middleware, IMiddleware, Request, Response, NextFunction } from './Middleware';
-export { AuthenticationMiddleware } from './AuthenticationMiddleware';
-export { EmailVerificationMiddleware } from './EmailVerificationMiddleware';
-export { SemesterCheckMiddleware } from './SemesterCheckMiddleware';
-export { MiddlewareChainBuilder, MiddlewareChain } from './MiddlewareChainBuilder';
+export { Middleware, IMiddleware, Request, Response, NextFunction } from './Middleware.js';
+export { AuthenticationMiddleware } from './AuthenticationMiddleware.js';
+export { EmailVerificationMiddleware } from './EmailVerificationMiddleware.js';
+export { SemesterCheckMiddleware } from './SemesterCheckMiddleware.js';
+export { MiddlewareChainBuilder, MiddlewareChain } from './MiddlewareChainBuilder.js';
