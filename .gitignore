@@ -42,4 +42,9 @@ app-examples/
 # Ignore local agent/tooling folders
 .agent/
 .opencode/
-.github/
+
+# Build cache
+**/.turbo/
+
+# Local spec docs
+openspec/
