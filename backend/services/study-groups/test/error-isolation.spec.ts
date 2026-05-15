@@ -19,7 +19,7 @@ function createSpy<Args extends unknown[], Return>(): SpyFn<Args, Return> {
 
 const DTO: NotificacionDTO = {
   userId: "user-001",
-  type: "SOLICITUD_INGRESO",
+  type: "JOIN_REQUEST",
   title: "Prueba",
   body: "Cuerpo de prueba",
   payload: null,

@@ -5,19 +5,19 @@ import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGrou
 import type { StudyGroupSubject } from "../../domain/events/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
-export interface AcceptAdminTransferInput {
+export interface RejectAdminTransferInput {
   readonly transferId: string;
   readonly actorUserId: string;
 }
 
-export class AcceptAdminTransfer {
+export class RejectAdminTransfer {
   constructor(
     private readonly repository: IAdminTransferRepository,
     private readonly studyGroupRepository: IStudyGroupRepository,
     private readonly subject: StudyGroupSubject,
   ) {}
 
-  async execute(input: AcceptAdminTransferInput): Promise<void> {
+  async execute(input: RejectAdminTransferInput): Promise<void> {
     const transferId = requireTrimmed(input.transferId, "transferId");
     const actorUserId = requireTrimmed(input.actorUserId, "actorUserId");
 
@@ -27,7 +27,7 @@ export class AcceptAdminTransfer {
     }
 
     if (transfer.toUserId !== actorUserId) {
-      throw new AuthorizationError("No autorizado para aceptar esta transferencia.");
+      throw new AuthorizationError("No autorizado para rechazar esta transferencia.");
     }
 
     const group = await this.studyGroupRepository.loadStudyGroup(
@@ -35,8 +35,11 @@ export class AcceptAdminTransfer {
       this.subject,
     );
 
-    await group.acceptAdminTransfer(transferId);
+    await group.rejectAdminTransfer();
 
-    await group.transferAdmin();
+    await this.repository.rejectTransfer({
+      transferId,
+      actorUserId,
+    });
   }
 }

@@ -10,11 +10,13 @@ import { ListUserNotifications } from "./application/use-cases/ListUserNotificat
 import { ListMembersByRequest } from "./application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
 import { LeaveAdminRole } from "./application/use-cases/LeaveAdminRole.js";
+import { RejectAdminTransfer } from "./application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
-import { NotificationObserver, StudyGroupSubject } from "./domain/events/index.js";
+import { NotificationObserver, PersistenceObserver, StudyGroupSubject } from "./domain/events/index.js";
+import { StudyGroupMembershipService } from "./domain/services/StudyGroupMembershipService.js";
 import type { IAdminTransferRepository } from "./domain/repositories/IAdminTransferRepository.js";
 import type { IApplicationRepository } from "./domain/repositories/IApplicationRepository.js";
 import type { INotificationRepository } from "./domain/repositories/INotificationRepository.js";
@@ -92,7 +94,7 @@ function createRepository(
   );
 
   const inMemoryRepo = new InMemoryStudyRequestRepository();
-  return { studyRequest: inMemoryRepo, studyGroup: inMemoryRepo as unknown as IStudyGroupRepository };
+  return { studyRequest: inMemoryRepo, studyGroup: inMemoryRepo };
 }
 
 function createApplicationRepository(
@@ -207,6 +209,11 @@ function bootstrap(): void {
   const subject = new StudyGroupSubject();
   subject.subscribe(notificationObserver);
 
+  const persistenceObserver = new PersistenceObserver(adminTransferRepository);
+  subject.subscribe(persistenceObserver);
+
+  const membershipService = new StudyGroupMembershipService(subject);
+
   const groupChatSubject = new GroupChatSubject("study-groups-chat");
   const mockRealtimeService: IGroupRealtimeService = {
     async broadcast(channel, message) {
@@ -249,12 +256,14 @@ function bootstrap(): void {
     repository,
     studyGroupRepository,
     subject,
+    membershipService,
   );
   const reviewApplication = new ReviewApplication(
     applicationRepository,
     studyGroupRepository,
     memberRepository,
     subject,
+    membershipService,
   );
   const requestAdminTransfer = new RequestAdminTransfer(
     adminTransferRepository,
@@ -262,7 +271,8 @@ function bootstrap(): void {
     subject,
   );
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
-  const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
+  const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
+  const leaveAdminRole = new LeaveAdminRole(studyGroupRepository, subject);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -276,6 +286,7 @@ function bootstrap(): void {
     reviewApplication,
     requestAdminTransfer,
     acceptAdminTransfer,
+    rejectAdminTransfer,
     leaveAdminRole,
   );
 

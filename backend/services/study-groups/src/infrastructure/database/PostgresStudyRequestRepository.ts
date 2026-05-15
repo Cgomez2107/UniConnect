@@ -9,12 +9,12 @@ import type {
 } from "../../domain/repositories/IStudyRequestRepository.js";
 import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
 import type { ISubject } from "../../domain/events/observers/ISubject.js";
-import { StudyGroup } from "../../domain/states/StudyGroup.js";
-import { AbiertaState } from "../../domain/states/AbiertaState.js";
-import { LlenaState } from "../../domain/states/LlenaState.js";
-import { CerradaState } from "../../domain/states/CerradaState.js";
-import { ExpiradaState } from "../../domain/states/ExpiradaState.js";
-import { TransferenciaPendienteState } from "../../domain/states/TransferenciaPendienteState.js";
+import { GroupContext } from "../../domain/states/GroupContext.js";
+import type { IState } from "../../domain/states/IState.js";
+import { Active } from "../../domain/states/Active.js";
+import { Dissolved } from "../../domain/states/Dissolved.js";
+import { Blocked } from "../../domain/states/Blocked.js";
+import { PendingTransfer } from "../../domain/states/PendingTransfer.js";
 
 interface StudyRequestRow {
   id: string;
@@ -37,11 +37,14 @@ interface StudyRequestRow {
 
 interface StudyGroupHydrationRow {
   id: string;
+  author_id: string;
   title: string;
   max_members: number;
   status: "abierta" | "cerrada" | "expirada";
   members_count: number;
   has_pending_transfer: boolean;
+  pending_transfer_id: string | null;
+  pending_transfer_to_user_id: string | null;
 }
 
 function mapStudyRequest(row: StudyRequestRow): StudyRequest {
@@ -88,26 +91,19 @@ export class PostgresStudyRequestRepository
 
   // ─── IStudyGroupRepository ────────────────────────────────────────────────
 
-  /**
-   * Hidrata el contexto StudyGroup con el estado correcto basándose en la BD.
-   *
-   * Lógica de asignación de estado:
-   *  - status='cerrada'  → CerradaState
-   *  - status='expirada' → ExpiradaState
-   *  - membersCount >= maxMembers → LlenaState (virtual, status sigue 'abierta' en BD)
-   *  - membersCount <  maxMembers → AbiertaState
-   *  Si además hay una transferencia pendiente → TransferenciaPendienteState(estadoBase)
-   */
-  async loadStudyGroup(requestId: string, subject: ISubject): Promise<StudyGroup> {
+  async loadStudyGroup(requestId: string, subject: ISubject): Promise<GroupContext> {
     const result = await this.pool.query<StudyGroupHydrationRow>(
       `
         SELECT
           sr.id,
+          sr.author_id,
           sr.title,
           sr.max_members,
           sr.status,
           COALESCE(m.members_count, 0)::int         AS members_count,
-          (t.id IS NOT NULL)                         AS has_pending_transfer
+          (t.id IS NOT NULL)                         AS has_pending_transfer,
+          t.id                                       AS pending_transfer_id,
+          t.to_user_id                               AS pending_transfer_to_user_id
         FROM study_requests sr
         LEFT JOIN (
           SELECT request_id, COUNT(*)::int AS members_count
@@ -128,28 +124,25 @@ export class PostgresStudyRequestRepository
       throw new Error(`Grupo de estudio '${requestId}' no encontrado.`);
     }
 
-    // ── Determinar el estado base ─────────────────────────────────────────
-    let baseState =
+    let baseState: IState =
       row.status === "cerrada"
-        ? new CerradaState()
+        ? new Dissolved()
         : row.status === "expirada"
-          ? new ExpiradaState()
-          : row.members_count >= row.max_members
-            ? new LlenaState()        // estado virtual: capacidad llena
-            : new AbiertaState();
+          ? new Blocked()
+          : new Active();
 
-    // ── Envolver con TransferenciaPendienteState si corresponde ───────────
-    const initialState = row.has_pending_transfer
-      ? new TransferenciaPendienteState(baseState)
+    const initialState: IState = row.has_pending_transfer && row.pending_transfer_id && row.pending_transfer_to_user_id
+      ? new PendingTransfer(baseState, row.pending_transfer_to_user_id, row.pending_transfer_id)
       : baseState;
 
-    return new StudyGroup(
+    return new GroupContext(
       row.id,
       row.title,
-      row.max_members,
-      row.members_count,
+      row.author_id,
       initialState,
       subject,
+      row.members_count,
+      row.max_members,
     );
   }
 

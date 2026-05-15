@@ -1,11 +1,18 @@
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type { IStudyRequestRepository } from "../../domain/repositories/IStudyRequestRepository.js";
+import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
+import type { ISubject } from "../../domain/events/observers/ISubject.js";
+import { GroupContext } from "../../domain/states/GroupContext.js";
+import type { IState } from "../../domain/states/IState.js";
+import { Active } from "../../domain/states/Active.js";
+import { Dissolved } from "../../domain/states/Dissolved.js";
+import { Blocked } from "../../domain/states/Blocked.js";
 
 /**
  * Temporary repository for bootstrapping service contracts and integration.
  * Replace with a Postgres implementation once the DB adapter is ready.
  */
-export class InMemoryStudyRequestRepository implements IStudyRequestRepository {
+export class InMemoryStudyRequestRepository implements IStudyRequestRepository, IStudyGroupRepository {
   private readonly requests: StudyRequest[] = [
     {
       id: "a1b2c3d4-0001-4000-9000-111111111111",
@@ -91,5 +98,29 @@ export class InMemoryStudyRequestRepository implements IStudyRequestRepository {
     return this.requests.filter(
       (r) => r.subjectId === subjectId && r.status === "abierta" && r.isActive,
     ).length;
+  }
+
+  async loadStudyGroup(requestId: string, subject: ISubject): Promise<GroupContext> {
+    const request = this.requests.find((r) => r.id === requestId);
+    if (!request) {
+      throw new Error(`Grupo de estudio '${requestId}' no encontrado.`);
+    }
+
+    let baseState: IState =
+      request.status === "cerrada"
+        ? new Dissolved()
+        : request.status === "expirada"
+          ? new Blocked()
+          : new Active();
+
+    return new GroupContext(
+      request.id,
+      request.title,
+      request.authorId,
+      baseState,
+      subject,
+      1,
+      request.maxMembers,
+    );
   }
 }

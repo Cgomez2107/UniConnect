@@ -115,7 +115,7 @@ describe("Observer Pattern - Subscription and Notification", () => {
     const observerTwo = new MockObserver("ObserverTwo");
 
     const event: StudyGroupEvent = {
-      type: "SOLICITUD_INGRESO",
+      type: "JOIN_REQUEST",
       version: "1.0",
       timestamp: new Date("2026-04-29T10:00:00.000Z"),
       requestId: "req-1",
@@ -143,7 +143,7 @@ describe("Observer Pattern - Subscription and Notification", () => {
     const observerTwo = new MockObserver("ObserverTwo");
 
     const event: StudyGroupEvent = {
-      type: "SOLICITUD_INGRESO",
+      type: "JOIN_REQUEST",
       version: "1.0",
       timestamp: new Date("2026-04-29T10:05:00.000Z"),
       requestId: "req-2",
@@ -171,7 +171,7 @@ describe("Observer Pattern - Subscription and Notification", () => {
     const healthyObserver = new MockObserver("HealthyObserver");
 
     const event: StudyGroupEvent = {
-      type: "SOLICITUD_INGRESO",
+      type: "JOIN_REQUEST",
       version: "1.0",
       timestamp: new Date("2026-04-29T10:10:00.000Z"),
       requestId: "req-3",

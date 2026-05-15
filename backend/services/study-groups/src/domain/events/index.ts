@@ -9,6 +9,7 @@ export { StudyGroupSubject } from "./observers/StudyGroupSubject.js";
 export type { IObserver } from "./observers/IObserver.js";
 export type { ISubject } from "./observers/ISubject.js";
 export { NotificationObserver } from "./observers/NotificationObserver.js";
+export { PersistenceObserver } from "./observers/PersistenceObserver.js";
 export {
 	WebSocketNotificationObserver,
 	type IStudyGroupSocketGateway,

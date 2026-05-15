@@ -122,7 +122,7 @@ const mapper = new NotificationMapper();
 
 // ── Smoke payload ──
 const event = {
-  type: "SOLICITUD_INGRESO",
+  type: "JOIN_REQUEST",
   version: "1.0",
   timestamp: new Date(),
   requestId: "smoke-test-0001",

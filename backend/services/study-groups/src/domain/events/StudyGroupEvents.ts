@@ -12,8 +12,8 @@
 /**
  * Evento: Solicitud de ingreso creada
  */
-export interface SolicitudIngresoEvent {
-  readonly type: "SOLICITUD_INGRESO";
+export interface JoinRequestEvent {
+  readonly type: "JOIN_REQUEST";
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly requestId: string;
@@ -27,8 +27,8 @@ export interface SolicitudIngresoEvent {
 /**
  * Evento: Solicitud de ingreso aceptada
  */
-export interface MiembroAceptadoEvent {
-  readonly type: "MIEMBRO_ACEPTADO";
+export interface MemberAcceptedEvent {
+  readonly type: "MEMBER_ACCEPTED";
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly applicationId: string;
@@ -42,8 +42,8 @@ export interface MiembroAceptadoEvent {
 /**
  * Evento: Solicitud de ingreso rechazada
  */
-export interface MiembroRechazadoEvent {
-  readonly type: "MIEMBRO_RECHAZADO";
+export interface MemberRejectedEvent {
+  readonly type: "MEMBER_REJECTED";
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly applicationId: string;
@@ -55,44 +55,87 @@ export interface MiembroRechazadoEvent {
 /**
  * Evento: Transferencia de admin solicitada
  */
-export interface TransferenciaAdminSolicitadaEvent {
-  readonly type: "TRANSFERENCIA_ADMIN_SOLICITADA";
+export interface AdminTransferRequestedEvent {
+  readonly type: "ADMIN_TRANSFER_REQUESTED";
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly transferId: string;
-  readonly groupId: string;  // requestId renombrado para claridad
-  readonly oldAdminId: string;  // quien solicita la transferencia
-  readonly newAdminId: string;  // quien recibirá el rol
-  readonly currentState: string;  // estado actual del grupo: "abierta" | "llena" | etc.
+  readonly groupId: string;
+  readonly oldAdminId: string;
+  readonly newAdminId: string;
+  readonly newState: "PendienteTransferencia";
   readonly groupName: string;
 }
 
 /**
  * Evento: Transferencia de admin aceptada
  */
-export interface TransferenciaAdminAceptadaEvent {
-  readonly type: "TRANSFERENCIA_ADMIN_ACEPTADA";
+export interface AdminTransferAcceptedEvent {
+  readonly type: "ADMIN_TRANSFER_ACCEPTED";
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly transferId: string;
-  readonly groupId: string;  // requestId renombrado para claridad
-  readonly oldAdminId: string;  // quién era antes
-  readonly newAdminId: string;  // quién es ahora
-  readonly newState: string;  // estado al que vuelve el grupo: "abierta" | "llena"
-  readonly acceptedBy: string;  // quién aceptó (debería ser newAdminId)
+  readonly groupId: string;
+  readonly oldAdminId: string;
+  readonly newAdminId: string;
+  readonly newState: "TransferenciaAceptada";
+  readonly acceptedBy: string;
+}
+
+/**
+ * Evento: Transferencia de admin rechazada
+ */
+export interface AdminTransferRejectedEvent {
+  readonly type: "ADMIN_TRANSFER_REJECTED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly transferId: string;
+  readonly groupId: string;
+  readonly oldAdminId: string;
+  readonly newAdminId: string;
+  readonly newState: "Activo";
+  readonly groupName: string;
+}
+
+/**
+ * Evento: Transferencia de admin transferida (commit final)
+ */
+export interface AdminTransferCompletedEvent {
+  readonly type: "ADMIN_TRANSFER_COMPLETED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly transferId: string;
+  readonly groupId: string;
+  readonly oldAdminId: string;
+  readonly newAdminId: string;
+  readonly newState: "Activo";
+  readonly groupName: string;
+}
+
+/**
+ * Evento: Administrador renuncia a su cargo
+ */
+export interface AdminRoleLeftEvent {
+  readonly type: "ADMIN_ROLE_LEFT";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly requestId: string;
+  readonly userId: string;
+  readonly groupName: string;
 }
 
 /**
  * Type Union: Representa TODOS los eventos posibles del dominio
- *
- * Ventaja: Si intentas pasar un evento inválido, TypeScript marca error 
  */
 export type StudyGroupEvent =
-  | SolicitudIngresoEvent
-  | MiembroAceptadoEvent
-  | MiembroRechazadoEvent
-  | TransferenciaAdminSolicitadaEvent
-  | TransferenciaAdminAceptadaEvent;
+  | JoinRequestEvent
+  | MemberAcceptedEvent
+  | MemberRejectedEvent
+  | AdminTransferRequestedEvent
+  | AdminTransferAcceptedEvent
+  | AdminTransferRejectedEvent
+  | AdminTransferCompletedEvent
+  | AdminRoleLeftEvent;
 
 /**
  * Extrae el tipo específico de un evento

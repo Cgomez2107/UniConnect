@@ -51,5 +51,55 @@ classDiagram
 	IObserver <|.. WebSocketNotificationObserver
 ```
 
+State diagram — Transferencia de Administrador:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Activo
+    Activo --> PendienteTransferencia : solicitar()\ntransferId = uuid()
+    PendienteTransferencia --> TransferenciaAceptada : aceptar()
+    PendienteTransferencia --> Activo : rechazar()
+    TransferenciaAceptada --> Activo : transferir()\nadminId = targetUserId
+    TransferenciaAceptada --> Activo : rechazar()\n(delegates to parent)
+    Activo --> [*] : Disuelto / Bloqueado\n(todas las operaciones lanzan error)
+
+    note right of Activo
+        Estado base.
+        solicitar() transiciona a
+        PendienteTransferencia.
+        aceptar/rechazar/transferir
+        lanzan error.
+    end note
+
+    note right of PendienteTransferencia
+        Almacena targetUserId y
+        transferId para la
+        Transicion.
+        aceptar/rechazar son validas.
+    end note
+
+    note right of TransferenciaAceptada
+        Estado "commit".
+        transferir() actualiza
+        adminId y vuelve a Activo.
+    end note
+```
+
+State pattern — IState contract:
+
+```typescript
+interface IState {
+  setContext(context: IGroupContext): void;
+  solicitar(): Promise<void>;
+  aceptar(): Promise<void>;
+  rechazar(): Promise<void>;
+  transferir(): Promise<void>;
+}
+```
+
+All 4 transfer methods are parameterless — data flows through `IGroupContext` properties (`targetUserId`, `transferId`), not method params. Transitions are atomic: each state class only imports its direct transition targets.
+
+Event-driven persistence: `PersistenceObserver` listens to `TRANSFERENCIA_ADMIN_ACEPTADA` and calls `acceptTransferAtomically()` on the admin transfer repository, decoupling DB writes from use-case orchestration.
+
 Run locally:
 - `pnpm --filter @uniconnect/study-groups dev`

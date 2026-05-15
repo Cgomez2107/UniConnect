@@ -8,5 +8,7 @@ export interface IAdminTransferRepository {
     targetUserId: string;
   }): Promise<AdminTransfer>;
   acceptTransfer(input: { transferId: string; actorUserId: string }): Promise<void>;
+  acceptTransferAtomically(transferId: string, actorUserId: string): Promise<void>;
+  rejectTransfer(input: { transferId: string; actorUserId: string }): Promise<void>;
   leaveAdminRole(input: { requestId: string; actorUserId: string }): Promise<void>;
 }
