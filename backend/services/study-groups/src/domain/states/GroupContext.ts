@@ -1,6 +1,9 @@
 import type { StudyGroupEvent } from "../events/StudyGroupEvents.js";
 import type { ISubject } from "../events/observers/ISubject.js";
 import type { IState, IGroupContext } from "./IState.js";
+import { PendingTransfer } from "./PendingTransfer.js";
+import { TransferAccepted } from "./TransferAccepted.js";
+import { Active } from "./Active.js";
 
 export class GroupContext implements IGroupContext {
   private _state!: IState;
@@ -36,6 +39,21 @@ export class GroupContext implements IGroupContext {
 
   emit(event: StudyGroupEvent): Promise<void> {
     return this.subject.emit(event);
+  }
+
+  transitionToPendingTransfer(previousState: IState, targetUserId: string, transferId: string): void {
+    this._state = new PendingTransfer(previousState, targetUserId, transferId);
+    this._state.setContext(this);
+  }
+
+  transitionToTransferAccepted(parent: IState): void {
+    this._state = new TransferAccepted(parent);
+    this._state.setContext(this);
+  }
+
+  transitionToActive(): void {
+    this._state = new Active();
+    this._state.setContext(this);
   }
 
   async requestAdminTransfer(targetUserId: string): Promise<void> {

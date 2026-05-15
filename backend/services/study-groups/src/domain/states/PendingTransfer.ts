@@ -1,8 +1,6 @@
 import { InvalidStateTransitionError } from "../../../../../shared/libs/errors/InvalidStateTransitionError.js";
 import type { IState, IGroupContext } from "./IState.js";
 import type { StudyGroupEvent } from "../events/StudyGroupEvents.js";
-import { Active } from "./Active.js";
-import { TransferAccepted } from "./TransferAccepted.js";
 
 export class PendingTransfer implements IState {
   private context!: IGroupContext;
@@ -22,7 +20,7 @@ export class PendingTransfer implements IState {
   }
 
   async aceptar(): Promise<void> {
-    this.context.transitionTo(new TransferAccepted(this));
+    this.context.transitionToTransferAccepted(this);
 
     const event: StudyGroupEvent = {
       type: "ADMIN_TRANSFER_ACCEPTED",
@@ -54,7 +52,7 @@ export class PendingTransfer implements IState {
 
     await this.context.emit(event);
 
-    this.context.transitionTo(new Active());
+    this.context.transitionToActive();
   }
 
   async transferir(): Promise<void> {

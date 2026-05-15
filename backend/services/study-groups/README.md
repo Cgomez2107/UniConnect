@@ -85,6 +85,94 @@ stateDiagram-v2
     end note
 ```
 
+State pattern — UML class diagram:
+
+```mermaid
+classDiagram
+    class GroupContext {
+        +requestId
+        +groupName
+        +adminId
+        +targetUserId
+        +transferId
+        +adminCount
+        +transitionTo(state)
+        +transitionToPendingTransfer(previousState, targetUserId, transferId)
+        +transitionToTransferAccepted(parent)
+        +transitionToActive()
+        +requestAdminTransfer(targetUserId)
+        +acceptAdminTransfer(transferId)
+        +rejectAdminTransfer()
+        +transferAdmin()
+        +leaveAdminRole(actorUserId)
+        -_state
+    }
+
+    class IState {
+        <<interface>>
+        +setContext(context)
+        +solicitar()
+        +aceptar()
+        +rechazar()
+        +transferir()
+    }
+
+    class Active {
+        +solicitar()
+        +aceptar()
+        +rechazar()
+        +transferir()
+        +leaveAdminRole(actorUserId)
+    }
+
+    class PendingTransfer {
+        +previousState
+        +targetUserId
+        +transferId
+        +aceptar()
+        +rechazar()
+        +solicitar()
+        +transferir()
+        +leaveAdminRole(actorUserId)
+    }
+
+    class TransferAccepted {
+        +parent
+        +transferir()
+        +rechazar()
+        +solicitar()
+        +aceptar()
+        +leaveAdminRole()
+    }
+
+    class Dissolved {
+        +solicitar()
+        +aceptar()
+        +rechazar()
+        +transferir()
+        +leaveAdminRole()
+    }
+
+    class Blocked {
+        +solicitar()
+        +aceptar()
+        +rechazar()
+        +transferir()
+        +leaveAdminRole()
+    }
+
+    GroupContext --> IState : state
+    IState <|.. Active
+    IState <|.. PendingTransfer
+    IState <|.. TransferAccepted
+    IState <|.. Dissolved
+    IState <|.. Blocked
+    GroupContext --> IState : crea transiciones >
+    GroupContext ..> Active : transitionToActive()
+    GroupContext ..> PendingTransfer : transitionToPendingTransfer()
+    GroupContext ..> TransferAccepted : transitionToTransferAccepted()
+```
+
 State pattern — IState contract:
 
 ```typescript

@@ -10,6 +10,10 @@ export interface IGroupContext {
 
   transitionTo(state: IState): void;
   emit(event: StudyGroupEvent): Promise<void>;
+
+  transitionToPendingTransfer(previousState: IState, targetUserId: string, transferId: string): void;
+  transitionToTransferAccepted(parent: IState): void;
+  transitionToActive(): void;
 }
 
 export interface IState {

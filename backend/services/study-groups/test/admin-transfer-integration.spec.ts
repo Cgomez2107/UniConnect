@@ -293,52 +293,59 @@ describe("AC-4 — PendingTransfer.rechazar()", () => {
   });
 });
 
-// ── AC-5: States solo importan transiciones directas ──────────────────────
-describe("AC-5 — Estados solo importan transiciones directas", () => {
+// ── AC-5: Ningun estado concreto referencia a otro estado concreto ──
+describe("AC-5 — Estados solo importan desde la interfaz IState", () => {
 function concreteStateImports(fileName: string): string[] {
-  const source = readFileSync(resolve(__dirname, `../src/domain/states/${fileName}.ts`), "utf-8");
+  const source = readFileSync(resolve(__dirname, `../../../../src/domain/states/${fileName}.ts`), "utf-8");
   const matches = source.match(/from\s+"[^"]+\/(\w+)\.js"/g) || [];
   return matches.map(s => s.match(/\/(\w+)\.js"/)![1]);
 }
 
-  it("Active solo puede ir a PendingTransfer", () => {
+  it("Active no importa estados concretos", () => {
     const imports = concreteStateImports("Active");
-    assert.ok(imports.includes("PendingTransfer"), "Falta import de PendingTransfer");
+    assert.ok(!imports.includes("PendingTransfer"), "No debe importar PendingTransfer");
     assert.ok(!imports.includes("TransferAccepted"), "No debe importar TransferAccepted");
     assert.ok(!imports.includes("Dissolved"), "No debe importar Dissolved");
     assert.ok(!imports.includes("Blocked"), "No debe importar Blocked");
   });
 
-  it("PendingTransfer solo importa Active y TransferAccepted", () => {
+  it("PendingTransfer no importa estados concretos", () => {
     const imports = concreteStateImports("PendingTransfer");
-    assert.ok(imports.includes("Active"));
-    assert.ok(imports.includes("TransferAccepted"));
-    assert.ok(!imports.includes("Dissolved"));
-    assert.ok(!imports.includes("Blocked"));
+    assert.ok(!imports.includes("Active"), "No debe importar Active");
+    assert.ok(!imports.includes("TransferAccepted"), "No debe importar TransferAccepted");
+    assert.ok(!imports.includes("Dissolved"), "No debe importar Dissolved");
+    assert.ok(!imports.includes("Blocked"), "No debe importar Blocked");
   });
 
-  it("TransferAccepted solo importa Active y PendingTransfer (type-only)", () => {
+  it("TransferAccepted no importa estados concretos", () => {
     const imports = concreteStateImports("TransferAccepted");
-    assert.ok(imports.includes("Active"));
-    assert.ok(imports.includes("PendingTransfer"));
-    assert.ok(!imports.includes("Dissolved"));
-    assert.ok(!imports.includes("Blocked"));
+    assert.ok(!imports.includes("Active"), "No debe importar Active");
+    assert.ok(!imports.includes("PendingTransfer"), "No debe importar PendingTransfer");
+    assert.ok(!imports.includes("Dissolved"), "No debe importar Dissolved");
+    assert.ok(!imports.includes("Blocked"), "No debe importar Blocked");
   });
 
-  it("Dissolved no importa ningun estado concreto", () => {
+  it("Dissolved no importa estados concretos", () => {
     const imports = concreteStateImports("Dissolved");
-    assert.ok(!imports.includes("Active"));
-    assert.ok(!imports.includes("PendingTransfer"));
-    assert.ok(!imports.includes("TransferAccepted"));
-    assert.ok(!imports.includes("Blocked"));
+    assert.ok(!imports.includes("Active"), "No debe importar Active");
+    assert.ok(!imports.includes("PendingTransfer"), "No debe importar PendingTransfer");
+    assert.ok(!imports.includes("TransferAccepted"), "No debe importar TransferAccepted");
+    assert.ok(!imports.includes("Blocked"), "No debe importar Blocked");
   });
 
-  it("Blocked no importa ningun estado concreto", () => {
+  it("Blocked no importa estados concretos", () => {
     const imports = concreteStateImports("Blocked");
-    assert.ok(!imports.includes("Active"));
-    assert.ok(!imports.includes("PendingTransfer"));
-    assert.ok(!imports.includes("TransferAccepted"));
-    assert.ok(!imports.includes("Dissolved"));
+    assert.ok(!imports.includes("Active"), "No debe importar Active");
+    assert.ok(!imports.includes("PendingTransfer"), "No debe importar PendingTransfer");
+    assert.ok(!imports.includes("TransferAccepted"), "No debe importar TransferAccepted");
+    assert.ok(!imports.includes("Dissolved"), "No debe importar Dissolved");
+  });
+
+  it("GroupContext es el unico que importa estados concretos", () => {
+    const imports = concreteStateImports("GroupContext");
+    assert.ok(imports.includes("PendingTransfer"), "Debe importar PendingTransfer");
+    assert.ok(imports.includes("TransferAccepted"), "Debe importar TransferAccepted");
+    assert.ok(imports.includes("Active"), "Debe importar Active");
   });
 });
 
@@ -401,9 +408,9 @@ describe("AC-6 — Observers reciben eventos con newState via Subject", () => {
 
 // ── AC-7: UML documentado en README ──────────────────────────────────────
 describe("AC-7 — UML en README", () => {
-  it("README contiene diagrama de estados", () => {
+  it("README contiene diagrama de estados (stateDiagram-v2)", () => {
     const readme = readFileSync(
-      resolve(__dirname, "../README.md"),
+      resolve(__dirname, "../../../../README.md"),
       "utf-8",
     );
     assert.ok(readme.includes("stateDiagram-v2"), "Falta stateDiagram-v2 en README");
@@ -412,6 +419,22 @@ describe("AC-7 — UML en README", () => {
     assert.ok(readme.includes("PendienteTransferencia --> Activo"), "Falta transicion PendingTransfer->Active (rechazar)");
     assert.ok(readme.includes("TransferenciaAceptada --> Activo"), "Falta transicion TransferAccepted->Active");
     assert.ok(readme.includes("IState"), "Falta contrato IState");
+  });
+
+  it("README contiene diagrama UML del patron State (classDiagram)", () => {
+    const readme = readFileSync(
+      resolve(__dirname, "../../../../README.md"),
+      "utf-8",
+    );
+    assert.ok(readme.includes("classDiagram"), "Falta classDiagram en README");
+    assert.ok(readme.includes("IState"), "Falta interfaz IState en classDiagram");
+    assert.ok(readme.includes("Active"), "Falta estado Active en classDiagram");
+    assert.ok(readme.includes("PendingTransfer"), "Falta estado PendingTransfer en classDiagram");
+    assert.ok(readme.includes("TransferAccepted"), "Falta estado TransferAccepted en classDiagram");
+    assert.ok(readme.includes("Dissolved"), "Falta estado Dissolved en classDiagram");
+    assert.ok(readme.includes("Blocked"), "Falta estado Blocked en classDiagram");
+    assert.ok(readme.includes("GroupContext"), "Falta contexto GroupContext en classDiagram");
+    assert.ok(readme.includes("<<interface>>"), "Falta marcador interface en classDiagram");
   });
 });
 
@@ -754,7 +777,7 @@ describe("INT-08 — PersistenceObserver llama a accept_admin_transfer_backend",
 
   it("PostgresAdminTransferRepository llama a accept_admin_transfer_backend (verificacion SQL)", () => {
     const source = readFileSync(
-      resolve(__dirname, "../src/infrastructure/database/PostgresAdminTransferRepository.ts"),
+      resolve(__dirname, "../../../../src/infrastructure/database/PostgresAdminTransferRepository.ts"),
       "utf-8",
     );
     assert.ok(source.includes("accept_admin_transfer_backend"), "Debe llamar a accept_admin_transfer_backend");
@@ -865,7 +888,7 @@ describe("LeaveAdminRole — nuevo flujo renuncia directa", () => {
 describe("CRIT-1 — acceptTransferAtomically ya no envia actorUserId vacio", () => {
   it("PostgresAdminTransferRepository.acceptTransferAtomically tiene 2 parametros", () => {
     const source = readFileSync(
-      resolve(__dirname, "../src/infrastructure/database/PostgresAdminTransferRepository.ts"),
+      resolve(__dirname, "../../../../src/infrastructure/database/PostgresAdminTransferRepository.ts"),
       "utf-8",
     );
     const match = source.match(/async acceptTransferAtomically\(([^)]+)\)/);
@@ -876,7 +899,7 @@ describe("CRIT-1 — acceptTransferAtomically ya no envia actorUserId vacio", ()
 
   it("InMemoryAdminTransferRepository.acceptTransferAtomically tiene 2 parametros", () => {
     const source = readFileSync(
-      resolve(__dirname, "../src/infrastructure/database/InMemoryAdminTransferRepository.ts"),
+      resolve(__dirname, "../../../../src/infrastructure/database/InMemoryAdminTransferRepository.ts"),
       "utf-8",
     );
     const match = source.match(/async acceptTransferAtomically\(([^)]+)\)/);
@@ -887,7 +910,7 @@ describe("CRIT-1 — acceptTransferAtomically ya no envia actorUserId vacio", ()
 
   it("PostgresAdminTransferRepository.leaveAdminRole llama a leave_request_admin_backend", () => {
     const source = readFileSync(
-      resolve(__dirname, "../src/infrastructure/database/PostgresAdminTransferRepository.ts"),
+      resolve(__dirname, "../../../../src/infrastructure/database/PostgresAdminTransferRepository.ts"),
       "utf-8",
     );
     assert.ok(source.includes("leave_request_admin_backend"), "Debe llamar a leave_request_admin_backend");
