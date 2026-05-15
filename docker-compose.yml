@@ -169,7 +169,6 @@ services:
     environment:
       PNPM_STORE_DIR: /pnpm-store
       SUPABASE_URL: https://becitrklvpadvjwdbmck.supabase.co
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-sb_secret_v7Kik5cu_hyGW9wTWn1NgA_LN2x-aW6}
     ports:
       - "3105:3105"
     volumes:

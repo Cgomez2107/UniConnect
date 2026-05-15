@@ -277,6 +277,13 @@ export function GroupDetailPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate(`/grupo/${id}/chat`)}
+            >
+              Chat del grupo
+            </Button>
             {(currentMember?.role === "autor" || currentMember?.role === "admin") && (
               <>
                 <Button

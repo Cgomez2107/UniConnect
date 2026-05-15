@@ -4,13 +4,7 @@ import { Conversation as ConversationApi, Message as MessageApi, SendMessagePayl
 import { mapConversationApiToUI, mapMessageApiToUI } from "@/utils/mappers";
 import type { ConversationUI, MessageUI } from "@/types/ui";
 
-/**
- * Servicio de mensajería y conversaciones
- */
 const messagingService = {
-  /**
-   * Obtiene todas las conversaciones del usuario autenticado
-   */
   async getConversations(): Promise<ConversationUI[]> {
     try {
       const response = await apiClient.get<{ data: ConversationApi[] }>(
@@ -23,9 +17,6 @@ const messagingService = {
     }
   },
 
-  /**
-   * Obtiene los detalles de una conversación por ID
-   */
   async getConversationById(id: string): Promise<ConversationUI> {
     try {
       const response = await apiClient.get<{ data: ConversationApi }>(
@@ -38,9 +29,6 @@ const messagingService = {
     }
   },
 
-  /**
-   * Crea una nueva conversación con un participante
-   */
   async createConversation(participantId: string): Promise<ConversationUI> {
     try {
       const response = await apiClient.post<{ data: ConversationApi }>(
@@ -57,13 +45,11 @@ const messagingService = {
     }
   },
 
-  /**
-   * Obtiene todos los mensajes de una conversación
-   */
   async getMessages(conversationId: string): Promise<MessageUI[]> {
     try {
       const response = await apiClient.get<{ data: MessageApi[] }>(
-        API_ENDPOINTS.MESSAGES_LIST(conversationId)
+        API_ENDPOINTS.MESSAGES_LIST,
+        { params: { conversationId } }
       );
       return response.data.data.map(mapMessageApiToUI);
     } catch (error) {
@@ -75,20 +61,21 @@ const messagingService = {
     }
   },
 
-  /**
-   * Envía un mensaje a una conversación
-   */
   async sendMessage(
     conversationId: string,
-    content: string
+    content: string,
+    options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string }
   ): Promise<MessageUI> {
     try {
-      const payload: SendMessagePayload = {
-        conversation_id: conversationId,
+      const payload: any = {
+        conversationId,
         content,
       };
+      if (options?.replyToMessageId) payload.reply_to_message_id = options.replyToMessageId;
+      if (options?.mediaUrl) payload.media_url = options.mediaUrl;
+      if (options?.mediaType) payload.media_type = options.mediaType;
       const response = await apiClient.post<{ data: MessageApi }>(
-        API_ENDPOINTS.MESSAGES_SEND(conversationId),
+        API_ENDPOINTS.MESSAGES_SEND,
         payload
       );
       return mapMessageApiToUI(response.data.data as MessageApi);
@@ -101,13 +88,10 @@ const messagingService = {
     }
   },
 
-  /**
-   * Marca una conversación como leída
-   */
   async markAsRead(conversationId: string): Promise<void> {
     try {
       await apiClient.patch(
-        `/conversations/${conversationId}/mark-as-read`
+        API_ENDPOINTS.CONVERSATIONS_MARK_READ(conversationId)
       );
     } catch (error) {
       console.error(

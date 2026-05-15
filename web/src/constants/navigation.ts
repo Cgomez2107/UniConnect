@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  FileText,
   Users,
   BookOpen,
   MessageSquare,
@@ -17,8 +16,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Feed", route: "/solicitudes", icon: LayoutDashboard },
-  { label: "Solicitudes", route: "/invitaciones", icon: FileText },
-  { label: "Compañeros", route: "/directorio", icon: Users },
+  { label: "Grupos", route: "/invitaciones", icon: Users },
   { label: "Recursos", route: "/recursos", icon: BookOpen },
   { label: "Mensajes", route: "/mensajes", icon: MessageSquare },
   { label: "Eventos", route: "/eventos", icon: Calendar },

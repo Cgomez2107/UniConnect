@@ -2,6 +2,13 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { sendJson } from "./sendJson.js";
 
+export interface ProxyResponse {
+  status: number;
+  body: string;
+  method: string;
+  pathname: string;
+}
+
 /**
  * Reenvía la solicitud entrante al servicio downstream preservando método,
  * headers y cuerpo. Devuelve un payload de error normalizado ante fallos de red.
@@ -15,6 +22,7 @@ export async function proxyRequest(
   res: ServerResponse,
   targetBaseUrl: string,
   stripPrefix?: string,
+  onResponse?: (info: ProxyResponse) => void,
 ): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   let pathname = requestUrl.pathname;
@@ -103,6 +111,15 @@ export async function proxyRequest(
         responseHeaders[key] = value;
       }
     });
+
+    if (onResponse) {
+      onResponse({
+        status: downstreamResponse.status,
+        body: responseText,
+        method,
+        pathname,
+      });
+    }
 
     res.writeHead(downstreamResponse.status, responseHeaders);
     res.end(responseText);

@@ -1,11 +1,14 @@
 import { createServer, type IncomingMessage, type ServerResponse as NodeServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { WebSocketServer, WebSocket } from "ws";
 
 import type { GatewayEnv } from "../shared/config/env.js";
-import { proxyRequest } from "../shared/http/proxyRequest.js";
+import { proxyRequest, type ProxyResponse } from "../shared/http/proxyRequest.js";
 import { sendJson } from "../shared/http/sendJson.js";
-import { JWTMiddleware } from "../middleware/JWTMiddleware.js";
+import { JWTMiddleware, type JWTPayload } from "../middleware/JWTMiddleware.js";
+
+const conversationRooms = new Map<string, Set<WebSocket>>();
 
 function getAppVersion(): string {
   try {
@@ -58,13 +61,142 @@ const setHeader = (res: NodeServerResponse, name: string, value: string) => {
   res.setHeader(name, value);
 };
 
-async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env: GatewayEnv): Promise<void> {
+function extractConversationId(pathname: string): string | null {
+  const match = pathname.match(/^\/api\/v1\/conversations\/([^/]+)/);
+  return match ? match[1] : null;
+}
+
+function extractConversationIdFromBody(body: string): string | null {
+  try {
+    const data = JSON.parse(body);
+    if (data?.data?.conversation_id) return data.data.conversation_id;
+    if (data?.conversation_id) return data.conversation_id;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function broadcastToConversation(conversationId: string, event: string, payload: unknown): void {
+  const room = conversationRooms.get(conversationId);
+  if (!room) return;
+  const message = JSON.stringify({ event, payload });
+  for (const ws of room) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+    }
+  }
+}
+
+function handleWebSocketUpgrade(
+  wss: WebSocketServer,
+  jwtMiddleware: JWTMiddleware,
+): void {
+  wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+    const requestUrl = new URL(req.url ?? "/", "http://localhost");
+    const token = requestUrl.searchParams.get("token");
+
+    if (!token) {
+      ws.close(4001, "Missing authentication token");
+      return;
+    }
+
+    const mockRes = {
+      writeHead: () => mockRes,
+      end: () => {},
+      on: () => mockRes,
+    } as unknown as NodeServerResponse;
+
+    const payload = jwtMiddleware.authenticate(
+      { ...req, headers: { ...req.headers, authorization: `Bearer ${token}` } } as IncomingMessage,
+      mockRes,
+    );
+
+    if (!payload) {
+      ws.close(4001, "Invalid or expired token");
+      return;
+    }
+
+    const subscribedRooms = new Set<string>();
+
+    ws.on("message", (rawData) => {
+      try {
+        const msg = JSON.parse(rawData.toString());
+        if (msg.type === "subscribe" && msg.conversationId) {
+          const convId = msg.conversationId;
+          if (!conversationRooms.has(convId)) {
+            conversationRooms.set(convId, new Set());
+          }
+          conversationRooms.get(convId)!.add(ws);
+          subscribedRooms.add(convId);
+        }
+        if (msg.type === "unsubscribe" && msg.conversationId) {
+          const room = conversationRooms.get(msg.conversationId);
+          if (room) {
+            room.delete(ws);
+            if (room.size === 0) conversationRooms.delete(msg.conversationId);
+          }
+          subscribedRooms.delete(msg.conversationId);
+        }
+      } catch {
+        // ignore malformed messages
+      }
+    });
+
+    ws.on("close", () => {
+      for (const convId of subscribedRooms) {
+        const room = conversationRooms.get(convId);
+        if (room) {
+          room.delete(ws);
+          if (room.size === 0) conversationRooms.delete(convId);
+        }
+      }
+      subscribedRooms.clear();
+    });
+  });
+}
+
+function onMessagingResponse(
+  info: ProxyResponse,
+  requestUrl: URL,
+  jwtPayload: JWTPayload,
+): void {
+  if (info.method === "POST" && info.pathname === "/api/v1/messages" && info.status === 201) {
+    const conversationId = extractConversationIdFromBody(info.body);
+    if (conversationId) {
+      let messagePayload: unknown = info.body;
+      try {
+        const parsed = JSON.parse(info.body);
+        messagePayload = parsed?.data || parsed;
+      } catch {
+        messagePayload = info.body;
+      }
+      broadcastToConversation(conversationId, "new_message", messagePayload);
+    }
+    return;
+  }
+
+  if (info.method === "PATCH") {
+    const conversationId = extractConversationId(info.pathname);
+    if (conversationId && info.status === 200) {
+      broadcastToConversation(conversationId, "message_read", {
+        conversationId,
+        userId: jwtPayload.sub,
+      });
+    }
+  }
+}
+
+async function handleRequest(
+  req: IncomingMessage,
+  res: NodeServerResponse,
+  env: GatewayEnv,
+  jwtMiddleware: JWTMiddleware,
+): Promise<void> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
-  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
   const appVersion = getAppVersion();
 
-  // CORS - Permitir solo orígenes específicos cuando hay credenciales
   const allowedOrigins = [
     "http://localhost:8081",
     "http://localhost:8082",
@@ -92,7 +224,6 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
     return;
   }
 
-  // Inyectar token desde cookies si no viene en el header (Criterio 2)
   if (!req.headers.authorization) {
     const token = jwtMiddleware.getToken(req);
     if (token) {
@@ -108,20 +239,16 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
     return;
   }
 
-  // Rutas de autenticación (sin protección de JWT)
   if (isAuthRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.authBaseUrl, "/api/v1/auth");
     return;
   }
 
-  // Rutas protegidas (requieren JWT válido)
   const payload = jwtMiddleware.authenticate(req, res);
   if (!payload) {
-    // El middleware ya envió la respuesta de error
     return;
   }
 
-  // Inyectar x-user-id desde el JWT para que los downstream services sepan quién es el usuario
   if (payload.sub) {
     req.headers["x-user-id"] = payload.sub;
   }
@@ -137,9 +264,12 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
   }
 
   if (isMessagingRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.messagingBaseUrl);
+    await proxyRequest(req, res, env.messagingBaseUrl, undefined, (info) => {
+      onMessagingResponse(info, requestUrl, payload);
+    });
     return;
   }
+
   if (isProfilesCatalogRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.profilesCatalogBaseUrl);
     return;
@@ -156,16 +286,20 @@ async function handleRequest(req: IncomingMessage, res: NodeServerResponse, env:
   });
 }
 
-/**
- * Builds the gateway HTTP server with explicit dependency injection via env.
- */
 export function createGatewayServer(env: GatewayEnv) {
-  return createServer((req, res) => {
-    void handleRequest(req, res, env).catch((error: unknown) => {
+  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
+
+  const server = createServer((req, res) => {
+    void handleRequest(req, res, env, jwtMiddleware).catch((error: unknown) => {
       sendJson(res, 500, {
         error: "Unexpected gateway failure",
         details: error instanceof Error ? error.message : "Unknown error",
       });
     });
   });
+
+  const wss = new WebSocketServer({ server, path: "/ws" });
+  handleWebSocketUpgrade(wss, jwtMiddleware);
+
+  return server;
 }

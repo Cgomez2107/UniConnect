@@ -215,6 +215,9 @@ export interface Conversation {
 export interface SendMessagePayload {
   conversation_id: string;
   content: string;
+  reply_to_message_id?: string;
+  media_url?: string;
+  media_type?: string;
 }
 
 // ============================================================================

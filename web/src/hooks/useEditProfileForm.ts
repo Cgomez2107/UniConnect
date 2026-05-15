@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import useAuth from "@/hooks/useAuth";
 import profilesService from "@/lib/services/profiles.service";
+import { useAuthStore } from "@/store/useAuthStore";
 import type { Program, Subject, UserProgram, UserSubject } from "@/types";
 
 const PHONE_REGEX = /^(\+?\d{1,3}[\s-]?)?\d{7,14}$/;
@@ -69,10 +70,8 @@ export default function useEditProfileForm() {
   const initialProgramId = useRef("");
   const initialSubjectIds = useRef<string[]>([]);
   const avatarChanged = useRef(false);
-  const loaded = useRef(false);
 
   useEffect(() => {
-    if (loaded.current) return;
     if (!user?.id) {
       setLoading(false);
       return;
@@ -90,8 +89,6 @@ export default function useEditProfileForm() {
         ]);
 
         if (cancelled) return;
-
-        loaded.current = true;
 
         const primaryProgram = programsData.find((p) => p.is_primary) ?? programsData[0];
         const currentSubjects = subjectsData.map((s) => s.subject_id).filter(Boolean);
@@ -277,7 +274,12 @@ export default function useEditProfileForm() {
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
-          await profilesService.uploadAvatar(user.id, base64);
+          const avatarUrl = await profilesService.uploadAvatar(user.id, base64);
+
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser) {
+            useAuthStore.setState({ user: { ...currentUser, profileImageUrl: avatarUrl } });
+          }
         } catch (avatarErr) {
           console.warn("Avatar upload failed, but profile was saved:", avatarErr);
         }

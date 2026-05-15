@@ -2,7 +2,6 @@ import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import {
   StudyRequest,
-  StudyGroup,
   CreateStudyRequestPayload,
   Application,
   Member,
@@ -242,6 +241,47 @@ const studyGroupsService = {
     } catch (error) {
       console.error(`Error cancelling application for ${requestId}:`, error);
       throw error;
+    }
+  },
+
+  async getGroupMessages(groupId: string): Promise<any[]> {
+    try {
+      const response = await apiClient.get<{ data: any[] }>(
+        API_ENDPOINTS.STUDY_GROUPS_MESSAGES(groupId)
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error(`Error fetching messages for group ${groupId}:`, error);
+      throw error;
+    }
+  },
+
+  async sendGroupMessage(
+    groupId: string,
+    content: string,
+    options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string }
+  ): Promise<any> {
+    try {
+      const payload: any = { content };
+      if (options?.replyToMessageId) payload.reply_to_message_id = options.replyToMessageId;
+      if (options?.mediaUrl) payload.media_url = options.mediaUrl;
+      if (options?.mediaType) payload.media_type = options.mediaType;
+      const response = await apiClient.post<{ data: any }>(
+        API_ENDPOINTS.STUDY_GROUPS_MESSAGES(groupId),
+        payload
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error(`Error sending message to group ${groupId}:`, error);
+      throw error;
+    }
+  },
+
+  async markGroupMessagesAsRead(groupId: string): Promise<void> {
+    try {
+      await apiClient.post(`/study-groups/${groupId}/messages/read`);
+    } catch {
+      // Route may not exist yet; silently ignored
     }
   },
 };

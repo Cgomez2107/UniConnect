@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import useAuth from "@/hooks/useAuth";
 import profilesService from "@/lib/services/profiles.service";
 import studyGroupsService from "@/lib/services/studyGroups.service";
@@ -13,6 +13,7 @@ export interface UseProfileData {
   error: string | null;
   primaryProgram: UserProgram | null;
   initials: string;
+  refresh: () => Promise<void>;
 }
 
 function getInitials(fullName: string): string {
@@ -32,7 +33,6 @@ export default function useProfile(): UseProfileData {
   const [publications, setPublications] = useState<StudyRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const loaded = useRef(false);
 
   const loadAll = useCallback(async () => {
     if (!user?.id) {
@@ -70,10 +70,7 @@ export default function useProfile(): UseProfileData {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!loaded.current) {
-      loaded.current = true;
-      loadAll();
-    }
+    loadAll();
   }, [loadAll]);
 
   const primaryProgram = programs.find((p) => p.is_primary) ?? programs[0] ?? null;
@@ -88,5 +85,6 @@ export default function useProfile(): UseProfileData {
     error,
     primaryProgram,
     initials,
+    refresh: loadAll,
   };
 }

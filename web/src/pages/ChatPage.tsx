@@ -6,6 +6,7 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Avatar } from "@/components/ui/Avatar";
 import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
+import { uploadChatImageFile } from "@/lib/supabase";
 
 interface Message {
   id: string;
@@ -13,6 +14,12 @@ interface Message {
   senderId: string;
   senderName: string;
   createdAt: string;
+  readAt?: string | null;
+  clientStatus?: "sending" | "sent" | "failed";
+  replyToMessageId?: string | null;
+  replyPreview?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
 }
 
 interface Conversation {
@@ -37,8 +44,11 @@ export const ChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [replyingTo, setReplyingTo] = useState<any>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,54 +58,10 @@ export const ChatPage: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-
-    fetchConversation();
-
-    const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
-    const ws = new WebSocket(`${WS_URL}/conversations/${conversationId}`);
-    wsRef.current = ws;
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const payload = data.payload || data;
-
-        if (data.type === "message" || data.event === "message:received") {
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === payload.id)) return prev;
-            return [...prev, payload];
-          });
-        } else if (data.event === "user:typing") {
-          setTypingUsers((prev) => {
-            if (!prev.includes(payload.userName)) {
-              return [...prev, payload.userName];
-            }
-            return prev;
-          });
-        } else if (data.event === "user:stopped-typing") {
-          setTypingUsers((prev) => prev.filter((n) => n !== payload.userName));
-        }
-      } catch {
-        // ignore
-      }
-    };
-
-    return () => {
-      ws.close();
-      wsRef.current = null;
-    };
-  }, [conversationId, user, navigate]);
-
   const fetchConversation = async () => {
     try {
       setIsLoading(true);
 
-      // Try as conversation first, then as study group chat
       try {
         const response = await apiClient.get(`/conversations/${conversationId}`);
         const conv = response.data?.data || response.data;
@@ -108,6 +74,12 @@ export const ChatPage: React.FC = () => {
           senderId: m.sender_id || m.senderId,
           senderName: m.sender?.full_name || m.sender?.fullName || m.senderName || "Usuario",
           createdAt: m.created_at || m.createdAt,
+          readAt: m.read_at || m.readAt || null,
+          clientStatus: "sent",
+          replyToMessageId: m.reply_to_message_id || m.replyToMessageId || null,
+          replyPreview: m.reply_preview || m.replyPreview || null,
+          mediaUrl: m.media_url || m.mediaUrl || null,
+          mediaType: m.media_type || m.mediaType || null,
         })) || []);
         return;
       } catch {
@@ -134,6 +106,8 @@ export const ChatPage: React.FC = () => {
         senderId: m.sender_id || m.senderId,
         senderName: m.sender?.full_name || m.sender?.fullName || m.senderName || "Usuario",
         createdAt: m.created_at || m.createdAt,
+        readAt: m.read_at || m.readAt || null,
+        clientStatus: "sent",
       })) || []);
     } catch (error) {
       console.error("Error fetching conversation:", error);
@@ -142,29 +116,169 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    fetchConversation();
+
+    const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
+    const token = localStorage.getItem("accessToken");
+    const ws = new WebSocket(`${WS_URL}/ws?token=${token}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "subscribe", conversationId }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const payload = data.payload || data;
+
+        if (data.event === "new_message") {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === payload.id)) return prev;
+            return [...prev, { ...payload, clientStatus: "sent" }];
+          });
+        } else if (data.type === "message" || data.event === "message:received") {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === payload.id)) return prev;
+            return [...prev, payload];
+          });
+        } else if (data.event === "user:typing") {
+          setTypingUsers((prev) => {
+            if (!prev.includes(payload.userName)) {
+              return [...prev, payload.userName];
+            }
+            return prev;
+          });
+        } else if (data.event === "user:stopped-typing") {
+          setTypingUsers((prev) => prev.filter((n) => n !== payload.userName));
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.send(JSON.stringify({ type: "unsubscribe", conversationId }));
+      }
+      ws.close();
+      wsRef.current = null;
+    };
+  }, [conversationId, user, navigate]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: Message = {
+      id: tempId,
+      content: newMessage.trim(),
+      senderId: user?.id || "",
+      senderName: "Tú",
+      createdAt: new Date().toISOString(),
+      readAt: null,
+      clientStatus: "sending",
+      replyToMessageId: replyingTo?.id || null,
+      replyPreview: replyingTo?.content || null,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setNewMessage("");
+    const replyTo = replyingTo;
+    setReplyingTo(null);
     setIsSending(true);
+
     try {
       const response = await apiClient.post("/messages", {
         conversationId,
-        content: newMessage.trim(),
+        content: optimisticMsg.content,
+        reply_to_message_id: replyTo?.id || undefined,
+      });
+      const msg = response.data?.data || response.data;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, id: msg.id, clientStatus: "sent", readAt: null }
+            : m
+        )
+      );
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, clientStatus: "failed" } : m
+        )
+      );
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleRetry = async (failedMsg: any) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === failedMsg.id ? { ...m, clientStatus: "sending" } : m))
+    );
+    try {
+      const response = await apiClient.post("/messages", {
+        conversationId,
+        content: failedMsg.content,
+        reply_to_message_id: failedMsg.replyToMessageId || undefined,
+      });
+      const msg = response.data?.data || response.data;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === failedMsg.id
+            ? { ...m, id: msg.id, content: msg.content, clientStatus: "sent" }
+            : m
+        )
+      );
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m
+        )
+      );
+    }
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !conversationId) return;
+
+    setUploadingImage(true);
+    try {
+      const mediaUrl = await uploadChatImageFile(conversationId, file);
+      if (!mediaUrl) throw new Error("Error al subir imagen");
+
+      const response = await apiClient.post("/messages", {
+        conversationId,
+        content: file.name,
+        media_url: mediaUrl,
+        media_type: file.type,
       });
       const msg = response.data?.data || response.data;
       setMessages((prev) => [...prev, {
         id: msg.id,
         content: msg.content,
         senderId: msg.sender_id || msg.senderId || user?.id || "",
-        senderName: msg.sender?.full_name || msg.sender?.fullName || msg.senderName || "Tú",
+        senderName: "Tú",
         createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
+        readAt: null,
+        clientStatus: "sent",
+        mediaUrl,
+        mediaType: file.type,
       }]);
-      setNewMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
+    } catch (err) {
+      console.error("Error uploading image:", err);
     } finally {
-      setIsSending(false);
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -229,12 +343,19 @@ export const ChatPage: React.FC = () => {
                 senderId: msg.senderId,
                 content: msg.content,
                 createdAt: msg.createdAt,
-                readAt: null,
+                readAt: msg.readAt || null,
+                clientStatus: msg.clientStatus || "sent",
+                replyToMessageId: msg.replyToMessageId || null,
+                replyPreview: msg.replyPreview || null,
+                mediaUrl: msg.mediaUrl || null,
+                mediaType: msg.mediaType || null,
               }}
               currentUser={userUI}
               previousSenderSame={
                 index > 0 && messages[index - 1].senderId === msg.senderId
               }
+              onRetry={handleRetry}
+              onReply={(m) => setReplyingTo(m)}
             />
           ))
         )}
@@ -249,9 +370,46 @@ export const ChatPage: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Reply preview */}
+      {replyingTo && (
+        <div className="px-4 py-2 bg-primary-50 border-t border-primary-200 flex items-center gap-2">
+          <span className="text-xs text-primary-700 flex-1 truncate">
+            Respondiendo a: {replyingTo.content}
+          </span>
+          <button
+            onClick={() => setReplyingTo(null)}
+            className="text-primary-500 hover:text-primary-700 text-sm"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Input */}
       <form onSubmit={handleSendMessage} className="bg-white border-t border-neutral-200 p-4">
         <div className="flex gap-2 items-end">
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingImage}
+            className="p-2.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
+            title="Subir imagen"
+          >
+            {uploadingImage ? (
+              <span className="inline-block w-5 h-5 border-2 border-neutral-300 border-t-primary-600 rounded-full animate-spin" />
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5-5m0 0l5 5m-5-5v12" />
+              </svg>
+            )}
+          </button>
           <div className="flex-1 relative">
             <input
               type="text"

@@ -49,6 +49,7 @@ export const API_ENDPOINTS = {
   STUDY_GROUPS_LEAVE: (id: string) => `/study-groups/${id}/leave`,
   STUDY_GROUPS_CANCEL: (id: string) => `/study-groups/${id}/cancel`,
   STUDY_GROUPS_MEMBERS: (id: string) => `/study-groups/${id}/members`,
+  STUDY_GROUPS_MESSAGES: (id: string) => `/study-groups/${id}/messages`,
   STUDY_GROUPS_TRANSFER: (id: string) => `/study-groups/${id}/transfer`,
   STUDY_GROUPS_TRANSFER_ACCEPT: (id: string) => `/study-groups/transfers/${id}/accept`,
 
@@ -63,11 +64,12 @@ export const API_ENDPOINTS = {
   // ========================================================================
   // MESSAGING & CONVERSATIONS
   // ========================================================================
-  MESSAGES_LIST: (conversationId: string) => `/conversations/${conversationId}/messages`,
-  MESSAGES_SEND: (conversationId: string) => `/conversations/${conversationId}/messages`,
+  MESSAGES_LIST: "/messages",
+  MESSAGES_SEND: "/messages",
   CONVERSATIONS_LIST: "/conversations",
   CONVERSATIONS_BY_ID: (id: string) => `/conversations/${id}`,
   CONVERSATIONS_CREATE: "/conversations",
+  CONVERSATIONS_MARK_READ: (id: string) => `/conversations/${id}/read`,
 
   // ========================================================================
   // RESOURCES

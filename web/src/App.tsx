@@ -18,6 +18,7 @@ import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { SolicitudDetailPage } from "./pages/SolicitudDetailPage";
 import { GroupDetailPage } from "./pages/GroupDetailPage";
 import { GroupAdminPage } from "./pages/GroupAdminPage";
+import { GroupChatPage } from "./pages/GroupChatPage";
 import { NuevaSolicitudPage } from "./pages/NuevaSolicitudPage";
 import { PostularPage } from "./pages/PostularPage";
 import { EventosPage } from "./pages/EventosPage";
@@ -124,6 +125,7 @@ function App() {
           <Route path="/postular/:id" element={<PostularPage />} />
           <Route path="/grupo/:id" element={<GroupDetailPage />} />
           <Route path="/grupo/:id/admin" element={<GroupAdminPage />} />
+          <Route path="/grupo/:id/chat" element={<GroupChatPage />} />
           <Route path="/eventos" element={<EventosPage />} />
           <Route path="/recursos" element={<RecursosPage />} />
           <Route path="/recursos/:id" element={<RecursoDetallePage />} />

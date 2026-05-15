@@ -65,7 +65,11 @@ export function PerfilPage() {
         <ProfileHero
           name={displayName}
           email={user?.email || ""}
-          avatarUrl={profile?.avatar_url || user?.profileImage || undefined}
+          avatarUrl={
+            profile?.avatar_url
+              ? `${profile.avatar_url}?t=${new Date(profile.updated_at).getTime()}`
+              : user?.profileImage || undefined
+          }
           primaryProgram={primaryProgramName}
         />
 

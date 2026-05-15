@@ -228,7 +228,7 @@ export class ProfilesCatalogController {
             fullName: data.full_name,
             bio: data.bio ?? null,
             phoneNumber: data.phone_number ?? null,
-            avatarUrl: data.avatar_url ?? null,
+            avatarUrl: data.avatar_url !== undefined ? data.avatar_url : undefined,
             semester: data.semester !== undefined ? Number(data.semester) : undefined,
           });
 

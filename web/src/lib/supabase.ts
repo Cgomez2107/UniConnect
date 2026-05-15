@@ -14,8 +14,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const STORAGE_BUCKETS = {
   AVATARS: "avatars",
   RESOURCES: "resources",
-  CHAT_MEDIA: "chat-media",
-  CHAT_AUDIO: "chat-audio",
+  CHAT_MEDIA: "resources",
+  CHAT_AUDIO: "resources",
 } as const;
 
 export async function uploadAvatarFile(userId: string, file: File): Promise<string | null> {
