@@ -3,13 +3,19 @@ import { apiClient } from "@/lib/api/client";
 
 interface Resource {
   id: string;
+  userId: string;
+  programId: string;
+  subjectId: string;
   title: string;
-  description: string;
-  url: string;
-  type: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  subjectId?: string;
+  description: string | null;
+  fileUrl: string;
+  fileName: string;
+  fileType: string | null;
+  fileSizeKb: number | null;
+  createdAt: string;
+  updatedAt: string;
+  profiles?: { fullName: string; avatarUrl: string | null };
+  subjects?: { name: string };
 }
 
 interface UseResourcesState {
@@ -47,8 +53,8 @@ export default function useResources() {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
         const endpoint = subjectId
-          ? `/api/v1/resources?subjectId=${subjectId}`
-          : "/api/v1/resources";
+          ? `/resources?subjectId=${subjectId}`
+          : "/resources";
         const response = await apiClient.get<{ data: Resource[] }>(endpoint);
         setState({ resources: response.data.data, isLoading: false, error: null });
       } catch (err) {
@@ -70,7 +76,7 @@ export default function useResources() {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
         const response = await apiClient.post<{ data: Resource }>(
-          "/api/v1/resources",
+          "/resources",
           data
         );
         setState((prev) => ({
@@ -97,7 +103,7 @@ export default function useResources() {
   const deleteResource = useCallback(async (resourceId: string) => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      await apiClient.delete(`/api/v1/resources/${resourceId}`);
+      await apiClient.delete(`/resources/${resourceId}`);
       setState((prev) => ({
         ...prev,
         resources: prev.resources.filter((r) => r.id !== resourceId),

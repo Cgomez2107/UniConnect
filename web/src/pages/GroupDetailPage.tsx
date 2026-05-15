@@ -148,6 +148,32 @@ export function GroupDetailPage() {
 
   const profileNames = useProfileNames(memberIds);
 
+  const resolveName = (userId: string, fallback: string | null): string => {
+    if (fallback) return fallback;
+    const data = profileNames.get(userId);
+    return data?.fullName || "Usuario";
+  };
+
+  const resolveAvatar = (userId: string): string | null => {
+    const data = profileNames.get(userId);
+    return data?.avatarUrl || null;
+  };
+
+  const sortedMembers = useMemo(
+    () =>
+      [...members]
+        .map((m) => ({
+          ...m,
+          fullName: m.fullName || resolveName(m.userId, null),
+          avatarUrl: m.avatarUrl || resolveAvatar(m.userId),
+        }))
+        .sort((a, b) => {
+          const order: Record<string, number> = { autor: 0, admin: 1, miembro: 2 };
+          return (order[a.role] ?? 3) - (order[b.role] ?? 3);
+        }),
+    [members, profileNames],
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
@@ -181,17 +207,6 @@ export function GroupDetailPage() {
     );
   }
 
-  const resolveName = (userId: string, fallback: string | null): string => {
-    if (fallback) return fallback;
-    const data = profileNames.get(userId);
-    return data?.fullName || "Usuario";
-  };
-
-  const resolveAvatar = (userId: string): string | null => {
-    const data = profileNames.get(userId);
-    return data?.avatarUrl || null;
-  };
-
   const title = solicitud.title || "Grupo de estudio";
   const creatorName = resolveName(solicitud.authorId, solicitud.author?.fullName) || "Usuario";
   const subjectName = solicitud.subjectName || "";
@@ -199,21 +214,6 @@ export function GroupDetailPage() {
 
   const currentMember = members.find((m) => m.userId === user?.id);
   const isAuthor = currentMember?.role === "autor";
-
-  const sortedMembers = useMemo(
-    () =>
-      [...members]
-        .map((m) => ({
-          ...m,
-          fullName: m.fullName || resolveName(m.userId, null),
-          avatarUrl: m.avatarUrl || resolveAvatar(m.userId),
-        }))
-        .sort((a, b) => {
-          const order: Record<string, number> = { autor: 0, admin: 1, miembro: 2 };
-          return (order[a.role] ?? 3) - (order[b.role] ?? 3);
-        }),
-    [members, profileNames],
-  );
 
   const groupStatus: "abierta" | "llena" | "transferenciaPendiente" | "cerrada" | "expirada" =
     solicitud.hasPendingTransfer
@@ -278,13 +278,22 @@ export function GroupDetailPage() {
 
           <div className="flex flex-wrap gap-3">
             {(currentMember?.role === "autor" || currentMember?.role === "admin") && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowTransferModal(true)}
-              >
-                Transferir admin
-              </Button>
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate(`/grupo/${id}/admin`)}
+                >
+                  Panel de administración
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowTransferModal(true)}
+                >
+                  Transferir admin
+                </Button>
+              </>
             )}
             {pendingTransferId && currentMember && (
               <Button

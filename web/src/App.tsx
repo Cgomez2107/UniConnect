@@ -10,16 +10,19 @@ import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { OAuthCallbackPage } from "./pages/OAuthCallbackPage";
 import { ViewerPage } from "./pages/ViewerPage";
+import { SubirRecursoPage } from "./pages/SubirRecursoPage";
 import { AdminPage } from "./pages/AdminPage";
 import { ChatPage } from "./pages/ChatPage";
 import { InvitationsPage } from "./pages/InvitationsPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { SolicitudDetailPage } from "./pages/SolicitudDetailPage";
 import { GroupDetailPage } from "./pages/GroupDetailPage";
+import { GroupAdminPage } from "./pages/GroupAdminPage";
 import { NuevaSolicitudPage } from "./pages/NuevaSolicitudPage";
 import { PostularPage } from "./pages/PostularPage";
 import { EventosPage } from "./pages/EventosPage";
 import { RecursosPage } from "./pages/RecursosPage";
+import { RecursoDetallePage } from "./pages/RecursoDetallePage";
 import { PerfilPage } from "./pages/PerfilPage";
 import { EditProfilePage } from "./pages/EditProfilePage";
 import { MensajesPage } from "./pages/MensajesPage";
@@ -120,8 +123,11 @@ function App() {
           <Route path="/nueva-solicitud" element={<NuevaSolicitudPage />} />
           <Route path="/postular/:id" element={<PostularPage />} />
           <Route path="/grupo/:id" element={<GroupDetailPage />} />
+          <Route path="/grupo/:id/admin" element={<GroupAdminPage />} />
           <Route path="/eventos" element={<EventosPage />} />
           <Route path="/recursos" element={<RecursosPage />} />
+          <Route path="/recursos/:id" element={<RecursoDetallePage />} />
+          <Route path="/subir-recurso" element={<SubirRecursoPage />} />
           <Route path="/perfil" element={<PerfilPage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/mensajes" element={<MensajesPage />} />

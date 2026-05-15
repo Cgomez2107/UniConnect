@@ -9,22 +9,30 @@ import { Button } from "@/components/ui/Button";
  */
 export function RecursosPage() {
   const navigate = useNavigate();
-  const { resources = [], isLoading = false, error = null } = useResources() as any;
+  const { resources = [], isLoading = false, error = null, refresh } = useResources() as any;
   const [filteredResources, setFilteredResources] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    let filtered = (resources || []);
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    let mapped = (resources || []).map((r: any) => ({
+      ...r,
+      subjectName: r.subjects?.name,
+      uploaderName: r.profiles?.fullName,
+    }));
 
     if (searchTerm) {
-      filtered = filtered.filter(
+      mapped = mapped.filter(
         (res: any) =>
           (res.title?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
           (res.description?.toLowerCase() || "").includes(searchTerm.toLowerCase())
       );
     }
 
-    setFilteredResources(filtered);
+    setFilteredResources(mapped);
   }, [searchTerm, resources]);
 
   const handleViewDetails = (id: string) => {

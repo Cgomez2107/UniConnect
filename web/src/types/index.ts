@@ -240,10 +240,14 @@ export interface StudyResource {
 }
 
 export interface CreateStudyResourcePayload {
-  subject_id: string;
+  subjectId: string;
   title: string;
   description?: string;
-  file_uri: string;
+  fileUrl: string;
+  fileName: string;
+  fileType?: string;
+  fileSizeKb?: number;
+  programId?: string;
 }
 
 // ============================================================================
