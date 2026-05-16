@@ -23,27 +23,20 @@ export default function useCompanions(subjectId?: string) {
 
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const allStudents = await companionsService.getAllStudents();
+      const allStudents = subjectId
+        ? await companionsService.getStudentsBySubject(subjectId)
+        : await companionsService.getAllStudents();
 
-      const mySubjectIds = (user as any).subjects?.map((s: any) => s.id) || [];
+      const mySubjectIds =
+        (user as any).subjects?.map((s: any) => s.id) ||
+        (user as any).studySubjects?.map((s: any) => s.id) ||
+        [];
 
-      let filtered = allStudents.filter((student) => {
-        if (student.id === user.id) return false;
-        const studentSubjectIds = student.subjects?.map((s) => s.id) || [];
-        return studentSubjectIds.some((id) => mySubjectIds.includes(id));
-      });
-
-      if (subjectId) {
-        filtered = filtered.filter((student) =>
-          student.subjects?.some((s) => s.id === subjectId)
-        );
-      }
+      let filtered = allStudents.filter((student) => student.id !== user.id);
 
       const withSharedSubjects = filtered.map((s) => ({
         ...s,
-        sharedSubjectIds: s.subjects
-          ?.filter((sub) => mySubjectIds.includes(sub.id))
-          .map((sub) => sub.id),
+        sharedSubjectIds: subjectId ? [subjectId] : [],
       }));
 
       setState({
@@ -60,7 +53,7 @@ export default function useCompanions(subjectId?: string) {
         error: message,
       }));
     }
-  }, [user?.id, subjectId]);
+  }, [subjectId, user]);
 
   useEffect(() => {
     loadCompanions();

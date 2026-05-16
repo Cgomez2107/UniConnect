@@ -1,0 +1,113 @@
+import {
+  FetchTransport,
+  AuthClient,
+  BaseMessagingClient,
+  RealtimeChatDecorator,
+  StudyGroupsClient,
+  ProfilesClient,
+  ResourcesClient,
+  EventsClient,
+  NotificationsClient,
+  AdminClient,
+} from "@uniconnect/shared-api";
+import { WebStorageAdapter, ConsoleLogger } from "@uniconnect/shared-state";
+
+const GATEWAY_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
+const AUTH_SESSION_KEY = "uniconnect-auth-session";
+
+const transport = new FetchTransport(GATEWAY_URL);
+
+transport.setAuthProvider(async () => {
+  try {
+    const raw = window.localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      state?: { accessToken?: string | null; refreshToken?: string | null };
+    };
+    return parsed?.state?.accessToken ?? null;
+  } catch {
+    return null;
+  }
+});
+
+transport.setTokenRefreshProvider(async () => {
+  try {
+    const raw = window.localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      state?: { accessToken?: string | null; refreshToken?: string | null };
+    };
+    const refreshToken = parsed?.state?.refreshToken;
+    if (!refreshToken) return null;
+
+    const response = await fetch(
+      `${GATEWAY_URL}/auth/refresh`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      }
+    );
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const payload = data?.data ?? data;
+    const newToken = payload?.accessToken ?? null;
+    const newRefreshToken = payload?.refreshToken ?? null;
+
+    // Update localStorage with new tokens
+    if (newToken && parsed?.state) {
+      parsed.state.accessToken = newToken;
+      if (newRefreshToken) parsed.state.refreshToken = newRefreshToken;
+      window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(parsed));
+    }
+
+    return newToken;
+  } catch {
+    return null;
+  }
+});
+
+transport.setOnSessionExpired(() => {
+  try {
+    window.localStorage.removeItem(AUTH_SESSION_KEY);
+    window.localStorage.removeItem("accessToken");
+    window.localStorage.removeItem("user");
+    window.location.href = "/login";
+  } catch {
+    // ignore
+  }
+});
+
+const authClient = new AuthClient(transport);
+const messagingClient = new BaseMessagingClient(transport);
+const realtimeChat = new RealtimeChatDecorator(messagingClient, transport, WS_URL);
+const studyGroupsClient = new StudyGroupsClient(transport);
+const profilesClient = new ProfilesClient(transport);
+const resourcesClient = new ResourcesClient(transport);
+const eventsClient = new EventsClient(transport);
+const notificationsClient = new NotificationsClient(transport);
+const adminClient = new AdminClient(transport);
+
+const storageAdapter = new WebStorageAdapter(window.localStorage);
+const logger = new ConsoleLogger();
+
+export const deps = {
+  apiClients: {
+    auth: authClient,
+    messaging: messagingClient,
+    messagingRealtime: realtimeChat,
+    studyGroups: studyGroupsClient,
+    profiles: profilesClient,
+    resources: resourcesClient,
+    events: eventsClient,
+    notifications: notificationsClient,
+    admin: adminClient,
+  },
+  transport,
+  storage: storageAdapter,
+  logger,
+};
+
+export { AUTH_SESSION_KEY };

@@ -26,9 +26,9 @@ export function NuevaSolicitudPage() {
         const userSubjects = await profilesService.getMySubjects();
         if (!cancelled) {
           setSubjects(
-            userSubjects
-              .filter((us) => us.subjects?.id && us.subjects?.name)
-              .map((us) => ({ id: us.subjects!.id, name: us.subjects!.name }))
+            (userSubjects as any[])
+              .filter((us: any) => us.subjects?.id && us.subjects?.name)
+              .map((us: any) => ({ id: us.subjects!.id, name: us.subjects!.name })) as any
           );
         }
       } catch {

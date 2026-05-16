@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useParams,
 } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { LoginPage } from "./pages/LoginPage";
@@ -16,9 +17,8 @@ import { ChatPage } from "./pages/ChatPage";
 import { InvitationsPage } from "./pages/InvitationsPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { SolicitudDetailPage } from "./pages/SolicitudDetailPage";
-import { GroupDetailPage } from "./pages/GroupDetailPage";
-import { GroupAdminPage } from "./pages/GroupAdminPage";
-import { GroupChatPage } from "./pages/GroupChatPage";
+import { StudentProfilePage } from "./pages/StudentProfilePage";
+import { GroupDashboardPage } from "./pages/GroupAdminPage";
 import { NuevaSolicitudPage } from "./pages/NuevaSolicitudPage";
 import { PostularPage } from "./pages/PostularPage";
 import { EventosPage } from "./pages/EventosPage";
@@ -32,7 +32,7 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import DirectorioPage from "./pages/DirectorioPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
-import { useNotificationStore } from "./store/useNotificationStore";
+import { fetchNotifications } from "./lib/services/notifications.service";
 import "./App.css";
 
 function PrivateRoute({
@@ -57,11 +57,19 @@ function PrivateRoute({
   return <>{children}</>;
 }
 
+function GroupAdminRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/grupo/${id}`} replace />;
+}
+
+function GroupChatRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/grupo/${id}`} replace />;
+}
+
 function App() {
   const { isAuthenticated, hydrate, user } = useAuthStore();
   const [isHydrating, setIsHydrating] = useState(true);
-
-  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
 
   useEffect(() => {
     (async () => {
@@ -77,7 +85,7 @@ function App() {
     if (isAuthenticated) {
       fetchNotifications();
     }
-  }, [isAuthenticated, fetchNotifications]);
+  }, [isAuthenticated]);
 
   // Block rendering until hydration completes
   if (isHydrating) {
@@ -123,9 +131,9 @@ function App() {
           <Route path="/solicitud/:id" element={<SolicitudDetailPage />} />
           <Route path="/nueva-solicitud" element={<NuevaSolicitudPage />} />
           <Route path="/postular/:id" element={<PostularPage />} />
-          <Route path="/grupo/:id" element={<GroupDetailPage />} />
-          <Route path="/grupo/:id/admin" element={<GroupAdminPage />} />
-          <Route path="/grupo/:id/chat" element={<GroupChatPage />} />
+          <Route path="/grupo/:id" element={<GroupDashboardPage />} />
+          <Route path="/grupo/:id/admin" element={<GroupAdminRedirect />} />
+          <Route path="/grupo/:id/chat" element={<GroupChatRedirect />} />
           <Route path="/eventos" element={<EventosPage />} />
           <Route path="/recursos" element={<RecursosPage />} />
           <Route path="/recursos/:id" element={<RecursoDetallePage />} />
@@ -136,6 +144,7 @@ function App() {
           <Route path="/chat/:conversationId" element={<ChatPage />} />
           <Route path="/directorio" element={<CompanionsPage />} />
           <Route path="/companions" element={<CompanionsPage />} />
+          <Route path="/perfil-estudiante/:id" element={<StudentProfilePage />} />
           <Route path="/notificaciones" element={<NotificationsPage />} />
         </Route>
         <Route

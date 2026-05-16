@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import useAuth from "@/hooks/useAuth";
 import studyGroupsService from "@/lib/services/studyGroups.service";
-import type { Application } from "@/types";
+import type { StudyApplication } from "@uniconnect/shared-types";
 
 export interface PostulationFormData {
   request: any;
@@ -65,8 +65,8 @@ export function usePostulationForm(requestId?: string): PostulationFormData {
     setSubmitError(null);
 
     try {
-      const myApps: Application[] = await studyGroupsService.listMyApplications();
-      const existingApp = myApps.find((a) => a.requestId === requestId);
+      const myApps: StudyApplication[] = await studyGroupsService.listMyApplications();
+      const existingApp = myApps.find((a) => a.groupId === requestId);
       if (existingApp && existingApp.status !== "rechazada") {
         throw new Error("Ya te postulaste a esta solicitud.");
       }

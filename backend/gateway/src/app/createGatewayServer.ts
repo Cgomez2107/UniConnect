@@ -303,7 +303,41 @@ async function handleRequest(
   });
 }
 
+function validateGatewayEnv(): void {
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+  const gatewayWarnings: string[] = [];
+
+  if (!SUPABASE_URL?.trim()) {
+    gatewayWarnings.push("SUPABASE_URL no está configurada — el gateway no podrá orquestar operaciones de almacenamiento");
+  }
+  if (!SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    gatewayWarnings.push("SUPABASE_SERVICE_ROLE_KEY no está configurada — el gateway no podrá orquestar operaciones que requieran service role");
+  }
+
+  if (SUPABASE_URL?.trim()) {
+    try {
+      const parsed = new URL(SUPABASE_URL.trim());
+      if (!["http:", "https:"].includes(parsed.protocol)) throw new Error();
+    } catch {
+      gatewayWarnings.push(`SUPABASE_URL no es una URL válida: "${SUPABASE_URL.trim()}"`);
+    }
+  }
+
+  if (gatewayWarnings.length > 0) {
+    for (const warning of gatewayWarnings) {
+      console.warn(
+        JSON.stringify({
+          service: "gateway",
+          level: "warn",
+          message: warning,
+        }),
+      );
+    }
+  }
+}
+
 export function createGatewayServer(env: GatewayEnv) {
+  validateGatewayEnv();
   const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
 
   const server = createServer((req, res) => {

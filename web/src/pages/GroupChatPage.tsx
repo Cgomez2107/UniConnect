@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import { MessageBubble } from "@/components/chat/MessageBubble";
+import { MentionInput } from "@/components/chat/MentionInput";
 import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/Button";
 import studyGroupsService from "@/lib/services/studyGroups.service";
-import { supabase, uploadChatImageFile } from "@/lib/supabase";
+import { uploadChatImageFile } from "@/lib/supabase";
+import { useChatObserver } from "@/hooks/useChatObserver";
 
 export function GroupChatPage() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +44,7 @@ export function GroupChatPage() {
         if (cancelled) return;
         setMessages(msgs || []);
         setMembers(membersData || []);
-        setGroupName(groupData?.title || "Chat del grupo");
+        setGroupName(groupData?.name || "Chat del grupo");
       } catch (err) {
         console.error("Error loading group chat:", err);
       } finally {
@@ -55,38 +56,16 @@ export function GroupChatPage() {
     return () => { cancelled = true; };
   }, [id]);
 
-  useEffect(() => {
-    if (!id) return;
+  // --- Realtime messages ---
+  useChatObserver(id, (newMsg) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
+      return [...prev, newMsg];
+    });
+  });
 
-    const channel = supabase
-      .channel(`group-chat-${id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "study_group_messages",
-          filter: `group_id=eq.${id}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as any;
-          if (!newMsg || !newMsg.id) return;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [id]);
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim() || !id) return;
+  const handleSend = async (content: string, mentions: { userId: string; name: string }[]) => {
+    if (!content.trim() || !id) return;
 
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg = {
@@ -95,7 +74,7 @@ export function GroupChatPage() {
       group_id: id,
       sender_id: user?.id,
       senderId: user?.id,
-      content: text.trim(),
+      content: content.trim(),
       created_at: new Date().toISOString(),
       clientStatus: "sending",
       sender: { full_name: user?.name || "Tú", avatar_url: user?.profileImage || null },
@@ -104,13 +83,13 @@ export function GroupChatPage() {
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
-    setText("");
     const replyTo = replyingTo;
     setReplyingTo(null);
 
     try {
-      const msg = await studyGroupsService.sendGroupMessage(id, text.trim(), {
+      const msg = await studyGroupsService.sendGroupMessage(id, content.trim(), {
         replyToMessageId: replyTo?.id || undefined,
+        mentions,
       });
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) {
@@ -178,7 +157,7 @@ export function GroupChatPage() {
       };
       setMessages((prev) => [...prev, optimisticMsg]);
 
-      const msg = await studyGroupsService.sendGroupMessage(id, file.name, {
+      const msg: any = await studyGroupsService.sendGroupMessage(id, file.name, {
         mediaUrl,
         mediaType: file.type,
       });
@@ -196,7 +175,51 @@ export function GroupChatPage() {
       console.error("Error uploading image:", err);
     } finally {
       setUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleImageSend = async (file: File) => {
+    if (!id) return;
+    setUploadingImage(true);
+    let tempId = "";
+    try {
+      const mediaUrl = await uploadChatImageFile(id, file);
+      if (!mediaUrl) throw new Error("Error al subir imagen");
+
+      tempId = `temp-${Date.now()}`;
+      const optimisticMsg = {
+        id: tempId,
+        _tempId: tempId,
+        group_id: id,
+        sender_id: user?.id,
+        senderId: user?.id,
+        content: file.name,
+        created_at: new Date().toISOString(),
+        clientStatus: "sending",
+        sender: { full_name: user?.name || "Tú", avatar_url: user?.profileImage || null },
+        media_url: mediaUrl,
+        media_type: file.type,
+      };
+      setMessages((prev) => [...prev, optimisticMsg]);
+
+      const msg: any = await studyGroupsService.sendGroupMessage(id, file.name, {
+        mediaUrl,
+        mediaType: file.type,
+      });
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) {
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) =>
+          m.id === tempId
+            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, media_url: m.media_url || msg.media_url }
+            : m
+        );
+      });
+    } catch (err) {
+      console.error("Error uploading image:", err);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -279,56 +302,16 @@ export function GroupChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {replyingTo && (
-        <div className="px-4 py-2 bg-primary-50 border-t border-primary-200 flex items-center gap-2">
-          <span className="text-xs text-primary-700 flex-1 truncate">
-            Respondiendo a: {replyingTo.content}
-          </span>
-          <button
-            onClick={() => setReplyingTo(null)}
-            className="text-primary-500 hover:text-primary-700 text-sm"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      <form onSubmit={handleSend} className="bg-white border-t border-neutral-200 p-4">
-        <div className="flex gap-2 items-end">
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleImageSelect}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingImage}
-            className="p-2.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
-            title="Subir imagen"
-          >
-            {uploadingImage ? (
-              <span className="inline-block w-5 h-5 border-2 border-neutral-300 border-t-primary-600 rounded-full animate-spin" />
-            ) : (
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5-5m0 0l5 5m-5-5v12" />
-              </svg>
-            )}
-          </button>
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Escribe un mensaje..."
-            className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
-          />
-          <Button type="submit" loading={sending} disabled={!text.trim()}>
-            Enviar
-          </Button>
-        </div>
-      </form>
+      <MentionInput
+        members={members}
+        currentUserId={user?.id || ""}
+        onSend={handleSend}
+        onSendImage={handleImageSend}
+        uploadingImage={uploadingImage}
+        sending={sending}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
+      />
     </div>
   );
 }

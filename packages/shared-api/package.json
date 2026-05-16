@@ -24,8 +24,13 @@
     "./types": {
       "import": "./dist/types/index.js",
       "types": "./dist/types/index.d.ts"
+    },
+    "./services": {
+      "import": "./src/services/index.ts",
+      "types": "./dist/services/index.d.ts"
     }
   },
+
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -35,12 +40,16 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "node --import tsx/esm --test \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
     "@uniconnect/shared-types": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
   "keywords": [

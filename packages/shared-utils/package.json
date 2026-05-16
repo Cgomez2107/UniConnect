@@ -1,0 +1,39 @@
+{
+  "name": "@uniconnect/shared-utils",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared utilities including environment variable validation for UniConnect",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./envValidator": {
+      "types": "./dist/envValidator.d.ts",
+      "import": "./src/envValidator.ts",
+      "default": "./src/envValidator.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "uniconnect",
+    "utils",
+    "env",
+    "validation"
+  ]
+}

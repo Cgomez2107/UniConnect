@@ -1,47 +1,45 @@
-import apiClient from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import { ApiResponse, AuthProfile, LoginFormData } from "@/types";
+/**
+ * @deprecated Use deps.apiClients.auth directly or import from @uniconnect/shared-api.
+ * This file is kept as a thin adapter for backward compatibility.
+ */
+import { deps } from "@/store/deps";
+import type { AuthProfile } from "@uniconnect/shared-types";
 
-// ============================================================================
-// AUTH SERVICE
-// ============================================================================
-
-export const authService = {
-  async login(data: LoginFormData): Promise<AuthProfile> {
-    const response = await apiClient.post<ApiResponse<AuthProfile>>(
-      API_ENDPOINTS.AUTH_LOGIN,
-      data
-    );
-    const user = response.data.data;
-    if (user && response.data.data?.id) {
-      localStorage.setItem("accessToken", (response.headers.authorization || "").replace("Bearer ", ""));
-      localStorage.setItem("user", JSON.stringify(user));
+const authService = {
+  async login(data: { email: string; password: string }): Promise<AuthProfile> {
+    const response = await deps.apiClients.auth.signIn(data);
+    if (response.accessToken) {
+      localStorage.setItem("accessToken", response.accessToken);
     }
-    return user || ({} as AuthProfile);
+    if (response.user) {
+      localStorage.setItem("user", JSON.stringify(response.user));
+    }
+    return response.user as AuthProfile;
   },
 
   async logout(): Promise<void> {
-    await apiClient.post(API_ENDPOINTS.AUTH_LOGOUT);
+    try {
+      await deps.apiClients.auth.signOut();
+    } catch {
+      // ignore errors during logout
+    }
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
   },
 
   async getMe(): Promise<AuthProfile> {
-    const response = await apiClient.get<ApiResponse<AuthProfile>>(API_ENDPOINTS.AUTH_ME);
-    return response.data.data || ({} as AuthProfile);
+    return deps.apiClients.auth.getCurrentUser();
   },
 
   async googleAuth(code: string): Promise<AuthProfile> {
-    const response = await apiClient.post<ApiResponse<AuthProfile>>(
-      API_ENDPOINTS.AUTH_GOOGLE,
-      { code }
-    );
-    const user = response.data.data;
-    if (user) {
-      localStorage.setItem("accessToken", (response.headers.authorization || "").replace("Bearer ", ""));
-      localStorage.setItem("user", JSON.stringify(user));
+    const response = await deps.apiClients.auth.handleOAuthCallback(code, "");
+    if (response.accessToken) {
+      localStorage.setItem("accessToken", response.accessToken);
     }
-    return user || ({} as AuthProfile);
+    if (response.user) {
+      localStorage.setItem("user", JSON.stringify(response.user));
+    }
+    return response.user as AuthProfile;
   },
 
   getStoredUser(): AuthProfile | null {

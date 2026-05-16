@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
-import { useProfileNames } from "@/hooks/useProfileNames";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
 import { RoleBadge } from "@/components/ui/RoleBadge";
 import { MemberListItem } from "@/components/ui/MemberListItem";
 import studyGroupsService from "@/lib/services/studyGroups.service";
-import type { Application, Member } from "@/types";
+import messagingService from "@/lib/services/messaging.service";
 
 function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return "Fecha no disponible";
@@ -36,6 +35,7 @@ export function SolicitudDetailPage() {
   const [myAppStatus, setMyAppStatus] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [members, setMembers] = useState<any[]>([]);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
@@ -52,15 +52,17 @@ export function SolicitudDetailPage() {
         setSolicitud(data);
 
         if (user?.id) {
-          const myApps: Application[] = await studyGroupsService.listMyApplications();
+          const myApps: any[] = await studyGroupsService.listMyApplications();
           if (cancelled) return;
-          const myApp = myApps.find((a: Application) => a.requestId === id);
+          const myApp = myApps.find((a: any) => (a.requestId || a.groupId) === id);
           if (myApp) setMyAppStatus(myApp.status);
 
           if (user.id === data.authorId) {
-            const apps = await studyGroupsService.getStudyGroupApplications(id);
+            const apps = await studyGroupsService.getStudyGroupApplications(id).catch(() => []);
             if (!cancelled) setApplications(apps);
           }
+          const mbrs = await studyGroupsService.getStudyGroupMembers(id).catch(() => []);
+          if (!cancelled) setMembers(mbrs);
         }
       } catch (err: any) {
         if (!cancelled) {
@@ -131,16 +133,27 @@ export function SolicitudDetailPage() {
     }
   };
 
-  const allUserIds = useMemo(() => {
-    const ids: string[] = [];
-    if (solicitud?.authorId) ids.push(solicitud.authorId);
-    for (const app of applications) {
-      if (app.applicantId) ids.push(app.applicantId);
+  const nameMap = useMemo(() => {
+    const map = new Map<string, { fullName: string; avatarUrl: string | null }>();
+    for (const m of members) {
+      if (!m.userId) continue;
+      const name = m.user?.firstName
+        ? `${m.user.firstName} ${m.user.lastName || ""}`.trim()
+        : m.user?.fullName || m.fullName || "";
+      const avatar = m.user?.profileImageUrl || m.avatarUrl || null;
+      if (name) map.set(m.userId, { fullName: name, avatarUrl: avatar });
     }
-    return ids;
-  }, [solicitud?.authorId, applications]);
-
-  const profileNames = useProfileNames(allUserIds);
+    for (const app of applications) {
+      const uid = app.applicantId || app.userId;
+      if (!uid || map.has(uid)) continue;
+      const name = app.user?.firstName
+        ? `${app.user.firstName} ${app.user.lastName || ""}`.trim()
+        : app.user?.fullName || app.applicantName || "";
+      const avatar = app.user?.profileImageUrl || null;
+      if (name) map.set(uid, { fullName: name, avatarUrl: avatar });
+    }
+    return map;
+  }, [members, applications]);
 
   if (loading) {
     return (
@@ -177,12 +190,12 @@ export function SolicitudDetailPage() {
 
   const getDisplayName = (userId: string, fallback: string): string => {
     if (fallback !== "Usuario") return fallback;
-    const data = profileNames.get(userId);
+    const data = nameMap.get(userId);
     return data?.fullName || fallback;
   };
 
   const getAvatarUrl = (userId: string): string | null => {
-    const data = profileNames.get(userId);
+    const data = nameMap.get(userId);
     return data?.avatarUrl || null;
   };
 
@@ -196,6 +209,7 @@ export function SolicitudDetailPage() {
   const hasApplied = myAppStatus !== null;
   const pendingApps = applications.filter((a: any) => a.status === "pendiente");
   const acceptedApps = applications.filter((a: any) => a.status === "aceptada");
+  const memberCount = members.length || acceptedApps.length + 1;
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
@@ -235,7 +249,11 @@ export function SolicitudDetailPage() {
             </p>
           )}
 
-          <div className="grid grid-cols-2 gap-4 p-4 bg-primary-800 rounded-lg mb-6">
+          <div className="grid grid-cols-3 gap-4 p-4 bg-primary-800 rounded-lg mb-6">
+            <div>
+              <p className="text-xs text-white/60">Cupos</p>
+              <p className="font-bold text-lg mt-0.5">{memberCount}/{solicitud.maxMembers ?? "?"}</p>
+            </div>
             <div>
               <p className="text-xs text-white/60">Postulaciones</p>
               <p className="font-bold text-lg mt-0.5">{solicitud.applicationsCount ?? 0}</p>
@@ -381,33 +399,46 @@ export function SolicitudDetailPage() {
           </div>
         )}
 
-        {acceptedApps.length > 0 && (
+        {solicitud && (
           <div className="card p-6 animate-slide-up mb-6">
             <h2 className="text-lg font-bold text-primary-900 dark:text-white mb-4">
-              Miembros ({acceptedApps.length + 1})
+              Miembros ({memberCount})
             </h2>
             <div className="space-y-2">
-              <MemberListItem
-                member={{
-                  userId: solicitud.authorId,
-                  fullName: creatorName,
-                  avatarUrl: solicitud.author?.avatarUrl || null,
-                  role: "autor",
-                  joinedAt: solicitud.createdAt,
-                }}
-                isCurrentUser={user?.id === solicitud.authorId}
-              />
-              {acceptedApps.map((app: any) => (
+              {(members.length > 0 ? members : [
+                { userId: solicitud.authorId, fullName: creatorName, avatarUrl: solicitud.author?.avatarUrl || null, role: "autor" as const, joinedAt: solicitud.createdAt },
+                ...acceptedApps.map((a: any) => ({ userId: a.applicantId, fullName: getDisplayName(a.applicantId, "Usuario"), avatarUrl: getAvatarUrl(a.applicantId), role: "miembro" as const, joinedAt: a.createdAt })),
+              ]).map((m: any) => (
                 <MemberListItem
-                  key={app.id}
+                  key={m.userId}
                   member={{
-                    userId: app.applicantId,
-                    fullName: getDisplayName(app.applicantId, "Usuario"),
-                    avatarUrl: getAvatarUrl(app.applicantId),
-                    role: "miembro",
-                    joinedAt: app.createdAt,
+                    userId: m.userId,
+                    fullName: m.fullName || m.user?.fullName || getDisplayName(m.userId, "Usuario"),
+                    avatarUrl: m.avatarUrl || m.user?.avatarUrl || getAvatarUrl(m.userId),
+                    role: m.role,
+                    joinedAt: m.joinedAt,
                   }}
-                  isCurrentUser={user?.id === app.applicantId}
+                  isCurrentUser={user?.id === m.userId}
+                  action={
+                    user?.id !== m.userId ? (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const conv = await messagingService.createConversation(m.userId);
+                            navigate(`/chat/${conv.id}`);
+                          } catch {
+                            setError("Error al iniciar chat");
+                          }
+                        }}
+                        className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="Chatear"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                        </svg>
+                      </button>
+                    ) : undefined
+                  }
                 />
               ))}
             </div>

@@ -85,7 +85,7 @@ export interface UserProgram {
 // ============================================================================
 
 export type StudyGroupStatus = "activa" | "inactiva" | "finalizada";
-export type ApplicationStatus = "pendiente" | "aprobada" | "rechazada";
+export type ApplicationStatus = "pendiente" | "aceptada" | "rechazada";
 export type MemberRole = "admin" | "miembro";
 
 export interface StudyGroup {

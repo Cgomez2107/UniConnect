@@ -5,6 +5,7 @@ import { RoleBadge } from "./RoleBadge";
 interface MemberListItemProps {
   member: Member;
   isCurrentUser?: boolean;
+  action?: React.ReactNode;
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -22,7 +23,7 @@ function formatDate(dateStr: string | null | undefined): string {
   }
 }
 
-export function MemberListItem({ member, isCurrentUser }: MemberListItemProps) {
+export function MemberListItem({ member, isCurrentUser, action }: MemberListItemProps) {
   return (
     <div className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-700/50 rounded-lg">
       <Avatar
@@ -45,6 +46,7 @@ export function MemberListItem({ member, isCurrentUser }: MemberListItemProps) {
         )}
       </div>
       <RoleBadge role={member.role} />
+      {action}
     </div>
   );
 }

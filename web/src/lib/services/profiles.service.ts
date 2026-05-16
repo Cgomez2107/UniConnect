@@ -1,175 +1,87 @@
-import { apiClient } from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import {
-  Profile,
-  EditProfileFormData,
-  StudentPublicProfile,
-  StudentSearchResult,
-  UserProgram,
-  UserSubject,
-  Program,
-  Subject,
-  StudyRequest,
-} from "@/types";
-
 /**
- * Servicio de gestión de perfiles de usuario
+ * @deprecated Use deps.apiClients.profiles directly or import from @uniconnect/shared-api.
+ * This file is kept as a thin adapter for backward compatibility.
  */
+import { deps } from "@/store/deps";
+import type { ProfileUI } from "@/types/ui";
+
+function mapProfile(p: any): ProfileUI {
+  return {
+    id: p.id,
+    fullName: p.fullName ?? p.full_name,
+    avatarUrl: p.avatarUrl ?? p.avatar_url ?? null,
+    bio: p.bio ?? null,
+    phoneNumber: p.phoneNumber ?? p.phone_number ?? null,
+    role: p.role ?? "estudiante",
+    semester: p.semester ?? null,
+    isActive: p.isActive ?? p.is_active ?? true,
+    createdAt: p.createdAt?.toISOString?.() ?? p.created_at ?? p.createdAt,
+    updatedAt: p.updatedAt?.toISOString?.() ?? p.updated_at ?? p.updatedAt,
+  };
+}
+
 const profilesService = {
-  async getProfile(): Promise<Profile> {
-    try {
-      const response = await apiClient.get<{ data: Profile }>(
-        API_ENDPOINTS.PROFILE_GET
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-      throw error;
-    }
+  async getProfile(): Promise<ProfileUI> {
+    const profile = await deps.apiClients.profiles.getMyProfile();
+    return mapProfile(profile);
   },
 
   async getFullProfile(userId: string): Promise<any> {
-    try {
-      const response = await apiClient.get<{ data: any }>(
-        `/students/${userId}?vista=completa`
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching full profile:", error);
-      throw error;
-    }
+    return deps.apiClients.profiles.getProfileById(userId);
   },
 
-  async updateProfile(data: EditProfileFormData): Promise<Profile> {
-    try {
-      const response = await apiClient.patch<{ data: Profile }>(
-        API_ENDPOINTS.PROFILE_UPDATE,
-        data
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      throw error;
-    }
+  async updateProfile(data: { fullName?: string; bio?: string; phone?: string }): Promise<ProfileUI> {
+    const profile = await deps.apiClients.profiles.updateProfile({
+      fullName: data.fullName,
+      bio: data.bio,
+      phone: data.phone,
+    });
+    return mapProfile(profile);
   },
 
-  async getProfileById(userId: string): Promise<Profile> {
-    try {
-      const response = await apiClient.get<{ data: Profile }>(
-        `/students/${userId}`
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error fetching profile for user ${userId}:`, error);
-      throw error;
-    }
+  async getProfileById(userId: string): Promise<ProfileUI> {
+    const profile = await deps.apiClients.profiles.getProfileById(userId);
+    return mapProfile(profile);
   },
 
-  async getPublicProfile(userId: string): Promise<StudentPublicProfile> {
-    try {
-      const response = await apiClient.get<{ data: StudentPublicProfile }>(
-        `/students/${userId}`
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error fetching public profile for user ${userId}:`, error);
-      throw error;
-    }
+  async getPublicProfile(userId: string): Promise<any> {
+    return deps.apiClients.profiles.getProfileById(userId);
   },
 
-  async searchStudents(subjectId: string): Promise<StudentSearchResult[]> {
-    try {
-      const response = await apiClient.get<{ data: StudentSearchResult[] }>(
-        `/students?subjectId=${subjectId}`
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error searching students for subject ${subjectId}:`, error);
-      throw error;
-    }
+  async searchStudents(subjectId?: string): Promise<any[]> {
+    return deps.apiClients.profiles.searchStudents(subjectId);
   },
 
-  async getMyPrograms(): Promise<UserProgram[]> {
-    try {
-      const response = await apiClient.get<{ data: UserProgram[] }>(
-        API_ENDPOINTS.MY_PROGRAMS
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching my programs:", error);
-      throw error;
-    }
+  async getMyPrograms(): Promise<any[]> {
+    return deps.apiClients.profiles.getMyPrograms();
   },
 
-  async getMySubjects(): Promise<UserSubject[]> {
-    try {
-      const response = await apiClient.get<{ data: UserSubject[] }>(
-        API_ENDPOINTS.MY_SUBJECTS
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching my subjects:", error);
-      throw error;
-    }
+  async getMySubjects(): Promise<any[]> {
+    return deps.apiClients.profiles.getMySubjects();
   },
 
   async setPrimaryProgram(programId: string): Promise<void> {
-    try {
-      await apiClient.patch(API_ENDPOINTS.SET_PRIMARY_PROGRAM, { program_id: programId });
-    } catch (error) {
-      console.error("Error setting primary program:", error);
-      throw error;
-    }
+    return deps.apiClients.profiles.setPrimaryProgram(programId);
   },
 
   async uploadAvatar(userId: string, base64Data: string): Promise<string> {
-    const response = await apiClient.post<{ data: { url: string } }>(
-      API_ENDPOINTS.UPLOAD_AVATAR,
-      { user_id: userId, image: base64Data }
-    );
-    return response.data.data.url;
+    return deps.apiClients.profiles.uploadAvatar(userId, base64Data);
   },
 
   async addMySubject(subjectId: string): Promise<void> {
-    try {
-      await apiClient.post(API_ENDPOINTS.ADD_MY_SUBJECT, { subject_id: subjectId });
-    } catch (error) {
-      console.error("Error adding subject:", error);
-      throw error;
-    }
+    return deps.apiClients.profiles.addMySubject(subjectId);
   },
 
   async removeMySubject(subjectId: string): Promise<void> {
-    try {
-      await apiClient.delete(API_ENDPOINTS.REMOVE_MY_SUBJECT(subjectId));
-    } catch (error) {
-      console.error(`Error removing subject ${subjectId}:`, error);
-      throw error;
-    }
+    return deps.apiClients.profiles.removeMySubject(subjectId);
   },
 
-  async getPrograms(): Promise<Program[]> {
-    try {
-      const response = await apiClient.get<{ data: Program[] }>(
-        API_ENDPOINTS.PROGRAMS
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching programs:", error);
-      throw error;
-    }
+  async getPrograms(): Promise<any[]> {
+    return deps.apiClients.profiles.getPrograms();
   },
 
-  async getSubjectsByProgram(programId: string): Promise<Subject[]> {
-    try {
-      const response = await apiClient.get<{ data: Subject[] }>(
-        API_ENDPOINTS.SUBJECTS_BY_PROGRAM(programId)
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error fetching subjects for program ${programId}:`, error);
-      throw error;
-    }
+  async getSubjectsByProgram(programId: string): Promise<any[]> {
+    return deps.apiClients.profiles.getSubjectsByProgram(programId);
   },
 };
 

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { apiClient } from "@/lib/api/client";
+import { deps } from "@/store/deps";
 
 interface Resource {
   id: string;
@@ -41,6 +41,11 @@ interface UseResourcesState {
  * await loadResources(subjectId);
  * await uploadResource({ title: "Apuntes", file });
  */
+interface LoadResourcesOptions {
+  subjectId?: string;
+  userId?: string;
+}
+
 export default function useResources() {
   const [state, setState] = useState<UseResourcesState>({
     resources: [],
@@ -49,14 +54,35 @@ export default function useResources() {
   });
 
   const loadResources = useCallback(
-    async (subjectId?: string) => {
+    async (options?: LoadResourcesOptions) => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
-        const endpoint = subjectId
-          ? `/resources?subjectId=${subjectId}`
-          : "/resources";
-        const response = await apiClient.get<{ data: Resource[] }>(endpoint);
-        setState({ resources: response.data.data, isLoading: false, error: null });
+        const data = options?.userId
+          ? await deps.apiClients.resources.getMyResources(options.userId)
+          : options?.subjectId
+            ? await deps.apiClients.resources.getBySubject(options.subjectId)
+            : await deps.apiClients.resources.list();
+
+        const resources = (data as any[]).map((r: any) => ({
+          id: r.id,
+          userId: r.uploaderUserId ?? r.userId,
+          programId: r.programId,
+          subjectId: r.subjectId,
+          title: r.title,
+          description: r.description ?? null,
+          fileUrl: r.url,
+          fileName: r.title,
+          fileType: r.type ?? null,
+          fileSizeKb: null,
+          createdAt: typeof r.createdAt === "string" ? r.createdAt : r.createdAt?.toISOString?.() ?? "",
+          updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : r.updatedAt?.toISOString?.() ?? "",
+          profiles: r.uploader
+            ? { fullName: r.uploader.firstName ? `${r.uploader.firstName} ${r.uploader.lastName ?? ""}`.trim() : r.uploader.email, avatarUrl: r.uploader.profileImageUrl ?? null }
+            : undefined,
+          subjects: r.subject ? { name: r.subject.name } : undefined,
+        }));
+
+        setState({ resources, isLoading: false, error: null });
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Error cargando recursos";
@@ -72,19 +98,12 @@ export default function useResources() {
   );
 
   const uploadResource = useCallback(
-    async (data: FormData | Partial<Resource>) => {
+    async (_data: FormData | Partial<Resource>) => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
-        const response = await apiClient.post<{ data: Resource }>(
-          "/resources",
-          data
-        );
-        setState((prev) => ({
-          ...prev,
-          resources: [...prev.resources, response.data.data],
-          isLoading: false,
-        }));
-        return response.data.data;
+        // Upload/create is handled by SubirRecursoPage flow with StorageService + ResourcesClient.create.
+        setState((prev) => ({ ...prev, isLoading: false }));
+        return null;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Error subiendo recurso";
@@ -103,7 +122,7 @@ export default function useResources() {
   const deleteResource = useCallback(async (resourceId: string) => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      await apiClient.delete(`/resources/${resourceId}`);
+      await deps.apiClients.resources.delete(resourceId);
       setState((prev) => ({
         ...prev,
         resources: prev.resources.filter((r) => r.id !== resourceId),
@@ -123,8 +142,8 @@ export default function useResources() {
   }, []);
 
   const refresh = useCallback(
-    (subjectId?: string) => {
-      return loadResources(subjectId);
+    (options?: LoadResourcesOptions) => {
+      return loadResources(options);
     },
     [loadResources]
   );

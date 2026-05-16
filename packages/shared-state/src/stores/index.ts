@@ -6,3 +6,6 @@ export type { NotificationState } from "./createNotificationStore.js";
 
 export { createConversationsStore } from "./createConversationsStore.js";
 export type { ConversationsState } from "./createConversationsStore.js";
+
+export { createUnreadCountStore } from "./createUnreadCountStore.js";
+export type { UnreadCountState } from "./createUnreadCountStore.js";

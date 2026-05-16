@@ -95,11 +95,11 @@ export default function useEditProfileForm() {
 
         setState((prev) => ({
           ...prev,
-          name: profileData?.full_name || user?.name || "",
-          phone: profileData?.phone_number || "",
+          name: profileData?.fullName || user?.name || "",
+          phone: profileData?.phoneNumber || "",
           bio: profileData?.bio || "",
           semester: profileData?.semester ? String(profileData.semester) : "",
-          avatarPreview: profileData?.avatar_url || user?.profileImage || "",
+          avatarPreview: profileData?.avatarUrl || user?.profileImage || "",
           selectedProgramId: primaryProgram?.program_id || "",
           selectedSubjectIds: currentSubjects,
         }));
@@ -259,10 +259,9 @@ export default function useEditProfileForm() {
 
     try {
       await profilesService.updateProfile({
-        full_name: state.name.trim(),
+        fullName: state.name.trim(),
         bio: state.bio.trim() || undefined,
-        phone_number: state.phone.trim() || undefined,
-        semester: state.semester ? Number(state.semester) : undefined,
+        phone: state.phone.trim() || undefined,
       });
 
       if (avatarChanged.current && state.avatarFile && user?.id) {

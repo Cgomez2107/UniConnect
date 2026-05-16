@@ -9,7 +9,6 @@ import { RoleBadge } from "@/components/ui/RoleBadge";
 import { MemberListItem } from "@/components/ui/MemberListItem";
 import { GroupStatusBadge } from "@/components/GroupStatusBadge";
 import studyGroupsService from "@/lib/services/studyGroups.service";
-import type { Member } from "@/types";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "";
@@ -33,7 +32,7 @@ export function GroupDetailPage() {
   const { user } = useAuth();
 
   const [solicitud, setSolicitud] = useState<any>(null);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leaveLoading, setLeaveLoading] = useState(false);

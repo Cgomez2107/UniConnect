@@ -1,288 +1,88 @@
-import { apiClient } from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import {
-  StudyRequest,
-  CreateStudyRequestPayload,
-  Application,
-  Member,
-  AppNotification,
-} from "@/types";
-
 /**
- * Servicio de gestión de grupos de estudio
+ * @deprecated Use deps.apiClients.studyGroups directly or import from @uniconnect/shared-api.
+ * This file is kept as a thin adapter for backward compatibility.
  */
+import { deps } from "@/store/deps";
+
 const studyGroupsService = {
-  /**
-   * Obtiene la lista de todas las solicitudes de grupos de estudio
-   */
-  async listStudyGroups(): Promise<StudyRequest[]> {
-    try {
-      const response = await apiClient.get<{ data: StudyRequest[] }>(
-        API_ENDPOINTS.STUDY_GROUPS_LIST
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching study groups:", error);
-      throw error;
-    }
+  async listStudyGroups(subjectId?: string) {
+    const client = deps.apiClients.studyGroups as any;
+    return client.list(subjectId ? { subjectId } : undefined);
   },
 
-  /**
-   * Obtiene los detalles de un grupo de estudio por ID
-   */
-  async getStudyGroupById(id: string): Promise<StudyRequest> {
-    try {
-      const response = await apiClient.get<{ data: StudyRequest }>(
-        API_ENDPOINTS.STUDY_GROUPS_BY_ID(id)
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error fetching study group ${id}:`, error);
-      throw error;
-    }
+  async getStudyGroupById(id: string) {
+    return deps.apiClients.studyGroups.getById(id);
   },
 
-  /**
-   * Crea un nuevo grupo de estudio
-   */
-  async createStudyGroup(
-    data: CreateStudyRequestPayload
-  ): Promise<StudyRequest> {
-    try {
-      const response = await apiClient.post<{ data: StudyRequest }>(
-        API_ENDPOINTS.STUDY_GROUPS_CREATE,
-        data
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error creating study group:", error);
-      throw error;
-    }
+  async createStudyGroup(data: { subjectId: string; title: string; description?: string; maxMembers?: number }) {
+    return deps.apiClients.studyGroups.create({
+      subjectId: data.subjectId,
+      title: data.title,
+      description: data.description ?? "",
+      maxMembers: data.maxMembers ?? 10,
+    });
   },
 
-  /**
-   * Invita a un usuario a un grupo de estudio
-   */
-  async inviteToStudyGroup(groupId: string, userId: string): Promise<void> {
-    try {
-      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_INVITE(groupId), {
-        user_id: userId,
-      });
-    } catch (error) {
-      console.error(
-        `Error inviting user ${userId} to group ${groupId}:`,
-        error
-      );
-      throw error;
-    }
+  async getStudyGroupMembers(groupId: string) {
+    return deps.apiClients.studyGroups.listMembers(groupId);
   },
 
-  /**
-   * Obtiene la lista de miembros de un grupo de estudio
-   */
-  async getStudyGroupMembers(groupId: string): Promise<Member[]> {
-    try {
-      const response = await apiClient.get<{ data: Member[] }>(
-        API_ENDPOINTS.STUDY_GROUPS_MEMBERS(groupId)
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error fetching members for group ${groupId}:`, error);
-      throw error;
-    }
+  async leaveStudyGroup(groupId: string) {
+    return deps.apiClients.studyGroups.leave(groupId);
   },
 
-  /**
-   * Abandona un grupo de estudio
-   */
-  async leaveStudyGroup(groupId: string): Promise<void> {
-    try {
-      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_LEAVE(groupId));
-    } catch (error) {
-      console.error(`Error leaving study group ${groupId}:`, error);
-      throw error;
-    }
+  async getStudyGroupApplications(groupId: string) {
+    return deps.apiClients.studyGroups.listApplications(groupId);
   },
 
-  /**
-   * Obtiene las solicitudes de aplicación para un grupo de estudio
-   */
-  async getStudyGroupApplications(groupId: string): Promise<Application[]> {
-    try {
-      const response = await apiClient.get<{ data: Application[] }>(
-        `/study-groups/${groupId}/applications`
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(
-        `Error fetching applications for group ${groupId}:`,
-        error
-      );
-      throw error;
-    }
+  async listMyApplications() {
+    return deps.apiClients.studyGroups.listMyApplications();
   },
 
-  /**
-   * Obtiene las aplicaciones del usuario autenticado
-   */
-  async listMyApplications(): Promise<Application[]> {
-    try {
-      const response = await apiClient.get<{ data: Application[] }>(
-        API_ENDPOINTS.APPLICATIONS_LIST
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching my applications:", error);
-      throw error;
-    }
+  async listMyStudyRequests() {
+    return deps.apiClients.studyGroups.listMyStudyRequests();
   },
 
-  /**
-   * Obtiene las solicitudes de estudio del usuario autenticado
-   */
-  async listMyStudyRequests(): Promise<StudyRequest[]> {
-    try {
-      const response = await apiClient.get<{ data: StudyRequest[] }>(
-        API_ENDPOINTS.MY_STUDY_REQUESTS
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching my study requests:", error);
-      throw error;
-    }
+  async applyToStudyGroup(requestId: string, message?: string) {
+    return deps.apiClients.studyGroups.apply(requestId, message ?? "");
   },
 
-  /**
-   * Postula al usuario actual a un grupo de estudio
-   */
-  async applyToStudyGroup(requestId: string, message: string): Promise<Application> {
-    try {
-      const response = await apiClient.post<{ data: Application }>(
-        `/study-groups/${requestId}/apply`,
-        { message }
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error applying to study group ${requestId}:`, error);
-      throw error;
-    }
+  async reviewApplication(applicationId: string, status: "aceptada" | "rechazada") {
+    return deps.apiClients.studyGroups.reviewApplication(applicationId, status);
   },
 
-  /**
-   * Revisa una postulación (aceptar o rechazar)
-   */
-  async reviewApplication(applicationId: string, status: "aceptada" | "rechazada"): Promise<void> {
-    try {
-      await apiClient.put(API_ENDPOINTS.APPLICATIONS_REVIEW(applicationId), { status });
-    } catch (error) {
-      console.error(`Error reviewing application ${applicationId}:`, error);
-      throw error;
-    }
+  async cancelStudyRequest(requestId: string) {
+    return deps.apiClients.studyGroups.cancel(requestId);
   },
 
-  /**
-   * Cancela/cierra una solicitud de grupo de estudio (solo autor)
-   */
-  async cancelStudyRequest(requestId: string): Promise<void> {
-    try {
-      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_CANCEL(requestId));
-    } catch (error) {
-      console.error(`Error cancelling study request ${requestId}:`, error);
-      throw error;
-    }
+  async listNotifications() {
+    return deps.apiClients.studyGroups.listNotifications();
   },
 
-  /**
-   * Cancela mi postulación a un grupo
-   */
-  async listNotifications(): Promise<AppNotification[]> {
-    try {
-      const response = await apiClient.get<{ data: AppNotification[] }>(
-        API_ENDPOINTS.NOTIFICATIONS_LIST
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      throw error;
-    }
+  async requestAdminTransfer(groupId: string, targetUserId: string) {
+    return deps.apiClients.studyGroups.requestTransfer(groupId, targetUserId);
   },
 
-  /**
-   * Solicita transferencia de admin a otro miembro
-   */
-  async requestAdminTransfer(groupId: string, targetUserId: string): Promise<{ id: string }> {
-    try {
-      const response = await apiClient.post<{ data: { id: string } }>(
-        API_ENDPOINTS.STUDY_GROUPS_TRANSFER(groupId),
-        { targetUserId }
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error requesting admin transfer for group ${groupId}:`, error);
-      throw error;
-    }
+  async acceptAdminTransfer(transferId: string) {
+    return deps.apiClients.studyGroups.acceptTransfer(transferId);
   },
 
-  /**
-   * Acepta una transferencia de admin pendiente
-   */
-  async acceptAdminTransfer(transferId: string): Promise<void> {
-    try {
-      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_TRANSFER_ACCEPT(transferId));
-    } catch (error) {
-      console.error(`Error accepting admin transfer ${transferId}:`, error);
-      throw error;
-    }
+  async cancelMyApplication(requestId: string) {
+    return deps.apiClients.studyGroups.cancel(requestId);
   },
 
-  async cancelMyApplication(requestId: string): Promise<void> {
-    try {
-      await apiClient.post(API_ENDPOINTS.STUDY_GROUPS_LEAVE(requestId));
-    } catch (error) {
-      console.error(`Error cancelling application for ${requestId}:`, error);
-      throw error;
-    }
+  async getGroupMessages(groupId: string) {
+    return deps.apiClients.studyGroups.getMessages(groupId);
   },
 
-  async getGroupMessages(groupId: string): Promise<any[]> {
-    try {
-      const response = await apiClient.get<{ data: any[] }>(
-        API_ENDPOINTS.STUDY_GROUPS_MESSAGES(groupId)
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error fetching messages for group ${groupId}:`, error);
-      throw error;
-    }
-  },
-
-  async sendGroupMessage(
-    groupId: string,
-    content: string,
-    options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string }
-  ): Promise<any> {
-    try {
-      const payload: any = { content };
-      if (options?.replyToMessageId) payload.reply_to_message_id = options.replyToMessageId;
-      if (options?.mediaUrl) payload.media_url = options.mediaUrl;
-      if (options?.mediaType) payload.media_type = options.mediaType;
-      const response = await apiClient.post<{ data: any }>(
-        API_ENDPOINTS.STUDY_GROUPS_MESSAGES(groupId),
-        payload
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error sending message to group ${groupId}:`, error);
-      throw error;
-    }
-  },
-
-  async markGroupMessagesAsRead(groupId: string): Promise<void> {
-    try {
-      await apiClient.post(`/study-groups/${groupId}/messages/read`);
-    } catch {
-      // Route may not exist yet; silently ignored
-    }
+  async sendGroupMessage(groupId: string, content: string, options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string; mentions?: { userId: string; name: string }[] }) {
+    return deps.apiClients.studyGroups.sendMessage(groupId, {
+      content,
+      ...(options?.replyToMessageId && { replyToMessageId: options.replyToMessageId }),
+      ...(options?.mediaUrl && { mediaUrl: options.mediaUrl }),
+      ...(options?.mediaType && { mediaType: options.mediaType }),
+      ...(options?.mentions && { mentions: options.mentions }),
+    });
   },
 };
 

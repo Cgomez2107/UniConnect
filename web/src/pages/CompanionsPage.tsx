@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useAcademicFilter } from "@uniconnect/shared-hooks";
 import useCompanions from "@/hooks/useCompanions";
+import useSubjectOptions from "@/hooks/useSubjectOptions";
+import { SubjectFilter } from "@/components/shared/SubjectFilter";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
+import { deps } from "@/store/deps";
 
 export function CompanionsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const userSubjects = (user as any)?.subjects || [];
-  const [selectedSubject, setSelectedSubject] = useState<string | undefined>();
-  const { companions, isLoading } = useCompanions(selectedSubject);
+  const filter = useAcademicFilter("compañeros");
+  const fallbackSubjects = ((user as any)?.studySubjects || []).map((s: any) => ({ id: s.id, name: s.name }));
+  const { subjects: userSubjects } = useSubjectOptions(fallbackSubjects);
+  const { companions, isLoading } = useCompanions(filter.selectedSubjectId ?? undefined);
 
   if (!user) {
     return (
@@ -19,6 +24,15 @@ export function CompanionsPage() {
       </div>
     );
   }
+
+  const handleSendMessage = async (targetUserId: string) => {
+    try {
+      const conversation = await deps.apiClients.messaging.createConversation(targetUserId);
+      navigate(`/mensajes/${conversation.id}`);
+    } catch (err) {
+      console.error("Error creating conversation:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-neutral-50 animate-fade-in">
@@ -32,30 +46,13 @@ export function CompanionsPage() {
           </p>
         </div>
 
-        <div className="mb-6 flex gap-2 flex-wrap">
-          <button
-            onClick={() => setSelectedSubject(undefined)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              !selectedSubject
-                ? "bg-primary-600 text-white shadow-sm"
-                : "card text-neutral-700 hover:bg-neutral-50"
-            }`}
-          >
-            Todos ({companions.length})
-          </button>
-          {userSubjects.map((subject: any) => (
-            <button
-              key={subject.id}
-              onClick={() => setSelectedSubject(subject.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedSubject === subject.id
-                  ? "bg-primary-600 text-white shadow-sm"
-                  : "card text-neutral-700 hover:bg-neutral-50"
-              }`}
-            >
-              {subject.name}
-            </button>
-          ))}
+        <div className="mb-6">
+          <SubjectFilter
+            subjects={userSubjects}
+            selectedId={filter.selectedSubjectId}
+            onSelect={filter.selectSubject}
+            totalCount={companions.length}
+          />
         </div>
 
         {isLoading && (
@@ -69,7 +66,7 @@ export function CompanionsPage() {
         {!isLoading && companions.length === 0 && (
           <div className="text-center py-12">
             <p className="text-neutral-500 mb-4">
-              {selectedSubject
+              {filter.selectedSubjectId
                 ? "No hay compañeros en esta materia"
                 : "No hay compañeros. Asegúrate de tener materias asignadas."}
             </p>
@@ -81,8 +78,7 @@ export function CompanionsPage() {
             {companions.map((companion) => (
               <div
                 key={companion.id}
-                className="card-hover p-4 cursor-pointer"
-                onClick={() => navigate(`/perfil/${companion.id}`)}
+                className="card-hover p-4"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <Avatar
@@ -104,13 +100,24 @@ export function CompanionsPage() {
                   </p>
                 )}
                 {companion.bio && (
-                  <p className="text-sm text-neutral-500 line-clamp-2">
+                  <p className="text-sm text-neutral-500 line-clamp-2 mb-3">
                     {companion.bio}
                   </p>
                 )}
-                <div className="mt-3">
-                  <Button variant="secondary" size="sm">
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate(`/perfil-estudiante/${companion.id}`)}
+                  >
                     Ver perfil
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSendMessage(companion.id)}
+                  >
+                    Enviar mensaje
                   </Button>
                 </div>
               </div>

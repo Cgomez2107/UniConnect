@@ -142,8 +142,30 @@ export class FetchWebSocketClient implements IWebSocketClient {
  * Works in browser and Node.js 18+ environments
  */
 export class FetchTransport extends BaseTransport {
+  private refreshProvider: (() => Promise<string | null>) | null = null;
+  private isRefreshing: boolean = false;
+  private refreshQueue: Array<{
+    resolve: (value: any) => void;
+    reject: (reason: any) => void;
+    options: RequestOptions;
+  }> = [];
+
+  /**
+   * Set token refresh provider (called when 401 is received)
+   */
+  setTokenRefreshProvider(provider: () => Promise<string | null>): void {
+    this.refreshProvider = provider;
+  }
+
   async request<TResponse = any>(
     options: RequestOptions
+  ): Promise<ResponseData<TResponse>> {
+    return this.executeWithRetry<TResponse>(options);
+  }
+
+  private async executeWithRetry<TResponse>(
+    options: RequestOptions,
+    hasRetried: boolean = false
   ): Promise<ResponseData<TResponse>> {
     const { method, url, headers = {}, body, params, timeout } = options;
 
@@ -167,7 +189,7 @@ export class FetchTransport extends BaseTransport {
         signal: controller.signal,
       });
 
-      const data = (await response.json()) as TResponse;
+      const rawData = await this.parseResponseBody<TResponse>(response);
 
       // Convert Headers to object (use forEach method which is well-typed)
       const headerRecord: Record<string, string> = {};
@@ -183,11 +205,23 @@ export class FetchTransport extends BaseTransport {
         error.response = {
           status: response.status,
           statusText: response.statusText,
-          data,
+          data: rawData as TResponse,
           headers: headerRecord,
         };
+
+        // On 401, attempt token refresh once
+        if (response.status === 401 && !hasRetried && this.refreshProvider) {
+          return this.handleTokenRefresh<TResponse>(options);
+        }
+
+        if (response.status === 401 && this.onSessionExpired) {
+          this.onSessionExpired();
+        }
+
         throw error;
       }
+
+      const data = this.unwrapDataEnvelope<TResponse>(rawData);
 
       return {
         status: response.status,
@@ -210,10 +244,88 @@ export class FetchTransport extends BaseTransport {
     }
   }
 
+  private async handleTokenRefresh<TResponse>(
+    originalOptions: RequestOptions
+  ): Promise<ResponseData<TResponse>> {
+    // If already refreshing, queue this request
+    if (this.isRefreshing) {
+      return new Promise<ResponseData<TResponse>>((resolve, reject) => {
+        this.refreshQueue.push({ resolve, reject, options: originalOptions });
+      });
+    }
+
+    this.isRefreshing = true;
+
+    try {
+      const newToken = await this.refreshProvider!();
+      if (!newToken) {
+        this.isRefreshing = false;
+        this.drainQueue(false);
+        if (this.onSessionExpired) this.onSessionExpired();
+        throw new Error("Token refresh failed");
+      }
+
+      this.isRefreshing = false;
+      this.drainQueue(true);
+      // Retry the original request with the new token
+      return this.executeWithRetry<TResponse>(originalOptions, true);
+    } catch (error) {
+      this.isRefreshing = false;
+      this.drainQueue(false);
+      throw error;
+    }
+  }
+
+  private drainQueue(success: boolean): void {
+    const queue = [...this.refreshQueue];
+    this.refreshQueue = [];
+    for (const item of queue) {
+      if (success) {
+        this.executeWithRetry(item.options, true)
+          .then((r) => item.resolve(r))
+          .catch((e) => item.reject(e));
+      } else {
+        item.reject(new Error("Session expired"));
+      }
+    }
+  }
+
   getWebSocket(
     url: string,
     options?: WebSocketOptions
   ): IWebSocketClient {
     return new FetchWebSocketClient(url, options);
+  }
+
+  private async parseResponseBody<TResponse>(response: Response): Promise<unknown> {
+    if (response.status === 204) {
+      return undefined;
+    }
+
+    const rawText = await response.text();
+    if (!rawText) {
+      return undefined;
+    }
+
+    try {
+      return JSON.parse(rawText) as TResponse;
+    } catch {
+      return rawText;
+    }
+  }
+
+  private unwrapDataEnvelope<TResponse>(payload: unknown): TResponse {
+    if (payload === null || payload === undefined) return undefined as TResponse;
+
+    if (Array.isArray(payload)) return payload as TResponse;
+
+    if (typeof payload === "object") {
+      const obj = payload as Record<string, unknown>;
+      if ("data" in obj) {
+        return obj.data as TResponse;
+      }
+    }
+
+    return payload as TResponse;
   }
 }

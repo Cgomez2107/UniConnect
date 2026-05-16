@@ -1,15 +1,8 @@
-import { apiClient } from "@/lib/api/client";
-
-export interface CompanionStudent {
-  id: string;
-  full_name: string;
-  avatar_url: string | null;
-  bio: string | null;
-  semester: number | null;
-  program_name: string | null;
-  faculty_name: string | null;
-  subjects?: { id: string; name: string }[];
-}
+/**
+ * @deprecated Use deps.apiClients.profiles directly or import from @uniconnect/shared-api.
+ * This file is kept as a thin adapter for backward compatibility.
+ */
+import { deps } from "@/store/deps";
 
 export interface CompanionStudentUI {
   id: string;
@@ -23,40 +16,28 @@ export interface CompanionStudentUI {
   sharedSubjectIds?: string[];
 }
 
-function mapToUI(s: CompanionStudent): CompanionStudentUI {
+function mapStudent(s: any): CompanionStudentUI {
   return {
     id: s.id,
-    fullName: s.full_name,
-    avatarUrl: s.avatar_url,
-    bio: s.bio,
-    semester: s.semester,
-    programName: s.program_name,
-    facultyName: s.faculty_name,
+    fullName: s.fullName ?? s.full_name,
+    avatarUrl: s.avatarUrl ?? s.avatar_url ?? null,
+    bio: s.bio ?? null,
+    semester: s.semester ?? null,
+    programName: s.programName ?? s.program_name ?? null,
+    facultyName: s.facultyName ?? s.faculty_name ?? null,
     subjects: s.subjects,
   };
 }
 
 export const companionsService = {
   async getAllStudents(): Promise<CompanionStudentUI[]> {
-    try {
-      const response = await apiClient.get<{ data: CompanionStudent[] }>("/students");
-      return (response.data.data || []).map(mapToUI);
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      throw error;
-    }
+    const students = await deps.apiClients.profiles.searchStudents();
+    return students.map(mapStudent);
   },
 
   async getStudentsBySubject(subjectId: string): Promise<CompanionStudentUI[]> {
-    try {
-      const response = await apiClient.get<{ data: CompanionStudent[] }>(
-        `/students?subjectId=${subjectId}`
-      );
-      return (response.data.data || []).map(mapToUI);
-    } catch (error) {
-      console.error(`Error fetching students for subject ${subjectId}:`, error);
-      throw error;
-    }
+    const students = await deps.apiClients.profiles.getBySubject(subjectId);
+    return students.map(mapStudent);
   },
 };
 

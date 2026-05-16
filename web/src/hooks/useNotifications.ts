@@ -1,31 +1,24 @@
 import { useCallback } from "react";
 import { useNotificationStore } from "@/store/useNotificationStore";
 
-/**
- * Hook para mostrar notificaciones del sistema
- *
- * @returns {Object} Métodos de notificación
- * @returns {Function} show - Muestra una notificación personalizada
- * @returns {Function} success - Muestra notificación de éxito
- * @returns {Function} error - Muestra notificación de error
- * @returns {Function} info - Muestra notificación de información
- * @returns {Function} warning - Muestra notificación de advertencia
- * @returns {Function} dismiss - Cierra una notificación
- * @returns {Function} clear - Limpia todas las notificaciones
- *
- * @example
- * const { success, error, info } = useNotifications();
- * success("Perfil actualizado correctamente");
- * error("Error al guardar cambios");
- * info("Cargando datos...");
- */
+let toastCounter = 0;
+
 export default function useNotifications() {
-  const { addNotification, removeNotification, clearNotifications } =
+  const { addNotification, removeNotification, clearAll } =
     useNotificationStore();
 
   const show = useCallback(
     (message: string, type: "success" | "error" | "info" | "warning" = "info") => {
-      addNotification({ type, message });
+      const toastType = type === "warning" ? "system" : type === "error" ? "system" : type === "success" ? "studyGroupAccepted" : "message";
+      addNotification({
+        id: `toast-${Date.now()}-${++toastCounter}`,
+        userId: "",
+        type: toastType as any,
+        title: message,
+        read: false,
+        createdAt: new Date(),
+        description: message,
+      });
     },
     [addNotification]
   );
@@ -66,8 +59,8 @@ export default function useNotifications() {
   );
 
   const clear = useCallback(() => {
-    clearNotifications();
-  }, [clearNotifications]);
+    clearAll();
+  }, [clearAll]);
 
   return {
     show,

@@ -1,75 +1,54 @@
-import { apiClient } from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import { StudyResource, CreateStudyResourcePayload } from "@/types";
-
 /**
- * Servicio de recursos de estudio
+ * @deprecated Use deps.apiClients.resources directly or import from @uniconnect/shared-api.
+ * This file is kept as a thin adapter for backward compatibility.
  */
+import { deps } from "@/store/deps";
+import type { StudyResourceUI } from "@/types/ui";
+
+function mapResource(r: any): StudyResourceUI {
+  return {
+    id: r.id,
+    userId: r.userId ?? "",
+    programId: r.programId ?? "",
+    subjectId: r.subjectId ?? "",
+    title: r.title,
+    description: r.description ?? null,
+    fileUrl: r.fileUrl ?? r.file_url ?? "",
+    fileName: r.fileName ?? r.file_name ?? "",
+    fileType: r.fileType ?? r.file_type ?? null,
+    fileSizeKb: r.fileSizeKb ?? r.file_size_kb ?? null,
+    createdAt: r.createdAt?.toISOString?.() ?? r.created_at ?? r.createdAt,
+    updatedAt: r.updatedAt?.toISOString?.() ?? r.updated_at ?? r.updatedAt,
+  };
+}
+
 const resourcesService = {
-  /**
-   * Obtiene la lista de recursos de estudio con filtros opcionales
-   */
-  async listResources(filters?: {
-    subject_id?: string;
-    program_id?: string;
-    page?: number;
-    per_page?: number;
-  }): Promise<StudyResource[]> {
-    try {
-      const response = await apiClient.get<{ data: StudyResource[] }>(
-        API_ENDPOINTS.RESOURCES_LIST,
-        { params: filters }
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error fetching resources:", error);
-      throw error;
-    }
+  async listResources(filters?: { subjectId?: string; programId?: string; page?: number; perPage?: number }) {
+    const resources = await deps.apiClients.resources.list(filters);
+    return resources.map(mapResource);
   },
 
-  /**
-   * Obtiene los detalles de un recurso por ID
-   */
-  async getResourceById(id: string): Promise<StudyResource> {
-    try {
-      const response = await apiClient.get<{ data: StudyResource }>(
-        API_ENDPOINTS.RESOURCES_BY_ID(id)
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error(`Error fetching resource ${id}:`, error);
-      throw error;
-    }
+  async getResourceById(id: string) {
+    const resource = await deps.apiClients.resources.getById(id);
+    return mapResource(resource);
   },
 
-  /**
-   * Carga un nuevo recurso de estudio
-   */
-  async uploadResource(
-    payload: CreateStudyResourcePayload
-  ): Promise<StudyResource> {
-    try {
-      const response = await apiClient.post<{ data: StudyResource }>(
-        API_ENDPOINTS.RESOURCES_CREATE,
-        payload
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error uploading resource:", error);
-      throw error;
-    }
+  async uploadResource(payload: {
+    subjectId: string;
+    title: string;
+    description?: string;
+    fileUrl: string;
+    fileName: string;
+    fileType?: string;
+    fileSizeKb?: number;
+    programId?: string;
+  }) {
+    const resource = await deps.apiClients.resources.create(payload);
+    return mapResource(resource);
   },
 
-  /**
-   * Elimina un recurso de estudio
-   */
-  async deleteResource(id: string): Promise<void> {
-    try {
-      await apiClient.delete(API_ENDPOINTS.RESOURCES_DELETE(id));
-    } catch (error) {
-      console.error(`Error deleting resource ${id}:`, error);
-      throw error;
-    }
+  async deleteResource(id: string) {
+    await deps.apiClients.resources.delete(id);
   },
 };
 

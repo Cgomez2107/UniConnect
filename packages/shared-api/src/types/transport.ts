@@ -39,6 +39,16 @@ export interface ITransport {
   setAuthProvider(provider: () => Promise<string | null>): void;
 
   /**
+   * Set token refresh provider (called on 401 to attempt refresh)
+   */
+  setTokenRefreshProvider?(provider: () => Promise<string | null>): void;
+
+  /**
+   * Set session expiration callback (invoked when refresh fails)
+   */
+  setOnSessionExpired?(callback: (() => void) | null): void;
+
+  /**
    * Get WebSocket client
    */
   getWebSocket(url: string, options?: WebSocketOptions): IWebSocketClient;

@@ -9,6 +9,41 @@ interface MessageBubbleProps {
   onRetry?: (message: MessageUI) => void;
 }
 
+function renderContent(content: string) {
+  const parts: React.ReactNode[] = [];
+  const regex = /@\[([^\]]+)\]\(user:([^)]+)\)/g;
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={key++}>{content.slice(lastIndex, match.index)}</span>);
+    }
+    const name = match[1];
+    const userId = match[2];
+    parts.push(
+      <span
+        key={key++}
+        className="text-primary-500 dark:text-primary-400 font-semibold cursor-pointer hover:underline"
+        onClick={(e) => {
+          e.stopPropagation();
+          window.open(`/perfil/${userId}`, '_blank');
+        }}
+      >
+        @{name}
+      </span>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push(<span key={key++}>{content.slice(lastIndex)}</span>);
+  }
+
+  return parts.length > 0 ? parts : content;
+}
+
 export function MessageBubble({
   message,
   currentUser,
@@ -47,7 +82,7 @@ export function MessageBubble({
               : "bg-neutral-200 text-neutral-800 rounded-bl-none"
           }`}
         >
-          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+          <p className="text-sm whitespace-pre-wrap break-words">{renderContent(message.content)}</p>
           {message.mediaUrl && (
             <img
               src={message.mediaUrl}

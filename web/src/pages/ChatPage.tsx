@@ -62,45 +62,23 @@ export const ChatPage: React.FC = () => {
     try {
       setIsLoading(true);
 
-      try {
-        const response = await apiClient.get(`/conversations/${conversationId}`);
-        const conv = response.data?.data || response.data;
-        setConversation({ ...conv, type: conv.type || "direct" });
-
-        const msgsResponse = await apiClient.get(`/conversations/${conversationId}/messages?limit=50`);
-        setMessages(msgsResponse.data?.data?.map((m: any) => ({
-          id: m.id,
-          content: m.content,
-          senderId: m.sender_id || m.senderId,
-          senderName: m.sender?.full_name || m.sender?.fullName || m.senderName || "Usuario",
-          createdAt: m.created_at || m.createdAt,
-          readAt: m.read_at || m.readAt || null,
-          clientStatus: "sent",
-          replyToMessageId: m.reply_to_message_id || m.replyToMessageId || null,
-          replyPreview: m.reply_preview || m.replyPreview || null,
-          mediaUrl: m.media_url || m.mediaUrl || null,
-          mediaType: m.media_type || m.mediaType || null,
-        })) || []);
-        return;
-      } catch {
-        // Not a conversation, try as study group
-      }
-
-      // Try as study group chat
-      const groupResponse = await apiClient.get(`/study-groups/${conversationId}/chat`);
-      const group = groupResponse.data?.data || groupResponse.data;
+      const response = await apiClient.get(`/conversations/${conversationId}`);
+      const conv = response.data?.data || response.data;
       setConversation({
-        id: conversationId!,
-        otherUserName: group.name || "Grupo de Estudio",
-        type: "group",
-        groupId: conversationId,
-        name: group.name,
-        description: group.description,
-        participants: group.members || group.participants || [],
+        id: conv.id,
+        otherUserName: conv.other_user_name || conv.otherUserName || "",
+        otherUserAvatar: conv.other_user_avatar || conv.otherUserAvatar,
+        type: conv.type || "direct",
+        groupId: conv.group_id || conv.groupId,
+        participants: conv.participants,
+        name: conv.name,
+        description: conv.description,
       });
 
-      const msgs = group.messages || group.chat || [];
-      setMessages(msgs.map((m: any) => ({
+      const msgsResponse = await apiClient.get(`/messages`, {
+        params: { conversationId, limit: 50 },
+      });
+      setMessages((msgsResponse.data?.data || msgsResponse.data || []).map((m: any) => ({
         id: m.id,
         content: m.content,
         senderId: m.sender_id || m.senderId,
@@ -108,7 +86,11 @@ export const ChatPage: React.FC = () => {
         createdAt: m.created_at || m.createdAt,
         readAt: m.read_at || m.readAt || null,
         clientStatus: "sent",
-      })) || []);
+        replyToMessageId: m.reply_to_message_id || m.replyToMessageId || null,
+        replyPreview: m.reply_preview || m.replyPreview || null,
+        mediaUrl: m.media_url || m.mediaUrl || null,
+        mediaType: m.media_type || m.mediaType || null,
+      })));
     } catch (error) {
       console.error("Error fetching conversation:", error);
     } finally {
@@ -164,10 +146,15 @@ export const ChatPage: React.FC = () => {
     };
 
     return () => {
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "unsubscribe", conversationId }));
+        ws.close();
+      } else if (ws.readyState === WebSocket.CONNECTING) {
+        ws.onopen = () => ws.close();
+        ws.onerror = () => ws.close();
+      } else {
+        ws.close();
       }
-      ws.close();
       wsRef.current = null;
     };
   }, [conversationId, user, navigate]);
@@ -199,7 +186,7 @@ export const ChatPage: React.FC = () => {
       const response = await apiClient.post("/messages", {
         conversationId,
         content: optimisticMsg.content,
-        reply_to_message_id: replyTo?.id || undefined,
+        replyToMessageId: replyTo?.id || undefined,
       });
       const msg = response.data?.data || response.data;
       setMessages((prev) =>
@@ -228,7 +215,7 @@ export const ChatPage: React.FC = () => {
       const response = await apiClient.post("/messages", {
         conversationId,
         content: failedMsg.content,
-        reply_to_message_id: failedMsg.replyToMessageId || undefined,
+        replyToMessageId: failedMsg.replyToMessageId || undefined,
       });
       const msg = response.data?.data || response.data;
       setMessages((prev) =>
@@ -259,8 +246,8 @@ export const ChatPage: React.FC = () => {
       const response = await apiClient.post("/messages", {
         conversationId,
         content: file.name,
-        media_url: mediaUrl,
-        media_type: file.type,
+        mediaUrl,
+        mediaType: file.type,
       });
       const msg = response.data?.data || response.data;
       setMessages((prev) => [...prev, {

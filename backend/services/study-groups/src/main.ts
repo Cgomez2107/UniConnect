@@ -309,6 +309,9 @@ function bootstrap(): void {
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(studyGroupRepository, subject);
+  const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
+  const listMyApplicationsUC = new ListMyApplications(applicationRepository);
+  const cancelStudyRequestUC = new CancelStudyRequest(repository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,

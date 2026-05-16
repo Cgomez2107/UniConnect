@@ -111,7 +111,7 @@ export interface StudyApplicationDTO {
   user_id: string;
   user: UserDTO;
   message: string;
-  status: "pendiente" | "aprobada" | "rechazada";
+  status: "pendiente" | "aceptada" | "rechazada";
   created_at: string;
   reviewed_at?: string;
   reviewed_by?: string;

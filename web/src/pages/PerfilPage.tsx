@@ -30,10 +30,10 @@ export function PerfilPage() {
 
   if (isLoading) return <LoadingState />;
 
-  const displayName = profile?.full_name || user?.name || user?.email?.split("@")[0] || "Usuario";
+  const displayName = profile?.fullName || user?.name || user?.email?.split("@")[0] || "Usuario";
   const primaryProgramName = primaryProgram?.programs?.name || primaryProgram?.program_id || "";
   const facultyName = primaryProgram?.programs?.faculties?.name || "";
-  const displayPhone = profile?.phone_number;
+  const displayPhone = profile?.phoneNumber;
   const displayBio = profile?.bio;
   const displaySemester = profile?.semester ?? user?.semester;
   const studySubjects = subjects
@@ -66,8 +66,8 @@ export function PerfilPage() {
           name={displayName}
           email={user?.email || ""}
           avatarUrl={
-            profile?.avatar_url
-              ? `${profile.avatar_url}?t=${new Date(profile.updated_at).getTime()}`
+            profile?.avatarUrl
+              ? `${profile.avatarUrl}?t=${new Date(profile.updatedAt).getTime()}`
               : user?.profileImage || undefined
           }
           primaryProgram={primaryProgramName}
@@ -173,10 +173,10 @@ export function PerfilPage() {
         >
           {publications.length > 0 ? (
             <div className="space-y-3">
-              {publications.map((pub) => (
+              {publications.map((pub: any) => (
                 <MiniRequestCard
                   key={pub.id}
-                  title={pub.title}
+                  title={pub.title || pub.name}
                   subjectName={pub.subjectName}
                   status={pub.status}
                   applicationsCount={pub.applicationsCount}

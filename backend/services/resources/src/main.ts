@@ -38,8 +38,50 @@ function createRepository(
   return new InMemoryStudyResourceRepository();
 }
 
+function validateResourcesEnv(): void {
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT_ACCESS_SECRET } = process.env;
+
+  const missing: string[] = [];
+  if (!SUPABASE_URL?.trim()) missing.push("SUPABASE_URL");
+  if (!SUPABASE_SERVICE_ROLE_KEY?.trim()) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (!JWT_ACCESS_SECRET?.trim()) missing.push("JWT_ACCESS_SECRET");
+
+  if (missing.length > 0) {
+    console.error(
+      JSON.stringify({
+        service: "resources",
+        level: "fatal",
+        message:
+          "Variables de entorno faltantes requeridas para el servicio de almacenamiento: " +
+          missing.join(", ") +
+          ". Revisa backend/services/resources/.env o la configuración compartida.",
+        missing,
+      }),
+    );
+    process.exit(1);
+  }
+
+  const url = SUPABASE_URL!.trim();
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      throw new Error("Protocolo inválido");
+    }
+  } catch {
+    console.error(
+      JSON.stringify({
+        service: "resources",
+        level: "fatal",
+        message: `SUPABASE_URL no es una URL válida: "${url}". Debe ser una URL https:// de Supabase.`,
+      }),
+    );
+    process.exit(1);
+  }
+}
+
 function bootstrap(): void {
   const env = loadResourcesEnv();
+  validateResourcesEnv();
 
   const hasDatabaseConfig =
     !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;

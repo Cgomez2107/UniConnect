@@ -1,4 +1,6 @@
 /**
+ * @deprecated Los clientes están ahora en packages/shared-api/src/clients/.
+ * Importa desde @uniconnect/shared-api en lugar de usar endpoints manuales.
  * ============================================================================
  * DEFINICIÓN CENTRALIZADA DE ENDPOINTS DE LA API
  * ============================================================================

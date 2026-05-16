@@ -1,39 +1,43 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useAcademicFilter } from "@uniconnect/shared-hooks";
+import { deps } from "@/store/deps";
 import useResources from "@/hooks/useResources";
+import useSubjectOptions from "@/hooks/useSubjectOptions";
+import { SubjectFilter } from "@/components/shared/SubjectFilter";
 import { ResourceCard } from "@/components/shared/ResourceCard";
 import { Button } from "@/components/ui/Button";
 
-/**
- * RecursosPage - Display and manage study resources
- */
 export function RecursosPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const { resources = [], isLoading = false, error = null, refresh } = useResources() as any;
-  const [filteredResources, setFilteredResources] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const filter = useAcademicFilter("recursos");
+  const [activeTab, setActiveTab] = useState<"todos" | "mis-recursos">("todos");
+
+  const fallbackSubjects = useMemo(
+    () => ((user as any)?.studySubjects || []).map((s: any) => ({ id: s.id, name: s.name })),
+    [user],
+  );
+  const { subjects: userSubjects } = useSubjectOptions(fallbackSubjects);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    void refresh({
+      subjectId: filter.selectedSubjectId ?? undefined,
+      userId: activeTab === "mis-recursos" ? user?.id : undefined,
+    });
+  }, [activeTab, filter.selectedSubjectId, refresh, user?.id]);
 
-  useEffect(() => {
+  const filteredResources = useMemo(() => {
     let mapped = (resources || []).map((r: any) => ({
       ...r,
-      subjectName: r.subjects?.name,
+      subjectName: r.subjects?.name || r.subjectName,
       uploaderName: r.profiles?.fullName,
     }));
 
-    if (searchTerm) {
-      mapped = mapped.filter(
-        (res: any) =>
-          (res.title?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-          (res.description?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-      );
-    }
-
-    setFilteredResources(mapped);
-  }, [searchTerm, resources]);
+    return mapped;
+  }, [resources]);
 
   const handleViewDetails = (id: string) => {
     navigate(`/recursos/${id}`);
@@ -41,7 +45,12 @@ export function RecursosPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm("¿Deseas eliminar este recurso?")) {
-      // TODO: Implement delete
+      try {
+        await deps.apiClients.resources.delete(id);
+        refresh();
+      } catch (err) {
+        console.error("Error deleting resource:", err);
+      }
     }
   };
 
@@ -58,18 +67,43 @@ export function RecursosPage() {
           </p>
         </div>
 
-        {/* Search and Filters */}
-        <div className="mb-6 flex gap-3 flex-wrap">
-          <input
-            type="text"
-            placeholder="Buscar recursos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 min-w-48 px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
+        {/* Tabs */}
+        <div className="mb-4 flex gap-4 border-b border-neutral-200">
+          <button
+            onClick={() => setActiveTab("todos")}
+            className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "todos"
+                ? "border-primary-600 text-primary-600"
+                : "border-transparent text-neutral-500 hover:text-neutral-700"
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => setActiveTab("mis-recursos")}
+            className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "mis-recursos"
+                ? "border-primary-600 text-primary-600"
+                : "border-transparent text-neutral-500 hover:text-neutral-700"
+            }`}
+          >
+            Mis recursos
+          </button>
+        </div>
+
+        {/* Subject Filter */}
+        <div className="mb-6 space-y-4">
+          <SubjectFilter
+            subjects={userSubjects}
+            selectedId={filter.selectedSubjectId}
+            onSelect={filter.selectSubject}
+            totalCount={resources.length}
           />
-          <Button onClick={() => navigate("/subir-recurso")}>
-            + Subir Recurso
-          </Button>
+          <div className="flex justify-end">
+            <Button onClick={() => navigate("/subir-recurso")}>
+              + Subir Recurso
+            </Button>
+          </div>
         </div>
 
         {/* Loading State */}
@@ -97,6 +131,7 @@ export function RecursosPage() {
                 resource={resource}
                 onViewDetails={handleViewDetails}
                 onDelete={handleDelete}
+                isOwner={user?.id === resource.uploaderUserId || user?.id === resource.user_id}
               />
             ))}
           </div>
@@ -106,9 +141,11 @@ export function RecursosPage() {
         {!isLoading && filteredResources.length === 0 && (
           <div className="text-center py-12">
             <p className="text-neutral-500 mb-4">
-              {searchTerm
-                ? "No hay recursos que coincidan con tu búsqueda"
-                : "No hay recursos disponibles"}
+              {filter.selectedSubjectId
+                ? "No hay recursos para esta materia"
+                : activeTab === "mis-recursos"
+                  ? "No has subido recursos todavía"
+                  : "No hay recursos disponibles"}
             </p>
             <Button onClick={() => navigate("/subir-recurso")}>
               Subir el primer recurso

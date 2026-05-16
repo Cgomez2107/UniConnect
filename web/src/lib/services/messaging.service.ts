@@ -1,64 +1,65 @@
-import { apiClient } from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import { Conversation as ConversationApi, Message as MessageApi, SendMessagePayload } from "@/types";
-import { mapConversationApiToUI, mapMessageApiToUI } from "@/utils/mappers";
+/**
+ * @deprecated Use deps.apiClients.messaging directly or import from @uniconnect/shared-api
+ * This file is kept as a thin adapter for backward compatibility.
+ * New code should use the BaseMessagingClient from the shared-api package.
+ */
+import { deps } from "@/store/deps";
 import type { ConversationUI, MessageUI } from "@/types/ui";
+
+function mapConversation(conv: any): ConversationUI {
+  return {
+    id: conv.id,
+    participantA: conv.participantA,
+    participantB: conv.participantB,
+    createdAt: conv.createdAt?.toISOString?.() ?? conv.createdAt,
+    updatedAt: conv.updatedAt?.toISOString?.() ?? conv.updatedAt,
+    otherUserId: conv.otherUserId ?? "",
+    otherUserName: conv.otherUserName ?? "",
+    otherUserAvatar: conv.otherUserAvatar ?? null,
+    lastMessage: conv.lastMessage ?? null,
+    lastMessageAt: conv.lastMessageAt?.toISOString?.() ?? conv.lastMessageAt ?? null,
+    unreadCount: conv.unreadCount ?? 0,
+  };
+}
+
+function mapMessage(msg: any): MessageUI {
+  return {
+    id: msg.id,
+    conversationId: msg.conversationId,
+    senderId: msg.senderId,
+    content: msg.content,
+    mediaUrl: msg.mediaUrl ?? null,
+    mediaType: msg.mediaType ?? null,
+    mediaFilename: msg.mediaFilename ?? null,
+    replyToMessageId: msg.replyToMessageId ?? null,
+    replyPreview: msg.replyPreview ?? null,
+    createdAt: msg.createdAt?.toISOString?.() ?? msg.createdAt,
+    readAt: msg.readAt?.toISOString?.() ?? msg.readAt ?? null,
+    sender: msg.sender
+      ? { fullName: msg.sender.fullName, avatarUrl: msg.sender.avatarUrl ?? null }
+      : undefined,
+  };
+}
 
 const messagingService = {
   async getConversations(): Promise<ConversationUI[]> {
-    try {
-      const response = await apiClient.get<{ data: ConversationApi[] }>(
-        API_ENDPOINTS.CONVERSATIONS_LIST
-      );
-      return response.data.data.map(mapConversationApiToUI);
-    } catch (error) {
-      console.error("Error fetching conversations:", error);
-      throw error;
-    }
+    const convs = await deps.apiClients.messaging.getConversations({ limit: 50 });
+    return convs.map(mapConversation);
   },
 
   async getConversationById(id: string): Promise<ConversationUI> {
-    try {
-      const response = await apiClient.get<{ data: ConversationApi }>(
-        API_ENDPOINTS.CONVERSATIONS_BY_ID(id)
-      );
-      return mapConversationApiToUI(response.data.data);
-    } catch (error) {
-      console.error(`Error fetching conversation ${id}:`, error);
-      throw error;
-    }
+    const conv = await deps.apiClients.messaging.getConversation(id);
+    return mapConversation(conv);
   },
 
   async createConversation(participantId: string): Promise<ConversationUI> {
-    try {
-      const response = await apiClient.post<{ data: ConversationApi }>(
-        API_ENDPOINTS.CONVERSATIONS_CREATE,
-        { participant_id: participantId }
-      );
-      return mapConversationApiToUI(response.data.data);
-    } catch (error) {
-      console.error(
-        `Error creating conversation with ${participantId}:`,
-        error
-      );
-      throw error;
-    }
+    const conv = await deps.apiClients.messaging.createConversation(participantId);
+    return mapConversation(conv);
   },
 
   async getMessages(conversationId: string): Promise<MessageUI[]> {
-    try {
-      const response = await apiClient.get<{ data: MessageApi[] }>(
-        API_ENDPOINTS.MESSAGES_LIST,
-        { params: { conversationId } }
-      );
-      return response.data.data.map(mapMessageApiToUI);
-    } catch (error) {
-      console.error(
-        `Error fetching messages for conversation ${conversationId}:`,
-        error
-      );
-      throw error;
-    }
+    const msgs = await deps.apiClients.messaging.getMessages({ conversationId, limit: 50 });
+    return msgs.map(mapMessage);
   },
 
   async sendMessage(
@@ -66,40 +67,18 @@ const messagingService = {
     content: string,
     options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string }
   ): Promise<MessageUI> {
-    try {
-      const payload: any = {
-        conversationId,
-        content,
-      };
-      if (options?.replyToMessageId) payload.reply_to_message_id = options.replyToMessageId;
-      if (options?.mediaUrl) payload.media_url = options.mediaUrl;
-      if (options?.mediaType) payload.media_type = options.mediaType;
-      const response = await apiClient.post<{ data: MessageApi }>(
-        API_ENDPOINTS.MESSAGES_SEND,
-        payload
-      );
-      return mapMessageApiToUI(response.data.data as MessageApi);
-    } catch (error) {
-      console.error(
-        `Error sending message to conversation ${conversationId}:`,
-        error
-      );
-      throw error;
-    }
+    const msg = await deps.apiClients.messaging.sendMessage({
+      conversationId,
+      content,
+      ...(options?.replyToMessageId && { replyToMessageId: options.replyToMessageId }),
+      ...(options?.mediaUrl && { mediaUrl: options.mediaUrl }),
+      ...(options?.mediaType && { mediaType: options.mediaType }),
+    });
+    return mapMessage(msg);
   },
 
   async markAsRead(conversationId: string): Promise<void> {
-    try {
-      await apiClient.patch(
-        API_ENDPOINTS.CONVERSATIONS_MARK_READ(conversationId)
-      );
-    } catch (error) {
-      console.error(
-        `Error marking conversation ${conversationId} as read:`,
-        error
-      );
-      throw error;
-    }
+    await deps.apiClients.messaging.markConversationAsRead(conversationId);
   },
 };
 

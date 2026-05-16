@@ -18,9 +18,17 @@ export abstract class BaseTransport implements ITransport {
   protected authProvider: AuthProvider | null = null;
   protected baseURL: string;
   protected defaultTimeout: number = 30000; // 30 seconds
+  protected onSessionExpired: (() => void) | null = null;
 
   constructor(baseURL: string = "") {
     this.baseURL = baseURL;
+  }
+
+  /**
+   * Set session expiration callback (invoked on 401 responses)
+   */
+  setOnSessionExpired(callback: (() => void) | null): void {
+    this.onSessionExpired = callback;
   }
 
   /**

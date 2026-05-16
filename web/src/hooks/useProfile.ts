@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback } from "react";
 import useAuth from "@/hooks/useAuth";
 import profilesService from "@/lib/services/profiles.service";
 import studyGroupsService from "@/lib/services/studyGroups.service";
-import type { UserProgram, UserSubject, StudyRequest, Profile } from "@/types";
+import type { ProfileUI } from "@/types/ui";
+import type { UserProgram, UserSubject } from "@/types";
+import type { StudyGroup } from "@uniconnect/shared-types";
 
 export interface UseProfileData {
-  profile: Profile | null;
+  profile: ProfileUI | null;
   programs: UserProgram[];
   subjects: UserSubject[];
-  publications: StudyRequest[];
+  publications: StudyGroup[];
   isLoading: boolean;
   error: string | null;
   primaryProgram: UserProgram | null;
@@ -27,10 +29,10 @@ function getInitials(fullName: string): string {
 
 export default function useProfile(): UseProfileData {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileUI | null>(null);
   const [programs, setPrograms] = useState<UserProgram[]>([]);
   const [subjects, setSubjects] = useState<UserSubject[]>([]);
-  const [publications, setPublications] = useState<StudyRequest[]>([]);
+  const [publications, setPublications] = useState<StudyGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +52,7 @@ export default function useProfile(): UseProfileData {
         profilesService.getMySubjects().catch(() => [] as UserSubject[]),
       ]);
 
-      let publicationsData: StudyRequest[] = [];
+      let publicationsData: StudyGroup[] = [];
       try {
         publicationsData = await studyGroupsService.listMyStudyRequests();
       } catch {
