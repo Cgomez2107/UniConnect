@@ -70,10 +70,10 @@ export class StudyGroupsClient extends BaseClient {
       method: "POST",
       url: "/study-groups",
       body: {
-        subject_id: payload.subjectId,
-        name: payload.title,
+        subjectId: payload.subjectId,
+        title: payload.title,
         description: payload.description,
-        max_members: payload.maxMembers,
+        maxMembers: payload.maxMembers,
       },
     });
     return mapStudyGroupDtoToDomain(response.data);
@@ -147,7 +147,7 @@ export class StudyGroupsClient extends BaseClient {
     const response = await this.transport.request<{ id: string }>({
       method: "POST",
       url: `/study-groups/${groupId}/transfer`,
-      body: { target_user_id: targetUserId },
+      body: { targetUserId },
     });
     return response.data;
   }
@@ -176,9 +176,9 @@ export class StudyGroupsClient extends BaseClient {
 
   async sendMessage(groupId: string, payload: SendGroupMessagePayload): Promise<Message> {
     const body: Record<string, any> = { content: payload.content };
-    if (payload.replyToMessageId) body.reply_to_message_id = payload.replyToMessageId;
-    if (payload.mediaUrl) body.media_url = payload.mediaUrl;
-    if (payload.mediaType) body.media_type = payload.mediaType;
+    if (payload.replyToMessageId) body.replyToMessageId = payload.replyToMessageId;
+    if (payload.mediaUrl) body.mediaUrl = payload.mediaUrl;
+    if (payload.mediaType) body.mediaType = payload.mediaType;
     if (payload.mentions) body.mentions = payload.mentions;
 
     const response = await this.transport.request<MessageDTO>({

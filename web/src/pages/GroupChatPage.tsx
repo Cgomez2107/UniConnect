@@ -42,7 +42,7 @@ export function GroupChatPage() {
           studyGroupsService.getStudyGroupById(id),
         ]);
         if (cancelled) return;
-        setMessages(msgs || []);
+        setMessages((msgs || []).reverse());
         setMembers(membersData || []);
         setGroupName(groupData?.name || "Chat del grupo");
       } catch (err) {
@@ -64,7 +64,13 @@ export function GroupChatPage() {
     });
   });
 
-  const handleSend = async (content: string, mentions: { userId: string; name: string }[]) => {
+  const handleUploadFile = async (file: File) => {
+    const mediaUrl = await uploadChatImageFile(id!, file);
+    if (!mediaUrl) throw new Error("Error al subir archivo");
+    return { url: mediaUrl, type: file.type || "application/octet-stream" };
+  };
+
+  const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string }) => {
     if (!content.trim() || !id) return;
 
     const tempId = `temp-${Date.now()}`;
@@ -80,6 +86,8 @@ export function GroupChatPage() {
       sender: { full_name: user?.name || "Tú", avatar_url: user?.profileImage || null },
       reply_to_message_id: replyingTo?.id || null,
       reply_preview: replyingTo?.content || null,
+      media_url: options?.mediaUrl || null,
+      media_type: options?.mediaType || null,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -90,6 +98,8 @@ export function GroupChatPage() {
       const msg = await studyGroupsService.sendGroupMessage(id, content.trim(), {
         replyToMessageId: replyTo?.id || undefined,
         mentions,
+        mediaUrl: options?.mediaUrl,
+        mediaType: options?.mediaType,
       });
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) {
@@ -307,6 +317,7 @@ export function GroupChatPage() {
         currentUserId={user?.id || ""}
         onSend={handleSend}
         onSendImage={handleImageSend}
+        onUploadFile={handleUploadFile}
         uploadingImage={uploadingImage}
         sending={sending}
         replyingTo={replyingTo}

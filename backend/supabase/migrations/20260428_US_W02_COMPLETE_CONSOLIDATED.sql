@@ -232,7 +232,7 @@ BEGIN
   FROM study_group_messages sgm
   JOIN profiles prof ON prof.id = sgm.sender_id
   WHERE sgm.request_id = p_group_id
-  ORDER BY sgm.created_at DESC
+  ORDER BY sgm.created_at ASC
   LIMIT GREATEST(1, LEAST(p_limit, 100))
   OFFSET GREATEST(0, p_offset);
 END;

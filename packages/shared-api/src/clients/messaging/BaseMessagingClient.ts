@@ -114,14 +114,14 @@ export class BaseMessagingClient {
       method: "POST",
       url: "/messages",
       body: {
-        conversation_id: payload.conversationId,
+        conversationId: payload.conversationId,
         content: payload.content,
         ...(payload.type !== undefined && { type: payload.type }),
-        ...(payload.mediaUrl !== undefined && { media_url: payload.mediaUrl }),
-        ...(payload.mediaType !== undefined && { media_type: payload.mediaType }),
-        ...(payload.mediaFilename !== undefined && { media_filename: payload.mediaFilename }),
-        ...(payload.replyToMessageId !== undefined && { reply_to_message_id: payload.replyToMessageId }),
-        ...(payload.replyPreview !== undefined && { reply_preview: payload.replyPreview }),
+        ...(payload.mediaUrl !== undefined && { mediaUrl: payload.mediaUrl }),
+        ...(payload.mediaType !== undefined && { mediaType: payload.mediaType }),
+        ...(payload.mediaFilename !== undefined && { mediaFilename: payload.mediaFilename }),
+        ...(payload.replyToMessageId !== undefined && { replyToMessageId: payload.replyToMessageId }),
+        ...(payload.replyPreview !== undefined && { replyPreview: payload.replyPreview }),
       },
     });
 

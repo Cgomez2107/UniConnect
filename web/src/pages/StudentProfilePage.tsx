@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/ui/Avatar";
 import { deps } from "@/store/deps";
+import useAuth from "@/hooks/useAuth";
 
 interface StudentProfileData {
   id: string;
@@ -71,6 +72,7 @@ function extractNum(data: any, ...keys: string[]): number | null {
 export function StudentProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<StudentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export function StudentProfilePage() {
       setLoading(true);
       setError(null);
       try {
-        const data: any = await deps.apiClients.profiles.getProfileById(id);
+        const data: any = await deps.apiClients.profiles.getProfileById(id, currentUser?.id);
         if (cancelled) return;
         console.log("[StudentProfile] API response:", data);
         setProfile({
@@ -94,7 +96,7 @@ export function StudentProfilePage() {
           semester: extractNum(data, "semester"),
           programName: extractField(data, "programName", "program_name", "program", "programName"),
           facultyName: extractField(data, "facultyName", "faculty_name", "faculty", "facultyName"),
-          sharedSubjects: [],
+          sharedSubjects: data.sharedSubjects ?? data.shared_subjects ?? [],
         });
         setLoading(false);
         return;

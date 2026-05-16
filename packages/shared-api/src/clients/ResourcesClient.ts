@@ -76,14 +76,14 @@ export class ResourcesClient extends BaseClient {
       method: "POST",
       url: "/resources",
       body: {
-        subject_id: payload.subjectId,
+        subjectId: payload.subjectId,
         title: payload.title,
         description: payload.description,
-        file_url: payload.fileUrl,
-        file_name: payload.fileName,
-        file_type: payload.fileType,
-        file_size_kb: payload.fileSizeKb,
-        program_id: payload.programId,
+        fileUrl: payload.fileUrl,
+        fileName: payload.fileName,
+        fileType: payload.fileType,
+        fileSizeKb: payload.fileSizeKb,
+        programId: payload.programId,
       },
     });
     return mapStudyResourceDtoToDomain(response.data);

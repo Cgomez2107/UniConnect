@@ -19,6 +19,8 @@ function mapResource(r: any): StudyResourceUI {
     fileSizeKb: r.fileSizeKb ?? r.file_size_kb ?? null,
     createdAt: r.createdAt?.toISOString?.() ?? r.created_at ?? r.createdAt,
     updatedAt: r.updatedAt?.toISOString?.() ?? r.updated_at ?? r.updatedAt,
+    profiles: r.profiles ?? undefined,
+    subjects: r.subjects ?? undefined,
   };
 }
 

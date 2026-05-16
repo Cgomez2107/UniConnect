@@ -76,10 +76,8 @@ export default function useResources() {
           fileSizeKb: null,
           createdAt: typeof r.createdAt === "string" ? r.createdAt : r.createdAt?.toISOString?.() ?? "",
           updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : r.updatedAt?.toISOString?.() ?? "",
-          profiles: r.uploader
-            ? { fullName: r.uploader.firstName ? `${r.uploader.firstName} ${r.uploader.lastName ?? ""}`.trim() : r.uploader.email, avatarUrl: r.uploader.profileImageUrl ?? null }
-            : undefined,
-          subjects: r.subject ? { name: r.subject.name } : undefined,
+          profiles: r.profiles ?? undefined,
+          subjects: r.subjects ?? undefined,
         }));
 
         setState({ resources, isLoading: false, error: null });

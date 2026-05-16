@@ -72,6 +72,8 @@ export function GroupDashboardPage() {
   useEffect(() => { scrollToBottom(); }, [messages]);
 
   // --- Load all data ---
+  const [applicationsLoading, setApplicationsLoading] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -79,16 +81,14 @@ export function GroupDashboardPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [data, membersData, appsData, msgs] = await Promise.all([
+        const [data, membersData, msgs] = await Promise.all([
           studyGroupsService.getStudyGroupById(id),
           studyGroupsService.getStudyGroupMembers(id),
-          studyGroupsService.getStudyGroupApplications(id),
           studyGroupsService.getGroupMessages(id),
         ]);
         if (cancelled) return;
         setSolicitud(data);
         setMembers(membersData);
-        setApplications(appsData);
         setMessages(msgs || []);
       } catch (err: any) {
         if (!cancelled) {
@@ -102,6 +102,27 @@ export function GroupDashboardPage() {
     fetchData();
     return () => { cancelled = true; };
   }, [id]);
+
+  const isAuthor = solicitud?.createdBy === user?.id || solicitud?.authorId === user?.id;
+  const isAdmin = isAuthor || members.some((m: any) => m.userId === user?.id && (m.role === "admin" || m.role === "autor"));
+
+  // --- Conditional applications fetch (admin only) ---
+  useEffect(() => {
+    if (!id || !isAdmin) {
+      setApplications([]);
+      return;
+    }
+
+    let cancelled = false;
+    setApplicationsLoading(true);
+
+    studyGroupsService.getStudyGroupApplications(id)
+      .then((apps) => { if (!cancelled) setApplications(apps); })
+      .catch(() => { if (!cancelled) setApplications([]); })
+      .finally(() => { if (!cancelled) setApplicationsLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [id, isAdmin]);
 
   // --- Role detection & guest redirect ---
   useEffect(() => {
@@ -155,8 +176,12 @@ export function GroupDashboardPage() {
   // --- Realtime group events ---
   const { addNotification } = useNotificationStore();
 
+  const isAdminRef = useRef(isAdmin);
+  isAdminRef.current = isAdmin;
+
   useGroupEventsObserver(id, {
     onNewApplication: (app) => {
+      if (!isAdminRef.current) return;
       const name = app.user?.fullName || app.user?.full_name || "Alguien";
       addNotification({
         id: `toast-${Date.now()}`,
@@ -171,6 +196,7 @@ export function GroupDashboardPage() {
       studyGroupsService.getStudyGroupApplications(id!).then(setApplications).catch(() => {});
     },
     onApplicationAccepted: (app) => {
+      if (!isAdminRef.current) return;
       const name = app.user?.fullName || app.user?.full_name || resolveName(app.userId || app.user_id, null);
       addNotification({
         id: `toast-${Date.now() + 1}`,
@@ -191,6 +217,7 @@ export function GroupDashboardPage() {
       }).catch(() => {});
     },
     onApplicationRejected: (app) => {
+      if (!isAdminRef.current) return;
       const name = app.user?.fullName || app.user?.full_name || resolveName(app.userId || app.user_id, null);
       addNotification({
         id: `toast-${Date.now() + 2}`,
@@ -219,8 +246,6 @@ export function GroupDashboardPage() {
 
   const profileNames = useProfileNames([...new Set([...applicantIds, ...memberIds])]);
 
-  const isAuthor = solicitud?.createdBy === user?.id || solicitud?.authorId === user?.id;
-  const isAdmin = isAuthor || members.some((m: any) => m.userId === user?.id && (m.role === "admin" || m.role === "autor"));
 
   const getMemberName = useCallback((member: any) => {
     return member.fullName || member.user?.fullName || "Usuario";

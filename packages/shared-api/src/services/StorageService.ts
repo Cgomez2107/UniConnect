@@ -221,12 +221,18 @@ export class StorageService {
   }
 
   async uploadChatImage(conversationId: string, file: File): Promise<StorageUploadResult> {
-    const ext = file.name.split(".").pop() || "jpg";
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const path = `${conversationId}/${Date.now()}.${ext}`;
+
+    const mimeMap: Record<string, string> = {
+      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+      webp: "image/webp", gif: "image/gif", bmp: "image/bmp",
+    };
+    const contentType = file.type || mimeMap[ext] || "application/octet-stream";
 
     const bucket = STORAGE_BUCKETS.CHAT_MEDIA;
     await this.requestWithRetry(() =>
-      this.supabase.storage.from(bucket.name).upload(path, file, { upsert: true }),
+      this.supabase.storage.from(bucket.name).upload(path, file, { upsert: true, contentType }),
     );
 
     const { data: urlData } = this.supabase.storage

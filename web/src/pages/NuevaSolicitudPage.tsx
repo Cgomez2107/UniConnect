@@ -60,6 +60,13 @@ export function NuevaSolicitudPage() {
       } catch (err: any) {
         throw new Error(err?.response?.data?.message || "Error al crear el grupo.");
       }
+    },
+    (formValues) => {
+      const errs: Record<string, string> = {};
+      if (!formValues.subjectId) errs.subjectId = "Debes seleccionar una materia.";
+      if (!formValues.title.trim()) errs.title = "El título es obligatorio.";
+      if (!formValues.description.trim()) errs.description = "La descripción es obligatoria.";
+      return errs;
     }
   );
 

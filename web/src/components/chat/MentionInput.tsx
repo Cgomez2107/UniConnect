@@ -16,11 +16,17 @@ function getMemberName(m: MemberLike): string {
   return "Usuario";
 }
 
+interface FileInfo {
+  file: File;
+  previewUrl?: string;
+}
+
 interface MentionInputProps {
   members: MemberLike[];
   currentUserId: string;
-  onSend: (content: string, mentions: { userId: string; name: string }[]) => void;
+  onSend: (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string }) => void;
   onSendImage?: (file: File) => void;
+  onUploadFile?: (file: File) => Promise<{ url: string; type: string }>;
   uploadingImage?: boolean;
   sending?: boolean;
   placeholder?: string;
@@ -29,11 +35,20 @@ interface MentionInputProps {
   onCancelReply?: () => void;
 }
 
+const FILE_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.webp,.zip,.rar,.7z";
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function MentionInput({
   members,
   currentUserId,
   onSend,
   onSendImage,
+  onUploadFile,
   uploadingImage = false,
   sending = false,
   placeholder = "Escribe un mensaje...",
@@ -45,9 +60,13 @@ export function MentionInput({
   const [mentionQuery, setMentionQuery] = useState<{ start: number; query: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [pendingFile, setPendingFile] = useState<FileInfo | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const imgInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mentionMapRef = useRef<Map<string, string>>(new Map());
 
   const otherMembers = members.filter((m) => m.userId !== currentUserId);
 
@@ -73,12 +92,16 @@ export function MentionInput({
 
     const lastAtIndex = value.lastIndexOf("@");
     if (lastAtIndex !== -1) {
-      const textAfterAt = value.slice(lastAtIndex + 1);
-      if (!textAfterAt.includes(" ")) {
-        setMentionQuery({ start: lastAtIndex, query: textAfterAt });
-        setShowDropdown(true);
-        setSelectedIndex(0);
-        return;
+      const beforeAt = value.slice(0, lastAtIndex);
+      const alreadyMention = /@\S+$/.test(beforeAt);
+      if (!alreadyMention) {
+        const textAfterAt = value.slice(lastAtIndex + 1);
+        if (!textAfterAt.includes(" ")) {
+          setMentionQuery({ start: lastAtIndex, query: textAfterAt });
+          setShowDropdown(true);
+          setSelectedIndex(0);
+          return;
+        }
       }
     }
     setShowDropdown(false);
@@ -89,16 +112,64 @@ export function MentionInput({
     (member: MemberLike) => {
       if (!mentionQuery) return;
       const name = getMemberName(member);
-      const mentionText = `@[${name}](user:${member.userId})`;
+      mentionMapRef.current.set(name, member.userId);
       const beforeAt = text.slice(0, mentionQuery.start);
       const afterQuery = text.slice(mentionQuery.start + 1 + mentionQuery.query.length);
-      setText(beforeAt + mentionText + " " + afterQuery);
+      setText(beforeAt + `@${name}` + " " + afterQuery);
       setShowDropdown(false);
       setMentionQuery(null);
       inputRef.current?.focus();
     },
     [mentionQuery, text]
   );
+
+  const buildContentWithMentions = useCallback((rawText: string): string => {
+    let result = rawText;
+    mentionMapRef.current.forEach((userId, name) => {
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`@${escapedName}(?![\\wÀ-ÿ])`, "g");
+      result = result.replace(regex, `@[${name}](user:${userId})`);
+    });
+    return result;
+  }, []);
+
+  const extractMentions = useCallback((content: string): { userId: string; name: string }[] => {
+    const regex = /@\[([^\]]+)\]\(user:([^)]+)\)/g;
+    const mentions: { userId: string; name: string }[] = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      mentions.push({ userId: match[2], name: match[1] });
+    }
+    return mentions;
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
+    if (sending || uploadingFile) return;
+
+    if (pendingFile && onUploadFile) {
+      setUploadingFile(true);
+      try {
+        const { url, type } = await onUploadFile(pendingFile.file);
+        const content = text.trim() || pendingFile.file.name;
+        const fullContent = buildContentWithMentions(content);
+        const mentions = extractMentions(fullContent);
+        onSend(fullContent, mentions, { mediaUrl: url, mediaType: type });
+      } catch (err) {
+        console.error("Error al enviar archivo:", err);
+      } finally {
+        setUploadingFile(false);
+        setPendingFile(null);
+        setText("");
+      }
+      return;
+    }
+
+    if (!text.trim() || !onSend) return;
+    const fullContent = buildContentWithMentions(text.trim());
+    const mentions = extractMentions(fullContent);
+    onSend(fullContent, mentions);
+    setText("");
+  }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -123,22 +194,27 @@ export function MentionInput({
         handleSubmit();
       }
     },
-    [showDropdown, filteredMembers, selectedIndex, mentionQuery, insertMention]
+    [showDropdown, filteredMembers, selectedIndex, mentionQuery, insertMention, handleSubmit]
   );
 
-  const handleSubmit = useCallback(() => {
-    if (!text.trim() || sending || !onSend) return;
+  const handleFileSelect = useCallback((file: File | null) => {
+    if (!file) return;
+    const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
+    setPendingFile({ file, previewUrl });
+  }, []);
 
-    const mentionRegex = /@\[([^\]]+)\]\(user:([^)]+)\)/g;
-    const mentions: { userId: string; name: string }[] = [];
-    let match;
-    while ((match = mentionRegex.exec(text)) !== null) {
-      mentions.push({ userId: match[2], name: match[1] });
-    }
+  const clearPendingFile = useCallback(() => {
+    if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl);
+    setPendingFile(null);
+  }, [pendingFile]);
 
-    onSend(text.trim(), mentions);
-    setText("");
-  }, [text, sending, onSend]);
+  useEffect(() => {
+    return () => {
+      if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl);
+    };
+  }, []);
+
+  const canSubmit = (text.trim().length > 0 || !!pendingFile) && !sending && !uploadingFile;
 
   return (
     <div className="relative">
@@ -150,6 +226,29 @@ export function MentionInput({
           <button
             onClick={onCancelReply}
             className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-300 text-sm"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Pending file preview */}
+      {pendingFile && (
+        <div className="px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 flex items-center gap-3">
+          {pendingFile.previewUrl ? (
+            <img src={pendingFile.previewUrl} alt="Preview" className="w-10 h-10 rounded object-cover" />
+          ) : (
+            <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded flex items-center justify-center text-lg">
+              📎
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-neutral-900 dark:text-white truncate">{pendingFile.file.name}</p>
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{formatSize(pendingFile.file.size)}</p>
+          </div>
+          <button
+            onClick={clearPendingFile}
+            className="text-neutral-400 hover:text-error-600 transition-colors text-sm px-1"
           >
             ✕
           </button>
@@ -171,14 +270,9 @@ export function MentionInput({
                   : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700/50"
               }`}
             >
-              <Avatar
-                name={getMemberName(member)}
-                size="sm"
-              />
+              <Avatar name={getMemberName(member)} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="font-medium truncate">
-                  {getMemberName(member)}
-                </p>
+                <p className="font-medium truncate">{getMemberName(member)}</p>
                 <p className="text-[10px] text-neutral-400 dark:text-neutral-500">
                   {member.role === "admin" ? "Admin" : "Miembro"}
                 </p>
@@ -190,25 +284,35 @@ export function MentionInput({
 
       <div className="bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 p-3">
         <div className="flex gap-2 items-end">
+          {/* Hidden file input for images */}
           <input
             type="file"
             accept="image/*"
-            ref={fileInputRef}
+            ref={imgInputRef}
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file && onSendImage) {
-                onSendImage(file);
-              }
+              handleFileSelect(e.target.files?.[0] ?? null);
               e.target.value = "";
             }}
             className="hidden"
           />
+          {/* Hidden file input for any file */}
+          <input
+            type="file"
+            accept={FILE_ACCEPT}
+            ref={fileInputRef}
+            onChange={(e) => {
+              handleFileSelect(e.target.files?.[0] ?? null);
+              e.target.value = "";
+            }}
+            className="hidden"
+          />
+          {/* Image button */}
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingImage || !onSendImage}
+            onClick={() => imgInputRef.current?.click()}
+            disabled={uploadingImage || sending || uploadingFile || !onSendImage}
             className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-50"
-            title="Subir imagen"
+            title="Adjuntar imagen"
           >
             {uploadingImage ? (
               <span className="inline-block w-5 h-5 border-2 border-neutral-300 border-t-primary-600 rounded-full animate-spin" />
@@ -218,26 +322,44 @@ export function MentionInput({
               </svg>
             )}
           </button>
+          {/* File attachment button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending || uploadingFile || !onUploadFile}
+            className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-50"
+            title="Adjuntar archivo"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+          </button>
           <input
             ref={inputRef}
             type="text"
             value={text}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={disabled}
+            placeholder={pendingFile ? "Añade un mensaje..." : placeholder}
+            disabled={disabled || uploadingFile}
             className="flex-1 px-4 py-2 border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
           />
           <Button
             type="button"
-            loading={sending}
-            disabled={!text.trim()}
+            loading={sending || uploadingFile}
+            disabled={!canSubmit}
             onClick={handleSubmit}
           >
-            Enviar
+            {(uploadingFile) ? "Subiendo..." : "Enviar"}
           </Button>
         </div>
       </div>
     </div>
   );
 }
+
+export default MentionInput;

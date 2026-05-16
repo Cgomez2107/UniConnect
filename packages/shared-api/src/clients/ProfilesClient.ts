@@ -86,10 +86,11 @@ export class ProfilesClient extends BaseClient {
     return mapProfileDtoToDomain(response.data);
   }
 
-  async getProfileById(userId: string): Promise<Profile> {
+  async getProfileById(userId: string, currentUserId?: string): Promise<Profile> {
     const response = await this.transport.request<ProfileDTO>({
       method: "GET",
       url: `/students/${userId}`,
+      params: currentUserId ? { currentUserId } : undefined,
     });
     return mapProfileDtoToDomain(response.data);
   }

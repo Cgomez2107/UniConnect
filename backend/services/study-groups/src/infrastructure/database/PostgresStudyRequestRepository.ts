@@ -290,8 +290,8 @@ export class PostgresStudyRequestRepository
       const insertResult = await this.pool.query<{ id: string }>(
         `
           INSERT INTO study_requests (
-            author_id, subject_id, title, description, max_members, status, is_active
-          ) VALUES ($1, $2, $3, $4, $5, 'abierta', true)
+            author_id, subject_id, title, description, max_members, status, is_active, created_by
+          ) VALUES ($1, $2, $3, $4, $5, 'abierta', true, $1)
           RETURNING id
         `,
         [input.authorId, input.subjectId, input.title, input.description, input.maxMembers],

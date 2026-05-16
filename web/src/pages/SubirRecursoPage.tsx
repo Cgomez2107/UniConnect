@@ -6,7 +6,7 @@ import profilesService from "@/lib/services/profiles.service";
 import resourcesService from "@/lib/services/resources.service";
 import { uploadResourceFile } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
-import type { UserSubject, UserProgram } from "@/types";
+import type { UserProgram } from "@/types";
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -17,6 +17,7 @@ const ALLOWED_TYPES = [
   "image/jpeg",
   "image/png",
 ];
+const ALLOWED_EXTENSIONS = ["pdf", "docx", "xlsx", "pptx", "txt", "jpg", "jpeg", "png"];
 const MAX_SIZE = 10 * 1024 * 1024;
 
 function formatSize(bytes: number): string {
@@ -30,7 +31,7 @@ export function SubirRecursoPage() {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [subjects, setSubjects] = useState<UserSubject[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [programId, setProgramId] = useState<string | null>(null);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -53,8 +54,8 @@ export function SubirRecursoPage() {
         ]);
         if (cancelled) return;
         setSubjects(subjectsData);
-        const primary = programsData.find((p) => p.is_primary) || programsData[0];
-        if (primary) setProgramId(primary.program_id);
+        const primary = programsData[0];
+        if (primary) setProgramId(primary.programId ?? primary.program_id);
       } catch (err: any) {
         if (!cancelled) setFetchError(err?.response?.data?.message || "Error al cargar datos.");
       } finally {
@@ -72,7 +73,8 @@ export function SubirRecursoPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
       setUploadError("Formato no permitido. Usa: PDF, DOCX, XLSX, PPTX, TXT, JPG, PNG.");
       return;
     }
@@ -216,12 +218,12 @@ export function SubirRecursoPage() {
               Materia * ({subjects.length} disponibles)
             </label>
             <div className="flex flex-wrap gap-2">
-              {subjects.map((s) => {
-                const active = selectedSubjectId === s.subject_id;
+              {subjects.map((s: any) => {
+                const active = selectedSubjectId === s.subjectId;
                 return (
                   <button
-                    key={s.subject_id}
-                    onClick={() => setSelectedSubjectId(active ? null : s.subject_id)}
+                    key={s.subjectId}
+                    onClick={() => setSelectedSubjectId(active ? null : s.subjectId)}
                     className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                       active
                         ? "bg-primary-600 text-white border-primary-600"
@@ -229,7 +231,7 @@ export function SubirRecursoPage() {
                     }`}
                   >
                     {active && <span className="text-xs">✓</span>}
-                    {s.subjects?.name || "Materia"}
+                    {s.subjects?.name || s.subject?.name || "Materia"}
                   </button>
                 );
               })}
