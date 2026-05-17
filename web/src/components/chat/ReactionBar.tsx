@@ -6,9 +6,10 @@ const EMOJI_LIST = ["👍", "❤️", "😂", "😮", "🎉", "🔥"];
 interface ReactionBarProps {
   reactions: MessageReactionUI[];
   currentUserId?: string;
+  onToggleReaction?: (emoji: string) => void;
 }
 
-export function ReactionBar({ reactions, currentUserId }: ReactionBarProps) {
+export function ReactionBar({ reactions, currentUserId, onToggleReaction }: ReactionBarProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [localReactions, setLocalReactions] = useState<MessageReactionUI[]>(reactions);
 
@@ -41,12 +42,27 @@ export function ReactionBar({ reactions, currentUserId }: ReactionBarProps) {
       ]);
     }
     setShowPicker(false);
+    onToggleReaction?.(emoji);
   };
 
-  if (!localReactions.length && !showPicker) return null;
+  if (!localReactions.length && !showPicker) {
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <div className="relative">
+          <button
+            onClick={() => setShowPicker(true)}
+            className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs border border-neutral-200 text-neutral-400 hover:text-neutral-600 hover:border-neutral-300 transition-all"
+            title="Agregar reacción"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 mt-2">
+    <div className="flex flex-col items-center gap-0.5">
       {localReactions.map((reaction) => {
         const isActive = currentUserId
           ? reaction.users.includes(currentUserId)
@@ -56,14 +72,14 @@ export function ReactionBar({ reactions, currentUserId }: ReactionBarProps) {
           <button
             key={reaction.emoji}
             onClick={() => handleAddReaction(reaction.emoji)}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all ${
+            className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-xs border transition-all ${
               isActive
                 ? "bg-primary-100 border-primary-300 text-primary-700"
                 : "bg-neutral-100 border-neutral-200 text-neutral-600 hover:bg-neutral-200"
             }`}
           >
             <span>{reaction.emoji}</span>
-            <span className="font-medium tabular-nums">{reaction.count}</span>
+            <span className="font-medium tabular-nums text-[10px]">{reaction.count}</span>
           </button>
         );
       })}
@@ -71,14 +87,14 @@ export function ReactionBar({ reactions, currentUserId }: ReactionBarProps) {
       <div className="relative">
         <button
           onClick={() => setShowPicker(!showPicker)}
-          className="inline-flex items-center justify-center w-6 h-6 rounded-full text-sm border border-neutral-200 text-neutral-400 hover:text-neutral-600 hover:border-neutral-300 transition-all"
+          className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs border border-neutral-200 text-neutral-400 hover:text-neutral-600 hover:border-neutral-300 transition-all"
           title="Agregar reacción"
         >
           +
         </button>
 
         {showPicker && (
-          <div className="absolute bottom-full left-0 mb-1 flex gap-1 p-1.5 bg-white rounded-lg shadow-lg border border-neutral-200 z-10">
+          <div className="absolute bottom-full right-0 mb-1 flex gap-1 p-1.5 bg-white rounded-lg shadow-lg border border-neutral-200 z-10">
             {EMOJI_LIST.map((emoji) => (
               <button
                 key={emoji}

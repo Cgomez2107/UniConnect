@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import type { IRenderContext, FileData } from "./IMessage.js";
+import type { IMessage, IRenderContext, FileData } from "./IMessage.js";
 import { MessageDecorator } from "./MessageDecorator.js";
 
 export class FileDecorator extends MessageDecorator {
   private readonly file: FileData;
 
-  constructor(wrapper: MessageDecorator, file: FileData) {
+  constructor(wrapper: IMessage, file: FileData) {
     super(wrapper);
     this.file = file;
   }

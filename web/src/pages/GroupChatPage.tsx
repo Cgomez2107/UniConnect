@@ -9,6 +9,34 @@ import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import { useChatObserver } from "@/hooks/useChatObserver";
 import { useAuthStore } from "@/store/useAuthStore";
+import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+
+function transformMentions(mentions?: any[]): MentionData[] | undefined {
+  if (!mentions || mentions.length === 0) return undefined;
+  return mentions.map((m) => ({
+    userId: m.userId ?? m.user_id ?? "",
+    displayName: m.name ?? m.displayName ?? "",
+    position: 0,
+  }));
+}
+
+function transformReactions(reactions?: any[]): ReactionData[] | undefined {
+  if (!reactions || reactions.length === 0) return undefined;
+  const grouped = new Map<string, { emoji: string; users: string[] }>();
+  for (const r of reactions) {
+    const emoji = r.emoji;
+    if (!emoji) continue;
+    if (!grouped.has(emoji)) {
+      grouped.set(emoji, { emoji, users: [] });
+    }
+    grouped.get(emoji)!.users.push(r.userId ?? r.user_id ?? "");
+  }
+  return Array.from(grouped.values()).map((g) => ({
+    emoji: g.emoji,
+    count: g.users.length,
+    users: g.users,
+  }));
+}
 
 export function GroupChatPage() {
   const { id } = useParams<{ id: string }>();
@@ -112,6 +140,8 @@ export function GroupChatPage() {
 
           if (data.event === "new_group_message") {
             const mappedMsg = snakeToCamel(payload);
+            mappedMsg.mentions = transformMentions(mappedMsg.mentions);
+            mappedMsg.reactions = transformReactions(mappedMsg.reactions);
             if (pendingTempIds.current.size > 0 && pendingTempIds.current.has(mappedMsg.id)) return;
             setMessages((prev) => {
               if (prev.some((m) => m.id === mappedMsg.id || m._tempId === mappedMsg.id)) return prev;
@@ -141,9 +171,14 @@ export function GroupChatPage() {
 
   // --- Supabase Realtime como fallback ---
   useChatObserver(id, (newMsg) => {
+    const transformed = {
+      ...newMsg,
+      mentions: transformMentions(newMsg.mentions),
+      reactions: transformReactions(newMsg.reactions),
+    };
     setMessages((prev) => {
-      if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
-      return [...prev, newMsg];
+      if (prev.some((m) => m.id === transformed.id || m._tempId === transformed.id)) return prev;
+      return [...prev, transformed];
     });
   });
 
@@ -341,8 +376,8 @@ export function GroupChatPage() {
     mediaUrl: msg.media_url || msg.mediaUrl || null,
     mediaType: msg.media_type || msg.mediaType || null,
     mediaFilename: msg.media_filename || msg.mediaFilename || null,
-    mentions: msg.mentions || undefined,
-    reactions: msg.reactions || undefined,
+    mentions: transformMentions(msg.mentions),
+    reactions: transformReactions(msg.reactions),
   })) as any[];
 
   if (loading) {
@@ -401,6 +436,7 @@ export function GroupChatPage() {
                   previousSenderSame={index > 0 && enhancedMessages[index - 1].senderId === msg.senderId}
                   onRetry={handleRetry}
                   onReply={(m) => setReplyingTo(m)}
+                  onToggleReaction={(messageId, emoji) => studyGroupsService.toggleReaction(id!, messageId, emoji)}
                 />
               </div>
             </div>

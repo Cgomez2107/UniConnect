@@ -29,6 +29,7 @@ export async function handleStudyGroupsRoutes(
   const transferMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/transfer$/);
   const transferAcceptMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/accept$/);
   const transferRejectMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/reject$/);
+  const reactionMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
@@ -121,6 +122,11 @@ export async function handleStudyGroupsRoutes(
 
   if (req.method === "POST" && transferRejectMatch) {
     await controller.rejectTransfer(req, res, transferRejectMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && reactionMatch) {
+    await controller.toggleReaction(req, res, reactionMatch[1], reactionMatch[2]);
     return true;
   }
 

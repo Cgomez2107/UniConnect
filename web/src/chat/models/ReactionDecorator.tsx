@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import type { ReactNode } from "react";
-import type { IRenderContext, ReactionData } from "./IMessage.js";
+import type { IMessage, IRenderContext, ReactionData } from "./IMessage.js";
 import { MessageDecorator } from "./MessageDecorator.js";
 
 const EMOJI_LIST = ["👍", "❤️", "😂", "😮", "🎉", "🔥"];
@@ -8,7 +8,7 @@ const EMOJI_LIST = ["👍", "❤️", "😂", "😮", "🎉", "🔥"];
 export class ReactionDecorator extends MessageDecorator {
   private readonly reactions: ReactionData[];
 
-  constructor(wrapper: MessageDecorator, reactions: ReactionData[]) {
+  constructor(wrapper: IMessage, reactions: ReactionData[]) {
     super(wrapper);
     this.reactions = reactions;
   }

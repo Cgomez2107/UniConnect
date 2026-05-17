@@ -78,4 +78,17 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
 
     return mapMessage(result.rows[0]);
   }
+
+  async toggleReaction(input: {
+    requestId: string;
+    messageId: string;
+    actorUserId: string;
+    emoji: string;
+  }): Promise<any[]> {
+    const result = await this.pool.query<{ reactions: any[] }>(
+      "SELECT toggle_message_reaction($1, $2, $3, $4) AS reactions",
+      [input.messageId, input.requestId, input.actorUserId, input.emoji],
+    );
+    return result.rows[0].reactions;
+  }
 }

@@ -2,7 +2,11 @@ import { createServer } from "node:http";
 
 import { ApplyToStudyRequest } from "./application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "./application/use-cases/AcceptAdminTransfer.js";
+import { CancelStudyRequest } from "./application/use-cases/CancelStudyRequest.js";
+import { ToggleReaction } from "./application/use-cases/ToggleReaction.js";
 import { CreateStudyRequest } from "./application/use-cases/CreateStudyRequest.js";
+import { ListMyStudyRequests } from "./application/use-cases/ListMyStudyRequests.js";
+import { ListMyApplications } from "./application/use-cases/ListMyApplications.js";
 import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById.js";
 import { ListApplicationsByRequest } from "./application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "./application/use-cases/ListStudyGroupMessages.js";
@@ -199,6 +203,10 @@ function bootstrap(): void {
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyRequestRepository, subject);
   const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyRequestRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(studyRequestRepository, subject);
+  const listMyStudyRequestsUC = new ListMyStudyRequests(studyRequestRepository);
+  const listMyApplicationsUC = new ListMyApplications(applicationRepository);
+  const cancelStudyRequestUC = new CancelStudyRequest(studyRequestRepository);
+  const toggleReaction = new ToggleReaction(messageRepository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -214,6 +222,10 @@ function bootstrap(): void {
     acceptAdminTransfer,
     rejectAdminTransfer,
     leaveAdminRole,
+    listMyStudyRequestsUC,
+    listMyApplicationsUC,
+    cancelStudyRequestUC,
+    toggleReaction,
   );
 
   const server = createServer((req, res) => {

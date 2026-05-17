@@ -3,13 +3,13 @@ import { MessageUI, UserSessionUI } from "@/types/ui";
 import { buildDecoratedMessage } from "@/chat/models/messageFactory.js";
 import type { IRenderContext } from "@/chat/models/IMessage.js";
 import { ReactionBar } from "./ReactionBar";
-
 interface MessageBubbleProps {
   message: MessageUI;
   currentUser: UserSessionUI | null;
   previousSenderSame?: boolean;
   onReply?: (message: MessageUI) => void;
   onRetry?: (message: MessageUI) => void;
+  onToggleReaction?: (messageId: string, emoji: string) => void;
 }
 
 export function MessageBubble({
@@ -18,6 +18,7 @@ export function MessageBubble({
   previousSenderSame = false,
   onReply,
   onRetry,
+  onToggleReaction,
 }: MessageBubbleProps) {
   const isOwn = currentUser?.id === message.senderId;
   const isFailed = message.clientStatus === "failed";
@@ -53,6 +54,27 @@ export function MessageBubble({
         previousSenderSame ? "mt-1" : "mt-4"
       } ${isFailed ? "opacity-60" : ""}`}
     >
+      {/* Reaction bar on the outside, positioned to the side */}
+      {!isOwn && (
+        <div className="flex items-end mr-1">
+          <ReactionBar
+            reactions={message.reactions ?? []}
+            currentUserId={currentUser?.id}
+            onToggleReaction={(emoji) => onToggleReaction?.(message.id, emoji)}
+          />
+        </div>
+      )}
+...
+      {isOwn && (
+        <div className="flex items-end ml-1">
+          <ReactionBar
+            reactions={message.reactions ?? []}
+            currentUserId={currentUser?.id}
+            onToggleReaction={(emoji) => onToggleReaction?.(message.id, emoji)}
+          />
+        </div>
+      )}
+
       <div className="max-w-xs lg:max-w-md">
         {message.replyToMessageId && message.replyPreview && (
           <div
@@ -90,12 +112,6 @@ export function MessageBubble({
             )}
           </div>
         </div>
-        {message.reactions && message.reactions.length > 0 && (
-          <ReactionBar
-            reactions={message.reactions}
-            currentUserId={currentUser?.id}
-          />
-        )}
         <div className="flex gap-2 mt-1 px-1">
           {onReply && (
             <button
@@ -115,6 +131,13 @@ export function MessageBubble({
           )}
         </div>
       </div>
+
+      {/* For own messages, reaction bar on the right */}
+      {isOwn && (
+        <div className="flex items-end ml-1">
+          <ReactionBar reactions={message.reactions ?? []} currentUserId={currentUser?.id} />
+        </div>
+      )}
     </div>
   );
 }

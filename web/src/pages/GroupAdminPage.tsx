@@ -16,6 +16,36 @@ import { useChatObserver } from "@/hooks/useChatObserver";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { snakeToCamel } from "@uniconnect/shared-api";
+import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+
+// Backend: [{ userId, name }] → UI: [{ userId, displayName, position }]
+function transformMentions(mentions?: any[]): MentionData[] | undefined {
+  if (!mentions || mentions.length === 0) return undefined;
+  return mentions.map((m) => ({
+    userId: m.userId ?? m.user_id ?? "",
+    displayName: m.name ?? m.displayName ?? "",
+    position: 0,
+  }));
+}
+
+// Backend: [{ emoji, userId }] (individual) → UI: [{ emoji, count, users: [id1, id2] }] (aggregated)
+function transformReactions(reactions?: any[]): ReactionData[] | undefined {
+  if (!reactions || reactions.length === 0) return undefined;
+  const grouped = new Map<string, { emoji: string; users: string[] }>();
+  for (const r of reactions) {
+    const emoji = r.emoji;
+    if (!emoji) continue;
+    if (!grouped.has(emoji)) {
+      grouped.set(emoji, { emoji, users: [] });
+    }
+    grouped.get(emoji)!.users.push(r.userId ?? r.user_id ?? "");
+  }
+  return Array.from(grouped.values()).map((g) => ({
+    emoji: g.emoji,
+    count: g.users.length,
+    users: g.users,
+  }));
+}
 
 type AppTab = "pendiente" | "aceptada" | "rechazada";
 type RightTab = "postulaciones" | "miembros" | "info";
@@ -211,6 +241,8 @@ export function GroupDashboardPage() {
             }
             newMsg.sender.fullName = newMsg.sender.fullName || newMsg.senderFullName;
             newMsg.sender.full_name = newMsg.sender.full_name || newMsg.senderFullName;
+            newMsg.mentions = transformMentions(newMsg.mentions);
+            newMsg.reactions = transformReactions(newMsg.reactions);
             setMessages((prev) => {
               if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
               return [...prev, newMsg];
@@ -514,8 +546,8 @@ export function GroupDashboardPage() {
       mediaFilename: msg.media_filename || msg.mediaFilename || null,
       createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
       content: msg.content || "",
-      mentions: msg.mentions || undefined,
-      reactions: msg.reactions || undefined,
+      mentions: transformMentions(msg.mentions),
+      reactions: transformReactions(msg.reactions),
     })),
     [messages, id, memberNameMap],
   );
@@ -823,6 +855,7 @@ export function GroupDashboardPage() {
                       previousSenderSame={index > 0 && enhancedMessages[index - 1].senderId === msg.senderId}
                       onRetry={handleRetry}
                       onReply={(m) => setReplyingTo(m)}
+                      onToggleReaction={(messageId, emoji) => studyGroupsService.toggleReaction(id!, messageId, emoji)}
                     />
                   </div>
                 </div>

@@ -75,6 +75,10 @@ const studyGroupsService = {
     return deps.apiClients.studyGroups.getMessages(groupId);
   },
 
+  async toggleReaction(groupId: string, messageId: string, emoji: string) {
+    return deps.apiClients.studyGroups.toggleReaction(groupId, messageId, emoji);
+  },
+
   async sendGroupMessage(groupId: string, content: string, options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string; mentions?: { userId: string; name: string }[] }) {
     return deps.apiClients.studyGroups.sendMessage(groupId, {
       content,
