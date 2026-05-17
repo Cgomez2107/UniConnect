@@ -21,6 +21,7 @@ import type { INotificationRepository } from "./domain/repositories/INotificatio
 import type { IMemberRepository } from "./domain/repositories/IMemberRepository.js";
 import type { IStudyGroupMessageRepository } from "./domain/repositories/IStudyGroupMessageRepository.js";
 import type { IStudyGroupRepository } from "./domain/repositories/IStudyGroupRepository.js";
+import { createStudyGroupsServer } from "./app/createStudyGroupsServer.js";
 import { InMemoryStudyRequestRepository } from "./infrastructure/database/InMemoryStudyRequestRepository.js";
 import { InMemoryAdminTransferRepository } from "./infrastructure/database/InMemoryAdminTransferRepository.js";
 import { InMemoryApplicationRepository } from "./infrastructure/database/InMemoryApplicationRepository.js";
