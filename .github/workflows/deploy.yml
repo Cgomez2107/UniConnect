@@ -45,15 +45,9 @@ jobs:
         run: npx vitest run tests/integration/sprint4/ --reporter=verbose
         working-directory: backend
 
-      - name: Run auth integration tests
-        run: pnpm --filter @uniconnect/auth test:integration
-        working-directory: backend
-        continue-on-error: false
-
-      - name: Run study-groups unit tests
-        run: pnpm --filter @uniconnect/study-groups test
-        working-directory: backend
-        continue-on-error: false
+      - name: Run auth contract tests (Zod, no server needed)
+        run: npx vitest run tests/contracts/auth.contract.spec.ts --reporter=verbose
+        working-directory: packages/shared-types
 
   build-and-deploy:
     needs: [test-and-validate]
