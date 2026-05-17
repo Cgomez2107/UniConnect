@@ -33,11 +33,11 @@
     "test:contracts": "vitest run tests/contracts/"
   },
   "dependencies": {
-    "zod": "^3.24.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "@types/node": "^20.0.0"
+    "vitest": "^3.2.4"
   }
 }
