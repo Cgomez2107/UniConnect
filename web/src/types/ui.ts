@@ -24,6 +24,18 @@ export interface AdminUserUI {
   createdAt: string;
 }
 
+export interface MessageReactionUI {
+  emoji: string;
+  count: number;
+  users: string[];
+}
+
+export interface MessageMentionUI {
+  userId: string;
+  displayName: string;
+  position: number;
+}
+
 export interface MessageUI {
   id: string;
   conversationId: string;
@@ -39,6 +51,8 @@ export interface MessageUI {
   createdAt: string;
   readAt: string | null;
   sender?: { fullName: string; avatarUrl: string | null };
+  mentions?: MessageMentionUI[];
+  reactions?: MessageReactionUI[];
 }
 
 export interface ConversationUI {
