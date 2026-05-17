@@ -9,7 +9,7 @@ import type {
 export class InMemoryStudyResourceRepository implements IStudyResourceRepository {
   private readonly resources = new Map<string, StudyResource>();
 
-  async list(filters: ListStudyResourcesFilters): Promise<StudyResource[]> {
+  async list(filters: ListStudyResourcesFilters): Promise<{ rows: StudyResource[]; total: number }> {
     const search = filters.search?.trim().toLowerCase();
 
     const filtered = [...this.resources.values()]
@@ -19,6 +19,10 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
         }
 
         if (filters.userId && resource.userId !== filters.userId) {
+          return false;
+        }
+
+        if (filters.resourceType && resource.resourceType !== filters.resourceType) {
           return false;
         }
 
@@ -33,10 +37,11 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
       })
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
+    const total = filtered.length;
     const start = filters.page * filters.pageSize;
     const end = start + filters.pageSize;
 
-    return filtered.slice(start, end);
+    return { rows: filtered.slice(start, end), total };
   }
 
   async getById(id: string): Promise<StudyResource | null> {
@@ -50,10 +55,16 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
       userId: input.userId,
       programId: input.programId,
       subjectId: input.subjectId,
+      resourceType: input.resourceType,
       title: input.title,
       description: input.description ?? null,
-      fileUrl: input.fileUrl,
-      fileName: input.fileName,
+      url: input.url ?? null,
+      ogTitle: input.ogTitle ?? null,
+      ogDescription: input.ogDescription ?? null,
+      ogImage: input.ogImage ?? null,
+      ogScrapedAt: input.ogScrapedAt ? new Date(input.ogScrapedAt).toISOString() : null,
+      fileUrl: input.fileUrl ?? null,
+      fileName: input.fileName ?? null,
       fileType: input.fileType ?? null,
       fileSizeKb: input.fileSizeKb ?? null,
       createdAt: now,
@@ -66,16 +77,11 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
 
   async updateById(
     id: string,
-    actorUserId: string,
     payload: { title?: string; description?: string | null },
   ): Promise<StudyResource | null> {
     const existing = this.resources.get(id);
     if (!existing) {
       return null;
-    }
-
-    if (existing.userId !== actorUserId) {
-      throw new Error("Solo el autor puede editar este recurso.");
     }
 
     const updated: StudyResource = {
@@ -89,14 +95,9 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
     return updated;
   }
 
-  async deleteById(id: string, actorUserId: string): Promise<boolean> {
-    const existing = this.resources.get(id);
-    if (!existing) {
+  async deleteById(id: string): Promise<boolean> {
+    if (!this.resources.has(id)) {
       return false;
-    }
-
-    if (existing.userId !== actorUserId) {
-      throw new Error("Solo el autor puede eliminar este recurso.");
     }
 
     this.resources.delete(id);
