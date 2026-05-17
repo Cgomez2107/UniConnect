@@ -25,17 +25,17 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: backend/pnpm-lock.yaml
 
-      - name: Install backend dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: backend
-
       - name: Install shared-types dependencies
         run: pnpm install --frozen-lockfile
         working-directory: packages/shared-types
 
-      - name: Build shared-types
+      - name: Build shared-types (first, so dist/ exists before backend hoists it)
         run: pnpm build
         working-directory: packages/shared-types
+
+      - name: Install backend dependencies (hoists shared-types with dist/ included)
+        run: pnpm install --frozen-lockfile
+        working-directory: backend
 
       - name: Typecheck backend
         run: pnpm typecheck
