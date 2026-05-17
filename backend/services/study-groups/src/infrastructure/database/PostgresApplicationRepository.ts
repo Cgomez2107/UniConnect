@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 
-import { AuthorizationError } from "../../../../../shared/libs/errors/index.js";
+import { AuthorizationError, ConflictError } from "../../../../../shared/libs/errors/index.js";
 import type { Application } from "../../domain/entities/Application.js";
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
 
@@ -67,24 +67,40 @@ export class PostgresApplicationRepository implements IApplicationRepository {
   }
 
   async create(input: { requestId: string; applicantId: string; message: string }): Promise<Application> {
-    try {
-      const result = await this.pool.query<ApplicationRow>(
-        `
-          INSERT INTO applications (request_id, applicant_id, message)
-          VALUES ($1, $2, $3)
-          RETURNING id, request_id, applicant_id, message, status, created_at, reviewed_at
-        `,
-        [input.requestId, input.applicantId, input.message],
-      );
+    // Permitir re-postulación si la anterior fue rechazada
+    const existing = await this.pool.query<ApplicationRow>(
+      `SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
+       FROM applications
+       WHERE request_id = $1 AND applicant_id = $2
+       LIMIT 1`,
+      [input.requestId, input.applicantId],
+    );
 
-      return mapApplication(result.rows[0]);
-    } catch (error) {
-      if (error && typeof error === "object" && "code" in error && error.code === "23505") {
-        throw new Error("Ya te postulaste a esta solicitud.");
+    if (existing.rows.length > 0) {
+      const app = existing.rows[0];
+      if (app.status !== "rechazada") {
+        throw new ConflictError("Ya te postulaste a esta solicitud.");
       }
-
-      throw error;
+      const updated = await this.pool.query<ApplicationRow>(
+        `UPDATE applications
+         SET message = $1, status = 'pendiente', reviewed_at = NULL, created_at = NOW()
+         WHERE id = $2
+         RETURNING id, request_id, applicant_id, message, status, created_at, reviewed_at`,
+        [input.message, app.id],
+      );
+      return mapApplication(updated.rows[0]);
     }
+
+    const result = await this.pool.query<ApplicationRow>(
+      `
+        INSERT INTO applications (request_id, applicant_id, message)
+        VALUES ($1, $2, $3)
+        RETURNING id, request_id, applicant_id, message, status, created_at, reviewed_at
+      `,
+      [input.requestId, input.applicantId, input.message],
+    );
+
+    return mapApplication(result.rows[0]);
   }
 
   async review(input: { applicationId: string; actorUserId: string; status: "aceptada" | "rechazada" }): Promise<void> {
@@ -93,5 +109,19 @@ export class PostgresApplicationRepository implements IApplicationRepository {
       input.actorUserId,
       input.status,
     ]);
+  }
+
+  async getByApplicantId(applicantId: string): Promise<Application[]> {
+    const result = await this.pool.query<ApplicationRow>(
+      `
+        SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
+        FROM applications
+        WHERE applicant_id = $1
+        ORDER BY created_at DESC
+      `,
+      [applicantId],
+    );
+
+    return result.rows.map(mapApplication);
   }
 }

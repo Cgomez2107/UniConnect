@@ -9,16 +9,12 @@ export class SearchStudentsBySubject {
   constructor(private readonly repository: IStudentRepository) {}
 
   async execute(input: {
-    subjectId: string;
+    subjectId?: string;
     search?: string;
     currentUserId?: string;
   }): Promise<Student[]> {
-    if (!input.subjectId.trim()) {
-      throw new Error("Subject ID is required");
-    }
-
     return this.repository.searchBySubject(
-      input.subjectId.trim(),
+      input.subjectId?.trim() || undefined,
       input.search?.trim(),
       input.currentUserId?.trim(),
     );

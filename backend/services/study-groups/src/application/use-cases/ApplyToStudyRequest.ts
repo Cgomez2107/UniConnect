@@ -5,6 +5,7 @@ import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGrou
 import type { StudyGroupSubject } from "../../domain/events/index.js";
 import { StudyGroupMembershipService } from "../../domain/services/StudyGroupMembershipService.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
+import { NotFoundError } from "../../../../../shared/libs/errors/index.js";
 
 /**
  * Caso de Uso: Postularse a un grupo de estudio.
@@ -33,7 +34,7 @@ export class ApplyToStudyRequest {
 
     const request = await this.studyRequestRepository.getById(requestId);
     if (!request) {
-      throw new Error("Solicitud de estudio no encontrada.");
+      throw new NotFoundError("Solicitud de estudio no encontrada.");
     }
 
     const group = await this.studyGroupRepository.loadStudyGroup(requestId, this.subject);

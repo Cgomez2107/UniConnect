@@ -117,6 +117,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set(state => ({
               user: state.user ? {
                 ...state.user,
+                email: profile.email || state.user.email,
                 fullName: profile.full_name || state.user.fullName,
                 avatarUrl: profile.avatar_url || state.user.avatarUrl,
                 role: normalizeRole(profile.role),

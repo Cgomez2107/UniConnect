@@ -1,3 +1,5 @@
+import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
+import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type { IStudyRequestRepository } from "../../domain/repositories/IStudyRequestRepository.js";
 import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
@@ -13,6 +15,12 @@ import { Blocked } from "../../domain/states/Blocked.js";
  * Replace with a Postgres implementation once the DB adapter is ready.
  */
 export class InMemoryStudyRequestRepository implements IStudyRequestRepository, IStudyGroupRepository {
+  listByAuthorId(authorId: string): Promise<StudyRequest[]> {
+    throw new Error("Method not implemented.");
+  }
+  cancel(id: string): Promise<StudyRequest> {
+    throw new Error("Method not implemented.");
+  }
   private readonly requests: StudyRequest[] = [
     {
       id: "a1b2c3d4-0001-4000-9000-111111111111",

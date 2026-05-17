@@ -80,3 +80,6 @@ Dockerfile
 .dockerignore
 docker-compose*.yml
 docker-compose*.yaml
+
+
+**/node_modules

@@ -1,0 +1,59 @@
+/**
+ * @deprecated Use deps.apiClients.events directly or import from @uniconnect/shared-api.
+ * This file is kept as a thin adapter for backward compatibility.
+ */
+import { deps } from "@/store/deps";
+import type { CampusEventUI } from "@/types/ui";
+
+function mapEvent(e: any): CampusEventUI {
+  return {
+    id: e.id,
+    title: e.title,
+    description: e.description ?? null,
+    eventDate: e.eventDate?.toISOString?.() ?? e.eventDate ?? e.event_date,
+    location: e.location ?? null,
+    category: e.category ?? "academico",
+    imageUrl: e.imageUrl ?? e.image_url ?? null,
+    createdBy: e.createdBy ?? e.created_by ?? null,
+    createdAt: e.createdAt?.toISOString?.() ?? e.createdAt,
+    updatedAt: e.updatedAt?.toISOString?.() ?? e.updatedAt,
+    creator: e.creator ? { fullName: e.creator.fullName ?? e.creator.full_name } : null,
+  };
+}
+
+const eventsService = {
+  async listEvents(filters?: { category?: string; page?: number; perPage?: number }) {
+    const events = await deps.apiClients.events.list(filters);
+    return events.map(mapEvent);
+  },
+
+  async getEventById(id: string) {
+    const event = await deps.apiClients.events.getById(id);
+    return mapEvent(event);
+  },
+
+  async createEvent(data: {
+    title: string;
+    description?: string;
+    eventDate: string;
+    location?: string;
+    category?: string;
+  }) {
+    const event = await deps.apiClients.events.create({
+      ...data,
+      eventDate: data.eventDate,
+    });
+    return mapEvent(event);
+  },
+
+  async updateEvent(id: string, data: { title?: string; description?: string; eventDate?: string; location?: string }) {
+    const event = await deps.apiClients.events.update(id, data);
+    return mapEvent(event);
+  },
+
+  async deleteEvent(id: string) {
+    await deps.apiClients.events.delete(id);
+  },
+};
+
+export default eventsService;

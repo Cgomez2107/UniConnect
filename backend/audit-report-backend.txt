@@ -1,0 +1,211 @@
+# Auditoria Backend - Sprint 3
+
+- Fecha: Thu Apr 30 11:17:07 HPS 2026
+- Directorio auditado: /c/Users/carli/Documents/U. Caldas/Software III/UniConnect/UniConnect/backend
+- URL backend: https://uniconnect-gateway.fly.dev/health
+- Reporte generado por: run-audit-backend.sh
+
+
+## Deteccion de tecnologia
+- PASS | TypeScript detectado
+- PASS | Rutas fuente detectadas (9): gateway/src services/auth/src services/events/src services/messaging/src services/profiles-catalog/src services/resources/src services/study-groups/src shared supabase/functions
+- PASS | Archivos de prueba detectados (9)
+
+- TypeScript: true
+- NestJS: false
+- JavaScript puro: false
+- Rutas fuente: gateway/src services/auth/src services/events/src services/messaging/src services/profiles-catalog/src services/resources/src services/study-groups/src shared supabase/functions
+- Raices de tests: tests services/messaging/test services/study-groups/test
+
+## A - Patron Singleton
+- PASS | Singleton detectado en codigo
+
+### Evidencia: Singleton
+```text
+shared/libs/database/DatabaseHandler.ts:8: *   const db = DatabaseHandler.getInstance();
+shared/libs/database/DatabaseHandler.ts:28:  private static instance: DatabaseHandler;
+shared/libs/database/DatabaseHandler.ts:35:  private constructor() {}
+shared/libs/database/DatabaseHandler.ts:40:  public static getInstance(): DatabaseHandler {
+shared/libs/database/DatabaseHandler.ts:189:export default DatabaseHandler.getInstance();
+shared/libs/logging/Logger.ts:8: *   const logger = Logger.getInstance();
+shared/libs/logging/Logger.ts:30:  private static instance: Logger;
+shared/libs/logging/Logger.ts:35:  private constructor(logLevel: string = 'INFO') {
+shared/libs/logging/Logger.ts:42:  public static getInstance(): Logger {
+shared/libs/logging/Logger.ts:167:export default Logger.getInstance();
+shared/patterns/observer/EventBus.ts:21: *     EventBus.getInstance().emit({
+shared/patterns/observer/EventBus.ts:47:  private static instance: EventBus;
+shared/patterns/observer/EventBus.ts:49:  private constructor() {
+shared/patterns/observer/EventBus.ts:56:  public static getInstance(): EventBus {
+shared/patterns/observer/EventBus.ts:98:    const eventBus = EventBus.getInstance();
+```
+
+## B - Patron Decorator Estructural
+- PASS | Clase/interfaz Decorator encontrada
+- PASS | Composicion interna del objeto decorado detectada
+- PASS | Tests del Decorator presentes
+
+### Evidencia: Decorator estructural
+```text
+services/messaging/src/domain/decorators/FileDecorator.ts:36:export class FileDecorator extends MessageDecorator {
+services/messaging/src/domain/decorators/FileDecorator.ts:74:    return this.message.getContent();
+services/messaging/src/domain/decorators/FileDecorator.ts:82:      ...this.message.getMetadata(),
+services/messaging/src/domain/decorators/FileDecorator.ts:96:    return this.message.render();
+services/messaging/src/domain/decorators/MentionDecorator.ts:37:export class MentionDecorator extends MessageDecorator {
+services/messaging/src/domain/decorators/MentionDecorator.ts:91:    return this.message.getContent();
+services/messaging/src/domain/decorators/MentionDecorator.ts:99:      ...this.message.getMetadata(),
+services/messaging/src/domain/decorators/MentionDecorator.ts:114:    const baseRender = this.message.render();
+services/messaging/src/domain/decorators/MessageDecorator.ts:33:export abstract class MessageDecorator implements IMessage {
+services/messaging/src/domain/decorators/MessageDecorator.ts:38:  protected readonly message: IMessage;
+services/messaging/src/domain/decorators/MessageDecorator.ts:41:    this.message = message;
+services/messaging/src/domain/decorators/MessageDecorator.ts:48:    return this.message.id;
+services/messaging/src/domain/decorators/MessageDecorator.ts:52:    return this.message.content;
+services/messaging/src/domain/decorators/MessageDecorator.ts:56:    return this.message.timestamp;
+services/messaging/src/domain/decorators/MessageDecorator.ts:60:    return this.message.senderId;
+services/messaging/src/domain/decorators/MessageDecorator.ts:68:    return this.message.getContent();
+services/messaging/src/domain/decorators/MessageDecorator.ts:76:    return this.message.getMetadata();
+services/messaging/src/domain/decorators/MessageDecorator.ts:84:    return this.message.render();
+services/messaging/src/domain/decorators/MessageDecorator.ts:92:    return this.message.toJSON();
+services/messaging/src/domain/decorators/ReactionDecorator.ts:35:export class ReactionDecorator extends MessageDecorator {
+services/messaging/src/domain/decorators/ReactionDecorator.ts:156:    return this.message.getContent();
+services/messaging/src/domain/decorators/ReactionDecorator.ts:164:      ...this.message.getMetadata(),
+services/messaging/src/domain/decorators/ReactionDecorator.ts:177:    return this.message.render();
+shared/libs/errors/ApplicationError.ts:17:      message: this.message,
+shared/libs/validation/ValidationError.ts:21:      message: this.message,
+```
+
+## C - Patron Observer
+- PASS | Observer interface/EventEmitter/EventBus detectado
+- PASS | Subject/Observable detectado
+- PASS | Metodos del patron Observer presentes (58 referencias)
+- PASS | Tests del Observer presentes
+
+### Evidencia: Observer
+```text
+services/messaging/src/application/use-cases/SendMessage.ts:79:    this.subject.subscribe(channel, this.idempotencyObserver);
+services/messaging/src/application/use-cases/SendMessage.ts:80:    this.subject.subscribe(channel, this.realtimeObserver);
+services/messaging/src/application/use-cases/SendMessage.ts:102:    this.subject.emit(channel, event).catch((error) => {
+services/messaging/src/domain/events/ChatSubject.ts:22:export interface IChatObserver {
+services/messaging/src/domain/events/ChatSubject.ts:42:export class ChatSubject implements ISubject {
+services/messaging/src/domain/events/ChatSubject.ts:65:  subscribe(channel: ChatChannel, observer: IChatObserver): void {
+services/messaging/src/domain/events/ChatSubject.ts:92:  unsubscribe(channel: ChatChannel, observer: IChatObserver): void {
+services/messaging/src/domain/events/ChatSubject.ts:128:  async emit(channel: ChatChannel, event: ChatEvent): Promise<void> {
+services/messaging/src/domain/events/ISubject.ts:10:export interface ISubject {
+services/messaging/src/domain/events/ISubject.ts:11:  subscribe(channel: ChatChannel, observer: IChatObserver): void;
+services/messaging/src/domain/events/ISubject.ts:12:  unsubscribe(channel: ChatChannel, observer: IChatObserver): void;
+services/messaging/src/domain/events/ISubject.ts:13:  emit(channel: ChatChannel, event: ChatEvent): Promise<void>;
+services/messaging/src/domain/events/observers/IdempotencyObserver.ts:48:export class IdempotencyObserver implements IChatObserver {
+services/messaging/src/domain/events/observers/RealtimeObserver.ts:47:export class RealtimeObserver implements IChatObserver {
+services/messaging/src/main.ts:68:			// En producción: chatSubject.emit(channel, ...);
+services/messaging/src/main.ts:88:	// chatSubject.subscribe("grupo:ejemplo", realtimeObserver);
+services/messaging/src/main.ts:89:	// chatSubject.subscribe("grupo:ejemplo", idempotencyObserver);
+services/profiles-catalog/src/application/use-cases/SearchStudentsBySubject.ts:8:export class SearchStudentsBySubject {
+services/study-groups/src/application/use-cases/AcceptAdminTransfer.ts:41:    this.subject.emit(event).catch((error) => {
+services/study-groups/src/application/use-cases/ApplyToStudyRequest.ts:43:    this.subject.emit(event).catch((error) => {
+services/study-groups/src/application/use-cases/CreateStudyGroupMessage.ts:57:    this.subject.subscribe(channel, this.idempotencyObserver);
+services/study-groups/src/application/use-cases/CreateStudyGroupMessage.ts:58:    this.subject.subscribe(channel, this.realtimeObserver);
+services/study-groups/src/application/use-cases/CreateStudyGroupMessage.ts:75:    this.subject.emit(channel, event).catch((error) => {
+services/study-groups/src/application/use-cases/RequestAdminTransfer.ts:47:    this.subject.emit(event).catch((error) => {
+services/study-groups/src/application/use-cases/ReviewApplication.ts:55:      this.subject.emit(event).catch((error) => {
+services/study-groups/src/application/use-cases/ReviewApplication.ts:71:    this.subject.emit(event).catch((error) => {
+services/study-groups/src/domain/events/observers/IObserver.ts:17:export interface IObserver {
+services/study-groups/src/domain/events/observers/ISubject.ts:10:export interface ISubject {
+services/study-groups/src/domain/events/observers/ISubject.ts:11:  subscribe(observer: IObserver): void;
+services/study-groups/src/domain/events/observers/ISubject.ts:12:  unsubscribe(observer: IObserver): void;
+services/study-groups/src/domain/events/observers/ISubject.ts:13:  emit(event: StudyGroupEvent): Promise<void>;
+services/study-groups/src/domain/events/observers/NotificationObserver.ts:25:export class NotificationObserver implements IObserver {
+services/study-groups/src/domain/events/observers/StudyGroupSubject.ts:17:export class StudyGroupSubject implements ISubject {
+services/study-groups/src/domain/events/observers/StudyGroupSubject.ts:20:   * Usamos Set para O(1) lookup en unsubscribe
+services/study-groups/src/domain/events/observers/StudyGroupSubject.ts:42:  subscribe(observer: IObserver): void {
+services/study-groups/src/domain/events/observers/StudyGroupSubject.ts:65:  unsubscribe(observer: IObserver): void {
+services/study-groups/src/domain/events/observers/StudyGroupSubject.ts:89:  async emit(event: StudyGroupEvent): Promise<void> {
+services/study-groups/src/domain/events/observers/WebSocketNotificationObserver.ts:18:export class WebSocketNotificationObserver implements IObserver {
+services/study-groups/src/main.ts:138:  subject.subscribe(new NotificationObserver(notificationRepository));
+services/study-groups/src/main.ts:139:  subject.subscribe(new WebSocketNotificationObserver(socketGateway));
+shared/patterns/observer/AppNotificationObserver.ts:10:import { Observer, DomainEvent } from './EventEmitter';
+shared/patterns/observer/AppNotificationObserver.ts:12:export class AppNotificationObserver implements Observer {
+shared/patterns/observer/EmailNotificationObserver.ts:10:import { Observer, DomainEvent } from './EventEmitter';
+shared/patterns/observer/EmailNotificationObserver.ts:12:export class EmailNotificationObserver implements Observer {
+shared/patterns/observer/EventBus.ts:4: * Un único EventBus compartido por toda la aplicación
+shared/patterns/observer/EventBus.ts:10: * import { EventBus } from '@uniconnect/shared/patterns/observer';
+shared/patterns/observer/EventBus.ts:21: *     EventBus.getInstance().emit({
+shared/patterns/observer/EventBus.ts:44:import { EventEmitter, DomainEvent, Observer } from './EventEmitter';
+shared/patterns/observer/EventBus.ts:46:export class EventBus extends EventEmitter {
+shared/patterns/observer/EventBus.ts:47:  private static instance: EventBus;
+shared/patterns/observer/EventBus.ts:54:   * Obtener instancia única del EventBus (Singleton)
+shared/patterns/observer/EventBus.ts:56:  public static getInstance(): EventBus {
+shared/patterns/observer/EventBus.ts:57:    if (!EventBus.instance) {
+shared/patterns/observer/EventBus.ts:58:      EventBus.instance = new EventBus();
+shared/patterns/observer/EventBus.ts:59:      console.log('[EventBus] Instancia creada');
+shared/patterns/observer/EventBus.ts:61:    return EventBus.instance;
+shared/patterns/observer/EventBus.ts:69:      this.subscribe(observer);
+shared/patterns/observer/EventBus.ts:76:  public static builder(): EventBusBuilder {
+shared/patterns/observer/EventBus.ts:77:    return new EventBusBuilder();
+shared/patterns/observer/EventBus.ts:82: * Builder para EventBus (sintaxis fluida)
+```
+
+## D - Tests y Cobertura
+- PASS | Suite de pruebas ejecutada correctamente con node --test + tsx
+- PASS | Cobertura lineas/statements >= 70% (97.10%)
+- PASS | Cobertura de funciones >= 70% (88.75%)
+
+### Resumen de pruebas
+
+- Runner: node --test + tsx
+- Estado: 0
+- Cobertura lineas/statements: 97.10%
+- Cobertura funciones: 88.75%
+- Cobertura branches: 96.62%
+
+```text
+ℹ tests 53
+ℹ suites 13
+ℹ pass 53
+ℹ fail 0
+ℹ duration_ms 524.6866
+ℹ tests                                  |        |          |         | 
+ℹ all files                              |  97.10 |    96.62 |   88.75 | 
+```
+- PASS | 9 archivos de test presentes
+
+## E - Tests de Integracion
+- FAIL | No se encontraron tests de integracion/e2e de endpoints (requerido US-20)
+- WARN | Hay referencias a pruebas de integracion de dominio (5), pero no sustituyen pruebas de endpoints
+
+### Evidencia integracion
+
+- Archivos e2e/integration: 0
+- Referencias endpoint en tests: 0
+- Referencias integracion de dominio: 5
+
+## F - Docker y Despliegue
+- PASS | Dockerfile presente (7 encontrado/s)
+- PASS | docker-compose/compose presente (2 encontrado/s)
+- PASS | CI/CD configurado (.github/workflows o infra/ci)
+- PASS | URL accesible: https://uniconnect-gateway.fly.dev/health (HTTP 200)
+
+### Evidencia Docker/CI
+
+- Dockerfiles: 7
+- Compose files: 2
+- CI/CD indicadores: 2
+- URL validada: true
+
+## Resumen de Auditoria
+
+| Seccion | Criterio | Obtenido | Max |
+| --- | --- | ---: | ---: |
+| A | Singleton | 5 | 5 |
+| B | Decorator Estructural | 8 | 8 |
+| C | Observer | 8 | 8 |
+| D | Tests + Cobertura | 5 | 5 |
+| E | Tests de Integracion en endpoints | 0 | 2 |
+| F | Docker + CI/CD + Despliegue | 2 | 2 |
+|  | **Total** | **28** | **30** |
+
+- PASS: 19
+- FAIL: 1
+- WARN: 1
+- Total verificaciones: 21
+- Estimacion automatica: 28 / 30
+- Equivalente 30% de la nota: 1.40 / 1.50
+- Equivalente sobre 5.0: 4.67 / 5.00

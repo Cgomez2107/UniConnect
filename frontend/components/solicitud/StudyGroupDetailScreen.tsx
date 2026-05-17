@@ -16,7 +16,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -67,7 +66,7 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
     onRequestCanceled: () => router.replace("/(tabs)/invitaciones" as any),
   });
 
-  if (Platform.OS === "web" && request?.id) {
+  if (request?.id) {
     // Si es administrador, mostrar dashboard completo
     if (canManageRequest) {
       return <AdminDashboardLayout requestId={request.id} />;

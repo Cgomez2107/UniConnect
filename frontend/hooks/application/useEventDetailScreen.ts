@@ -21,7 +21,8 @@ export function useEventDetailScreen(id?: string) {
         const useCase = container.getGetEventById();
         const result = await useCase.execute(eventId);
         setEvent(result);
-      } catch {
+      } catch (error) {
+        console.warn("[useEventDetailScreen] Error loading event:", error instanceof Error ? error.message : String(error))
         setEvent(null);
       } finally {
         setLoading(false);

@@ -2,8 +2,12 @@ import { createServer } from "node:http";
 import { SearchStudentsBySubject } from "./application/use-cases/SearchStudentsBySubject.js";
 import { GetStudentPublicProfile } from "./application/use-cases/GetStudentPublicProfile.js";
 import { GetFullProfile } from "./application/use-cases/GetFullProfile.js";
+import { GetAllSubjects } from "./application/use-cases/GetAllSubjects.js";
 import { GetPrograms } from "./application/use-cases/GetPrograms.js";
 import { GetSubjectsByProgram } from "./application/use-cases/GetSubjectsByProgram.js";
+import { GetMyPrograms } from "./application/use-cases/GetMyPrograms.js";
+import { CreateStudentProfile } from "./application/use-cases/CreateStudentProfile.js";
+import { UpdateStudentProfile } from "./application/use-cases/UpdateStudentProfile.js";
 import { loadProfilesCatalogEnv } from "./config/env.js";
 import { PostgresStudentRepository } from "./infrastructure/database/PostgresStudentRepository.js";
 import { PostgresFacultyCatalogRepository } from "./infrastructure/database/PostgresFacultyCatalogRepository.js";
@@ -28,15 +32,24 @@ function bootstrap(): void {
   const searchStudents = new SearchStudentsBySubject(studentRepository);
   const getPublicProfile = new GetStudentPublicProfile(studentRepository);
   const getFullProfile = new GetFullProfile(indicatorsRepository);
+  const getAllSubjectsUC = new GetAllSubjects(catalogRepository);
   const getPrograms = new GetPrograms(catalogRepository);
   const getSubjectsByProgram = new GetSubjectsByProgram(catalogRepository);
+  const getMyProgramsUC = new GetMyPrograms(studentRepository);
+  const createProfileUC = new CreateStudentProfile(studentRepository);
+  const updateProfileUC = new UpdateStudentProfile(studentRepository);
 
   const controller = new ProfilesCatalogController(
     searchStudents,
     getPublicProfile,
     getFullProfile,
+    getAllSubjectsUC,
     getPrograms,
     getSubjectsByProgram,
+    getMyProgramsUC,
+    createProfileUC,
+    updateProfileUC,
+    studentRepository,
   );
 
   const server = createServer((req, res) => {

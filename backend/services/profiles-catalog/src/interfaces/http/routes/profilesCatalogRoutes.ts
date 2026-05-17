@@ -37,6 +37,55 @@ export async function handleProfilesCatalogRoutes(
     return true;
   }
 
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/students/me") {
+    await controller.getMyProfile(req, res);
+    return true;
+  }
+
+  if (req.method === "POST" && requestUrl.pathname === "/api/v1/students/profile") {
+    await controller.createProfile(req, res);
+    return true;
+  }
+
+  if (req.method === "PATCH" && requestUrl.pathname === "/api/v1/students/me") {
+    await controller.updateProfile(req, res);
+    return true;
+  }
+
+  if (req.method === "PATCH" && requestUrl.pathname === "/api/v1/students/me/primary-program") {
+    await controller.setPrimaryProgram(req, res);
+    return true;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/students/me/programs") {
+    await controller.getMyPrograms(req, res);
+    return true;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/students/me/subjects") {
+    await controller.getMySubjects(req, res);
+    return true;
+  }
+
+  const removeSubjectMatch = requestUrl.pathname.match(
+    /^\/api\/v1\/students\/me\/subjects\/([^/]+)$/,
+  );
+
+  if (req.method === "POST" && requestUrl.pathname === "/api/v1/students/me/subjects") {
+    await controller.addMySubject(req, res);
+    return true;
+  }
+
+  if (req.method === "DELETE" && removeSubjectMatch) {
+    await controller.removeMySubject(req, res, removeSubjectMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && requestUrl.pathname === "/api/v1/students/me/avatar") {
+    await controller.uploadAvatar(req, res);
+    return true;
+  }
+
   if (req.method === "GET" && requestUrl.pathname === "/api/v1/students") {
     await controller.searchStudents(req, res);
     return true;
@@ -50,6 +99,11 @@ export async function handleProfilesCatalogRoutes(
   // Alias para cumplir AC4: endpoint público `/perfil/:id`
   if (req.method === "GET" && perfilMatch) {
     await controller.getStudentProfile(req, res, perfilMatch[1]);
+    return true;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/catalog/subjects") {
+    await controller.getAllSubjects(req, res);
     return true;
   }
 

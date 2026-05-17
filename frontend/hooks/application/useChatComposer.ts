@@ -7,7 +7,7 @@ import type { Message } from "@/types";
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
+import { useToast } from "@/context";
 
 interface SelectedImage {
   uri: string;
@@ -55,6 +55,7 @@ export function useChatComposer({
   sendMessage,
   retryMessage,
 }: UseChatComposerParams) {
+  const { showToast } = useToast();
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
@@ -98,6 +99,7 @@ export function useChatComposer({
           reply_to_message_id: replyingTo?.id,
           reply_preview: replyPreview,
         });
+        showToast("Imagen enviada", "success");
       } else {
         await sendMessage(conversationId, userId, {
           content,
@@ -110,10 +112,13 @@ export function useChatComposer({
       setSelectedImage(null);
       setReplyingTo(null);
       setTyping(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo enviar el mensaje.";
+      showToast(message, "error");
     } finally {
       setSending(false);
     }
-  }, [conversationId, inputText, replyingTo, selectedImage, sendMessage, sending, userId]);
+  }, [conversationId, inputText, replyingTo, selectedImage, sendMessage, sending, userId, showToast]);
 
   const startVoiceRecording = useCallback(async () => {
     if (sending || !userId || !conversationId || voiceRecordingActive) return;
@@ -177,6 +182,10 @@ export function useChatComposer({
       setInputText("");
       setReplyingTo(null);
       setTyping(false);
+      showToast("Nota de voz enviada", "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo enviar el audio.";
+      showToast(message, "error");
     } finally {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
@@ -189,7 +198,7 @@ export function useChatComposer({
       }).catch(() => undefined);
       setSending(false);
     }
-  }, [conversationId, inputText, replyingTo, sendMessage, sending, userId, voiceRecording]);
+  }, [conversationId, inputText, replyingTo, sendMessage, sending, userId, voiceRecording, showToast]);
 
   const handleVoicePress = useCallback(async () => {
     try {
@@ -201,9 +210,9 @@ export function useChatComposer({
       await startVoiceRecording();
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo procesar el audio.";
-      Alert.alert("Audio", message);
+      showToast(message, "error");
     }
-  }, [startVoiceRecording, stopVoiceRecordingAndSend, voiceRecordingActive]);
+  }, [startVoiceRecording, stopVoiceRecordingAndSend, voiceRecordingActive, showToast]);
 
   const handleTyping = useCallback((text: string) => {
     if (typingTimeoutRef.current) {

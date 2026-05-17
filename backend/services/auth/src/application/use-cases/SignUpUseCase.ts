@@ -8,7 +8,10 @@ export class SignUpUseCase {
   constructor(
     private authRepository: IAuthRepository,
     private tokenRepository: ITokenRepository,
-    private jwtService: any // será inyectado
+    private jwtService: any,
+    private onUserCreated?: (userId: string, fullName: string) => Promise<void>,
+    private supabaseUrl?: string,
+    private supabaseServiceRoleKey?: string,
   ) {}
 
   async execute(request: SignUpRequest): Promise<SignUpResponse> {
@@ -25,17 +28,50 @@ export class SignUpUseCase {
       throw new ValidationError("Password must be at least 8 characters");
     }
 
-    // Verificar que no existe
+    // Verificar que no existe localmente
     const existing = await this.authRepository.findByEmail(request.email);
     if (existing) {
       throw new ConflictError("Email already registered");
     }
 
-    // Hash password
+    // Crear usuario en Supabase Auth vía Admin API
+    let supabaseUserId: string;
+    if (this.supabaseUrl && this.supabaseServiceRoleKey) {
+      const response = await fetch(`${this.supabaseUrl}/auth/v1/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.supabaseServiceRoleKey}`,
+        },
+        body: JSON.stringify({
+          email: request.email,
+          password: request.password,
+          email_confirm: true,
+          user_metadata: { full_name: request.fullName },
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ msg: "Unknown error" }));
+        if (response.status === 409) {
+          throw new ConflictError("Email already registered");
+        }
+        throw new Error(`Failed to create user in Supabase Auth: ${err.msg ?? "Unknown error"}`);
+      }
+
+      const supabaseUser = await response.json() as { id: string };
+      supabaseUserId = supabaseUser.id;
+    } else {
+      // Sin Supabase Admin API, generar ID local
+      throw new Error("Supabase Admin API is not configured");
+    }
+
+    // Hash password para almacenamiento local
     const passwordHash = await bcryptjs.hash(request.password, 10);
 
-    // Crear usuario
+    // Crear usuario en repositorio local con el ID de Supabase
     const user = await this.authRepository.create({
+      id: supabaseUserId,
       email: request.email,
       fullName: request.fullName,
       passwordHash,
@@ -52,6 +88,11 @@ export class SignUpUseCase {
       token: refreshToken,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
     });
+
+    // Crear perfil en profiles-catalog
+    if (this.onUserCreated) {
+      await this.onUserCreated(user.id, user.fullName);
+    }
 
     return {
       user: {
