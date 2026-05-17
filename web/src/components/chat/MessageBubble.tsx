@@ -28,7 +28,7 @@ function renderContent(content: string) {
         className="text-primary-500 dark:text-primary-400 font-semibold cursor-pointer hover:underline"
         onClick={(e) => {
           e.stopPropagation();
-          window.open(`/perfil/${userId}`, '_blank');
+          window.open(`/perfil-estudiante/${userId}`, '_blank');
         }}
       >
         @{name}
@@ -83,14 +83,25 @@ export function MessageBubble({
           }`}
         >
           <p className="text-sm whitespace-pre-wrap break-words">{renderContent(message.content)}</p>
-          {message.mediaUrl && (
+          {message.mediaUrl && message.mediaType?.startsWith('image/') ? (
             <img
               src={message.mediaUrl}
               alt="Message attachment"
               className="mt-2 rounded max-h-48 w-auto cursor-pointer"
               onClick={() => window.open(message.mediaUrl!, "_blank")}
             />
-          )}
+          ) : message.mediaUrl ? (
+            <div
+              className="mt-2 p-3 rounded-lg border border-neutral-300 bg-neutral-50 dark:bg-neutral-700 flex items-center gap-3 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-600"
+              onClick={() => window.open(message.mediaUrl!, "_blank")}
+            >
+              <span className="text-2xl">📎</span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 truncate">{message.content}</p>
+                <p className="text-xs text-neutral-500">{message.mediaType || 'Archivo'}</p>
+              </div>
+            </div>
+          ) : null}
           <div className={`flex items-center justify-end gap-1 mt-1`}>
             <span className={`text-xs ${isOwn ? "text-primary-200" : "text-neutral-500"}`}>
               {new Date(message.createdAt).toLocaleTimeString("es-CO", {

@@ -111,5 +111,10 @@ function buildDecoratedPayload(message: StudyGroupMessage): Record<string, unkno
     decorated = new MentionDecorator(decorated, mentions);
   }
 
-  return decorated.toJSON();
+  return {
+    ...decorated.toJSON(),
+    ...(message.mediaUrl ? { media_url: message.mediaUrl, mediaUrl: message.mediaUrl } : {}),
+    ...(message.mediaType ? { media_type: message.mediaType, mediaType: message.mediaType } : {}),
+    ...(message.mediaFilename ? { media_filename: message.mediaFilename, mediaFilename: message.mediaFilename } : {}),
+  };
 }

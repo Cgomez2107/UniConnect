@@ -90,8 +90,8 @@ export default function useEditProfileForm() {
 
         if (cancelled) return;
 
-        const primaryProgram = programsData.find((p) => p.is_primary) ?? programsData[0];
-        const currentSubjects = subjectsData.map((s) => s.subject_id).filter(Boolean);
+        const primaryProgram = programsData.find((p) => p.isPrimary) ?? programsData[0];
+        const currentSubjects = subjectsData.map((s) => s.subjectId).filter(Boolean);
 
         setState((prev) => ({
           ...prev,
@@ -100,11 +100,11 @@ export default function useEditProfileForm() {
           bio: profileData?.bio || "",
           semester: profileData?.semester ? String(profileData.semester) : "",
           avatarPreview: profileData?.avatarUrl || user?.profileImage || "",
-          selectedProgramId: primaryProgram?.program_id || "",
+          selectedProgramId: primaryProgram?.programId || "",
           selectedSubjectIds: currentSubjects,
         }));
 
-        initialProgramId.current = primaryProgram?.program_id || "";
+        initialProgramId.current = primaryProgram?.programId || "";
         initialSubjectIds.current = currentSubjects;
 
         setAvailablePrograms(allPrograms);

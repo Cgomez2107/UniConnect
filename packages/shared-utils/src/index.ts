@@ -4,10 +4,10 @@ export {
   formatValidationErrors,
   WEB_ENV_VARS,
   BACKEND_ENV_VARS,
-} from "./envValidator.ts";
+} from "./envValidator.js";
 
 export type {
   EnvVarSpec,
   ValidationEntry,
   EnvValidationResult,
-} from "./envValidator.ts";
+} from "./envValidator.js";

@@ -5,8 +5,10 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MentionInput } from "@/components/chat/MentionInput";
 import { Avatar } from "@/components/ui/Avatar";
 import studyGroupsService from "@/lib/services/studyGroups.service";
-import { uploadChatImageFile } from "@/lib/supabase";
+import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
+import { snakeToCamel } from "@uniconnect/shared-api";
 import { useChatObserver } from "@/hooks/useChatObserver";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export function GroupChatPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +24,8 @@ export function GroupChatPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const pendingTempIds = useRef<Set<string>>(new Set());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -56,7 +60,86 @@ export function GroupChatPage() {
     return () => { cancelled = true; };
   }, [id]);
 
-  // --- Realtime messages ---
+  // --- WebSocket para real-time (gateway) ---
+  useEffect(() => {
+    if (!id || !user?.id) {
+      console.log("[GroupChat] WS effect skipped: id=", id, "user?.id=", user?.id);
+      return;
+    }
+
+    const token = useAuthStore.getState().accessToken;
+    if (!token) {
+      console.log("[GroupChat] WS skipped: no access token");
+      return;
+    }
+
+    console.log("[GroupChat] WS effect starting for group", id, "user", user?.id);
+
+    const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
+    const wsUrl = `${WS_URL}/ws?token=${token}`;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT = 3;
+
+    function connect() {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("[GroupChat] WS connected, subscribing to group", id);
+        reconnectAttempts = 0;
+        ws.send(JSON.stringify({ type: "subscribe", groupId: id }));
+      };
+
+      ws.onerror = (err) => {
+        console.error("[GroupChat] WS error:", err);
+      };
+
+      ws.onclose = (event) => {
+        console.log("[GroupChat] WS closed: code=", event.code, "reason=", event.reason, "wasClean=", event.wasClean);
+        if (event.code !== 4001 && reconnectAttempts < MAX_RECONNECT) {
+          reconnectAttempts++;
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 8000);
+          console.log(`[GroupChat] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT})`);
+          setTimeout(connect, delay);
+        }
+        wsRef.current = null;
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const payload = data.payload || data;
+
+          if (data.event === "new_group_message") {
+            const mappedMsg = snakeToCamel(payload);
+            if (pendingTempIds.current.size > 0 && pendingTempIds.current.has(mappedMsg.id)) return;
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === mappedMsg.id || m._tempId === mappedMsg.id)) return prev;
+              return [...prev, { ...mappedMsg, clientStatus: "sent" }];
+            });
+          }
+        } catch {
+          // ignore
+        }
+      };
+    }
+
+    connect();
+
+    return () => {
+      if (wsRef.current) {
+        const ws = wsRef.current;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "unsubscribe", groupId: id }));
+        }
+        ws.close();
+        wsRef.current = null;
+      }
+      reconnectAttempts = MAX_RECONNECT;
+    };
+  }, [id, user?.id]);
+
+  // --- Supabase Realtime como fallback ---
   useChatObserver(id, (newMsg) => {
     setMessages((prev) => {
       if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
@@ -65,9 +148,16 @@ export function GroupChatPage() {
   });
 
   const handleUploadFile = async (file: File) => {
-    const mediaUrl = await uploadChatImageFile(id!, file);
-    if (!mediaUrl) throw new Error("Error al subir archivo");
-    return { url: mediaUrl, type: file.type || "application/octet-stream" };
+    const storage = getStorageService();
+    let result;
+    if (file.type.startsWith("image/")) {
+      result = await storage.uploadChatImage(id!, file);
+    } else {
+      if (!user?.id) throw new Error("Debes iniciar sesión para subir archivos");
+      result = await storage.uploadResource(user.id, file);
+    }
+    if (!result?.url) throw new Error("Error al subir archivo");
+    return { url: result.url, type: file.type };
   };
 
   const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string }) => {
@@ -93,6 +183,7 @@ export function GroupChatPage() {
     setMessages((prev) => [...prev, optimisticMsg]);
     const replyTo = replyingTo;
     setReplyingTo(null);
+    pendingTempIds.current.add(tempId);
 
     try {
       const msg = await studyGroupsService.sendGroupMessage(id, content.trim(), {
@@ -101,6 +192,7 @@ export function GroupChatPage() {
         mediaUrl: options?.mediaUrl,
         mediaType: options?.mediaType,
       });
+      pendingTempIds.current.delete(tempId);
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) {
           return prev.filter((m) => m.id !== tempId);
@@ -111,7 +203,9 @@ export function GroupChatPage() {
             : m
         );
       });
-    } catch {
+    } catch (err) {
+      pendingTempIds.current.delete(tempId);
+      console.error("Error sending group message:", err);
       setMessages((prev) =>
         prev.map((m) => (m.id === tempId ? { ...m, clientStatus: "failed" } : m))
       );

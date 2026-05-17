@@ -32,7 +32,8 @@ export async function uploadAvatarFile(userId: string, file: File): Promise<stri
   try {
     const result = await getStorageService().uploadAvatar(userId, file);
     return result.url;
-  } catch {
+  } catch (err) {
+    console.error("Storage uploadAvatarFile failed:", err);
     return null;
   }
 }
@@ -42,7 +43,8 @@ export async function uploadResourceFile(userId: string, file: File): Promise<st
   try {
     const result = await getStorageService().uploadResource(userId, file);
     return result.url;
-  } catch {
+  } catch (err) {
+    console.error("Storage uploadResourceFile failed:", err);
     return null;
   }
 }
@@ -52,7 +54,8 @@ export async function uploadChatImageFile(conversationId: string, file: File): P
   try {
     const result = await getStorageService().uploadChatImage(conversationId, file);
     return result.url;
-  } catch {
+  } catch (err) {
+    console.error("Storage uploadChatImageFile failed:", err);
     return null;
   }
 }

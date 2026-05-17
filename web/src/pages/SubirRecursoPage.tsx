@@ -88,8 +88,18 @@ export function SubirRecursoPage() {
     setUploadError(null);
   };
 
+  const handleRemoveFile = () => {
+    setPickedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleUpload = async () => {
-    if (!user?.id || !pickedFile || !title.trim() || !selectedSubjectId || !programId) return;
+    if (!user?.id || !pickedFile || !title.trim() || !selectedSubjectId || !programId) {
+      setUploadError("Completa todos los campos requeridos antes de subir.");
+      return;
+    }
 
     setUploading(true);
     setUploadError(null);
@@ -119,7 +129,7 @@ export function SubirRecursoPage() {
     }
   };
 
-  const isValid = title.trim().length >= 3 && !!selectedSubjectId && !!pickedFile;
+  const isValid = title.trim().length >= 3 && !!selectedSubjectId && !!pickedFile && !!programId && !!user?.id;
 
   if (loadingSubjects) {
     return (
@@ -262,7 +272,7 @@ export function SubirRecursoPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setPickedFile(null)}
+                  onClick={handleRemoveFile}
                   className="text-error-600 hover:text-error-700 dark:text-error-400 dark:hover:text-error-300 font-bold text-lg px-1"
                 >
                   ✕

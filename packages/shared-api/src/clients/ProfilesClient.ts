@@ -80,7 +80,7 @@ export class ProfilesClient extends BaseClient {
       body: {
         ...(data.fullName !== undefined && { full_name: data.fullName }),
         ...(data.bio !== undefined && { bio: data.bio }),
-        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.phone !== undefined && { phone_number: data.phone }),
       },
     });
     return mapProfileDtoToDomain(response.data);

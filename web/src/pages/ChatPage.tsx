@@ -6,7 +6,9 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Avatar } from "@/components/ui/Avatar";
 import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
-import { uploadChatImageFile } from "@/lib/supabase";
+import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
+import { snakeToCamel } from "@uniconnect/shared-api";
+import { useConversationsStore } from "@/store/useConversationsStore";
 
 interface Message {
   id: string;
@@ -49,6 +51,10 @@ export const ChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const pendingTempIds = useRef<Set<string>>(new Set());
+  const loadConversations = useConversationsStore((s) => s.loadConversations);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -121,9 +127,11 @@ export const ChatPage: React.FC = () => {
         const payload = data.payload || data;
 
         if (data.event === "new_message") {
+          const mappedMsg = snakeToCamel(payload);
+          if (pendingTempIds.current.size > 0 && pendingTempIds.current.has(mappedMsg.id)) return;
           setMessages((prev) => {
-            if (prev.some((m) => m.id === payload.id)) return prev;
-            return [...prev, { ...payload, clientStatus: "sent" }];
+            if (prev.some((m) => m.id === mappedMsg.id)) return prev;
+            return [...prev, { ...mappedMsg, clientStatus: "sent" }];
           });
         } else if (data.type === "message" || data.event === "message:received") {
           setMessages((prev) => {
@@ -180,6 +188,7 @@ export const ChatPage: React.FC = () => {
     setNewMessage("");
     const replyTo = replyingTo;
     setReplyingTo(null);
+    pendingTempIds.current.add(tempId);
     setIsSending(true);
 
     try {
@@ -189,6 +198,7 @@ export const ChatPage: React.FC = () => {
         replyToMessageId: replyTo?.id || undefined,
       });
       const msg = response.data?.data || response.data;
+      pendingTempIds.current.delete(tempId);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
@@ -196,7 +206,9 @@ export const ChatPage: React.FC = () => {
             : m
         )
       );
+      loadConversations();
     } catch {
+      pendingTempIds.current.delete(tempId);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId ? { ...m, clientStatus: "failed" } : m
@@ -266,6 +278,42 @@ export const ChatPage: React.FC = () => {
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDocSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !conversationId) return;
+
+    setUploadingFile(true);
+    try {
+      const storage = getStorageService();
+      const result = await storage.uploadResource(user?.id || conversationId, file);
+      if (!result?.url) throw new Error("Error al subir archivo");
+
+      const response = await apiClient.post("/messages", {
+        conversationId,
+        content: file.name,
+        mediaUrl: result.url,
+        mediaType: file.type,
+      });
+      const msg = response.data?.data || response.data;
+      setMessages((prev) => [...prev, {
+        id: msg.id,
+        content: msg.content,
+        senderId: msg.sender_id || msg.senderId || user?.id || "",
+        senderName: "Tú",
+        createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
+        readAt: null,
+        clientStatus: "sent",
+        mediaUrl: result.url,
+        mediaType: file.type,
+      }]);
+    } catch (err) {
+      console.error("Error uploading file:", err);
+    } finally {
+      setUploadingFile(false);
+      if (docInputRef.current) docInputRef.current.value = "";
     }
   };
 
@@ -382,6 +430,13 @@ export const ChatPage: React.FC = () => {
             onChange={handleImageSelect}
             className="hidden"
           />
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z"
+            ref={docInputRef}
+            onChange={handleDocSelect}
+            className="hidden"
+          />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -394,6 +449,25 @@ export const ChatPage: React.FC = () => {
             ) : (
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5-5m0 0l5 5m-5-5v12" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => docInputRef.current?.click()}
+            disabled={uploadingFile}
+            className="p-2.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
+            title="Adjuntar archivo"
+          >
+            {uploadingFile ? (
+              <span className="inline-block w-5 h-5 border-2 border-neutral-300 border-t-primary-600 rounded-full animate-spin" />
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
               </svg>
             )}
           </button>

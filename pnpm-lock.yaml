@@ -233,6 +233,12 @@ importers:
 
   packages/shared-hooks:
     dependencies:
+      '@uniconnect/shared-api':
+        specifier: workspace:*
+        version: link:../shared-api
+      '@uniconnect/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
       react:
         specifier: ^18.0.0 || ^19.0.0
         version: 19.2.6

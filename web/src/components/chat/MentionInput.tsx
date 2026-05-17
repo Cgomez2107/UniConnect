@@ -293,7 +293,7 @@ export function MentionInput({
               handleFileSelect(e.target.files?.[0] ?? null);
               e.target.value = "";
             }}
-            className="hidden"
+            className="sr-only"
           />
           {/* Hidden file input for any file */}
           <input
@@ -304,7 +304,7 @@ export function MentionInput({
               handleFileSelect(e.target.files?.[0] ?? null);
               e.target.value = "";
             }}
-            className="hidden"
+            className="sr-only"
           />
           {/* Image button */}
           <button

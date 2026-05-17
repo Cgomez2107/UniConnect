@@ -9,6 +9,7 @@ import { sendJson } from "../shared/http/sendJson.js";
 import { JWTMiddleware, type JWTPayload } from "../middleware/JWTMiddleware.js";
 
 const conversationRooms = new Map<string, Set<WebSocket>>();
+const studyGroupRooms = new Map<string, Set<WebSocket>>();
 
 function getAppVersion(): string {
   try {
@@ -89,6 +90,23 @@ function extractConversationIdFromBody(body: string): string | null {
   }
 }
 
+function broadcastToStudyGroup(groupId: string, event: string, payload: unknown): void {
+  const room = studyGroupRooms.get(groupId);
+  if (!room) {
+    console.log(JSON.stringify({ service: "gateway", level: "warn", message: "broadcastToStudyGroup: no clients in room", groupId, event }));
+    return;
+  }
+  const message = JSON.stringify({ event, payload });
+  let sent = 0;
+  for (const ws of room) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+      sent++;
+    }
+  }
+  console.log(JSON.stringify({ service: "gateway", level: "info", message: "broadcastToStudyGroup: sent", groupId, event, sent }));
+}
+
 function broadcastToConversation(conversationId: string, event: string, payload: unknown): void {
   const room = conversationRooms.get(conversationId);
   if (!room) return;
@@ -109,6 +127,7 @@ function handleWebSocketUpgrade(
     const token = requestUrl.searchParams.get("token");
 
     if (!token) {
+      console.log(JSON.stringify({ service: "gateway", level: "warn", message: "WS connection rejected: missing token" }));
       ws.close(4001, "Missing authentication token");
       return;
     }
@@ -125,11 +144,15 @@ function handleWebSocketUpgrade(
     );
 
     if (!payload) {
+      console.log(JSON.stringify({ service: "gateway", level: "warn", message: "WS connection rejected: invalid token" }));
       ws.close(4001, "Invalid or expired token");
       return;
     }
 
-    const subscribedRooms = new Set<string>();
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS client connected", userId: payload.sub }));
+
+    const subscribedConversations = new Set<string>();
+    const subscribedGroups = new Set<string>();
 
     ws.on("message", (rawData) => {
       try {
@@ -140,7 +163,17 @@ function handleWebSocketUpgrade(
             conversationRooms.set(convId, new Set());
           }
           conversationRooms.get(convId)!.add(ws);
-          subscribedRooms.add(convId);
+          subscribedConversations.add(convId);
+          console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS subscribed to conversation", conversationId: convId }));
+        }
+        if (msg.type === "subscribe" && msg.groupId) {
+          const groupId = msg.groupId;
+          if (!studyGroupRooms.has(groupId)) {
+            studyGroupRooms.set(groupId, new Set());
+          }
+          studyGroupRooms.get(groupId)!.add(ws);
+          subscribedGroups.add(groupId);
+          console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS subscribed to study group", groupId }));
         }
         if (msg.type === "unsubscribe" && msg.conversationId) {
           const room = conversationRooms.get(msg.conversationId);
@@ -148,7 +181,15 @@ function handleWebSocketUpgrade(
             room.delete(ws);
             if (room.size === 0) conversationRooms.delete(msg.conversationId);
           }
-          subscribedRooms.delete(msg.conversationId);
+          subscribedConversations.delete(msg.conversationId);
+        }
+        if (msg.type === "unsubscribe" && msg.groupId) {
+          const room = studyGroupRooms.get(msg.groupId);
+          if (room) {
+            room.delete(ws);
+            if (room.size === 0) studyGroupRooms.delete(msg.groupId);
+          }
+          subscribedGroups.delete(msg.groupId);
         }
       } catch {
         // ignore malformed messages
@@ -156,16 +197,49 @@ function handleWebSocketUpgrade(
     });
 
     ws.on("close", () => {
-      for (const convId of subscribedRooms) {
+      let unsubscribedGroups = 0, unsubscribedConversations = 0;
+      for (const convId of subscribedConversations) {
         const room = conversationRooms.get(convId);
         if (room) {
           room.delete(ws);
           if (room.size === 0) conversationRooms.delete(convId);
+          unsubscribedConversations++;
         }
       }
-      subscribedRooms.clear();
+      for (const groupId of subscribedGroups) {
+        const room = studyGroupRooms.get(groupId);
+        if (room) {
+          room.delete(ws);
+          if (room.size === 0) studyGroupRooms.delete(groupId);
+          unsubscribedGroups++;
+        }
+      }
+      subscribedConversations.clear();
+      subscribedGroups.clear();
+      console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS client disconnected", userId: payload.sub, unsubscribedGroups, unsubscribedConversations }));
     });
   });
+}
+
+function onStudygroupsResponse(
+  info: ProxyResponse,
+  requestUrl: URL,
+  _jwtPayload: JWTPayload,
+): void {
+  console.log(JSON.stringify({ service: "gateway", level: "info", message: "onStudygroupsResponse called", method: info.method, pathname: info.pathname, status: info.status }));
+  const groupIdMatch = info.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages$/);
+  if (info.method === "POST" && groupIdMatch && info.status === 201) {
+    const groupId = groupIdMatch[1];
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "onStudygroupsResponse: broadcasting", groupId }));
+    let messagePayload: unknown = info.body;
+    try {
+      const parsed = JSON.parse(info.body);
+      messagePayload = parsed?.data || parsed;
+    } catch {
+      messagePayload = info.body;
+    }
+    broadcastToStudyGroup(groupId, "new_group_message", messagePayload);
+  }
 }
 
 function onMessagingResponse(
@@ -266,7 +340,9 @@ async function handleRequest(
   }
 
   if (isStudyGroupsRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.studyGroupsBaseUrl);
+    await proxyRequest(req, res, env.studyGroupsBaseUrl, undefined, (info) => {
+      onStudygroupsResponse(info, requestUrl, payload);
+    });
     return;
   }
 
@@ -349,7 +425,7 @@ export function createGatewayServer(env: GatewayEnv) {
     });
   });
 
-  const wss = new WebSocketServer({ server, path: "/ws" });
+  const wss = new WebSocketServer({ server: server as any, path: "/ws" });
   handleWebSocketUpgrade(wss, jwtMiddleware);
 
   return server;

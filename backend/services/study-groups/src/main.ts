@@ -248,20 +248,41 @@ function bootstrap(): void {
 
   const groupPermissionRepo = new GroupPermissionRepository(pool);
 
-  const mockRealtimeService: IGroupRealtimeService = {
-    async broadcast(channel, message) {
-      console.log(
-        JSON.stringify({
-          service: "study-groups",
-          level: "info",
-          message: "WebSocket broadcast",
-          channel,
-          eventType: message.type,
-        }),
-      );
-    },
-  };
-  const realtimeObserver = new GroupRealtimeObserver(mockRealtimeService);
+  const realtimeObserverService: IGroupRealtimeService = realtimeGateway
+    ? {
+        async broadcast(channel, message) {
+          const groupId = channel.replace("grupo:", "");
+          const payload: Record<string, unknown> = {
+            id: message.data.messageId,
+            sender_id: message.data.senderId,
+            senderId: message.data.senderId,
+            content: message.data.content,
+            created_at: message.data.timestamp,
+            sender: {
+              full_name: message.data.senderName,
+              fullName: message.data.senderName,
+            },
+            ...(typeof message.data.payload === "object" && message.data.payload != null
+              ? (message.data.payload as Record<string, unknown>)
+              : {}),
+          };
+          await realtimeGateway!.emitToGroup(groupId, "new_group_message", payload);
+        },
+      }
+    : {
+        async broadcast(channel, message) {
+          console.log(
+            JSON.stringify({
+              service: "study-groups",
+              level: "warn",
+              message: "WebSocket broadcast SKIPPED (no Supabase Realtime configured)",
+              channel,
+              eventType: message.type,
+            }),
+          );
+        },
+      };
+  const realtimeObserver = new GroupRealtimeObserver(realtimeObserverService);
   const mockIdempotencyStore: IGroupIdempotencyStore = {
     async markProcessed(_messageId) {
       return true;
@@ -345,8 +366,9 @@ function bootstrap(): void {
       "http://192.168.140.38:8082",
     ];
     
-    if (origin && allowedOrigins.includes(origin)) {
-      resp.setHeader("Access-Control-Allow-Origin", origin);
+    const originStr = Array.isArray(origin) ? origin[0] : origin;
+    if (originStr && allowedOrigins.includes(originStr)) {
+      resp.setHeader("Access-Control-Allow-Origin", originStr);
     }
     
     resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");

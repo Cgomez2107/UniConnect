@@ -10,10 +10,12 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MentionInput } from "@/components/chat/MentionInput";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 import messagingService from "@/lib/services/messaging.service";
-import { uploadChatImageFile } from "@/lib/supabase";
+import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { useGroupEventsObserver } from "@/hooks/useGroupEventsObserver";
 import { useChatObserver } from "@/hooks/useChatObserver";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { useAuthStore } from "@/store/useAuthStore";
+import { snakeToCamel } from "@uniconnect/shared-api";
 
 type AppTab = "pendiente" | "aceptada" | "rechazada";
 type RightTab = "postulaciones" | "miembros" | "info";
@@ -61,6 +63,7 @@ export function GroupDashboardPage() {
   const [sending, setSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [chatLoading, setChatLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,7 +92,7 @@ export function GroupDashboardPage() {
         if (cancelled) return;
         setSolicitud(data);
         setMembers(membersData);
-        setMessages(msgs || []);
+        setMessages((msgs || []).reverse());
       } catch (err: any) {
         if (!cancelled) {
           setError(err?.response?.data?.message || "Error al cargar datos del grupo.");
@@ -172,6 +175,89 @@ export function GroupDashboardPage() {
       return [...prev, newMsg];
     });
   });
+
+  // --- Gateway WS real-time connection ---
+  useEffect(() => {
+    if (!id) return;
+
+    let ws: WebSocket | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let mounted = true;
+    let attempt = 0;
+
+    const connect = (token: string) => {
+      if (!mounted) return;
+      attempt++;
+      const url = `ws://localhost:3000/ws?token=${token}`;
+      console.log(`[GroupDashboardPage WS] Connecting (attempt ${attempt})...`);
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        if (!mounted) { ws?.close(); return; }
+        console.log(`[GroupDashboardPage WS] Connected, subscribing to group ${id}`);
+        ws?.send(JSON.stringify({ type: "subscribe", groupId: id }));
+        attempt = 0;
+      };
+
+      ws.onmessage = (event) => {
+        if (!mounted) return;
+        try {
+          const data = JSON.parse(event.data);
+          if (data.event === "new_group_message" && data.payload) {
+            const newMsg = snakeToCamel(data.payload);
+            if (!newMsg.sender) {
+              newMsg.sender = {};
+            }
+            newMsg.sender.fullName = newMsg.sender.fullName || newMsg.senderFullName;
+            newMsg.sender.full_name = newMsg.sender.full_name || newMsg.senderFullName;
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+          }
+        } catch (err) {
+          console.error("[GroupDashboardPage WS] Error parsing message:", err);
+        }
+      };
+
+      ws.onclose = () => {
+        if (!mounted) return;
+        console.log(`[GroupDashboardPage WS] Disconnected, reconnecting in 3s...`);
+        reconnectTimer = setTimeout(() => {
+          const token = useAuthStore.getState().accessToken;
+          if (token) connect(token);
+        }, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("[GroupDashboardPage WS] Error:", err);
+      };
+    };
+
+    const tryConnect = () => {
+      if (!mounted) return;
+      const token = useAuthStore.getState().accessToken;
+      if (token) {
+        connect(token);
+      } else {
+        console.log("[GroupDashboardPage WS] Waiting for token...");
+        retryTimer = setTimeout(tryConnect, 500);
+      }
+    };
+
+    tryConnect();
+
+    return () => {
+      mounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+      }
+    };
+  }, [id]);
 
   // --- Realtime group events ---
   const { addNotification } = useNotificationStore();
@@ -419,7 +505,7 @@ export function GroupDashboardPage() {
       id: msg.id || msg._tempId,
       conversationId: id || "",
       senderId: msg.sender_id || msg.senderId || "",
-      senderName: msg.sender?.full_name || msg.sender?.fullName || memberNameMap.get(msg.sender_id || msg.senderId) || "Usuario",
+      senderName: msg.senderName || msg.sender_full_name || msg.sender?.full_name || msg.sender?.fullName || msg.senderFullName || memberNameMap.get(msg.sender_id || msg.senderId) || "Usuario",
       replyToMessageId: msg.reply_to_message_id || msg.replyToMessageId || null,
       replyPreview: msg.reply_preview || msg.replyPreview || null,
       clientStatus: msg.client_status || msg.clientStatus || "sent",
@@ -431,9 +517,11 @@ export function GroupDashboardPage() {
     [messages, id, memberNameMap],
   );
 
-  const handleSend = async (content: string, mentions: { userId: string; name: string }[]) => {
-    if (!content.trim() || !id) return;
+  const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string }) => {
+    if (!content.trim() && !options?.mediaUrl) return;
+    if (!id) return;
 
+    const finalContent = content.trim() || "Archivo";
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg = {
       id: tempId,
@@ -441,12 +529,14 @@ export function GroupDashboardPage() {
       group_id: id,
       sender_id: user?.id,
       senderId: user?.id,
-      content: content.trim(),
+      content: finalContent,
       created_at: new Date().toISOString(),
       clientStatus: "sending",
       sender: { full_name: user?.name || "Tú", avatar_url: user?.profileImage || null },
       reply_to_message_id: replyingTo?.id || null,
       reply_preview: replyingTo?.content || null,
+      media_url: options?.mediaUrl || null,
+      media_type: options?.mediaType || null,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -455,9 +545,11 @@ export function GroupDashboardPage() {
 
     try {
       setSending(true);
-      const msg = await studyGroupsService.sendGroupMessage(id, content.trim(), {
+      const msg = await studyGroupsService.sendGroupMessage(id, finalContent, {
         replyToMessageId: replyTo?.id || undefined,
         mentions,
+        mediaUrl: options?.mediaUrl,
+        mediaType: options?.mediaType,
       });
       setMessages((prev) => {
         if (prev.some((m: any) => m.id === msg.id)) {
@@ -465,7 +557,7 @@ export function GroupDashboardPage() {
         }
         return prev.map((m: any) =>
           m.id === tempId
-            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined }
+            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, media_url: m.media_url || msg.media_url }
             : m
         );
       });
@@ -593,6 +685,19 @@ export function GroupDashboardPage() {
       );
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const handleUploadFile = async (file: File): Promise<{ url: string; type: string }> => {
+    if (!id) throw new Error("No group ID");
+    setUploadingFile(true);
+    try {
+      const storage = getStorageService();
+      const result = await storage.uploadChatImage(id, file);
+      if (!result?.url) throw new Error("Upload returned no URL");
+      return { url: result.url, type: file.type };
+    } finally {
+      setUploadingFile(false);
     }
   };
 
@@ -728,7 +833,9 @@ export function GroupDashboardPage() {
             currentUserId={user?.id || ""}
             onSend={handleSend}
             onSendImage={handleImageSend}
+            onUploadFile={handleUploadFile}
             uploadingImage={uploadingImage}
+            uploadingFile={uploadingFile}
             sending={sending}
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
