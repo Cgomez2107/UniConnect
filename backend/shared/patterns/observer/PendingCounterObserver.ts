@@ -7,7 +7,7 @@
  * - Usar para mostrar badge en UI
  */
 
-import { Observer, DomainEvent } from './EventEmitter';
+import { Observer, DomainEvent } from './EventEmitter.js';
 
 export class PendingCounterObserver implements Observer {
   

@@ -1,27 +1,30 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
-import type { IEmailGateway } from "../../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
 
 jest.mock("@sendgrid/mail", () => {
-  const mockSend = jest.fn<(...args: unknown[]) => Promise<unknown>>();
-  const mockSetApiKey = jest.fn<(key: string) => void>();
+  const mockSend = jest.fn<any>();
+  const mockSetApiKey = jest.fn<any>();
   return {
     __esModule: true,
     default: { setApiKey: mockSetApiKey, send: mockSend },
-    setApiKey: mockSetApiKey,
-    send: mockSend,
   };
 }, { virtual: false });
 
 import sgMail from "@sendgrid/mail";
 import { SendGridEmailGateway } from "../src/infrastructure/gateways/SendGridEmailGateway.js";
 
-interface SendGridResponse { statusCode: number }
-type SendFn = (msg: Record<string, unknown>) => Promise<[SendGridResponse]>;
-const mockSend = sgMail.send as unknown as jest.Mock<SendFn>;
-const mockSetApiKey = sgMail.setApiKey as unknown as jest.Mock<(key: string) => void>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockSend = sgMail.send as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockSetApiKey = sgMail.setApiKey as any;
+
+interface LoggerSpy {
+  error: jest.Mock;
+  warn: jest.Mock;
+  info: jest.Mock;
+}
 
 describe("SendGridEmailGateway", () => {
-  let loggerSpy: { error: jest.Mock<(...args: unknown[]) => void>; warn: jest.Mock<(...args: unknown[]) => void>; info: jest.Mock<(...args: unknown[]) => void> };
+  let loggerSpy: LoggerSpy;
 
   beforeEach(() => {
     jest.clearAllMocks();

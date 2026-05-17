@@ -59,7 +59,7 @@ function buildNotificacion(
 export class NotificationMapper {
   map(event: StudyGroupEvent): MappingResult {
     switch (event.type) {
-      case "SOLICITUD_INGRESO":
+      case "JOIN_REQUEST":
         return buildNotificacion(
           event.recipientUserId,
           "solicitud_ingreso",
@@ -75,7 +75,7 @@ export class NotificationMapper {
           "normal",
         );
 
-      case "MIEMBRO_ACEPTADO":
+      case "MEMBER_ACCEPTED":
         return buildNotificacion(
           event.applicantId,
           "miembro_aceptado",
@@ -91,7 +91,7 @@ export class NotificationMapper {
           { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.requestId}` },
         );
 
-      case "MIEMBRO_RECHAZADO":
+      case "MEMBER_REJECTED":
         return buildNotificacion(
           event.applicantId,
           "miembro_rechazado",
@@ -105,7 +105,7 @@ export class NotificationMapper {
           "normal",
         );
 
-      case "TRANSFERENCIA_ADMIN_SOLICITADA":
+      case "ADMIN_TRANSFER_REQUESTED":
         return buildNotificacion(
           event.newAdminId,
           "transferencia_admin_solicitada",
@@ -120,7 +120,7 @@ export class NotificationMapper {
           { label: "Revisar solicitud", endpoint: `/api/v1/study-groups/transfers/${event.transferId}/accept` },
         );
 
-      case "TRANSFERENCIA_ADMIN_ACEPTADA":
+      case "ADMIN_TRANSFER_ACCEPTED":
         return buildNotificacion(
           event.oldAdminId,
           "transferencia_admin_aceptada",
@@ -133,6 +133,47 @@ export class NotificationMapper {
           },
           "normal",
           { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.groupId}` },
+        );
+
+      case "ADMIN_TRANSFER_REJECTED":
+        return buildNotificacion(
+          event.oldAdminId,
+          "transferencia_admin_rechazada",
+          "Transferencia rechazada",
+          "La transferencia de administracion fue rechazada.",
+          {
+            transferId: event.transferId,
+            groupId: event.groupId,
+            newAdminId: event.newAdminId,
+          },
+          "normal",
+        );
+
+      case "ADMIN_TRANSFER_COMPLETED":
+        return buildNotificacion(
+          event.newAdminId,
+          "transferencia_admin_transferida",
+          event.groupName,
+          "Ahora eres administrador del grupo.",
+          {
+            transferId: event.transferId,
+            groupId: event.groupId,
+            oldAdminId: event.oldAdminId,
+          },
+          "urgente",
+          { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.groupId}` },
+        );
+
+      case "ADMIN_ROLE_LEFT":
+        return buildNotificacion(
+          event.userId,
+          "admin_role_left",
+          event.groupName,
+          "Has renunciado a tu rol de administrador.",
+          {
+            requestId: event.requestId,
+          },
+          "normal",
         );
 
       default: {

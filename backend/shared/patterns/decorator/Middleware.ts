@@ -36,6 +36,7 @@ export type MiddlewareHandler = (
  * Interfaz base para middlewares (decorators)
  */
 export interface IMiddleware {
+  setNext(arg0: IMiddleware): unknown;
   handle(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
@@ -58,7 +59,7 @@ export abstract class Middleware implements IMiddleware {
     res: Response
   ): Promise<void> {
     if (this.next) {
-      await this.next.handle(req, res, async () => {});
+      await this.next.handle(req, res, async () => { });
     }
   }
 

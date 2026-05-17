@@ -7,7 +7,7 @@
  * - Loguear envío
  */
 
-import { Observer, DomainEvent } from './EventEmitter';
+import { Observer, DomainEvent } from './EventEmitter.js';
 
 export class EmailNotificationObserver implements Observer {
   

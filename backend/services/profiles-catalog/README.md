@@ -89,7 +89,7 @@ classDiagram
     ProfileDecorator --> IProfile : wraps
 
     note for BaseProfile "AC-01: nombre, carrera, semestre,\nasignaturas activas"
-    note for StatisticsDecorator "AC-02: gruposCreados,\ngruposParticipa,\nmensajesEnviados"
+    note for StatisticsDecorator "AC-02: gruposBajoAdministracion,\ngruposParticipa,\nmensajesEnviados"
     note for BadgesDecorator "AC-03: array de insignias\npor hitos del sistema"
 ```
 
@@ -106,7 +106,7 @@ const base = new PerfilBase({
 });
 
 const stats = new EstadisticasDecorator(base, {
-  gruposCreados: 3,
+  gruposBajoAdministracion: 3,
   gruposParticipa: 5,
   mensajesEnviados: 42,
 });
@@ -116,7 +116,7 @@ const completo = new InsigniasDecorator(stats, [
 ]);
 
 console.log(completo.render());
-// "Carlos Pérez - Ingeniería de Sistemas (Semestre 6) | Actividad: 42 msgs, 3 grupos creados, participa en 5 | 1 insignia desbloqueada"
+// "Carlos Pérez - Ingeniería de Sistemas (Semestre 6) | Actividad: 42 msgs, 3 grupos administrados, participa en 5 | 1 insignia desbloqueada"
 
 console.log(completo.getMetadata());
 // { id, fullName, carrera, semestre, asignaturasActivas, indicadores: {...}, insignias: [...] }

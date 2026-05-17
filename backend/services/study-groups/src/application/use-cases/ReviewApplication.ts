@@ -2,18 +2,14 @@ import type { IApplicationRepository } from "../../domain/repositories/IApplicat
 import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
 import type { IMemberRepository } from "../../domain/repositories/IMemberRepository.js";
 import type { StudyGroupSubject } from "../../domain/events/index.js";
+import { StudyGroupMembershipService } from "../../domain/services/StudyGroupMembershipService.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 
 /**
  * Caso de Uso: Revisar (aceptar/rechazar) una postulación a un grupo de estudio.
  *
- * Delega la validación de reglas de negocio al dominio (patrón State):
- * - AbiertaState:  acepta o rechaza. Si acepta y grupo queda lleno → transición a LlenaState
- * - LlenaState:    solo permite rechazar (aceptar lanza DomainError)
- * - CerradaState:  lanza DomainError (grupo cerrado)
- * - ExpiradaState: lanza DomainError (grupo expirado)
- *
- * El estado emite los eventos MIEMBRO_ACEPTADO o MIEMBRO_RECHAZADO según corresponda.
+ * Delega la emision de eventos al StudyGroupMembershipService,
+ * separando la logica de membresia del patron State de transferencias.
  */
 export class ReviewApplication {
   constructor(
@@ -21,6 +17,7 @@ export class ReviewApplication {
     private readonly studyGroupRepository: IStudyGroupRepository,
     private readonly memberRepository: IMemberRepository,
     private readonly subject: StudyGroupSubject,
+    private readonly membershipService?: StudyGroupMembershipService,
   ) {}
 
   async execute(input: {
@@ -31,19 +28,16 @@ export class ReviewApplication {
     const applicationId = requireTrimmed(input.applicationId, "applicationId");
     const actorUserId = requireTrimmed(input.actorUserId, "actorUserId");
 
-    // 1. Obtener la postulación para conocer el requestId y applicantId
     const application = await this.repository.getById(applicationId);
     if (!application) {
       throw new Error("Postulacion no encontrada.");
     }
 
-    // 2. Cargar el contexto StudyGroup con el estado correcto (hidratado desde BD)
     const group = await this.studyGroupRepository.loadStudyGroup(
       application.requestId,
       this.subject,
     );
 
-    // 3. Resolver el nombre del solicitante si la acción es aceptar
     let applicantName: string | undefined;
     if (input.status === "aceptada") {
       const members = await this.memberRepository.listByRequest({
@@ -54,10 +48,10 @@ export class ReviewApplication {
       applicantName = newMember?.fullName ?? "Nuevo integrante";
     }
 
-    // 4. El estado valida la regla de negocio y emite el evento de dominio.
-    //    Lanza DomainError si la acción no está permitida en el estado actual.
+    const svc = this.membershipService ?? new StudyGroupMembershipService(this.subject);
     const domainStatus = input.status === "aceptada" ? "approved" : "rejected";
-    group.reviewApplication(
+    await svc.reviewApplication(
+      group,
       applicationId,
       domainStatus,
       actorUserId,
@@ -65,7 +59,6 @@ export class ReviewApplication {
       applicantName,
     );
 
-    // 5. Solo persistimos si el estado permitió la acción
     await this.repository.review({
       applicationId,
       actorUserId,

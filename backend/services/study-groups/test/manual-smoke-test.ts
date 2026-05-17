@@ -122,7 +122,7 @@ const mapper = new NotificationMapper();
 
 // ── Smoke payload ──
 const event = {
-  type: "SOLICITUD_INGRESO",
+  type: "JOIN_REQUEST",
   version: "1.0",
   timestamp: new Date(),
   requestId: "smoke-test-0001",
@@ -150,10 +150,8 @@ const resumen = await wsPushService.notificar({ ...dto, userId: SMOKE_USER_ID })
 
 // 3. Email por separado (userId debe ser la direccion email)
 console.log("Enviando email a " + TARGET_EMAIL + " ...");
-const emailResult = await emailStrategy.enviar({ ...dto, userId: TARGET_EMAIL });
+    const emailResult = await emailStrategy.enviar({ ...dto, userId: SMOKE_USER_ID });
 resumen.resultados.push(emailResult);
-if (emailResult.exitoso) resumen.exitosos++;
-else resumen.fallidos++;
 
 console.log("---");
 console.log("Resultado del envío:");

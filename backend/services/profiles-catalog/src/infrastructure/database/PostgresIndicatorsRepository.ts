@@ -7,9 +7,13 @@ interface CountRow {
   count: number;
 }
 
-interface GruposCountRow {
-  grupos_creados: number;
+interface GruposRow {
+  grupos_bajo_admin: number;
   grupos_participa: number;
+}
+
+interface TransferCountRow {
+  count: number;
 }
 
 export class PostgresIndicatorsRepository implements IIndicatorsRepository {
@@ -21,14 +25,23 @@ export class PostgresIndicatorsRepository implements IIndicatorsRepository {
       [userId],
     );
 
-    const grupos = await this.pool.query<GruposCountRow>(
+    const grupos = await this.pool.query<GruposRow>(
       `
+        WITH member_union AS (
+          SELECT a.request_id, a.applicant_id AS user_id
+          FROM applications a
+          WHERE a.applicant_id = $1 AND a.status = 'aceptada'
+          UNION
+          SELECT adm.request_id, adm.user_id
+          FROM study_request_admins adm
+          WHERE adm.user_id = $1
+        )
         SELECT
-          COALESCE(SUM(CASE WHEN sr.author_id = $1 THEN 1 ELSE 0 END), 0)::int AS grupos_creados,
-          COALESCE(COUNT(DISTINCT a.request_id), 0)::int AS grupos_participa
+          COALESCE(SUM(CASE WHEN sr.author_id = $1 THEN 1 ELSE 0 END), 0)::int AS grupos_bajo_admin,
+          COALESCE(COUNT(DISTINCT mu.request_id), 0)::int AS grupos_participa
         FROM study_requests sr
-        LEFT JOIN applications a ON a.request_id = sr.id AND a.status = 'aceptada' AND a.applicant_id = $1
-        WHERE (sr.author_id = $1 OR a.applicant_id = $1) AND sr.is_active = true
+        LEFT JOIN member_union mu ON mu.request_id = sr.id
+        WHERE (sr.author_id = $1 OR mu.request_id IS NOT NULL) AND sr.is_active = true
       `,
       [userId],
     );
@@ -36,7 +49,7 @@ export class PostgresIndicatorsRepository implements IIndicatorsRepository {
     const row = grupos.rows[0];
 
     return {
-      gruposCreados: row?.grupos_creados ?? 0,
+      gruposBajoAdministracion: row?.grupos_bajo_admin ?? 0,
       gruposParticipa: row?.grupos_participa ?? 0,
       mensajesEnviados: mensajes.rows[0]?.count ?? 0,
     };
@@ -50,8 +63,32 @@ export class PostgresIndicatorsRepository implements IIndicatorsRepository {
 
     const gruposCount = await this.pool.query<CountRow>(
       `
-        SELECT COUNT(*)::int AS count FROM applications
-        WHERE applicant_id = $1 AND status = 'aceptada'
+        WITH member_union AS (
+          SELECT a.request_id, a.applicant_id AS user_id
+          FROM applications a
+          WHERE a.applicant_id = $1 AND a.status = 'aceptada'
+          UNION
+          SELECT adm.request_id, adm.user_id
+          FROM study_request_admins adm
+          WHERE adm.user_id = $1
+        )
+        SELECT COUNT(*)::int AS count FROM member_union
+      `,
+      [userId],
+    );
+
+    const transferenciasAceptadas = await this.pool.query<TransferCountRow>(
+      `
+        SELECT COUNT(*)::int AS count FROM study_request_admin_transfers
+        WHERE to_user_id = $1 AND status = 'aceptada'
+      `,
+      [userId],
+    );
+
+    const transferenciasRealizadas = await this.pool.query<TransferCountRow>(
+      `
+        SELECT COUNT(*)::int AS count FROM study_request_admin_transfers
+        WHERE from_user_id = $1 AND status = 'aceptada'
       `,
       [userId],
     );
@@ -59,6 +96,8 @@ export class PostgresIndicatorsRepository implements IIndicatorsRepository {
     const badges: Badge[] = [];
     const msgs = totalMensajes.rows[0]?.count ?? 0;
     const grupos = gruposCount.rows[0]?.count ?? 0;
+    const aceptadas = transferenciasAceptadas.rows[0]?.count ?? 0;
+    const cedidas = transferenciasRealizadas.rows[0]?.count ?? 0;
 
     if (msgs >= 1) {
       badges.push({
@@ -96,6 +135,26 @@ export class PostgresIndicatorsRepository implements IIndicatorsRepository {
         nombre: "Trabajador en Equipo",
         descripcion: "Participas en 3 o más grupos de estudio",
         iconoUrl: "/insignias/trabajador-equipo.svg",
+        fechaObtenida: new Date().toISOString(),
+      });
+    }
+
+    if (aceptadas >= 3) {
+      badges.push({
+        id: "sucesor-confiable",
+        nombre: "Sucesor Confiable",
+        descripcion: "Has aceptado la administración de 3 o más grupos",
+        iconoUrl: "/insignias/sucesor-confiable.svg",
+        fechaObtenida: new Date().toISOString(),
+      });
+    }
+
+    if (cedidas >= 1) {
+      badges.push({
+        id: "lider-emerito",
+        nombre: "Líder Emérito",
+        descripcion: "Has cedido exitosamente la administración de tu grupo",
+        iconoUrl: "/insignias/lider-emerito.svg",
         fechaObtenida: new Date().toISOString(),
       });
     }

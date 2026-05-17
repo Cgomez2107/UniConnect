@@ -7,9 +7,7 @@
  * Uso: npx tsx composition-test.ts
  */
 
-import { BaseNotification } from "./BaseNotification.js";
-import { PriorityDecorator } from "./PriorityDecorator.js";
-import { ActionDecorator } from "./ActionDecorator.js";
+import { BaseNotification, PriorityDecorator, ActionDecorator } from "./index.js";
 
 // ─── PASO 1: BaseNotification ───────────────────────────────────────────────
 

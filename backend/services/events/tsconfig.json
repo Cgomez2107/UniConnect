@@ -11,6 +11,8 @@
     "../../shared/http/sendJson.ts",
     "../../shared/libs/errors/ApplicationError.ts",
     "../../shared/libs/errors/mapHttpStatus.ts",
-    "../../shared/libs/config/requiredEnv.ts"
+    "../../shared/libs/config/requiredEnv.ts",
+    "../../shared/libs/logging/Logger.ts",
+    "../../shared/libs/database/DatabaseHandler.ts"
   ]
 }

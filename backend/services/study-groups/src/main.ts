@@ -8,11 +8,13 @@ import { ListUserNotifications } from "./application/use-cases/ListUserNotificat
 import { ListMembersByRequest } from "./application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
 import { LeaveAdminRole } from "./application/use-cases/LeaveAdminRole.js";
+import { RejectAdminTransfer } from "./application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
-import { NotificationObserver, StudyGroupSubject } from "./domain/events/index.js";
+import { NotificationObserver, PersistenceObserver, StudyGroupSubject } from "./domain/events/index.js";
+import { StudyGroupMembershipService } from "./domain/services/StudyGroupMembershipService.js";
 import type { IAdminTransferRepository } from "./domain/repositories/IAdminTransferRepository.js";
 import type { IApplicationRepository } from "./domain/repositories/IApplicationRepository.js";
 import type { INotificationRepository } from "./domain/repositories/INotificationRepository.js";
@@ -48,12 +50,14 @@ import { SupabaseRealtimeGateway } from "./infrastructure/realtime/SupabaseRealt
 import { PreferenceService } from "./application/services/PreferenceService.js";
 import { NotificationMapper } from "./application/services/NotificationMapper.js";
 import { PostgresUserRepository } from "./infrastructure/database/PostgresUserRepository.js";
-import { createStudyGroupsServer } from "./app/createStudyGroupsServer.js";
+import type { IUserRepository as IStrategyUserRepository } from "../../../shared/patterns/strategy/IUserRepository.js";
+import { GroupPermissionRepository } from "./infrastructure/database/GroupPermissionRepository.js";
 
 import {
   ChatSubject as GroupChatSubject,
   RealtimeObserver as GroupRealtimeObserver,
   IdempotencyObserver as GroupIdempotencyObserver,
+  ChatNotificationObserver as GroupChatNotificationObserver,
   type IRealtimeService as IGroupRealtimeService,
   type IIdempotencyStore as IGroupIdempotencyStore,
 } from "../../messaging/src/domain/events/index.js";
@@ -87,7 +91,7 @@ function createRepository(
   );
 
   const inMemoryRepo = new InMemoryStudyRequestRepository();
-  return { studyRequest: inMemoryRepo, studyGroup: inMemoryRepo as unknown as IStudyGroupRepository };
+  return { studyRequest: inMemoryRepo, studyGroup: inMemoryRepo };
 }
 
 function createApplicationRepository(
@@ -202,7 +206,39 @@ function bootstrap(): void {
   const subject = new StudyGroupSubject();
   subject.subscribe(notificationObserver);
 
+  const persistenceObserver = new PersistenceObserver(adminTransferRepository);
+  subject.subscribe(persistenceObserver);
+
+  const membershipService = new StudyGroupMembershipService(subject);
+
   const groupChatSubject = new GroupChatSubject("study-groups-chat");
+
+  const groupUserRepository: IStrategyUserRepository = {
+    async getContactInfo(userId: string) {
+      if (!pool) return {};
+      try {
+        const result = await pool.query(
+          `SELECT email, push_token FROM profiles WHERE id = $1`,
+          [userId],
+        );
+        if (result.rows.length === 0) return {};
+        return {
+          email: result.rows[0].email as string | undefined,
+          pushToken: result.rows[0].push_token as string | undefined,
+        };
+      } catch {
+        return {};
+      }
+    },
+  };
+
+  const groupChatNotificationObserver = new GroupChatNotificationObserver(
+    notificationService,
+    groupUserRepository,
+  );
+
+  const groupPermissionRepo = new GroupPermissionRepository(pool);
+
   const mockRealtimeService: IGroupRealtimeService = {
     async broadcast(channel, message) {
       console.log(
@@ -237,6 +273,9 @@ function bootstrap(): void {
     groupChatSubject,
     realtimeObserver,
     idempotencyObserver,
+    groupChatNotificationObserver,
+    groupPermissionRepo,
+    groupPermissionRepo,
   );
   const listUserNotifications = new ListUserNotifications(notificationRepository);
   const applyToStudyRequest = new ApplyToStudyRequest(
@@ -244,12 +283,14 @@ function bootstrap(): void {
     repository,
     studyGroupRepository,
     subject,
+    membershipService,
   );
   const reviewApplication = new ReviewApplication(
     applicationRepository,
     studyGroupRepository,
     memberRepository,
     subject,
+    membershipService,
   );
   const requestAdminTransfer = new RequestAdminTransfer(
     adminTransferRepository,
@@ -257,7 +298,8 @@ function bootstrap(): void {
     subject,
   );
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
-  const leaveAdminRole = new LeaveAdminRole(adminTransferRepository);
+  const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
+  const leaveAdminRole = new LeaveAdminRole(studyGroupRepository, subject);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -271,6 +313,7 @@ function bootstrap(): void {
     reviewApplication,
     requestAdminTransfer,
     acceptAdminTransfer,
+    rejectAdminTransfer,
     leaveAdminRole,
   );
   const server = createStudyGroupsServer(controller);

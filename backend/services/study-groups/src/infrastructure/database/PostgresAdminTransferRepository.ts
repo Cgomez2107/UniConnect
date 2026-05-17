@@ -62,8 +62,22 @@ export class PostgresAdminTransferRepository implements IAdminTransferRepository
     ]);
   }
 
+  async acceptTransferAtomically(transferId: string, actorUserId: string): Promise<void> {
+    await this.pool.query("SELECT accept_admin_transfer_backend($1, $2)", [
+      transferId,
+      actorUserId,
+    ]);
+  }
+
+  async rejectTransfer(input: { transferId: string; actorUserId: string }): Promise<void> {
+    await this.pool.query("SELECT reject_admin_transfer($1, $2)", [
+      input.transferId,
+      input.actorUserId,
+    ]);
+  }
+
   async leaveAdminRole(input: { requestId: string; actorUserId: string }): Promise<void> {
-    await this.pool.query("SELECT leave_request_admin($1, $2)", [
+    await this.pool.query("SELECT leave_request_admin_backend($1, $2)", [
       input.requestId,
       input.actorUserId,
     ]);

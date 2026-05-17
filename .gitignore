@@ -39,12 +39,11 @@ yarn-error.*
 
 app-examples/
 
-# Ignore local agent/tooling folders
-.agent/
-.opencode/
-
-# Build cache
-**/.turbo/
-
-# Local spec docs
-openspec/
+openspec/*
+.agent/*
+.agents/*
+.gpt/*
+.gemini/*
+.github/*
+.opencode/*
+skills-lock.json

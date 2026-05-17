@@ -22,7 +22,7 @@ export class WebSocketNotificationObserver implements IObserver {
 
   async handle(event: StudyGroupEvent): Promise<void> {
     switch (event.type) {
-      case "SOLICITUD_INGRESO":
+      case "JOIN_REQUEST":
         await this.socketGateway.emitToUser(
           event.recipientUserId,
           "study-group:application:created",
@@ -34,7 +34,7 @@ export class WebSocketNotificationObserver implements IObserver {
         );
         break;
 
-      case "MIEMBRO_ACEPTADO":
+      case "MEMBER_ACCEPTED":
         await this.socketGateway.emitToUser(
           event.applicantId,
           "study-group:application:accepted",
@@ -46,7 +46,7 @@ export class WebSocketNotificationObserver implements IObserver {
         );
         break;
 
-      case "MIEMBRO_RECHAZADO":
+      case "MEMBER_REJECTED":
         await this.socketGateway.emitToUser(
           event.applicantId,
           "study-group:application:rejected",
@@ -58,26 +58,50 @@ export class WebSocketNotificationObserver implements IObserver {
         );
         break;
 
-      case "TRANSFERENCIA_ADMIN_SOLICITADA":
+      case "ADMIN_TRANSFER_REQUESTED":
         await this.socketGateway.emitToUser(
-          event.targetUserId,
+          event.newAdminId,
           "study-group:admin-transfer:requested",
           {
             transferId: event.transferId,
-            requestId: event.requestId,
-            actorUserId: event.actorUserId,
+            requestId: event.groupId,
+            actorUserId: event.oldAdminId,
           },
         );
         break;
 
-      case "TRANSFERENCIA_ADMIN_ACEPTADA":
+      case "ADMIN_TRANSFER_ACCEPTED":
         await this.socketGateway.emitToUser(
-          event.fromUserId,
+          event.oldAdminId,
           "study-group:admin-transfer:accepted",
           {
             transferId: event.transferId,
-            requestId: event.requestId,
-            toUserId: event.toUserId,
+            requestId: event.groupId,
+            toUserId: event.newAdminId,
+          },
+        );
+        break;
+
+      case "ADMIN_TRANSFER_REJECTED":
+        await this.socketGateway.emitToUser(
+          event.oldAdminId,
+          "study-group:admin-transfer:rejected",
+          {
+            transferId: event.transferId,
+            requestId: event.groupId,
+            toUserId: event.newAdminId,
+          },
+        );
+        break;
+
+      case "ADMIN_TRANSFER_COMPLETED":
+        await this.socketGateway.emitToUser(
+          event.newAdminId,
+          "study-group:admin-transfer:completed",
+          {
+            transferId: event.transferId,
+            requestId: event.groupId,
+            oldAdminId: event.oldAdminId,
           },
         );
         break;

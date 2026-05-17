@@ -5,7 +5,7 @@
  * Campos específicos: materia, descripción del proyecto, skills requeridos, fechas
  */
 
-import { Publication } from './Publication';
+import { Publication } from './Publication.js';
 
 export interface ProjectTeamSpecificFields {
   subjectId: string;

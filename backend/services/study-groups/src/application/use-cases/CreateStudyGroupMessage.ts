@@ -12,6 +12,7 @@ import {
   extractMentionsFromContent,
 } from "../../../../messaging/src/domain/decorators/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
+import { ValidatorFactory, type IGroupPermissionRepository, type IAdminResolver } from "../../../../../shared/patterns/chain/message/index.js";
 
 export interface CreateStudyGroupMessageInput {
   readonly requestId: string;
@@ -24,21 +25,34 @@ export interface CreateStudyGroupMessageInput {
 }
 
 export class CreateStudyGroupMessage {
+  private readonly validator;
+
   constructor(
     private readonly repository: IStudyGroupMessageRepository,
     private readonly subject: ChatSubject,
     private readonly realtimeObserver: IChatObserver,
     private readonly idempotencyObserver: IChatObserver,
-  ) { }
+    private readonly chatNotificationObserver: IChatObserver | null,
+    permissionRepo: IGroupPermissionRepository,
+    adminResolver: IAdminResolver,
+  ) {
+    this.validator = ValidatorFactory.createChain(5000, undefined, permissionRepo, adminResolver);
+  }
 
   async execute(input: CreateStudyGroupMessageInput): Promise<StudyGroupMessage> {
     const requestId = requireTrimmed(input.requestId, "requestId");
-    
-    // Si no hay texto pero hay archivo, el contenido es una cadena vacía
+
     const content = input.content ?? "";
 
-    // Priorizar menciones recibidas del frontend (ya resueltas)
-    // O extraerlas del contenido si no vienen
+    await this.validator.validate(content, {
+      mediaUrl: input.mediaUrl?.trim() || undefined,
+      mediaType: input.mediaType?.trim() || undefined,
+      mediaFilename: input.mediaFilename?.trim() || undefined,
+      senderId: input.actorUserId,
+      requestId,
+      isGroup: true,
+    });
+
     const finalMentions = (input.mentions && input.mentions.length > 0)
       ? input.mentions
       : extractMentionsFromContent(content);
@@ -56,6 +70,10 @@ export class CreateStudyGroupMessage {
     const channel = createGroupChannel(requestId);
     this.subject.subscribe(channel, this.idempotencyObserver);
     this.subject.subscribe(channel, this.realtimeObserver);
+
+    if (this.chatNotificationObserver) {
+      this.subject.subscribe(channel, this.chatNotificationObserver);
+    }
 
     const payload = buildDecoratedPayload(created);
 

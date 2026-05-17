@@ -1,8 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { BaseNotification } from "./BaseNotification.js";
-import { PriorityDecorator } from "./PriorityDecorator.js";
-import { ActionDecorator } from "./ActionDecorator.js";
+import { BaseNotification, PriorityDecorator, ActionDecorator } from "./index.js";
 
 const baseInput = {
   mensaje: "Tienes una nueva solicitud de transferencia de administrador",

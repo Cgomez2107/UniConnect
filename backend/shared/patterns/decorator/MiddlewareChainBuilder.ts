@@ -14,10 +14,10 @@
  * await chain.execute(req, res);
  */
 
-import { IMiddleware, Request, Response } from './Middleware';
-import AuthenticationMiddleware from './AuthenticationMiddleware';
-import EmailVerificationMiddleware from './EmailVerificationMiddleware';
-import SemesterCheckMiddleware from './SemesterCheckMiddleware';
+import { IMiddleware, Request, Response } from './Middleware.js';
+import AuthenticationMiddleware from './AuthenticationMiddleware.js';
+import EmailVerificationMiddleware from './EmailVerificationMiddleware.js';
+import SemesterCheckMiddleware from './SemesterCheckMiddleware.js';
 
 export class MiddlewareChainBuilder {
   private middlewares: IMiddleware[] = [];
@@ -83,7 +83,7 @@ export class MiddlewareChain {
    */
   public async execute(req: Request, res: Response): Promise<Response> {
     if (this.head) {
-      await this.head.handle(req, res, async () => {});
+      await this.head.handle(req, res, async () => { });
     }
     return res;
   }

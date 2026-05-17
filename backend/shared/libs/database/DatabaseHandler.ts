@@ -10,7 +10,7 @@
  */
 
 import { Pool, QueryResult, PoolClient } from 'pg';
-import Logger from '../logging/Logger';
+import Logger from '../logging/Logger.js';
 
 interface DatabaseConfig {
   host: string;

@@ -11,6 +11,7 @@ import { ListUserNotifications } from "../../../application/use-cases/ListUserNo
 import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
 import { LeaveAdminRole } from "../../../application/use-cases/LeaveAdminRole.js";
+import { RejectAdminTransfer } from "../../../application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
@@ -58,6 +59,7 @@ export class StudyGroupsController {
     private readonly reviewApplication: ReviewApplication,
     private readonly requestAdminTransfer: RequestAdminTransfer,
     private readonly acceptAdminTransfer: AcceptAdminTransfer,
+    private readonly rejectAdminTransfer: RejectAdminTransfer,
     private readonly leaveAdminRole: LeaveAdminRole,
   ) { }
 
@@ -393,6 +395,30 @@ export class StudyGroupsController {
       });
 
       sendData(res, 200, { message: "Transferencia aceptada correctamente." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async rejectTransfer(
+    req: IncomingMessage,
+    res: ServerResponse,
+    transferId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.rejectAdminTransfer.execute({
+        transferId,
+        actorUserId,
+      });
+
+      sendData(res, 200, { message: "Transferencia rechazada correctamente." });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

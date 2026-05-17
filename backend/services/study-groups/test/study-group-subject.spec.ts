@@ -25,7 +25,7 @@ describe("StudyGroupSubject integration", () => {
     const observer = new MockObserver("Observer-A");
 
     const event: StudyGroupEvent = {
-      type: "SOLICITUD_INGRESO",
+      type: "JOIN_REQUEST",
       version: "1.0",
       timestamp: new Date("2026-04-29T11:00:00.000Z"),
       requestId: "req-int-1",

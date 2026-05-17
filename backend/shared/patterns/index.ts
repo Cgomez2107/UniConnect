@@ -10,8 +10,8 @@
  * - Observer: Notificaciones por eventos
  */
 
-export * from './factory';
-export * from './decorator';
-export * from './facade';
-export * from './observer';
-export * from './strategy';
+export * from './factory/index.js';
+export * from './decorator/index.js';
+export * from './facade/index.js';
+export * from './observer/index.js';
+export * from './strategy/index.js';

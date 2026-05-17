@@ -62,7 +62,7 @@ describe("ProfilesCatalog - integración (perfil base vs completa)", () => {
     const mockGetPublic = { execute: async (_id: string) => student } as unknown as GetStudentPublicProfile;
 
     const fakeIndicatorsRepo = {
-      getIndicators: async () => ({ gruposCreados: 1, gruposParticipa: 2, mensajesEnviados: 10 }),
+      getIndicators: async () => ({ gruposBajoAdministracion: 1, gruposParticipa: 2, mensajesEnviados: 10 }),
       getBadges: async () => [{ id: "b1", nombre: "Badge", descripcion: "", iconoUrl: "", fechaObtenida: new Date().toISOString() }],
     } as any;
 
@@ -89,7 +89,7 @@ describe("ProfilesCatalog - integración (perfil base vs completa)", () => {
 
     // Decorator fields
     assert(payload.indicadores);
-    assert.equal(typeof payload.indicadores.gruposCreados, "number");
+    assert.equal(typeof payload.indicadores.gruposBajoAdministracion, "number");
     assert(Array.isArray(payload.insignias));
   });
 

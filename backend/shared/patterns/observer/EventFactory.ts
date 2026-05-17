@@ -27,7 +27,7 @@
  * - EventoCancelado
  */
 
-import { DomainEvent } from './EventEmitter';
+import { DomainEvent } from './EventEmitter.js';
 
 /**
  * Factory helper para crear eventos
