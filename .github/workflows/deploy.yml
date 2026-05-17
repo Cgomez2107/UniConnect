@@ -96,3 +96,20 @@ jobs:
         working-directory: ${{ matrix.service.cwd }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Validate ${{ matrix.service.name }} deployment
+        run: |
+          echo "🔍 Validando despliegue de ${{ matrix.service.name }}..."
+          APP_NAME=$(grep '^app =' "${{ matrix.service.config }}" | head -1 | cut -d'"' -f2)
+          echo "App: $APP_NAME"
+          STATUS=$(flyctl status --app "$APP_NAME" --json 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 || echo '"status":"unknown"')
+          echo "Estado de $APP_NAME: $STATUS"
+          if echo "$STATUS" | grep -qi "deployed"; then
+            echo "✅ ${{ matrix.service.name }} desplegado correctamente"
+          else
+            echo "⚠️  No se pudo verificar el estado de ${{ matrix.service.name }}"
+            echo "   Revisa manualmente: flyctl status --app $APP_NAME"
+          fi
+        working-directory: ${{ matrix.service.cwd }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
