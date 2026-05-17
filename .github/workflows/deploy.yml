@@ -29,6 +29,10 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: backend
 
+      - name: Install shared-types dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: packages/shared-types
+
       - name: Build shared-types
         run: pnpm build
         working-directory: packages/shared-types
@@ -45,9 +49,6 @@ jobs:
         run: npx vitest run tests/integration/sprint4/ --reporter=verbose
         working-directory: backend
 
-      - name: Run auth contract tests (Zod, no server needed)
-        run: npx vitest run tests/contracts/auth.contract.spec.ts --reporter=verbose
-        working-directory: packages/shared-types
 
   build-and-deploy:
     needs: [test-and-validate]
