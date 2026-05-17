@@ -1,5 +1,7 @@
 import { createServer } from "node:http";
 import type { ServerResponse } from "node:http";
+import pg from "pg";
+const { Pool } = pg;
 import { PostgreSQLAuthRepository } from "./infrastructure/repositories/PostgreSQLAuthRepository.js";
 import { PostgreSQLTokenRepository } from "./infrastructure/repositories/PostgreSQLTokenRepository.js";
 import { JWTService } from "./infrastructure/jwt/JWTService.js";
@@ -8,6 +10,11 @@ import { SignInUseCase } from "./application/use-cases/SignInUseCase.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshTokenUseCase.js";
 import { AuthController } from "./interfaces/http/AuthController.js";
 import { requireEnv } from "../../../shared/libs/config/requiredEnv.js";
+
+const DIRTY_FLAG_MESSAGE =
+  "CRITICAL: Database configuration missing. " +
+  "This service REQUIRES a PostgreSQL database. " +
+  "Set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD environment variables.";
 
 try {
   if (typeof process.loadEnvFile === "function") {
@@ -29,17 +36,12 @@ if (!Number.isInteger(PORT) || PORT <= 0) {
   throw new Error(`Invalid auth service PORT value: ${portRaw}`);
 }
 
-/**
- * Genera la URL de autorización de Google con redirectTo dinámico
- */
 function sendOAuthUrl(res: ServerResponse, redirectTo?: string): void {
   const supabaseUrl = process.env.SUPABASE_URL || "https://becitrklvpadvjwdbmck.supabase.co";
-  const hd = "ucaldas.edu.co"; // restricción de dominio institucional
+  const hd = "ucaldas.edu.co";
 
-  // Construir URL base de Supabase
   let authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&hd=${hd}`;
 
-  // Si se proporciona redirectTo, agregarlo como parámetro
   if (redirectTo) {
     authUrl += `&redirect_to=${encodeURIComponent(redirectTo)}`;
   }
@@ -49,9 +51,36 @@ function sendOAuthUrl(res: ServerResponse, redirectTo?: string): void {
 }
 
 async function main() {
-  // Inyección de dependencias
-  const authRepository = new PostgreSQLAuthRepository();
-  const tokenRepository = new PostgreSQLTokenRepository();
+  const dbHost = requireEnv(process.env, "DB_HOST");
+  const dbPortRaw = requireEnv(process.env, "DB_PORT");
+  const dbName = requireEnv(process.env, "DB_NAME");
+  const dbUser = requireEnv(process.env, "DB_USER");
+  const dbPassword = requireEnv(process.env, "DB_PASSWORD");
+
+  const pool = new Pool({
+    host: dbHost,
+    port: Number(dbPortRaw),
+    database: dbName,
+    user: dbUser,
+    password: dbPassword,
+    ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+    max: 20,
+    connectionTimeoutMillis: 10000,
+  });
+
+  pool.on("error", (err) => {
+    console.error(
+      JSON.stringify({
+        service: "auth",
+        level: "error",
+        message: "Unexpected error on idle database client",
+        error: err.message,
+      }),
+    );
+  });
+
+  const authRepository = new PostgreSQLAuthRepository(pool);
+  const tokenRepository = new PostgreSQLTokenRepository(pool);
   const jwtService = new JWTService();
 
   const signUpUseCase = new SignUpUseCase(authRepository, tokenRepository, jwtService);
@@ -60,15 +89,10 @@ async function main() {
 
   const authController = new AuthController(signUpUseCase, signInUseCase, refreshTokenUseCase);
 
-  // Crear servidor
   const server = createServer(async (req, res) => {
     const path = req.url?.split("?")[0] || "";
     const method = req.method || "GET";
 
-    // Headers CORS
-    //res.setHeader("Content-Type", "application/json");
-    //res.setHeader("Access-Control-Allow-Origin", "*");
-    //res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization, X-Requested-With, bypass-tunnel-reminder, ngrok-skip-browser-warning",
@@ -86,7 +110,6 @@ async function main() {
       return;
     }
 
-    // Rutas
     if (method === "POST" && path === "/signup") {
       await authController.signup(req, res);
     } else if (method === "POST" && path === "/signin") {
@@ -94,29 +117,46 @@ async function main() {
     } else if (method === "POST" && path === "/refresh") {
       await authController.refreshToken(req, res);
     } else if (method === "GET" && path === "/session") {
-      // Endpoint para recuperar sesión basada en cookies (Criterio 2)
-      // En una implementación real, esto validaría el token de la cookie
-      // y devolvería la sesión. Por ahora, si llegamos aquí es porque el Gateway
-      // ya validó el token (o no).
       const auth = req.headers.authorization;
       if (auth?.startsWith("Bearer ")) {
-        // En un caso real buscaríamos el usuario en la DB
-        // Aquí devolvemos un mock basado en que el Gateway pasó el token
-        res.writeHead(200);
-        res.end(JSON.stringify({
-          session: { user: { email: "usuario@ucaldas.edu.co" }, access_token: auth.substring(7) }
-        }));
+        const token = auth.substring(7);
+        const payload = jwtService.verifyAccessToken(token);
+        if (!payload) {
+          res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Invalid or expired token" }));
+          return;
+        }
+        try {
+          const user = await authRepository.findById(payload.sub);
+          if (!user) {
+            res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ error: "User not found" }));
+            return;
+          }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({
+            session: {
+              user: {
+                id: user.id,
+                email: user.email,
+                fullName: user.fullName,
+                role: user.role,
+              },
+              access_token: token,
+            },
+          }));
+        } catch (error) {
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Internal server error" }));
+        }
       } else {
-        res.writeHead(401);
+        res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "No session found" }));
       }
     } else if ((method === "POST" || method === "GET") && path === "/google") {
-      // Endpoint unificado para Google OAuth
-      // Acepta POST con redirectTo en el body o GET con redirectTo como query param
       let redirectTo: string | undefined;
 
       if (method === "POST") {
-        // Leer body para obtener redirectTo
         let body = "";
         req.on("data", (chunk) => {
           body += chunk.toString();
@@ -132,13 +172,12 @@ async function main() {
           }
         });
       } else {
-        // GET: leer query parameter
         const urlObj = new URL(req.url || "", "http://localhost");
         redirectTo = urlObj.searchParams.get("redirectTo") || undefined;
         sendOAuthUrl(res, redirectTo);
       }
     } else {
-      res.writeHead(404);
+      res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ error: "Not found" }));
     }
   });
@@ -155,6 +194,36 @@ async function main() {
       }),
     );
   });
+
+  const shutdown = async (signal: string) => {
+    console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio auth...`);
+
+    server.close(() => {
+      console.log("[Shutdown] Servidor HTTP cerrado.");
+    });
+
+    try {
+      await pool.end();
+      console.log("[Shutdown] Limpieza de recursos completada con éxito.");
+      process.exit(0);
+    } catch (error) {
+      console.error("[Shutdown] Error durante el cierre de recursos:", error);
+      process.exit(1);
+    }
+  };
+
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(
+    JSON.stringify({
+      service: "auth",
+      level: "fatal",
+      message: DIRTY_FLAG_MESSAGE,
+      error: error instanceof Error ? error.message : String(error),
+    }),
+  );
+  process.exit(1);
+});

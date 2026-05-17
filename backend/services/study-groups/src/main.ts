@@ -17,18 +17,6 @@ import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGrou
 import { loadStudyGroupsEnv } from "./config/env.js";
 import { NotificationObserver, PersistenceObserver, StudyGroupSubject } from "./domain/events/index.js";
 import { StudyGroupMembershipService } from "./domain/services/StudyGroupMembershipService.js";
-import type { IAdminTransferRepository } from "./domain/repositories/IAdminTransferRepository.js";
-import type { IApplicationRepository } from "./domain/repositories/IApplicationRepository.js";
-import type { INotificationRepository } from "./domain/repositories/INotificationRepository.js";
-import type { IMemberRepository } from "./domain/repositories/IMemberRepository.js";
-import type { IStudyGroupMessageRepository } from "./domain/repositories/IStudyGroupMessageRepository.js";
-import type { IStudyGroupRepository } from "./domain/repositories/IStudyGroupRepository.js";
-import { InMemoryStudyRequestRepository } from "./infrastructure/database/InMemoryStudyRequestRepository.js";
-import { InMemoryAdminTransferRepository } from "./infrastructure/database/InMemoryAdminTransferRepository.js";
-import { InMemoryApplicationRepository } from "./infrastructure/database/InMemoryApplicationRepository.js";
-import { InMemoryMemberRepository } from "./infrastructure/database/InMemoryMemberRepository.js";
-import { InMemoryNotificationRepository } from "./infrastructure/database/InMemoryNotificationRepository.js";
-import { InMemoryStudyGroupMessageRepository } from "./infrastructure/database/InMemoryStudyGroupMessageRepository.js";
 import { PostgresAdminTransferRepository } from "./infrastructure/database/PostgresAdminTransferRepository.js";
 import { PostgresApplicationRepository } from "./infrastructure/database/PostgresApplicationRepository.js";
 import { PostgresMemberRepository } from "./infrastructure/database/PostgresMemberRepository.js";
@@ -38,9 +26,7 @@ import { PostgresStudyRequestRepository } from "./infrastructure/database/Postgr
 import { PostgresPreferenceRepository } from "./infrastructure/database/PostgresPreferenceRepository.js";
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
-import type { IStudyRequestRepository } from "./domain/repositories/IStudyRequestRepository.js";
 import { Database } from "./infrastructure/database/Database.js";
-import type { Pool } from "pg";
 
 import { NotificationService } from "../../../shared/patterns/strategy/NotificationService.js";
 import { InAppWebSocketStrategy } from "../../../shared/patterns/strategy/InAppWebSocketStrategy.js";
@@ -61,120 +47,35 @@ import {
   IdempotencyObserver as GroupIdempotencyObserver,
   ChatNotificationObserver as GroupChatNotificationObserver,
   type IRealtimeService as IGroupRealtimeService,
-  type IIdempotencyStore as IGroupIdempotencyStore,
 } from "../../messaging/src/domain/events/index.js";
+
+import { PostgresIdempotencyStore } from "../../../shared/patterns/idempotency/PostgresIdempotencyStore.js";
+import { SupabaseRealtimeService } from "../../../shared/patterns/realtime/SupabaseRealtimeService.js";
+
+const DIRTY_FLAG_MESSAGE =
+  "CRITICAL: Database configuration missing. " +
+  "This service REQUIRES a PostgreSQL database. " +
+  "Set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD environment variables. " +
+  "In-memory repositories are ONLY available in NODE_ENV=test.";
 
 function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message });
 }
 
-interface Repositories {
-  studyRequest: IStudyRequestRepository;
-  studyGroup: IStudyGroupRepository;
-}
-
-const ALL_CHANNEL_NAMES: readonly string[] = [
-  "in_app_websocket",
-  "email_institucional",
-  "push_movil",
-];
-
-function createRepository(
-  env: ReturnType<typeof loadStudyGroupsEnv>,
-  pool: Pool | null,
-): Repositories {
-  if (pool) {
-    const repo = new PostgresStudyRequestRepository(pool);
-    return { studyRequest: repo, studyGroup: repo };
-  }
-
-  console.log(
-    JSON.stringify({
-      service: "study-groups",
-      level: "warn",
-      message: "Database config missing or placeholder detected; using in-memory repository",
-    }),
-  );
-
-  const inMemoryRepo = new InMemoryStudyRequestRepository();
-  return { studyRequest: inMemoryRepo, studyGroup: inMemoryRepo };
-}
-
-function createApplicationRepository(
-  env: ReturnType<typeof loadStudyGroupsEnv>,
-  pool: Pool | null,
-): IApplicationRepository {
-  if (pool) {
-    return new PostgresApplicationRepository(pool);
-  }
-  return new InMemoryApplicationRepository();
-}
-
-function createMemberRepository(
-  env: ReturnType<typeof loadStudyGroupsEnv>,
-  pool: Pool | null,
-): IMemberRepository {
-  if (pool) {
-    return new PostgresMemberRepository(pool);
-  }
-  return new InMemoryMemberRepository();
-}
-
-function createAdminTransferRepository(
-  env: ReturnType<typeof loadStudyGroupsEnv>,
-  pool: Pool | null,
-): IAdminTransferRepository {
-  if (pool) {
-    return new PostgresAdminTransferRepository(pool);
-  }
-  return new InMemoryAdminTransferRepository();
-}
-
-function createStudyGroupMessageRepository(
-  env: ReturnType<typeof loadStudyGroupsEnv>,
-  pool: Pool | null,
-): IStudyGroupMessageRepository {
-  if (pool) {
-    return new PostgresStudyGroupMessageRepository(pool);
-  }
-  return new InMemoryStudyGroupMessageRepository();
-}
-
-function createNotificationRepository(
-  env: ReturnType<typeof loadStudyGroupsEnv>,
-  pool: Pool | null,
-): INotificationRepository {
-  if (pool) {
-    return new PostgresNotificationRepository(pool);
-  }
-  return new InMemoryNotificationRepository();
-}
-
 function bootstrap(): void {
   const env = loadStudyGroupsEnv();
 
-  const hasDatabaseConfig =
-    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-  const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
+  const pool = Database.getInstance(env).getPool();
 
-  const { studyRequest: repository, studyGroup: studyGroupRepository } = createRepository(env, pool);
-  const applicationRepository = createApplicationRepository(env, pool);
-  const memberRepository = createMemberRepository(env, pool);
-  const adminTransferRepository = createAdminTransferRepository(env, pool);
-  const messageRepository = createStudyGroupMessageRepository(env, pool);
-  const notificationRepository = createNotificationRepository(env, pool);
-  const preferenceRepository = pool
-    ? new PostgresPreferenceRepository(pool)
-    : null;
+  const studyRequestRepository = new PostgresStudyRequestRepository(pool);
+  const applicationRepository = new PostgresApplicationRepository(pool);
+  const memberRepository = new PostgresMemberRepository(pool);
+  const adminTransferRepository = new PostgresAdminTransferRepository(pool);
+  const messageRepository = new PostgresStudyGroupMessageRepository(pool);
+  const notificationRepository = new PostgresNotificationRepository(pool);
+  const preferenceRepository = new PostgresPreferenceRepository(pool);
 
-  const preferenceService = new PreferenceService(
-    preferenceRepository ?? {
-      async getCanalesActivos(_userId: string, _eventType: string): Promise<string[] | null> {
-        return null;
-      },
-      async setCanalActivo(_userId: string, _eventType: string, _canal: string, _activo: boolean): Promise<void> {},
-    },
-  );
+  const preferenceService = new PreferenceService(preferenceRepository);
 
   const realtimeGateway = (env.supabaseUrl && env.supabaseServiceRoleKey)
     ? new SupabaseRealtimeGateway(env.supabaseUrl, env.supabaseServiceRoleKey)
@@ -189,18 +90,16 @@ function bootstrap(): void {
     ? new SupabasePushGateway(`${supabaseUrl}/functions/v1/notifications`, env.supabaseServiceRoleKey)
     : null;
 
-  const userRepository = pool
-    ? new PostgresUserRepository(pool)
-    : null;
+  const userRepository = new PostgresUserRepository(pool);
 
   const strategies = [
     realtimeGateway
       ? new InAppWebSocketStrategy(realtimeGateway)
       : null,
-    emailGateway && userRepository
+    emailGateway
       ? new EmailInstitucionalStrategy(emailGateway, userRepository)
       : null,
-    pushGateway && userRepository
+    pushGateway
       ? new PushMovilStrategy(pushGateway, userRepository)
       : null,
   ].filter((s): s is NonNullable<typeof s> => s !== null);
@@ -221,7 +120,6 @@ function bootstrap(): void {
 
   const groupUserRepository: IStrategyUserRepository = {
     async getContactInfo(userId: string) {
-      if (!pool) return {};
       try {
         const result = await pool.query(
           `SELECT email, push_token FROM profiles WHERE id = $1`,
@@ -245,32 +143,27 @@ function bootstrap(): void {
 
   const groupPermissionRepo = new GroupPermissionRepository(pool);
 
-  const mockRealtimeService: IGroupRealtimeService = {
-    async broadcast(channel, message) {
-      console.log(
-        JSON.stringify({
-          service: "study-groups",
-          level: "info",
-          message: "WebSocket broadcast",
-          channel,
-          eventType: message.type,
-        }),
-      );
-    },
-  };
-  const realtimeObserver = new GroupRealtimeObserver(mockRealtimeService);
-  const mockIdempotencyStore: IGroupIdempotencyStore = {
-    async markProcessed(_messageId) {
-      return true;
-    },
-    async cleanup(_olderThanSeconds) {
-      return;
-    },
-  };
-  const idempotencyObserver = new GroupIdempotencyObserver(mockIdempotencyStore);
-  const listOpenStudyRequests = new ListOpenStudyRequests(repository);
-  const getStudyRequestById = new GetStudyRequestById(repository);
-  const createStudyRequest = new CreateStudyRequest(repository);
+  const realtimeService: IGroupRealtimeService = realtimeGateway
+    ? new SupabaseRealtimeService(env.supabaseUrl!, env.supabaseServiceRoleKey!)
+    : {
+        async broadcast(_channel, _message) {
+          console.warn(
+            JSON.stringify({
+              service: "study-groups",
+              level: "warn",
+              message: "Supabase credentials missing; real-time broadcast not available",
+            }),
+          );
+        },
+      };
+  const realtimeObserver = new GroupRealtimeObserver(realtimeService);
+
+  const idempotencyStore = new PostgresIdempotencyStore(pool);
+  const idempotencyObserver = new GroupIdempotencyObserver(idempotencyStore);
+
+  const listOpenStudyRequests = new ListOpenStudyRequests(studyRequestRepository);
+  const getStudyRequestById = new GetStudyRequestById(studyRequestRepository);
+  const createStudyRequest = new CreateStudyRequest(studyRequestRepository);
   const listMembersByRequest = new ListMembersByRequest(memberRepository);
   const listApplicationsByRequest = new ListApplicationsByRequest(applicationRepository);
   const listStudyGroupMessages = new ListStudyGroupMessages(messageRepository);
@@ -286,26 +179,26 @@ function bootstrap(): void {
   const listUserNotifications = new ListUserNotifications(notificationRepository);
   const applyToStudyRequest = new ApplyToStudyRequest(
     applicationRepository,
-    repository,
-    studyGroupRepository,
+    studyRequestRepository,
+    studyRequestRepository,
     subject,
     membershipService,
   );
   const reviewApplication = new ReviewApplication(
     applicationRepository,
-    studyGroupRepository,
+    studyRequestRepository,
     memberRepository,
     subject,
     membershipService,
   );
   const requestAdminTransfer = new RequestAdminTransfer(
     adminTransferRepository,
-    studyGroupRepository,
+    studyRequestRepository,
     subject,
   );
-  const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
-  const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
-  const leaveAdminRole = new LeaveAdminRole(studyGroupRepository, subject);
+  const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyRequestRepository, subject);
+  const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyRequestRepository, subject);
+  const leaveAdminRole = new LeaveAdminRole(studyRequestRepository, subject);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -378,9 +271,7 @@ function bootstrap(): void {
         realtimeGateway.dispose();
       }
 
-      if (hasDatabaseConfig) {
-        await Database.getInstance().close();
-      }
+      await Database.getInstance().close();
 
       console.log("[Shutdown] Limpieza de recursos completada con exito.");
       process.exit(0);
@@ -394,4 +285,16 @@ function bootstrap(): void {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
-bootstrap();
+try {
+  bootstrap();
+} catch (error) {
+  console.error(
+    JSON.stringify({
+      service: "study-groups",
+      level: "fatal",
+      message: DIRTY_FLAG_MESSAGE,
+      error: error instanceof Error ? error.message : String(error),
+    }),
+  );
+  process.exit(1);
+}

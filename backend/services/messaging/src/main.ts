@@ -13,7 +13,6 @@ import { TouchConversation } from "./application/use-cases/TouchConversation.js"
 import { ChatSubject, RealtimeObserver, IdempotencyObserver, ChatNotificationObserver, type IRealtimeService, type IIdempotencyStore } from "./domain/events/index.js";
 import { loadMessagingEnv } from "./config/env.js";
 import type { IMessagingRepository } from "./domain/repositories/IMessagingRepository.js";
-import { InMemoryMessagingRepository } from "./infrastructure/database/InMemoryMessagingRepository.js";
 import { PostgresMessagingRepository } from "./infrastructure/database/PostgresMessagingRepository.js";
 import { Database } from "./infrastructure/database/Database.js";
 import type { Pool } from "pg";
@@ -24,64 +23,28 @@ import { InAppWebSocketStrategy } from "../../../shared/patterns/strategy/InAppW
 import type { IPreferenceService } from "../../../shared/patterns/strategy/IPreferenceService.js";
 import type { IUserRepository, ContactInfo } from "../../../shared/patterns/strategy/IUserRepository.js";
 import { SupabaseRealtimeGateway } from "./infrastructure/realtime/SupabaseRealtimeGateway.js";
+import { PostgresIdempotencyStore } from "../../../shared/patterns/idempotency/PostgresIdempotencyStore.js";
+import { SupabaseRealtimeService } from "../../../shared/patterns/realtime/SupabaseRealtimeService.js";
+
+const DIRTY_FLAG_MESSAGE =
+  "CRITICAL: Database configuration missing. " +
+  "This service REQUIRES a PostgreSQL database. " +
+  "Set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD environment variables. " +
+  "In-memory repositories are ONLY available in NODE_ENV=test.";
 
 function sendJsonError(statusCode: number, message: string): string {
 	return JSON.stringify({ error: message, statusCode });
 }
 
-function createRepository(
-  env: ReturnType<typeof loadMessagingEnv>,
-  pool: Pool | null,
-): IMessagingRepository {
-  if (pool) {
-    return new PostgresMessagingRepository(pool);
-  }
-
-	console.log(
-		JSON.stringify({
-			service: "messaging",
-			level: "warn",
-			message: "Database config missing or placeholder detected; using in-memory repository",
-		}),
-	);
-
-	return new InMemoryMessagingRepository();
-}
-
 function bootstrap(): void {
   const env = loadMessagingEnv();
 
-  const hasDatabaseConfig =
-    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-  const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
+  const pool: Pool = Database.getInstance(env).getPool();
 
-  const repository = createRepository(env, pool);
+  const repository: IMessagingRepository = new PostgresMessagingRepository(pool);
 
-	// ✅ Crear ChatSubject para eventos en tiempo real
 	const chatSubject = new ChatSubject("messaging-domain");
 
-	// ✅ Registrar observers de chat (tiempo real)
-	const realtimeObserver = new RealtimeObserver({
-		async broadcast(channel, message) {
-			console.log(
-				JSON.stringify({
-					service: "messaging",
-					level: "info",
-					message: "WebSocket broadcast",
-					channel,
-					eventType: message.type,
-				}),
-			);
-		},
-	});
-
-	// ✅ Idempotency store (evita duplicados)
-	const idempotencyObserver = new IdempotencyObserver({
-		async markProcessed(_messageId) { return true; },
-		async cleanup(_olderThanSeconds) {},
-	});
-
-	// ✅ Gateway de notificaciones vía Supabase Realtime
 	const realtimeGateway = (env.supabaseUrl && env.supabaseServiceRoleKey)
 		? new SupabaseRealtimeGateway(env.supabaseUrl, env.supabaseServiceRoleKey)
 		: null;
@@ -96,10 +59,26 @@ function bootstrap(): void {
 		);
 	}
 
-	// ✅ IUserRepository — resuelve contacto del destinatario antes de emitir
+	const realtimeService: IRealtimeService = realtimeGateway
+		? new SupabaseRealtimeService(env.supabaseUrl!, env.supabaseServiceRoleKey!)
+		: {
+				async broadcast(_channel, _message) {
+					console.warn(
+						JSON.stringify({
+							service: "messaging",
+							level: "warn",
+							message: "Supabase credentials missing; real-time broadcast not available",
+						}),
+					);
+				},
+			};
+	const realtimeObserver = new RealtimeObserver(realtimeService);
+
+	const idempotencyStore: IIdempotencyStore = new PostgresIdempotencyStore(pool);
+	const idempotencyObserver = new IdempotencyObserver(idempotencyStore);
+
 	const userRepository: IUserRepository = {
 		async getContactInfo(userId: string): Promise<ContactInfo> {
-			if (!pool) return {};
 			try {
 				const result = await pool.query(
 					`SELECT email, push_token FROM profiles WHERE id = $1`,
@@ -116,7 +95,6 @@ function bootstrap(): void {
 		},
 	};
 
-	// ✅ Estrategias de notificación
 	const strategies = realtimeGateway
 		? [new InAppWebSocketStrategy(realtimeGateway)]
 		: [];
@@ -129,7 +107,6 @@ function bootstrap(): void {
 
 	const notificationService = new NotificationService(strategies, preferenceService);
 
-	// ✅ ChatNotificationObserver — cierra el circuito: CH01 → ChatSubject → NotificationObserver
 	const chatNotificationObserver = new ChatNotificationObserver(notificationService, userRepository);
 
 	const getConversations = new GetConversations(repository);
@@ -188,7 +165,6 @@ function bootstrap(): void {
 		);
 	});
 
-	// --- Graceful Shutdown ---
 	const shutdown = async (signal: string) => {
 		console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio messaging...`);
 
@@ -203,9 +179,7 @@ function bootstrap(): void {
 				realtimeGateway.dispose();
 			}
 
-			if (hasDatabaseConfig) {
-				await Database.getInstance().close();
-			}
+			await Database.getInstance().close();
 
 			console.log("[Shutdown] Limpieza de recursos completada con éxito.");
 			process.exit(0);
@@ -219,4 +193,16 @@ function bootstrap(): void {
 	process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
-bootstrap();
+try {
+	bootstrap();
+} catch (error) {
+	console.error(
+		JSON.stringify({
+			service: "messaging",
+			level: "fatal",
+			message: DIRTY_FLAG_MESSAGE,
+			error: error instanceof Error ? error.message : String(error),
+		}),
+	);
+	process.exit(1);
+}

@@ -6,8 +6,6 @@ import { GetStudyResourceById } from "./application/use-cases/GetStudyResourceBy
 import { ListStudyResources } from "./application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "./application/use-cases/UpdateStudyResource.js";
 import { loadResourcesEnv } from "./config/env.ts";
-import type { IStudyResourceRepository } from "./domain/repositories/IStudyResourceRepository.js";
-import { InMemoryStudyResourceRepository } from "./infrastructure/database/InMemoryStudyResourceRepository.js";
 import { PostgresStudyResourceRepository } from "./infrastructure/database/PostgresStudyResourceRepository.js";
 import { PostgresPermissionValidator } from "./infrastructure/database/PostgresPermissionValidator.js";
 import { OpenGraphService } from "./infrastructure/og/OpenGraphService.js";
@@ -17,40 +15,23 @@ import type { Pool } from "pg";
 import { ResourcesController } from "./interfaces/http/controllers/ResourcesController.js";
 import { handleResourcesRoutes } from "./interfaces/http/routes/resourcesRoutes.js";
 
+const DIRTY_FLAG_MESSAGE =
+  "CRITICAL: Database configuration missing. " +
+  "This service REQUIRES a PostgreSQL database. " +
+  "Set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD environment variables. " +
+  "In-memory repositories are ONLY available in NODE_ENV=test.";
+
 function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message, statusCode });
-}
-
-function createRepository(
-  env: ReturnType<typeof loadResourcesEnv>,
-  pool: Pool | null,
-): IStudyResourceRepository {
-  if (pool) {
-    return new PostgresStudyResourceRepository(pool);
-  }
-
-  console.log(
-    JSON.stringify({
-      service: "resources",
-      level: "warn",
-      message: "Database config missing or placeholder detected; using in-memory repository",
-    }),
-  );
-
-  return new InMemoryStudyResourceRepository();
 }
 
 function bootstrap(): void {
   const env = loadResourcesEnv();
 
-  const hasDatabaseConfig =
-    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-  const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
+  const pool: Pool = Database.getInstance(env).getPool();
 
-  const repository = createRepository(env, pool);
-  const permissionValidator = pool
-    ? new PostgresPermissionValidator(pool)
-    : { canEditResource: async () => false };
+  const repository = new PostgresStudyResourceRepository(pool);
+  const permissionValidator = new PostgresPermissionValidator(pool);
   const openGraphService = new OpenGraphService();
 
   const listStudyResources = new ListStudyResources(repository);
@@ -94,7 +75,6 @@ function bootstrap(): void {
     );
   });
 
-  // --- Graceful Shutdown ---
   const shutdown = async (signal: string) => {
     console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio resources...`);
 
@@ -103,10 +83,7 @@ function bootstrap(): void {
     });
 
     try {
-      if (hasDatabaseConfig) {
-        await Database.getInstance().close();
-      }
-
+      await Database.getInstance().close();
       console.log("[Shutdown] Limpieza de recursos completada con éxito.");
       process.exit(0);
     } catch (error) {
@@ -119,4 +96,16 @@ function bootstrap(): void {
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
-bootstrap();
+try {
+  bootstrap();
+} catch (error) {
+  console.error(
+    JSON.stringify({
+      service: "resources",
+      level: "fatal",
+      message: DIRTY_FLAG_MESSAGE,
+      error: error instanceof Error ? error.message : String(error),
+    }),
+  );
+  process.exit(1);
+}
