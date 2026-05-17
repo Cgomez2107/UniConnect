@@ -261,6 +261,8 @@ export interface Event {
   description: string;
   eventDate: Date;
   location?: string;
+  category?: string;
+  imageUrl?: string;
   creatorId: string;
   creator?: User;
   capacity?: number;

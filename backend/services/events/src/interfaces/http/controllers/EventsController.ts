@@ -63,23 +63,20 @@ export class EventsController {
       return;
     }
 
-    if (!isAdminUser(req)) {
-      sendError(res, 403, "Only admins can create events");
-      return;
-    }
-
     try {
       const body = await readJsonBody<any>(req);
+
+      const eventDate = body.event_date || body.eventDate || body.startAt || "";
 
       const result = await this.createEvent.execute({
         actorUserId,
         title: body.title ?? "",
         description: body.description ?? "",
         location: body.location ?? "",
-        startAt: body.startAt ?? "",
-        endAt: body.endAt ?? "",
-        category: body.category,
-        imageUrl: body.imageUrl,
+        startAt: eventDate,
+        endAt: body.end_at || body.endAt || "",
+        category: body.category || "academico",
+        imageUrl: body.imageUrl || body.image_url || "",
         maxCapacity: body.maxCapacity,
       });
 

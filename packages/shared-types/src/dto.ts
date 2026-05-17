@@ -229,6 +229,8 @@ export interface EventDTO {
   description: string;
   event_date: string;
   location?: string;
+  category?: string;
+  image_url?: string;
   creator_id: string;
   creator?: UserDTO;
   capacity?: number;

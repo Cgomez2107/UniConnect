@@ -28,3 +28,5 @@ export { default as useThemeColor } from "./useThemeColor";
 export { default as useNotifications } from "./useNotifications";
 export { default as useAsync } from "./useAsync";
 export { usePostulationForm } from "./usePostulationForm";
+export { useEventSubscription } from "./useEventSubscription";
+export { useNewEventObserver } from "./useNewEventObserver";

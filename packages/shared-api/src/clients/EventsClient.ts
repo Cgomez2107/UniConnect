@@ -14,6 +14,7 @@ export interface CreateEventPayload {
   description?: string;
   eventDate: string;
   location?: string;
+  category?: string;
   isOnline?: boolean;
   eventUrl?: string;
   capacity?: number;
@@ -59,6 +60,7 @@ export class EventsClient extends BaseClient {
         description: payload.description,
         event_date: payload.eventDate,
         location: payload.location,
+        category: payload.category,
         is_online: payload.isOnline,
         event_url: payload.eventUrl,
         capacity: payload.capacity,
@@ -77,6 +79,7 @@ export class EventsClient extends BaseClient {
         ...(payload.description !== undefined && { description: payload.description }),
         ...(payload.eventDate !== undefined && { event_date: payload.eventDate }),
         ...(payload.location !== undefined && { location: payload.location }),
+        ...(payload.category !== undefined && { category: payload.category }),
         ...(payload.isOnline !== undefined && { is_online: payload.isOnline }),
         ...(payload.eventUrl !== undefined && { event_url: payload.eventUrl }),
         ...(payload.capacity !== undefined && { capacity: payload.capacity }),

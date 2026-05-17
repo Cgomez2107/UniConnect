@@ -25,15 +25,11 @@ export class CreateEvent {
   async execute(input: CreateEventInput): Promise<Event> {
     const title = input.title.trim();
     const description = input.description.trim();
-    const location = input.location.trim();
-
     if (!title) {
       throw new Error("Title is required");
     }
 
-    if (!location) {
-      throw new Error("Location is required");
-    }
+    const location = (input.location || "").trim();
 
     const startDate = new Date(input.startAt);
     if (isNaN(startDate.getTime())) {

@@ -96,7 +96,25 @@ src/
 |------|-------------|---|
 | `/login` | Formulario de login | ❌ |
 | `/admin` | Panel de administración | ✅ Admin |
-| `/chat/:id` | Chat con conversación | ✅ |
+| `/eventos` | Explorar eventos del campus | ✅ |
+| `/eventos/:id` | Detalle de evento | ✅ |
+| `/crear-evento` | Crear nuevo evento | ✅ |
+| `/solicitudes` | Solicitudes de grupo de estudio | ✅ |
+| `/solicitud/:id` | Detalle de solicitud | ✅ |
+| `/nueva-solicitud` | Nueva solicitud de grupo | ✅ |
+| `/postular/:id` | Postularse a un grupo | ✅ |
+| `/grupo/:id` | Dashboard del grupo (chat + miembros) | ✅ |
+| `/recursos` | Recursos académicos | ✅ |
+| `/recursos/:id` | Detalle de recurso | ✅ |
+| `/subir-recurso` | Subir recurso académico | ✅ |
+| `/perfil` | Perfil de usuario | ✅ |
+| `/edit-profile` | Editar perfil | ✅ |
+| `/mensajes` | Lista de conversaciones | ✅ |
+| `/chat/:conversationId` | Chat privado | ✅ |
+| `/directorio` / `/companions` | Directorio de estudiantes | ✅ |
+| `/perfil-estudiante/:id` | Perfil de otro estudiante | ✅ |
+| `/notificaciones` | Centro de notificaciones | ✅ |
+| `/invitaciones` | Invitaciones pendientes | ✅ |
 
 ## Comandos npm
 
@@ -114,7 +132,17 @@ src/
 ✅ Sesión persistente con localStorage
 ✅ Rutas protegidas basadas en rol
 ✅ Panel Admin con lista de grupos
-✅ Interfaz de chat en tiempo real
+✅ Interfaz de chat en tiempo real (WebSocket + Supabase Realtime)
+✅ Eventos del campus agrupados por categoría
+✅ Filtro por categoría con un clic
+✅ Suscripción a categorías de eventos con notificaciones en tiempo real (Observer)
+✅ Creación de eventos
+✅ Detalle de evento
+✅ Recursos académicos (subir, listar, descargar)
+✅ Perfil de usuario y edición
+✅ Directorio de estudiantes
+✅ Mensajería privada
+✅ Notificaciones push toast
 ✅ Diseño responsive con Tailwind CSS
 ✅ Colores institucionales (UC Blue & Gold)
 ✅ API client con axios + interceptors

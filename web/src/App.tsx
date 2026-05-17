@@ -22,6 +22,8 @@ import { GroupDashboardPage } from "./pages/GroupAdminPage";
 import { NuevaSolicitudPage } from "./pages/NuevaSolicitudPage";
 import { PostularPage } from "./pages/PostularPage";
 import { EventosPage } from "./pages/EventosPage";
+import { EventoDetallePage } from "./pages/EventoDetallePage";
+import { CrearEventoPage } from "./pages/CrearEventoPage";
 import { RecursosPage } from "./pages/RecursosPage";
 import { RecursoDetallePage } from "./pages/RecursoDetallePage";
 import { PerfilPage } from "./pages/PerfilPage";
@@ -135,6 +137,8 @@ function App() {
           <Route path="/grupo/:id/admin" element={<GroupAdminRedirect />} />
           <Route path="/grupo/:id/chat" element={<GroupChatRedirect />} />
           <Route path="/eventos" element={<EventosPage />} />
+          <Route path="/eventos/:id" element={<EventoDetallePage />} />
+          <Route path="/crear-evento" element={<CrearEventoPage />} />
           <Route path="/recursos" element={<RecursosPage />} />
           <Route path="/recursos/:id" element={<RecursoDetallePage />} />
           <Route path="/subir-recurso" element={<SubirRecursoPage />} />
