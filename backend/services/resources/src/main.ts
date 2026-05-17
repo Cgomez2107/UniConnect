@@ -6,94 +6,40 @@ import { GetStudyResourceById } from "./application/use-cases/GetStudyResourceBy
 import { ListStudyResources } from "./application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "./application/use-cases/UpdateStudyResource.js";
 import { loadResourcesEnv } from "./config/env.ts";
-import type { IStudyResourceRepository } from "./domain/repositories/IStudyResourceRepository.js";
-import { InMemoryStudyResourceRepository } from "./infrastructure/database/InMemoryStudyResourceRepository.js";
 import { PostgresStudyResourceRepository } from "./infrastructure/database/PostgresStudyResourceRepository.js";
+import { PostgresPermissionValidator } from "./infrastructure/database/PostgresPermissionValidator.js";
+import { OpenGraphService } from "./infrastructure/og/OpenGraphService.js";
 import { Database } from "./infrastructure/database/Database.js";
 import { SupabaseStorageCleaner } from "./infrastructure/storage/SupabaseStorageCleaner.js";
 import type { Pool } from "pg";
 import { ResourcesController } from "./interfaces/http/controllers/ResourcesController.js";
 import { handleResourcesRoutes } from "./interfaces/http/routes/resourcesRoutes.js";
 
+const DIRTY_FLAG_MESSAGE =
+  "CRITICAL: Database configuration missing. " +
+  "This service REQUIRES a PostgreSQL database. " +
+  "Set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD environment variables. " +
+  "In-memory repositories are ONLY available in NODE_ENV=test.";
+
 function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message, statusCode });
 }
 
-function createRepository(
-  env: ReturnType<typeof loadResourcesEnv>,
-  pool: Pool | null,
-): IStudyResourceRepository {
-  if (pool) {
-    return new PostgresStudyResourceRepository(pool);
-  }
-
-  console.log(
-    JSON.stringify({
-      service: "resources",
-      level: "warn",
-      message: "Database config missing or placeholder detected; using in-memory repository",
-    }),
-  );
-
-  return new InMemoryStudyResourceRepository();
-}
-
-function validateResourcesEnv(): void {
-  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT_ACCESS_SECRET } = process.env;
-
-  const missing: string[] = [];
-  if (!SUPABASE_URL?.trim()) missing.push("SUPABASE_URL");
-  if (!SUPABASE_SERVICE_ROLE_KEY?.trim()) missing.push("SUPABASE_SERVICE_ROLE_KEY");
-  if (!JWT_ACCESS_SECRET?.trim()) missing.push("JWT_ACCESS_SECRET");
-
-  if (missing.length > 0) {
-    console.error(
-      JSON.stringify({
-        service: "resources",
-        level: "fatal",
-        message:
-          "Variables de entorno faltantes requeridas para el servicio de almacenamiento: " +
-          missing.join(", ") +
-          ". Revisa backend/services/resources/.env o la configuración compartida.",
-        missing,
-      }),
-    );
-    process.exit(1);
-  }
-
-  const url = SUPABASE_URL!.trim();
-  try {
-    const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol)) {
-      throw new Error("Protocolo inválido");
-    }
-  } catch {
-    console.error(
-      JSON.stringify({
-        service: "resources",
-        level: "fatal",
-        message: `SUPABASE_URL no es una URL válida: "${url}". Debe ser una URL https:// de Supabase.`,
-      }),
-    );
-    process.exit(1);
-  }
-}
-
 function bootstrap(): void {
   const env = loadResourcesEnv();
-  validateResourcesEnv();
 
-  const hasDatabaseConfig =
-    !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;
-  const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
+  const pool: Pool = Database.getInstance(env).getPool();
 
-  const repository = createRepository(env, pool);
+  const repository = new PostgresStudyResourceRepository(pool);
+  const permissionValidator = new PostgresPermissionValidator(pool);
+  const openGraphService = new OpenGraphService();
+
   const listStudyResources = new ListStudyResources(repository);
   const getStudyResourceById = new GetStudyResourceById(repository);
-  const createStudyResource = new CreateStudyResource(repository);
-  const updateStudyResource = new UpdateStudyResource(repository);
+  const createStudyResource = new CreateStudyResource(repository, openGraphService);
+  const updateStudyResource = new UpdateStudyResource(repository, permissionValidator);
   const storageCleaner = new SupabaseStorageCleaner(env);
-  const deleteStudyResource = new DeleteStudyResource(repository, storageCleaner);
+  const deleteStudyResource = new DeleteStudyResource(repository, permissionValidator, storageCleaner);
 
   const controller = new ResourcesController(
     listStudyResources,
@@ -129,7 +75,6 @@ function bootstrap(): void {
     );
   });
 
-  // --- Graceful Shutdown ---
   const shutdown = async (signal: string) => {
     console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio resources...`);
 
@@ -138,10 +83,7 @@ function bootstrap(): void {
     });
 
     try {
-      if (hasDatabaseConfig) {
-        await Database.getInstance().close();
-      }
-
+      await Database.getInstance().close();
       console.log("[Shutdown] Limpieza de recursos completada con éxito.");
       process.exit(0);
     } catch (error) {
@@ -154,4 +96,16 @@ function bootstrap(): void {
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
-bootstrap();
+try {
+  bootstrap();
+} catch (error) {
+  console.error(
+    JSON.stringify({
+      service: "resources",
+      level: "fatal",
+      message: DIRTY_FLAG_MESSAGE,
+      error: error instanceof Error ? error.message : String(error),
+    }),
+  );
+  process.exit(1);
+}

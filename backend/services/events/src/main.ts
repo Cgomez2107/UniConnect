@@ -137,4 +137,21 @@ function bootstrap(): void {
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
-bootstrap();
+const DIRTY_FLAG_MESSAGE =
+  "CRITICAL: Database connection failed. " +
+  "This service REQUIRES a PostgreSQL database. " +
+  "Set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD environment variables.";
+
+try {
+  bootstrap();
+} catch (error) {
+  console.error(
+    JSON.stringify({
+      service: "events",
+      level: "fatal",
+      message: DIRTY_FLAG_MESSAGE,
+      error: error instanceof Error ? error.message : String(error),
+    }),
+  );
+  process.exit(1);
+}
