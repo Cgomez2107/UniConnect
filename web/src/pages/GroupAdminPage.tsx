@@ -199,7 +199,7 @@ export function GroupDashboardPage() {
   }, [pendingTransferId, id, navigate]);
 
   // --- Realtime chat subscription ---
-  useChatObserver(id, (newMsg) => {
+  useChatObserver(id ?? null, (newMsg) => {
     setMessages((prev) => {
       if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
       return [...prev, newMsg];
@@ -297,14 +297,14 @@ export function GroupDashboardPage() {
   const isAdminRef = useRef(isAdmin);
   isAdminRef.current = isAdmin;
 
-  useGroupEventsObserver(id, {
+  useGroupEventsObserver(id ?? null, {
     onNewApplication: (app) => {
       if (!isAdminRef.current) return;
       const name = app.user?.fullName || app.user?.full_name || "Alguien";
       addNotification({
         id: `toast-${Date.now()}`,
         userId: user?.id || "system",
-        type: "application_update",
+        type: "studyGroupApplication",
         title: `Nueva solicitud de ${name}`,
         description: "",
         read: false,
@@ -319,7 +319,7 @@ export function GroupDashboardPage() {
       addNotification({
         id: `toast-${Date.now() + 1}`,
         userId: user?.id || "system",
-        type: "application_update",
+        type: "studyGroupApplication",
         title: `${name} fue aceptado/a`,
         description: "",
         read: false,
@@ -340,7 +340,7 @@ export function GroupDashboardPage() {
       addNotification({
         id: `toast-${Date.now() + 2}`,
         userId: user?.id || "system",
-        type: "application_update",
+        type: "studyGroupApplication",
         title: `${name} fue rechazado/a`,
         description: "",
         read: false,
@@ -592,7 +592,7 @@ export function GroupDashboardPage() {
         }
         return prev.map((m: any) =>
           m.id === tempId
-            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, media_url: m.media_url || msg.media_url }
+            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, mediaUrl: m.mediaUrl || m.media_url || (msg as any).mediaUrl || (msg as any).media_url }
             : m
         );
       });
@@ -664,7 +664,7 @@ export function GroupDashboardPage() {
         }
         return prev.map((m: any) =>
           m.id === tempId
-            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, media_url: m.media_url || msg.media_url }
+            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, mediaUrl: m.mediaUrl || m.media_url || (msg as any).mediaUrl || (msg as any).media_url }
             : m
         );
       });
@@ -709,7 +709,7 @@ export function GroupDashboardPage() {
         }
         return prev.map((m: any) =>
           m.id === tempId
-            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, media_url: m.media_url || msg.media_url }
+            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, mediaUrl: m.mediaUrl || m.media_url || (msg as any).mediaUrl || (msg as any).media_url }
             : m
         );
       });
@@ -855,7 +855,14 @@ export function GroupDashboardPage() {
                       previousSenderSame={index > 0 && enhancedMessages[index - 1].senderId === msg.senderId}
                       onRetry={handleRetry}
                       onReply={(m) => setReplyingTo(m)}
-                      onToggleReaction={(messageId, emoji) => studyGroupsService.toggleReaction(id!, messageId, emoji)}
+                      onToggleReaction={async (messageId, emoji) => {
+                        const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === messageId ? { ...m, reactions: result.reactions } : m
+                          )
+                        );
+                      }}
                     />
                   </div>
                 </div>

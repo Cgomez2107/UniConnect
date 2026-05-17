@@ -324,6 +324,15 @@ export function MensajesPage() {
                   }
                   onReply={(msg) => setReplyingTo(msg)}
                   onRetry={handleRetry}
+                  onToggleReaction={async (messageId, emoji) => {
+                    const result = await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
+                    const data = result.data?.data || result.data;
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === messageId ? { ...m, reactions: data.reactions } : m
+                      )
+                    );
+                  }}
                 />
               ))
             )}

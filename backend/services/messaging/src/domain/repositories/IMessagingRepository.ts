@@ -18,4 +18,5 @@ export interface IMessagingRepository {
   markMessageAsRead(messageId: string, currentUserId: string): Promise<boolean>;
   markConversationAsRead(conversationId: string, currentUserId: string): Promise<number>;
   getUnreadCountForUser(currentUserId: string): Promise<number>;
+  toggleReaction(messageId: string, userId: string, emoji: string): Promise<MessageReaction[]>;
 }

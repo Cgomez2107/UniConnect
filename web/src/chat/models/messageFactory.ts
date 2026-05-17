@@ -1,7 +1,7 @@
 import { BaseMessage } from "./BaseMessage.js";
 import { FileDecorator } from "./FileDecorator.js";
 import { MentionDecorator } from "./MentionDecorator.js";
-import type { IMessage, FileData, MentionData } from "./IMessage.js";
+import type { IMessage, FileData, MentionData, ReactionData } from "./IMessage.js";
 
 interface RawMessageData {
   id: string;

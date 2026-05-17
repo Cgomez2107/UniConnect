@@ -22,6 +22,7 @@ interface Message {
   replyPreview?: string | null;
   mediaUrl?: string | null;
   mediaType?: string | null;
+  reactions?: { emoji: string; userId: string }[];
 }
 
 interface Conversation {
@@ -96,6 +97,7 @@ export const ChatPage: React.FC = () => {
         replyPreview: m.reply_preview || m.replyPreview || null,
         mediaUrl: m.media_url || m.mediaUrl || null,
         mediaType: m.media_type || m.mediaType || null,
+        reactions: m.reactions || [],
       })));
     } catch (error) {
       console.error("Error fetching conversation:", error);
@@ -182,6 +184,7 @@ export const ChatPage: React.FC = () => {
       clientStatus: "sending",
       replyToMessageId: replyingTo?.id || null,
       replyPreview: replyingTo?.content || null,
+      reactions: [],
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -272,6 +275,7 @@ export const ChatPage: React.FC = () => {
         clientStatus: "sent",
         mediaUrl,
         mediaType: file.type,
+        reactions: [],
       }]);
     } catch (err) {
       console.error("Error uploading image:", err);
@@ -384,6 +388,9 @@ export const ChatPage: React.FC = () => {
                 replyPreview: msg.replyPreview || null,
                 mediaUrl: msg.mediaUrl || null,
                 mediaType: msg.mediaType || null,
+                mediaFilename: null,
+                mentions: undefined,
+                reactions: msg.reactions || [],
               }}
               currentUser={userUI}
               previousSenderSame={
@@ -391,6 +398,15 @@ export const ChatPage: React.FC = () => {
               }
               onRetry={handleRetry}
               onReply={(m) => setReplyingTo(m)}
+              onToggleReaction={async (messageId, emoji) => {
+                const result = await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
+                const data = result.data?.data || result.data;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === messageId ? { ...m, reactions: data.reactions } : m
+                  )
+                );
+              }}
             />
           ))
         )}

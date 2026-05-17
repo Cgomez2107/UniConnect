@@ -10,6 +10,7 @@ import { MarkMessageAsRead } from "../../../application/use-cases/MarkMessageAsR
 import { MarkConversationAsRead } from "../../../application/use-cases/MarkConversationAsRead.js";
 import { SendMessage } from "../../../application/use-cases/SendMessage.js";
 import { TouchConversation } from "../../../application/use-cases/TouchConversation.js";
+import { ToggleReaction } from "../../../application/use-cases/ToggleReaction.js";
 import type { ConversationSummary } from "../../../domain/entities/Conversation.js";
 import type { Message } from "../../../domain/entities/Message.js";
 import type { CreateConversationDto } from "../dto/CreateConversationDto.js";
@@ -49,6 +50,7 @@ function toApiMessage(message: Message) {
     media_filename: message.mediaFilename,
     reply_to_message_id: message.replyToMessageId,
     reply_preview: message.replyPreview,
+    reactions: message.reactions,
     created_at: message.createdAt,
     read_at: message.readAt,
     sender: message.sender
@@ -72,6 +74,7 @@ export class MessagingController {
     private readonly sendMessageUseCase: SendMessage,
     private readonly markMessageAsReadUseCase: MarkMessageAsRead,
     private readonly markConversationAsReadUseCase: MarkConversationAsRead,
+    private readonly toggleReactionUseCase: ToggleReaction,
   ) {}
 
   async listConversations(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -270,6 +273,23 @@ export class MessagingController {
 
       const count = await this.markConversationAsReadUseCase.execute(conversationId, actorUserId);
       sendData(res, 200, { count, message: "Conversacion actualizada." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async toggleReaction(req: IncomingMessage, res: ServerResponse, messageId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const body = await readJsonBody<{ emoji: string }>(req);
+      const result = await this.toggleReactionUseCase.execute(messageId, actorUserId, body.emoji);
+      sendData(res, 200, result);
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

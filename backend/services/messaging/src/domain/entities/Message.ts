@@ -1,3 +1,8 @@
+export interface MessageReaction {
+  readonly emoji: string;
+  readonly userId: string;
+}
+
 export interface Message {
   readonly id: string;
   readonly conversationId: string;
@@ -8,6 +13,7 @@ export interface Message {
   readonly mediaFilename: string | null;
   readonly replyToMessageId: string | null;
   readonly replyPreview: string | null;
+  readonly reactions: MessageReaction[];
   readonly createdAt: string;
   readonly readAt: string | null;
   readonly sender: {

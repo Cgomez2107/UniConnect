@@ -21,7 +21,7 @@ export function ClassmateCard({ classmate, onViewProfile, onSendMessage }: Class
   return (
     <div className="card-hover p-4">
       <div className="flex items-center gap-3 mb-3">
-        <Avatar src={classmate.avatarUrl} name={classmate.fullName} size="md" />
+        <Avatar src={classmate.avatarUrl ?? undefined} name={classmate.fullName} size="md" />
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-neutral-900 dark:text-white truncate">
             {classmate.fullName}

@@ -4,7 +4,7 @@ import type {
   ConversationSummary,
   CreateConversationInput,
 } from "../../domain/entities/Conversation.js";
-import type { CreateMessageInput, Message } from "../../domain/entities/Message.js";
+import type { CreateMessageInput, Message, MessageReaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 
 interface StoredConversation {
@@ -141,6 +141,7 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
       mediaFilename: input.mediaFilename ?? null,
       replyToMessageId: input.replyToMessageId ?? null,
       replyPreview: input.replyPreview ?? null,
+      reactions: [],
       createdAt: new Date().toISOString(),
       readAt: null,
       sender: {
@@ -271,5 +272,27 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
       lastMessageAt: latest?.createdAt ?? null,
       unreadCount,
     };
+  }
+
+  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<MessageReaction[]> {
+    const msg = this.messages.get(messageId);
+    if (!msg) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    const currentReactions = msg.reactions ?? [];
+    const existingIndex = currentReactions.findIndex(
+      (r) => r.userId === userId && r.emoji === emoji,
+    );
+
+    let newReactions: MessageReaction[];
+    if (existingIndex >= 0) {
+      newReactions = currentReactions.filter((_, i) => i !== existingIndex);
+    } else {
+      newReactions = [...currentReactions, { emoji, userId }];
+    }
+
+    this.messages.set(messageId, { ...msg, reactions: newReactions });
+    return newReactions;
   }
 }

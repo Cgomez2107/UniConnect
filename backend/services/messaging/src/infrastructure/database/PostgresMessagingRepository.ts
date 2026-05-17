@@ -4,7 +4,7 @@ import type {
   ConversationSummary,
   CreateConversationInput,
 } from "../../domain/entities/Conversation.js";
-import type { CreateMessageInput, Message } from "../../domain/entities/Message.js";
+import type { CreateMessageInput, Message, MessageReaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 
 interface ConversationRow {
@@ -31,6 +31,7 @@ interface MessageRow {
   media_filename: string | null;
   reply_to_message_id: string | null;
   reply_preview: string | null;
+  reactions: any;
   created_at: string | Date;
   read_at: string | Date | null;
   sender_full_name: string | null;
@@ -94,6 +95,13 @@ function mapMessage(row: MessageRow): Message {
   const resolvedMediaUrl = row.media_url ?? legacy.mediaUrl;
   const resolvedContent = row.media_url ? rawContent : legacy.content;
 
+  const rawReactions = row.reactions;
+  const reactions = Array.isArray(rawReactions)
+    ? rawReactions
+    : typeof rawReactions === "string"
+      ? JSON.parse(rawReactions)
+      : [];
+
   return {
     id: row.id,
     conversationId: row.conversation_id,
@@ -104,6 +112,7 @@ function mapMessage(row: MessageRow): Message {
     mediaFilename: row.media_filename,
     replyToMessageId: row.reply_to_message_id,
     replyPreview: row.reply_preview,
+    reactions,
     createdAt: new Date(row.created_at).toISOString(),
     readAt: row.read_at ? new Date(row.read_at).toISOString() : null,
     sender: {
@@ -282,6 +291,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           to_jsonb(m)->>'media_filename' AS media_filename,
           to_jsonb(m)->>'reply_to_message_id' AS reply_to_message_id,
           to_jsonb(m)->>'reply_preview' AS reply_preview,
+          COALESCE(to_jsonb(m)->'reactions', '[]'::jsonb) AS reactions,
           m.created_at,
           m.read_at,
           p.full_name AS sender_full_name,
@@ -332,6 +342,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           to_jsonb(m)->>'media_filename' AS media_filename,
           to_jsonb(m)->>'reply_to_message_id' AS reply_to_message_id,
           to_jsonb(m)->>'reply_preview' AS reply_preview,
+          COALESCE(to_jsonb(m)->'reactions', '[]'::jsonb) AS reactions,
           m.created_at,
           m.read_at,
           p.full_name AS sender_full_name,
@@ -513,5 +524,47 @@ export class PostgresMessagingRepository implements IMessagingRepository {
     );
 
     return parseInt(result.rows[0]?.count ?? "0", 10);
+  }
+
+  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<MessageReaction[]> {
+    const msgResult = await this.pool.query<{ conversation_id: string; reactions: any }>(
+      `
+        SELECT m.conversation_id, COALESCE(to_jsonb(m)->'reactions', '[]'::jsonb) AS reactions
+        FROM messages m
+        WHERE m.id = $1
+        LIMIT 1
+      `,
+      [messageId],
+    );
+
+    if (!msgResult.rows[0]) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    const currentReactions: MessageReaction[] = Array.isArray(msgResult.rows[0].reactions)
+      ? msgResult.rows[0].reactions
+      : [];
+
+    const existingIndex = currentReactions.findIndex(
+      (r) => r.userId === userId && r.emoji === emoji,
+    );
+
+    let newReactions: MessageReaction[];
+    if (existingIndex >= 0) {
+      newReactions = currentReactions.filter((_, i) => i !== existingIndex);
+    } else {
+      newReactions = [...currentReactions, { emoji, userId }];
+    }
+
+    await this.pool.query(
+      `
+        UPDATE messages
+        SET reactions = $1::jsonb
+        WHERE id = $2
+      `,
+      [JSON.stringify(newReactions), messageId],
+    );
+
+    return newReactions;
   }
 }

@@ -64,16 +64,6 @@ export function MessageBubble({
           />
         </div>
       )}
-...
-      {isOwn && (
-        <div className="flex items-end ml-1">
-          <ReactionBar
-            reactions={message.reactions ?? []}
-            currentUserId={currentUser?.id}
-            onToggleReaction={(emoji) => onToggleReaction?.(message.id, emoji)}
-          />
-        </div>
-      )}
 
       <div className="max-w-xs lg:max-w-md">
         {message.replyToMessageId && message.replyPreview && (
@@ -135,7 +125,11 @@ export function MessageBubble({
       {/* For own messages, reaction bar on the right */}
       {isOwn && (
         <div className="flex items-end ml-1">
-          <ReactionBar reactions={message.reactions ?? []} currentUserId={currentUser?.id} />
+          <ReactionBar
+            reactions={message.reactions ?? []}
+            currentUserId={currentUser?.id}
+            onToggleReaction={(emoji) => onToggleReaction?.(message.id, emoji)}
+          />
         </div>
       )}
     </div>

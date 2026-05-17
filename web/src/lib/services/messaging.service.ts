@@ -80,6 +80,10 @@ const messagingService = {
   async markAsRead(conversationId: string): Promise<void> {
     await deps.apiClients.messaging.markConversationAsRead(conversationId);
   },
+
+  async toggleReaction(messageId: string, emoji: string): Promise<{ emoji: string; userId: string }[]> {
+    return deps.apiClients.messaging.toggleReaction(messageId, emoji);
+  },
 };
 
 export default messagingService;

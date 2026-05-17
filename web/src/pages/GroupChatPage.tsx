@@ -170,7 +170,7 @@ export function GroupChatPage() {
   }, [id, user?.id]);
 
   // --- Supabase Realtime como fallback ---
-  useChatObserver(id, (newMsg) => {
+  useChatObserver(id ?? null, (newMsg) => {
     const transformed = {
       ...newMsg,
       mentions: transformMentions(newMsg.mentions),
@@ -436,7 +436,14 @@ export function GroupChatPage() {
                   previousSenderSame={index > 0 && enhancedMessages[index - 1].senderId === msg.senderId}
                   onRetry={handleRetry}
                   onReply={(m) => setReplyingTo(m)}
-                  onToggleReaction={(messageId, emoji) => studyGroupsService.toggleReaction(id!, messageId, emoji)}
+                  onToggleReaction={async (messageId, emoji) => {
+                    const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === messageId ? { ...m, reactions: result.reactions } : m
+                      )
+                    );
+                  }}
                 />
               </div>
             </div>

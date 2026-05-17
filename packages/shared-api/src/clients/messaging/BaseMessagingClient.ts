@@ -148,4 +148,16 @@ export class BaseMessagingClient {
     });
     return response.data.count;
   }
+
+  /**
+   * Toggle a reaction on a message (add if not present, remove if present)
+   */
+  async toggleReaction(messageId: string, emoji: string): Promise<{ emoji: string; userId: string }[]> {
+    const response = await this.transport.request<{ reactions: { emoji: string; userId: string }[] }>({
+      method: "POST",
+      url: `/messages/${messageId}/reactions`,
+      body: { emoji },
+    });
+    return response.data.reactions;
+  }
 }
