@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { 
   View, 
   Text, 
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Platform 
 } from "react-native";
-import { useNotificationStore, type Prioridad } from "@/store/useNotificationStore";
+import { useNotificationStore, type Prioridad, type Accion } from "@/store/useNotificationStore";
 import { supabase } from "@/lib/supabase";
 import { fetchApi } from "@/lib/api/httpClient";
 
@@ -63,6 +63,9 @@ export function GlobalNotificationModals() {
     case "miembro_aceptado":
       return <WelcomeModal data={current} onClose={handleClose} />;
     default:
+      if (current.action) {
+        return <DefaultActionModal data={current} onClose={handleClose} />;
+      }
       console.warn("[GlobalNotificationModals] Tipo desconocido:", current.type);
       return null;
   }
@@ -168,6 +171,66 @@ function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
   );
 }
 
+// 4. Modal Genérico con Acción Decorada (D03)
+function DefaultActionModal({ data, onClose }: { data: any, onClose: () => void }) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [actionResult, setActionResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const handleAction = useCallback(async () => {
+    if (!data.action?.endpoint || isProcessing) return;
+    setIsProcessing(true);
+    setActionResult(null);
+    try {
+      await fetchApi(data.action.endpoint, { method: "POST" });
+      setActionResult({ ok: true, message: "Completado" });
+      setTimeout(() => onClose(), 1500);
+    } catch (error: any) {
+      setActionResult({ ok: false, message: error?.message ?? "Error de conexión" });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [data.action, isProcessing, onClose]);
+
+  return (
+    <Modal transparent visible animationType="fade">
+      <View style={styles.overlay}>
+        <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+          <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
+          <Text style={styles.title}>{data.title ?? "Notificación"}</Text>
+          <Text style={styles.description}>{data.body ?? data.description ?? ""}</Text>
+
+          {actionResult && !actionResult.ok && (
+            <Text style={styles.errorText}>{actionResult.message}</Text>
+          )}
+
+          <View style={styles.buttonContainer}>
+            {actionResult?.ok ? (
+              <TouchableOpacity style={[styles.button, { backgroundColor: '#10B981' }]} onPress={onClose}>
+                <Text style={[styles.acceptText, { color: 'white' }]}>✓ {actionResult.message}</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.button, styles.acceptButton]}
+                onPress={handleAction}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <ActivityIndicator color="#0047AB" />
+                ) : (
+                  <Text style={styles.acceptText}>{data.action?.label ?? "ACCIÓN"}</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onClose} disabled={isProcessing}>
+              <Text style={styles.rejectText}>CERRAR</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "center", alignItems: "center", padding: 20 },
   container: { backgroundColor: "#1A1A1A", borderRadius: 32, padding: 32, width: "100%", maxWidth: 400, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.1)", alignItems: "center" },
@@ -181,4 +244,5 @@ const styles = StyleSheet.create({
   rejectButton: { backgroundColor: "transparent", borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.1)" },
   acceptText: { color: "#0047AB", fontWeight: "900", fontSize: 12, letterSpacing: 1 },
   rejectText: { color: "#A3A3A3", fontWeight: "700", fontSize: 12, letterSpacing: 1 },
+  errorText: { color: "#EF4444", fontSize: 12, textAlign: "center", marginBottom: 8 },
 });

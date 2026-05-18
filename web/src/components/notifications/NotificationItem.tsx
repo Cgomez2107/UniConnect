@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, X, AlertTriangle, AlertCircle } from "lucide-react";
+import { Bell, Check, X, AlertTriangle, AlertCircle, Loader2 } from "lucide-react";
 import type { Prioridad, Accion } from "@/types";
 
 interface NotificacionData {
@@ -60,10 +61,49 @@ function formatDate(date: Date | string): string {
   }
 }
 
+function getToken(): string | null {
+  try {
+    const raw = localStorage.getItem("auth-storage");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.state?.token ?? parsed?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function NotificationItem({ notificacion: n }: Props) {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const priority = n.priority ?? "normal";
   const styles = PRIORITY_STYLES[priority] ?? PRIORITY_STYLES.normal;
+
+  const handleAction = async (endpoint: string) => {
+    if (!endpoint || loading) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const token = getToken();
+      const res = await fetch(`http://localhost:3000/api/v1${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `Error ${res.status}`);
+      }
+      setResult({ ok: true, message: "Hecho" });
+      setTimeout(() => setResult(null), 2000);
+    } catch (err: any) {
+      setResult({ ok: false, message: err.message ?? "Error de conexión" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -96,14 +136,30 @@ export function NotificationItem({ notificacion: n }: Props) {
           {formatDate(n.createdAt)}
         </p>
 
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="flex flex-wrap gap-2 mt-2 items-center">
           {n.action && (
             <button
-              onClick={() => navigate(n.action!.endpoint)}
-              className="text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-800/30 font-medium px-3 py-1 rounded-full transition-colors"
+              onClick={() => handleAction(n.action!.endpoint)}
+              disabled={loading}
+              className={`text-xs font-medium px-3 py-1 rounded-full transition-colors flex items-center gap-1 ${
+                loading
+                  ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed"
+                  : result?.ok
+                  ? "bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300"
+                  : "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-800/30"
+              }`}
             >
-              {n.action.label}
+              {loading ? (
+                <><Loader2 size={12} className="animate-spin" /> Enviando...</>
+              ) : result?.ok ? (
+                <><Check size={12} /> {result.message}</>
+              ) : (
+                n.action.label
+              )}
             </button>
+          )}
+          {result && !result.ok && (
+            <span className="text-xs text-error-600 dark:text-error-400">{result.message}</span>
           )}
           {isTransfer(n.type) && !n.action && (n.data?.groupId ?? n.data?.requestId) && (
             <button
