@@ -50,7 +50,10 @@ export class ProfilesCatalogController {
         : undefined;
 
     try {
-      const parsed = SearchStudentsQuerySchema.parse({ subjectId, search });
+      const parsed = SearchStudentsQuerySchema.parse({ 
+        subjectId, 
+        search: search ?? undefined 
+      });
 
       const result = await this.searchStudentsUC.execute({
         subjectId: parsed.subjectId,
