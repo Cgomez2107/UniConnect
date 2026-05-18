@@ -511,8 +511,11 @@ export function GroupDashboardPage() {
       clientStatus: msg.client_status || msg.clientStatus || "sent",
       mediaUrl: msg.media_url || msg.mediaUrl || null,
       mediaType: msg.media_type || msg.mediaType || null,
+      mediaFilename: msg.media_filename || msg.mediaFilename || null,
       createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
       content: msg.content || "",
+      mentions: msg.mentions || undefined,
+      reactions: msg.reactions || undefined,
     })),
     [messages, id, memberNameMap],
   );
