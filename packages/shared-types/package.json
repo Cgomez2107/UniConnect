@@ -1,45 +1,43 @@
 {
   "name": "@uniconnect/shared-types",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Shared TypeScript types and domain interfaces for UniConnect",
   "type": "module",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./domain": {
-      "import": "./dist/domain/index.js",
-      "types": "./dist/domain/index.d.ts"
-    },
-    "./dto": {
-      "import": "./dist/dto/index.js",
-      "types": "./dist/dto/index.d.ts"
-    },
-    "./errors": {
-      "import": "./dist/errors/index.js",
-      "types": "./dist/errors/index.d.ts"
-    }
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schemas/*": {
+      "types": "./dist/schemas/*.schema.d.ts",
+      "import": "./dist/schemas/*.schema.js",
+      "default": "./dist/schemas/*.schema.js"
+    },
+    "./contracts/*": {
+      "types": "./dist/api/*.contract.d.ts",
+      "import": "./dist/api/*.contract.js",
+      "default": "./dist/api/*.contract.js"
+    }
+  },
   "files": [
-    "dist",
-    "README.md"
+    "dist"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "build": "tsc",
-    "clean": "rm -rf dist"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:contracts": "vitest run tests/contracts/"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
-  },
-  "keywords": [
-    "uniconnect",
-    "types",
-    "shared",
-    "domain"
-  ]
+    "@types/node": "^20.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4"
+  }
 }

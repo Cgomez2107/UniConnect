@@ -1,0 +1,26 @@
+import { z } from "zod";
+import { UserSchema, AuthProfileSchema } from "../schemas/auth.schema.js";
+import { ProfileSchema, FacultySchema, ProgramSchema, SubjectSchema, UserSubjectSchema, UserProgramSchema } from "../schemas/user.schema.js";
+import { StudyGroupSchema, StudyGroupMemberSchema, StudyRequestSchema, StudyApplicationSchema } from "../schemas/study-group.schema.js";
+import { MessageSchema, ConversationSchema } from "../schemas/messaging.schema.js";
+import { StudyResourceSchema } from "../schemas/resource.schema.js";
+import { EventSchema } from "../schemas/event.schema.js";
+import { NotificationSchema } from "../schemas/notification.schema.js";
+
+export type User = z.infer<typeof UserSchema>;
+export type AuthProfile = z.infer<typeof AuthProfileSchema>;
+export type Profile = z.infer<typeof ProfileSchema>;
+export type Faculty = z.infer<typeof FacultySchema>;
+export type Program = z.infer<typeof ProgramSchema>;
+export type Subject = z.infer<typeof SubjectSchema>;
+export type UserSubject = z.infer<typeof UserSubjectSchema>;
+export type UserProgram = z.infer<typeof UserProgramSchema>;
+export type StudyGroup = z.infer<typeof StudyGroupSchema>;
+export type StudyGroupMember = z.infer<typeof StudyGroupMemberSchema>;
+export type StudyRequest = z.infer<typeof StudyRequestSchema>;
+export type StudyApplication = z.infer<typeof StudyApplicationSchema>;
+export type Message = z.infer<typeof MessageSchema>;
+export type Conversation = z.infer<typeof ConversationSchema>;
+export type StudyResource = z.infer<typeof StudyResourceSchema>;
+export type Event = z.infer<typeof EventSchema>;
+export type Notification = z.infer<typeof NotificationSchema>;

@@ -1,0 +1,25 @@
+import { z } from "zod";
+import { UserDTOSchema, AuthProfileDTOSchema } from "../schemas/auth.schema.js";
+import { ProfileDTOSchema, FacultyDTOSchema, ProgramDTOSchema, SubjectDTOSchema, UserSubjectDTOSchema, UserProgramDTOSchema } from "../schemas/user.schema.js";
+import { StudyGroupDTOSchema, StudyGroupMemberDTOSchema, StudyApplicationDTOSchema } from "../schemas/study-group.schema.js";
+import { MessageDTOSchema, ConversationDTOSchema } from "../schemas/messaging.schema.js";
+import { StudyResourceDTOSchema } from "../schemas/resource.schema.js";
+import { EventDTOSchema } from "../schemas/event.schema.js";
+import { NotificationDTOSchema } from "../schemas/notification.schema.js";
+
+export type UserDTO = z.infer<typeof UserDTOSchema>;
+export type AuthProfileDTO = z.infer<typeof AuthProfileDTOSchema>;
+export type ProfileDTO = z.infer<typeof ProfileDTOSchema>;
+export type FacultyDTO = z.infer<typeof FacultyDTOSchema>;
+export type ProgramDTO = z.infer<typeof ProgramDTOSchema>;
+export type SubjectDTO = z.infer<typeof SubjectDTOSchema>;
+export type UserSubjectDTO = z.infer<typeof UserSubjectDTOSchema>;
+export type UserProgramDTO = z.infer<typeof UserProgramDTOSchema>;
+export type StudyGroupDTO = z.infer<typeof StudyGroupDTOSchema>;
+export type StudyGroupMemberDTO = z.infer<typeof StudyGroupMemberDTOSchema>;
+export type StudyApplicationDTO = z.infer<typeof StudyApplicationDTOSchema>;
+export type MessageDTO = z.infer<typeof MessageDTOSchema>;
+export type ConversationDTO = z.infer<typeof ConversationDTOSchema>;
+export type StudyResourceDTO = z.infer<typeof StudyResourceDTOSchema>;
+export type EventDTO = z.infer<typeof EventDTOSchema>;
+export type NotificationDTO = z.infer<typeof NotificationDTOSchema>;

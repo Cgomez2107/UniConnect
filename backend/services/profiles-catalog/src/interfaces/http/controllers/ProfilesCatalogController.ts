@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Student } from "../../../domain/entities/Student.js";
+import { z, ZodError } from "zod";
 import type { SearchStudentsBySubject } from "../../../application/use-cases/SearchStudentsBySubject.js";
 import type { GetStudentPublicProfile } from "../../../application/use-cases/GetStudentPublicProfile.js";
 import type { GetFullProfile } from "../../../application/use-cases/GetFullProfile.js";
@@ -12,8 +13,12 @@ import type { UpdateStudentProfile } from "../../../application/use-cases/Update
 import type { IStudentRepository } from "../../../domain/repositories/IStudentRepository.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
-import { DtoValidationError } from "../../../../../../shared/libs/validation/index.js";
-import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
+import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+
+const SearchStudentsQuerySchema = z.object({
+  subjectId: z.string().min(1, "subjectId es requerido"),
+  search: z.string().optional(),
+});
 
 export class ProfilesCatalogController {
   constructor(
@@ -45,16 +50,18 @@ export class ProfilesCatalogController {
         : undefined;
 
     try {
+      const parsed = SearchStudentsQuerySchema.parse({ subjectId, search });
+
       const result = await this.searchStudentsUC.execute({
-        subjectId: subjectId ?? undefined,
-        search: search ?? undefined,
+        subjectId: parsed.subjectId,
+        search: parsed.search,
         currentUserId,
       });
 
       sendData(res, 200, result, { total: result.length });
     } catch (error) {
-      if (error instanceof DtoValidationError) {
-        sendJson(res, 400, { error: error.message, fields: error.fields });
+      if (error instanceof ZodError) {
+        sendError(res, 400, "Error de validación: el campo 'subjectId' es requerido.");
         return;
       }
 

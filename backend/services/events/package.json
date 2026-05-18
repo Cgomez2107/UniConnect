@@ -12,6 +12,7 @@
     "test": "echo \"events tests config scaffold\""
   },
   "dependencies": {
+    "@uniconnect/shared-types": "file:../../../packages/shared-types",
     "@supabase/supabase-js": "^2.105.4",
     "pg": "^8.13.1"
   },

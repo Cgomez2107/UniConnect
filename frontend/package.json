@@ -17,6 +17,7 @@
     "deploy": "npx eas-cli@latest workflow:run deploy-to-production.yml"
   },
   "dependencies": {
+    "@uniconnect/shared-types": "file:../packages/shared-types",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",

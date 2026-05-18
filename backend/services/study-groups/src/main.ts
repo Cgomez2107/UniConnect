@@ -1,5 +1,3 @@
-import { createServer } from "node:http";
-
 import { ApplyToStudyRequest } from "./application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "./application/use-cases/AcceptAdminTransfer.js";
 import { CancelStudyRequest } from "./application/use-cases/CancelStudyRequest.js";
@@ -27,6 +25,7 @@ import type { INotificationRepository } from "./domain/repositories/INotificatio
 import type { IMemberRepository } from "./domain/repositories/IMemberRepository.js";
 import type { IStudyGroupMessageRepository } from "./domain/repositories/IStudyGroupMessageRepository.js";
 import type { IStudyGroupRepository } from "./domain/repositories/IStudyGroupRepository.js";
+import { createStudyGroupsServer } from "./app/createStudyGroupsServer.js";
 import { InMemoryStudyRequestRepository } from "./infrastructure/database/InMemoryStudyRequestRepository.js";
 import { InMemoryAdminTransferRepository } from "./infrastructure/database/InMemoryAdminTransferRepository.js";
 import { InMemoryApplicationRepository } from "./infrastructure/database/InMemoryApplicationRepository.js";
@@ -67,10 +66,6 @@ import {
   type IRealtimeService as IGroupRealtimeService,
   type IIdempotencyStore as IGroupIdempotencyStore,
 } from "../../messaging/src/domain/events/index.js";
-
-function sendJsonError(statusCode: number, message: string): string {
-  return JSON.stringify({ error: message });
-}
 
 interface Repositories {
   studyRequest: IStudyRequestRepository;
@@ -355,46 +350,7 @@ function bootstrap(): void {
     cancelStudyRequestUC,
     toggleStudyGroupMessageReaction,
   );
-
-  const server = createServer((req, res) => {
-    const resp = res as any;
-    // Manejo de CORS - Permitir solo orígenes específicos con credenciales
-    const origin = req.headers.origin;
-    const allowedOrigins = [
-      "http://localhost:8081",
-      "http://localhost:8082",
-      "http://127.0.0.1:8081",
-      "http://127.0.0.1:8082",
-      "http://192.168.140.38:8081",
-      "http://192.168.140.38:8082",
-    ];
-    
-    const originStr = Array.isArray(origin) ? origin[0] : origin;
-    if (originStr && allowedOrigins.includes(originStr)) {
-      resp.setHeader("Access-Control-Allow-Origin", originStr);
-    }
-    
-    resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning, bypass-tunnel-reminder");
-    resp.setHeader("Access-Control-Allow-Credentials", "true");
-
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    void (async () => {
-      const handled = await handleStudyGroupsRoutes(req, res, controller);
-      if (!handled) {
-        res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(sendJsonError(404, "Route not found"));
-      }
-    })().catch((error: any) => {
-      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(sendJsonError(500, error instanceof Error ? error.message : "Unexpected service error"));
-    });
-  });
+  const server = createStudyGroupsServer(controller);
 
   (server as any).listen({ port: env.port, host: "::" }, () => {
     console.log(
