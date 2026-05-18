@@ -22,6 +22,7 @@ export async function handleStudyGroupsRoutes(
   const membersMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/members$/);
   const applicationsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/applications$/);
   const messagesMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages$/);
+  const messageReactionsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
   const applyMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/apply$/);
   const leaveMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/leave$/);
   const cancelMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/cancel$/);
@@ -121,6 +122,11 @@ export async function handleStudyGroupsRoutes(
 
   if (req.method === "POST" && transferRejectMatch) {
     await controller.rejectTransfer(req, res, transferRejectMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && messageReactionsMatch) {
+    await controller.toggleMessageReaction(req, res, messageReactionsMatch[2]);
     return true;
   }
 

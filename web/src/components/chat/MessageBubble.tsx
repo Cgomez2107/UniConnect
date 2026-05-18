@@ -1,15 +1,17 @@
 import React, { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { MessageUI, UserSessionUI } from "@/types/ui";
 import { buildDecoratedMessage } from "@/chat/models/messageFactory.js";
 import type { IRenderContext } from "@/chat/models/IMessage.js";
+import type { FileData } from "@/chat/models/IMessage.js";
 import { ReactionBar } from "./ReactionBar";
-
 interface MessageBubbleProps {
   message: MessageUI;
   currentUser: UserSessionUI | null;
   previousSenderSame?: boolean;
   onReply?: (message: MessageUI) => void;
   onRetry?: (message: MessageUI) => void;
+  onToggleReaction?: (messageId: string, emoji: string) => void;
 }
 
 export function MessageBubble({
@@ -18,15 +20,23 @@ export function MessageBubble({
   previousSenderSame = false,
   onReply,
   onRetry,
+  onToggleReaction,
 }: MessageBubbleProps) {
+  const navigate = useNavigate();
   const isOwn = currentUser?.id === message.senderId;
   const isFailed = message.clientStatus === "failed";
   const isSending = message.clientStatus === "sending";
   const isRead = !!message.readAt;
 
   const decoratorContext: IRenderContext = useMemo(
-    () => ({ currentUserId: currentUser?.id }),
-    [currentUser?.id],
+    () => ({
+      currentUserId: currentUser?.id,
+      viewFile: (file: FileData) =>
+        navigate(
+          `/viewer?url=${encodeURIComponent(file.url)}&title=${encodeURIComponent(file.filename)}&fileName=${encodeURIComponent(file.filename)}&fileType=${encodeURIComponent(file.mimeType)}`,
+        ),
+    }),
+    [currentUser?.id, navigate],
   );
 
   const decoratedMessage = useMemo(
@@ -90,12 +100,11 @@ export function MessageBubble({
             )}
           </div>
         </div>
-        {message.reactions && message.reactions.length > 0 && (
-          <ReactionBar
-            reactions={message.reactions}
-            currentUserId={currentUser?.id}
-          />
-        )}
+        <ReactionBar
+          reactions={message.reactions ?? []}
+          currentUserId={currentUser?.id}
+          onToggleReaction={(emoji) => onToggleReaction?.(message.id, emoji)}
+        />
         <div className="flex gap-2 mt-1 px-1">
           {onReply && (
             <button

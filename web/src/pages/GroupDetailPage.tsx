@@ -110,7 +110,13 @@ export function GroupDetailPage() {
         setTransferSuccess(false);
       }, 2000);
     } catch (err: any) {
-      setTransferError(err?.response?.data?.message || "Error al solicitar la transferencia.");
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message || "";
+      if (status === 422 && msg.toLowerCase().includes("transfer")) {
+        setTransferError("Ya se ha solicitado una transferencia. Espera a que se complete.");
+      } else {
+        setTransferError(msg || "Error al solicitar la transferencia.");
+      }
     } finally {
       setTransferLoading(false);
     }
@@ -292,13 +298,19 @@ export function GroupDetailPage() {
                 >
                   Panel de administración
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowTransferModal(true)}
-                >
-                  Transferir admin
-                </Button>
+                {solicitud.hasPendingTransfer ? (
+                  <Button variant="secondary" size="sm" disabled>
+                    Transferencia solicitada
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowTransferModal(true)}
+                  >
+                    Transferir admin
+                  </Button>
+                )}
               </>
             )}
             {pendingTransferId && currentMember && (

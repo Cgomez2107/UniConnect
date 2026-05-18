@@ -34,4 +34,24 @@ export class InMemoryStudyGroupMessageRepository implements IStudyGroupMessageRe
     this.messages.unshift(created);
     return created;
   }
+
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<any[]> {
+    const message = this.messages.find((m) => m.id === messageId);
+    if (!message) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    const current = message.reactions ?? [];
+    const existingIdx = current.findIndex((r: any) => r.emoji === emoji && r.userId === currentUserId);
+
+    let updated: any[];
+    if (existingIdx >= 0) {
+      updated = current.filter((_: any, i: number) => i !== existingIdx);
+    } else {
+      updated = [...current, { emoji, userId: currentUserId }];
+    }
+
+    (message as any).reactions = updated;
+    return updated;
+  }
 }

@@ -28,6 +28,7 @@ interface MentionInputProps {
   onSendImage?: (file: File) => void;
   onUploadFile?: (file: File) => Promise<{ url: string; type: string }>;
   uploadingImage?: boolean;
+  uploadingFile?: boolean;
   sending?: boolean;
   placeholder?: string;
   disabled?: boolean;

@@ -1,12 +1,12 @@
 import React from "react";
 import type { ReactNode } from "react";
-import type { IRenderContext, MentionData } from "./IMessage.js";
+import type { IMessage, IRenderContext, MentionData } from "./IMessage.js";
 import { MessageDecorator } from "./MessageDecorator.js";
 
 export class MentionDecorator extends MessageDecorator {
   private readonly mentions: MentionData[];
 
-  constructor(wrapper: MessageDecorator, mentions: MentionData[]) {
+  constructor(wrapper: IMessage, mentions: MentionData[]) {
     super(wrapper);
     this.mentions = mentions;
   }
@@ -60,6 +60,7 @@ export class MentionDecorator extends MessageDecorator {
 
     if (lastIndex < content.length) {
       parts.push(<span key={key++}>{content.slice(lastIndex)}</span>);
+      void key;
     }
 
     return parts.length > 0 ? <>{parts}</> : content;

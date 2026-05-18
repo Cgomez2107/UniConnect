@@ -10,6 +10,7 @@ import { MarkMessageAsRead } from "../../../application/use-cases/MarkMessageAsR
 import { MarkConversationAsRead } from "../../../application/use-cases/MarkConversationAsRead.js";
 import { SendMessage } from "../../../application/use-cases/SendMessage.js";
 import { TouchConversation } from "../../../application/use-cases/TouchConversation.js";
+import { ToggleReaction } from "../../../application/use-cases/ToggleReaction.js";
 import type { ConversationSummary } from "../../../domain/entities/Conversation.js";
 import type { Message } from "../../../domain/entities/Message.js";
 import type { CreateConversationDto } from "../dto/CreateConversationDto.js";
@@ -51,6 +52,7 @@ function toApiMessage(message: Message) {
     reply_preview: message.replyPreview,
     created_at: message.createdAt,
     read_at: message.readAt,
+    reactions: message.reactions ?? [],
     sender: message.sender
       ? {
           full_name: message.sender.fullName,
@@ -72,6 +74,7 @@ export class MessagingController {
     private readonly sendMessageUseCase: SendMessage,
     private readonly markMessageAsReadUseCase: MarkMessageAsRead,
     private readonly markConversationAsReadUseCase: MarkConversationAsRead,
+    private readonly toggleReactionUseCase: ToggleReaction,
   ) {}
 
   async listConversations(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -234,6 +237,28 @@ export class MessagingController {
         sendJson(res, error.statusCode, { error: error.message, reason: error.reason, name: error.name });
         return;
       }
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async toggleReaction(req: IncomingMessage, res: ServerResponse, messageId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const body = await readJsonBody<{ emoji: string }>(req);
+      if (!body.emoji) {
+        sendError(res, 400, "El campo 'emoji' es requerido.");
+        return;
+      }
+
+      const reactions = await this.toggleReactionUseCase.execute(messageId, actorUserId, body.emoji);
+      sendData(res, 200, { reactions });
+    } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
