@@ -223,6 +223,63 @@ export interface CreateStudyResourcePayload {
 // Búsqueda de compañeros
 
 
+// ============================================================================
+// D02 — PERFILES CON DECORADORES (Patrón Decorator)
+// ============================================================================
+
+/** Perfil base (Criterio 1) — coincide con GET /profiles/:userId sin ?vista=completa */
+export interface PerfilBase {
+  id: string;
+  nombre: string;
+  carrera: string;
+  semestre: number;
+  asignaturasActivas: { id: string; nombre: string }[];
+}
+
+/**
+ * Decorador: estadísticas del estudiante (Criterio 2)
+ * Los nombres coinciden con StatisticsDecorator del backend
+ */
+export interface IndicadoresEstadisticas {
+  gruposBajoAdministracion: number;
+  gruposParticipa: number;
+  mensajesEnviados: number;
+}
+
+/** Una insignia — estructura del BadgesDecorator del backend */
+export interface Insignia {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  iconoUrl: string;
+  fechaObtenida: string;
+}
+
+/**
+ * Decorador: insignias desbloqueadas (Criterio 3)
+ * Aparece en la respuesta cuando se usa ?vista=completa
+ */
+export interface PerfilConInsignias {
+  insignias: Insignia[];
+}
+
+/**
+ * Decorador: perfil con estadísticas (Criterio 2)
+ */
+export interface PerfilConEstadisticas {
+  indicadores: IndicadoresEstadisticas;
+}
+
+/**
+ * Perfil completamente decorado — resultado de GET /profiles/:userId?vista=completa
+ * Extiende la base y agrega ambos decoradores (Criterio 4)
+ */
+export interface PerfilCompleto extends PerfilBase, PerfilConEstadisticas, PerfilConInsignias {}
+
+// ============================================================================
+// BÚSQUEDA DE COMPAÑEROS (legacy)
+// ============================================================================
+
 /** Resultado de la RPC search_students_by_subject */
 export interface StudentSearchResult {
   id: string;

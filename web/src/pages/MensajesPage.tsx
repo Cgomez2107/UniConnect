@@ -9,9 +9,17 @@ import messagingService, { groupReactions } from "@/lib/services/messaging.servi
 import { apiClient } from "@/lib/api/client";
 
 import { uploadChatImageFile } from "@/lib/supabase";
+import { useUnreadCountStore } from "@/store/useUnreadCountStore";
+import { useAuthStore } from "@/store/useAuthStore";
+
 export function MensajesPage() {
   const { user } = useAuth();
+  const authStore = useAuthStore();
   const { conversations = [], loading: conversationsLoading = false } = useConversations();
+  const unreadStore = useUnreadCountStore();
+  const setConversationUnread = unreadStore.setConversationUnread;
+  const incrementUnread = unreadStore.incrementUnread;
+  const clearConversationUnread = unreadStore.clearConversationUnread;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,20 +30,7 @@ export function MensajesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-
-          {replyingTo && (
-            <div className="px-4 py-2 bg-primary-50 border-t border-primary-200 flex items-center gap-2">
-              <span className="text-xs text-primary-700 flex-1 truncate">
-                Respondiendo a: {replyingTo.content}
-              </span>
-              <button
-                onClick={() => setReplyingTo(null)}
-                className="text-primary-500 hover:text-primary-700 text-sm"
-              >
-                ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢
-              </button>
-            </div>
-          )}
+  const [conversationsList, setConversationsList] = useState<typeof conversations>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -80,6 +75,18 @@ export function MensajesPage() {
         if (data.event === "new_message") {
           const raw = data.payload;
           if (raw && raw.id) {
+            const isOwnMessage = raw.sender_id === user?.id || raw.senderId === authStore.user?.id;
+            if (!isOwnMessage) {
+              const convId = raw.conversation_id || raw.conversationId;
+              incrementUnread(convId);
+              setConversationsList((prev) =>
+                prev.map((c) =>
+                  c.id === convId
+                    ? { ...c, lastMessage: raw.content ?? c.lastMessage, lastMessageAt: raw.created_at ?? c.lastMessageAt }
+                    : c
+                )
+              );
+            }
             import("@/utils/mappers").then(({ mapMessageApiToUI }) => {
               const msg = mapMessageApiToUI(raw);
               setMessages((prev) => {
@@ -124,7 +131,19 @@ export function MensajesPage() {
     if (conversations.length > 0 && !selectedConversation) {
       setSelectedConversation(conversations[0]);
     }
-  }, [conversations]);
+    setConversationsList(conversations);
+    conversations.forEach((c) => {
+      if (c.unreadCount > 0) {
+        setConversationUnread(c.id, c.unreadCount);
+      }
+    });
+  }, [conversations, setConversationUnread]);
+
+  useEffect(() => {
+    if (conversations.length !== conversationsList.length) {
+      setConversationsList(conversations);
+    }
+  }, [conversations, conversationsList.length]);
 
 
 
@@ -250,8 +269,9 @@ export function MensajesPage() {
   useEffect(() => {
     if (selectedConversation?.id) {
       messagingService.markAsRead(selectedConversation.id).catch(() => {});
+      clearConversationUnread(selectedConversation.id);
     }
-  }, [selectedConversation?.id, messages]);
+  }, [selectedConversation?.id, messages, clearConversationUnread]);
 
   return (
     <div className="min-h-screen bg-neutral-50 flex animate-fade-in">
@@ -279,16 +299,20 @@ export function MensajesPage() {
               <p>Sin conversaciones</p>
             </div>
           ) : (
-            conversations.map((conversation) => (
-              <div key={conversation.id} className="md:cursor-pointer" onClick={() => setSelectedConversation(conversation)}>
-              <ConversationItem
-                key={conversation.id}
-                conversation={conversation}
-                isSelected={selectedConversation?.id === conversation.id}
-                onClick={() => setSelectedConversation(conversation)}
-              />
-              </div>
-            ))
+            conversationsList.map((conversation) => {
+              const unread = unreadStore.conversationUnreadCounts[conversation.id] ?? conversation.unreadCount ?? 0;
+              return (
+                <div key={conversation.id} className="md:cursor-pointer" onClick={() => setSelectedConversation(conversation)}>
+                <ConversationItem
+                  key={conversation.id}
+                  conversation={conversation}
+                  isSelected={selectedConversation?.id === conversation.id}
+                  onClick={() => setSelectedConversation(conversation)}
+                  unreadCount={unread}
+                />
+                </div>
+              );
+            })
           )}
         </div>
       </div>

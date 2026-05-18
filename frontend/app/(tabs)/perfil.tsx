@@ -8,6 +8,7 @@
  * Componentes      -> components/perfil/, components/shared/
  */
 
+import { BadgePanel } from "@/components/perfil/BadgePanel";
 import { MiniRequestCard } from "@/components/perfil/MiniRequestCard";
 import { ProfileHero } from "@/components/perfil/ProfileHero";
 import { StatsRow } from "@/components/perfil/StatsRow";
@@ -42,6 +43,8 @@ export default function PerfilScreen() {
     primaryFacultyName,
     hasPrimaryProgram,
     isLoading,
+    indicadores,
+    insignias,
   } = useProfile();
 
   const handleSignOut = useCallback(() => {
@@ -194,11 +197,17 @@ export default function PerfilScreen() {
               )}
             </SectionCard>
 
-            {/* Estadisticas */}
+            {/* Estadisticas (D02: soporta indicadores decorados) */}
             <StatsRow
               requestsCount={myRequests.length}
               subjectsCount={userSubjects.length}
+              indicadores={indicadores}
             />
+
+            {/* D02: Panel de insignias */}
+            {insignias && insignias.length > 0 && (
+              <BadgePanel insignias={insignias} />
+            )}
           </>
         )}
 

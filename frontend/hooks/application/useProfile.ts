@@ -1,6 +1,6 @@
 import { DIContainer } from "@/lib/services/di/container"
 import { useAuthStore } from "@/store/useAuthStore"
-import type { StudyRequest, UserProgram, UserSubject } from "@/types"
+import type { StudyRequest, UserProgram, UserSubject, IndicadoresEstadisticas, Insignia } from "@/types"
 import { useFocusEffect } from "expo-router"
 import { useCallback, useMemo, useState } from "react"
 
@@ -15,6 +15,9 @@ interface UseProfileReturn {
 	primaryFacultyName: string
 	hasPrimaryProgram: boolean
 	isLoading: boolean
+	// D02 — Decoradores opcionales
+	indicadores?: IndicadoresEstadisticas
+	insignias?: Insignia[]
 }
 
 export function useProfile(): UseProfileReturn {
@@ -26,6 +29,8 @@ export function useProfile(): UseProfileReturn {
 	const [userSubjects, setUserSubjects] = useState<UserSubject[]>(user?.subjects ?? [])
 	const [myRequests, setMyRequests] = useState<StudyRequest[]>([])
 	const [isLoading, setIsLoading] = useState(!user?.programs?.length && !user?.subjects?.length)
+	const [indicadores, setIndicadores] = useState<IndicadoresEstadisticas | undefined>(undefined)
+	const [insignias, setInsignias] = useState<Insignia[] | undefined>(undefined)
 
 	useFocusEffect(
 		useCallback(() => {
@@ -80,6 +85,16 @@ export function useProfile(): UseProfileReturn {
 					.then(setMyRequests)
 					.catch(e => console.warn("[useProfile] Error solicitudes:", e))
 					.finally(markDone)
+
+				// D02: Cargar perfil decorado (best-effort)
+				container.getGetDecoratedStudentProfile().execute(userId)
+					.then(decorated => {
+						if (decorated) {
+							setIndicadores(decorated.indicadores)
+							setInsignias(decorated.insignias)
+						}
+					})
+					.catch(() => {})
 				
 				// Timeout de seguridad
 				setTimeout(() => {
@@ -116,5 +131,7 @@ export function useProfile(): UseProfileReturn {
 		primaryFacultyName,
 		hasPrimaryProgram: !!primaryProgram,
 		isLoading,
+		indicadores,
+		insignias,
 	}
 }

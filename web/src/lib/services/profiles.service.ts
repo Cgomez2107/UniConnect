@@ -3,6 +3,8 @@
  * This file is kept as a thin adapter for backward compatibility.
  */
 import { deps } from "@/store/deps";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import apiClient from "@/lib/api/client";
 import type { ProfileUI } from "@/types/ui";
 
 function mapProfile(p: any): ProfileUI {
@@ -17,6 +19,30 @@ function mapProfile(p: any): ProfileUI {
     isActive: p.isActive ?? p.is_active ?? true,
     createdAt: p.createdAt?.toISOString?.() ?? p.created_at ?? p.createdAt,
     updatedAt: p.updatedAt?.toISOString?.() ?? p.updated_at ?? p.updatedAt,
+  };
+}
+
+function mapDecoratedToProfileUI(raw: any): ProfileUI {
+  const base = mapProfile(raw);
+  return {
+    ...base,
+    semester: raw.semestre ?? raw.semester ?? null,
+    indicadores: raw.indicadores
+      ? {
+          gruposBajoAdministracion: raw.indicadores.gruposBajoAdministracion ?? 0,
+          gruposParticipa: raw.indicadores.gruposParticipa ?? 0,
+          mensajesEnviados: raw.indicadores.mensajesEnviados ?? 0,
+        }
+      : undefined,
+    insignias: Array.isArray(raw.insignias)
+      ? raw.insignias.map((i: any) => ({
+          id: i.id,
+          nombre: i.nombre,
+          descripcion: i.descripcion ?? "",
+          iconoUrl: i.iconoUrl ?? "",
+          fechaObtenida: i.fechaObtenida ?? "",
+        }))
+      : undefined,
   };
 }
 
@@ -46,6 +72,19 @@ const profilesService = {
 
   async getPublicProfile(userId: string): Promise<any> {
     return deps.apiClients.profiles.getProfileById(userId);
+  },
+
+  /** D02: Obtiene perfil decorado con estadísticas e insignias (?vista=completa) */
+  async getDecoratedProfile(userId: string): Promise<ProfileUI | null> {
+    try {
+      const endpoint = API_ENDPOINTS.PROFILE_DECORATED(userId);
+      const response = await apiClient.get(endpoint, { params: { vista: "completa" } });
+      const data = response.data?.data ?? response.data;
+      if (!data) return null;
+      return mapDecoratedToProfileUI(data);
+    } catch {
+      return null;
+    }
   },
 
   async searchStudents(subjectId?: string): Promise<any[]> {

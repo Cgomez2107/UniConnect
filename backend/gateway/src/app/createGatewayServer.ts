@@ -48,7 +48,9 @@ function isProfilesCatalogRoute(pathname: string): boolean {
     pathname.startsWith("/api/v1/students") ||
     pathname.startsWith("/api/v1/catalog") ||
     pathname.startsWith("/perfil/") ||
-    pathname === "/perfil"
+    pathname === "/perfil" ||
+    pathname.startsWith("/api/v1/perfil/") ||
+    pathname === "/api/v1/perfil"
   );
 }
 
@@ -359,7 +361,10 @@ async function handleRequest(
   }
 
   if (isProfilesCatalogRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.profilesCatalogBaseUrl);
+    const stripPerfilPrefix = requestUrl.pathname.startsWith("/api/v1/perfil")
+      ? "/api/v1"
+      : undefined;
+    await proxyRequest(req, res, env.profilesCatalogBaseUrl, stripPerfilPrefix);
     return;
   }
 

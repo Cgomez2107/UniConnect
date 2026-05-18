@@ -257,6 +257,52 @@ export interface CreateStudyResourcePayload {
 // BÚSQUEDA DE COMPAÑEROS
 // ============================================================================
 
+// ============================================================================
+// D02 — PERFILES CON DECORADORES (Patrón Decorator)
+// ============================================================================
+
+/** Perfil base (Criterio 1) */
+export interface PerfilBase {
+  id: string;
+  nombre: string;
+  carrera: string;
+  semestre: number;
+  asignaturasActivas: { id: string; nombre: string }[];
+}
+
+/** Decorador: estadísticas del estudiante (Criterio 2) — coincide con backend */
+export interface IndicadoresEstadisticas {
+  gruposBajoAdministracion: number;
+  gruposParticipa: number;
+  mensajesEnviados: number;
+}
+
+/** Una insignia — estructura del BadgesDecorator del backend */
+export interface Insignia {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  iconoUrl: string;
+  fechaObtenida: string;
+}
+
+/** Decorador: insignias (Criterio 3) */
+export interface PerfilConInsignias {
+  insignias: Insignia[];
+}
+
+/** Decorador: estadísticas (Criterio 2) */
+export interface PerfilConEstadisticas {
+  indicadores: IndicadoresEstadisticas;
+}
+
+/** Perfil completamente decorado (Criterio 4) */
+export interface PerfilCompleto extends PerfilBase, PerfilConEstadisticas, PerfilConInsignias {}
+
+// ============================================================================
+// BÚSQUEDA DE COMPAÑEROS (legacy)
+// ============================================================================
+
 /** Resultado de la RPC search_students_by_subject */
 export interface StudentSearchResult {
   id: string;
