@@ -437,12 +437,16 @@ export function GroupChatPage() {
                   onRetry={handleRetry}
                   onReply={(m) => setReplyingTo(m)}
                   onToggleReaction={async (messageId, emoji) => {
-                    const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === messageId ? { ...m, reactions: result.reactions } : m
-                      )
-                    );
+                    try {
+                      const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);
+                      setMessages((prev) =>
+                        prev.map((m) =>
+                          m.id === messageId ? { ...m, reactions: result.reactions } : m
+                        )
+                      );
+                    } catch (err: any) {
+                      console.error("Error al reaccionar:", err?.response?.data?.message || err.message);
+                    }
                   }}
                 />
               </div>

@@ -60,6 +60,7 @@ export class MentionDecorator extends MessageDecorator {
 
     if (lastIndex < content.length) {
       parts.push(<span key={key++}>{content.slice(lastIndex)}</span>);
+      void key;
     }
 
     return parts.length > 0 ? <>{parts}</> : content;

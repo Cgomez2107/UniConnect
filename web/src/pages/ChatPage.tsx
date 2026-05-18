@@ -8,6 +8,7 @@ import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { snakeToCamel } from "@uniconnect/shared-api";
+import { groupReactions } from "@/lib/services/messaging.service";
 import { useConversationsStore } from "@/store/useConversationsStore";
 
 interface Message {
@@ -22,6 +23,7 @@ interface Message {
   replyPreview?: string | null;
   mediaUrl?: string | null;
   mediaType?: string | null;
+  mediaFilename?: string | null;
   reactions?: { emoji: string; userId: string }[];
 }
 
@@ -263,6 +265,7 @@ export const ChatPage: React.FC = () => {
         content: file.name,
         mediaUrl,
         mediaType: file.type,
+        mediaFilename: file.name,
       });
       const msg = response.data?.data || response.data;
       setMessages((prev) => [...prev, {
@@ -275,6 +278,7 @@ export const ChatPage: React.FC = () => {
         clientStatus: "sent",
         mediaUrl,
         mediaType: file.type,
+        mediaFilename: file.name,
         reactions: [],
       }]);
     } catch (err) {
@@ -300,6 +304,7 @@ export const ChatPage: React.FC = () => {
         content: file.name,
         mediaUrl: result.url,
         mediaType: file.type,
+        mediaFilename: file.name,
       });
       const msg = response.data?.data || response.data;
       setMessages((prev) => [...prev, {
@@ -312,6 +317,7 @@ export const ChatPage: React.FC = () => {
         clientStatus: "sent",
         mediaUrl: result.url,
         mediaType: file.type,
+        mediaFilename: file.name,
       }]);
     } catch (err) {
       console.error("Error uploading file:", err);
@@ -388,9 +394,9 @@ export const ChatPage: React.FC = () => {
                 replyPreview: msg.replyPreview || null,
                 mediaUrl: msg.mediaUrl || null,
                 mediaType: msg.mediaType || null,
-                mediaFilename: null,
+                mediaFilename: msg.mediaFilename ?? null,
                 mentions: undefined,
-                reactions: msg.reactions || [],
+                reactions: groupReactions(msg.reactions),
               }}
               currentUser={userUI}
               previousSenderSame={

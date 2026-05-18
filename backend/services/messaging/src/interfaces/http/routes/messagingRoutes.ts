@@ -24,6 +24,7 @@ export async function handleMessagingRoutes(
   const conversationTouchMatch = requestUrl.pathname.match(/^\/api\/v1\/conversations\/([^/]+)\/touch$/);
   const conversationReadMatch = requestUrl.pathname.match(/^\/api\/v1\/conversations\/([^/]+)\/read$/);
   const messageDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)$/);
+  const messageReactionsMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/reactions$/);
   const messageReadMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/read$/);
   const messageReactionMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/reactions$/);
   const unreadCountMatch = requestUrl.pathname === "/api/v1/messages/unread-count";
@@ -74,6 +75,11 @@ export async function handleMessagingRoutes(
 
   if (req.method === "POST" && requestUrl.pathname === "/api/v1/messages") {
     await controller.createMessage(req, res);
+    return true;
+  }
+
+  if (req.method === "POST" && messageReactionsMatch) {
+    await controller.toggleReaction(req, res, messageReactionsMatch[1]);
     return true;
   }
 

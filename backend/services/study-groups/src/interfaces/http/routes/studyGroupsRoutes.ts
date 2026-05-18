@@ -22,6 +22,7 @@ export async function handleStudyGroupsRoutes(
   const membersMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/members$/);
   const applicationsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/applications$/);
   const messagesMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages$/);
+  const messageReactionsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
   const applyMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/apply$/);
   const leaveMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/leave$/);
   const cancelMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/cancel$/);
@@ -29,7 +30,6 @@ export async function handleStudyGroupsRoutes(
   const transferMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/transfer$/);
   const transferAcceptMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/accept$/);
   const transferRejectMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/reject$/);
-  const reactionMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
@@ -125,8 +125,8 @@ export async function handleStudyGroupsRoutes(
     return true;
   }
 
-  if (req.method === "POST" && reactionMatch) {
-    await controller.toggleReaction(req, res, reactionMatch[1], reactionMatch[2]);
+  if (req.method === "POST" && messageReactionsMatch) {
+    await controller.toggleMessageReaction(req, res, messageReactionsMatch[2]);
     return true;
   }
 

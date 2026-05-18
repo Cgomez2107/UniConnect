@@ -1,4 +1,4 @@
-export interface MessageReaction {
+export interface Reaction {
   readonly emoji: string;
   readonly userId: string;
 }
@@ -13,7 +13,7 @@ export interface Message {
   readonly mediaFilename: string | null;
   readonly replyToMessageId: string | null;
   readonly replyPreview: string | null;
-  readonly reactions: MessageReaction[];
+  readonly reactions: Reaction[];
   readonly createdAt: string;
   readonly readAt: string | null;
   readonly sender: {

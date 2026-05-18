@@ -34,7 +34,6 @@ export class ReactionDecorator extends MessageDecorator {
         <ReactionBar
           reactions={this.reactions}
           currentUserId={currentUserId}
-          messageId={this.id}
         />
       </>
     );
@@ -44,10 +43,9 @@ export class ReactionDecorator extends MessageDecorator {
 interface ReactionBarProps {
   reactions: ReactionData[];
   currentUserId?: string;
-  messageId: string;
 }
 
-function ReactionBar({ reactions, currentUserId, messageId }: ReactionBarProps) {
+function ReactionBar({ reactions, currentUserId }: ReactionBarProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [localReactions, setLocalReactions] = useState<ReactionData[]>(reactions);
 
@@ -81,8 +79,6 @@ function ReactionBar({ reactions, currentUserId, messageId }: ReactionBarProps) 
     }
     setShowPicker(false);
   };
-
-  const hasReactions = localReactions.length > 0;
 
   return (
     <div className="flex flex-wrap items-center gap-1 mt-2">

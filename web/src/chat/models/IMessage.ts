@@ -22,6 +22,7 @@ export interface FileData {
 export interface IRenderContext {
   currentUserId?: string;
   memberNameMap?: Map<string, string>;
+  viewFile?: (file: FileData) => void;
 }
 
 export interface IMessage {

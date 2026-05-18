@@ -16,10 +16,5 @@ export interface IStudyGroupMessageRepository {
     mediaFilename?: string;
     mentions?: any[];
   }): Promise<StudyGroupMessage>;
-  toggleReaction(input: {
-    requestId: string;
-    messageId: string;
-    actorUserId: string;
-    emoji: string;
-  }): Promise<any[]>;
+  toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<any[]>;
 }

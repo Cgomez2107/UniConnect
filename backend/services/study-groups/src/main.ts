@@ -3,7 +3,6 @@ import { createServer } from "node:http";
 import { ApplyToStudyRequest } from "./application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "./application/use-cases/AcceptAdminTransfer.js";
 import { CancelStudyRequest } from "./application/use-cases/CancelStudyRequest.js";
-import { ToggleReaction } from "./application/use-cases/ToggleReaction.js";
 import { CreateStudyRequest } from "./application/use-cases/CreateStudyRequest.js";
 import { ListMyStudyRequests } from "./application/use-cases/ListMyStudyRequests.js";
 import { ListMyApplications } from "./application/use-cases/ListMyApplications.js";
@@ -18,6 +17,7 @@ import { RejectAdminTransfer } from "./application/use-cases/RejectAdminTransfer
 import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
+import { ToggleStudyGroupMessageReaction } from "./application/use-cases/ToggleStudyGroupMessageReaction.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
 import { NotificationObserver, PersistenceObserver, StudyGroupSubject } from "./domain/events/index.js";
 import { StudyGroupMembershipService } from "./domain/services/StudyGroupMembershipService.js";
@@ -205,8 +205,8 @@ function bootstrap(): void {
   const leaveAdminRole = new LeaveAdminRole(studyRequestRepository, subject);
   const listMyStudyRequestsUC = new ListMyStudyRequests(studyRequestRepository);
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
-  const cancelStudyRequestUC = new CancelStudyRequest(studyRequestRepository);
-  const toggleReaction = new ToggleReaction(messageRepository);
+  const cancelStudyRequestUC = new CancelStudyRequest(repository);
+  const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -225,7 +225,7 @@ function bootstrap(): void {
     listMyStudyRequestsUC,
     listMyApplicationsUC,
     cancelStudyRequestUC,
-    toggleReaction,
+    toggleStudyGroupMessageReaction,
   );
 
   const server = createServer((req, res) => {

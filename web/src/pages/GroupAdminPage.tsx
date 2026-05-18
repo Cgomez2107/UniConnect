@@ -466,7 +466,13 @@ export function GroupDashboardPage() {
         setTransferSuccess(false);
       }, 2000);
     } catch (err: any) {
-      setTransferError(err?.response?.data?.message || "Error al solicitar la transferencia.");
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message || "";
+      if (status === 422 && msg.toLowerCase().includes("transfer")) {
+        setTransferError("Ya se ha solicitado una transferencia. Espera a que se complete.");
+      } else {
+        setTransferError(msg || "Error al solicitar la transferencia.");
+      }
     } finally {
       setTransferLoading(false);
     }
@@ -788,9 +794,15 @@ export function GroupDashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           {isAuthor && (
-            <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
-              Transferir admin
-            </Button>
+            solicitud.hasPendingTransfer ? (
+              <Button variant="secondary" size="sm" disabled>
+                Transferencia solicitada
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
+                Transferir admin
+              </Button>
+            )
           )}
           <Button variant="danger" size="sm" onClick={() => setShowLeaveConfirm(true)} loading={leaveLoading}>
             Salir
@@ -856,12 +868,16 @@ export function GroupDashboardPage() {
                       onRetry={handleRetry}
                       onReply={(m) => setReplyingTo(m)}
                       onToggleReaction={async (messageId, emoji) => {
-                        const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);
-                        setMessages((prev) =>
-                          prev.map((m) =>
-                            m.id === messageId ? { ...m, reactions: result.reactions } : m
-                          )
-                        );
+                        try {
+                          const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);
+                          setMessages((prev) =>
+                            prev.map((m) =>
+                              m.id === messageId ? { ...m, reactions: result.reactions } : m
+                            )
+                          );
+                        } catch (err: any) {
+                          console.error("Error al reaccionar:", err?.response?.data?.message || err.message);
+                        }
                       }}
                     />
                   </div>
@@ -1102,13 +1118,23 @@ export function GroupDashboardPage() {
                   <h2 className="text-sm font-bold text-primary-900 dark:text-white mb-2">Acciones de administración</h2>
                   <div className="space-y-2">
                     {isAuthor && (
-                      <Button
-                        variant="secondary"
-                        className="w-full justify-center"
-                        onClick={() => setShowTransferModal(true)}
-                      >
-                        Transferir administración
-                      </Button>
+                      solicitud.hasPendingTransfer ? (
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-center"
+                          disabled
+                        >
+                          Transferencia solicitada
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-center"
+                          onClick={() => setShowTransferModal(true)}
+                        >
+                          Transferir administración
+                        </Button>
+                      )
                     )}
                     <Button
                       variant="danger"

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { MessageReactionUI } from "@/types/ui";
 
 const EMOJI_LIST = ["👍", "❤️", "😂", "😮", "🎉", "🔥"];
@@ -12,6 +12,10 @@ interface ReactionBarProps {
 export function ReactionBar({ reactions, currentUserId, onToggleReaction }: ReactionBarProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [localReactions, setLocalReactions] = useState<MessageReactionUI[]>(reactions);
+
+  useEffect(() => {
+    setLocalReactions(reactions);
+  }, [reactions]);
 
   const handleAddReaction = (emoji: string) => {
     const existing = localReactions.find((r) => r.emoji === emoji);
@@ -47,7 +51,7 @@ export function ReactionBar({ reactions, currentUserId, onToggleReaction }: Reac
 
   if (!localReactions.length && !showPicker) {
     return (
-      <div className="flex flex-col items-center gap-0.5">
+      <div className="flex flex-wrap items-center gap-1 mt-1">
         <div className="relative">
           <button
             onClick={() => setShowPicker(true)}
@@ -56,13 +60,26 @@ export function ReactionBar({ reactions, currentUserId, onToggleReaction }: Reac
           >
             +
           </button>
+          {showPicker && (
+            <div className="absolute bottom-full left-0 mb-1 flex gap-1 p-1.5 bg-white rounded-lg shadow-lg border border-neutral-200 z-10">
+              {EMOJI_LIST.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleAddReaction(emoji)}
+                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-neutral-100 text-base transition-colors"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <div className="flex flex-wrap items-center gap-1 mt-1">
       {localReactions.map((reaction) => {
         const isActive = currentUserId
           ? reaction.users.includes(currentUserId)

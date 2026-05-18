@@ -17,7 +17,7 @@ import { RejectAdminTransfer } from "../../../application/use-cases/RejectAdminT
 import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
-import { ToggleReaction } from "../../../application/use-cases/ToggleReaction.js";
+import { ToggleStudyGroupMessageReaction } from "../../../application/use-cases/ToggleStudyGroupMessageReaction.js";
 import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
 import type { CreateStudyGroupMessageDto } from "../dto/CreateStudyGroupMessageDto.js";
 import type { CreateStudyGroupDto } from "../dto/CreateStudyGroupDto.js";
@@ -60,7 +60,7 @@ export class StudyGroupsController {
     private readonly listMyStudyRequestsUC: ListMyStudyRequests,
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
-    private readonly toggleReactionUC: ToggleReaction,
+    private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
   ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -440,6 +440,32 @@ export class StudyGroupsController {
     }
   }
 
+  async toggleMessageReaction(
+    req: IncomingMessage,
+    res: ServerResponse,
+    messageId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const body = await readJsonBody<{ emoji: string }>(req);
+      if (!body.emoji) {
+        sendError(res, 400, "El campo 'emoji' es requerido.");
+        return;
+      }
+
+      const reactions = await this.toggleStudyGroupMessageReaction.execute(messageId, actorUserId, body.emoji);
+      sendData(res, 200, { reactions });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async leaveAdmin(
     req: IncomingMessage,
     res: ServerResponse,
@@ -458,40 +484,6 @@ export class StudyGroupsController {
       });
 
       sendData(res, 200, { message: "Salida de administracion registrada." });
-    } catch (error) {
-      const mapped = mapErrorToHttpStatus(error);
-      sendError(res, mapped.statusCode, mapped.message);
-    }
-  }
-
-  async toggleReaction(
-    req: IncomingMessage,
-    res: ServerResponse,
-    requestId: string,
-    messageId: string,
-  ): Promise<void> {
-    const actorUserId = getActorUserId(req);
-    if (!actorUserId) {
-      sendError(res, 401, "Token de autenticacion requerido.");
-      return;
-    }
-
-    const body = await readJsonBody<{ emoji: string }>(req);
-
-    try {
-      if (!body.emoji) {
-        sendError(res, 400, "El campo 'emoji' es requerido.");
-        return;
-      }
-
-      const result = await this.toggleReactionUC.execute({
-        requestId,
-        messageId,
-        actorUserId,
-        emoji: body.emoji,
-      });
-
-      sendData(res, 200, result);
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

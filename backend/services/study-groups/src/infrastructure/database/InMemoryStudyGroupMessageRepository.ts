@@ -35,32 +35,24 @@ export class InMemoryStudyGroupMessageRepository implements IStudyGroupMessageRe
     return created;
   }
 
-  async toggleReaction(input: {
-    requestId: string;
-    messageId: string;
-    actorUserId: string;
-    emoji: string;
-  }): Promise<any[]> {
-    const message = this.messages.find(
-      (m) => m.id === input.messageId && m.requestId === input.requestId,
-    );
-    if (!message) throw new Error("Mensaje no encontrado");
-
-    if (!message.reactions) {
-      (message as any).reactions = [];
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<any[]> {
+    const message = this.messages.find((m) => m.id === messageId);
+    if (!message) {
+      throw new Error("Mensaje no encontrado.");
     }
 
-    const reactions = message.reactions as any[];
-    const existingIndex = reactions.findIndex(
-      (r: any) => r.userId === input.actorUserId && r.emoji === input.emoji,
-    );
+    const current = message.reactions ?? [];
+    const existingIdx = current.findIndex((r: any) => r.emoji === emoji && r.userId === currentUserId);
 
-    if (existingIndex >= 0) {
-      reactions.splice(existingIndex, 1);
+    let updated: any[];
+    if (existingIdx >= 0) {
+      updated = current.filter((_: any, i: number) => i !== existingIdx);
     } else {
-      reactions.push({ userId: input.actorUserId, emoji: input.emoji });
+      updated = [...current, { emoji, userId: currentUserId }];
     }
 
-    return reactions;
+    (message as any).reactions = updated;
+    return updated;
+  }
   }
 }

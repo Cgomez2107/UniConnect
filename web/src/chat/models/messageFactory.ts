@@ -1,7 +1,7 @@
 import { BaseMessage } from "./BaseMessage.js";
 import { FileDecorator } from "./FileDecorator.js";
 import { MentionDecorator } from "./MentionDecorator.js";
-import type { IMessage, FileData, MentionData, ReactionData } from "./IMessage.js";
+import type { IMessage, MentionData, ReactionData } from "./IMessage.js";
 
 interface RawMessageData {
   id: string;
@@ -15,6 +15,13 @@ interface RawMessageData {
   reactions?: ReactionData[];
 }
 
+function deriveFilename(raw: RawMessageData): string {
+  if (raw.mediaFilename) return raw.mediaFilename;
+  const fromUrl = raw.mediaUrl?.split("/").pop()?.split("?")[0];
+  if (fromUrl) return fromUrl;
+  return raw.content || "archivo";
+}
+
 export function buildDecoratedMessage(raw: RawMessageData): IMessage {
   const timestamp =
     typeof raw.createdAt === "string" ? new Date(raw.createdAt) : raw.createdAt;
@@ -22,11 +29,11 @@ export function buildDecoratedMessage(raw: RawMessageData): IMessage {
   const base = new BaseMessage(raw.id, raw.content, raw.senderId, timestamp);
   let decorated: IMessage = base;
 
-  if (raw.mediaUrl && raw.mediaType && raw.mediaFilename) {
+  if (raw.mediaUrl && raw.mediaType) {
     decorated = new FileDecorator(decorated, {
       url: raw.mediaUrl,
       mimeType: raw.mediaType,
-      filename: raw.mediaFilename,
+      filename: deriveFilename(raw),
       size: 0,
     });
   }

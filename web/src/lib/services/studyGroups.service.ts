@@ -3,9 +3,11 @@
  * This file is kept as a thin adapter for backward compatibility.
  */
 import { deps } from "@/store/deps";
+import { apiClient } from "@/lib/api/client";
 
 const studyGroupsService = {
   async listStudyGroups(subjectId?: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = deps.apiClients.studyGroups as any;
     return client.list(subjectId ? { subjectId } : undefined);
   },
@@ -76,7 +78,8 @@ const studyGroupsService = {
   },
 
   async toggleReaction(groupId: string, messageId: string, emoji: string) {
-    return deps.apiClients.studyGroups.toggleReaction(groupId, messageId, emoji);
+    const result = await apiClient.post(`/study-groups/${groupId}/messages/${messageId}/reactions`, { emoji });
+    return result.data?.data ?? result.data;
   },
 
   async sendGroupMessage(groupId: string, content: string, options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string; mentions?: { userId: string; name: string }[] }) {

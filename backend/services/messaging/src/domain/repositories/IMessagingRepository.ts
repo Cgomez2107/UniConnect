@@ -1,5 +1,5 @@
 import type { ConversationSummary, CreateConversationInput } from "../entities/Conversation.js";
-import type { CreateMessageInput, Message } from "../entities/Message.js";
+import type { CreateMessageInput, Message, Reaction } from "../entities/Message.js";
 
 export interface IMessagingRepository {
   getConversationById(id: string, currentUserId: string): Promise<ConversationSummary | null>;
@@ -18,5 +18,5 @@ export interface IMessagingRepository {
   markMessageAsRead(messageId: string, currentUserId: string): Promise<boolean>;
   markConversationAsRead(conversationId: string, currentUserId: string): Promise<number>;
   getUnreadCountForUser(currentUserId: string): Promise<number>;
-  toggleReaction(messageId: string, userId: string, emoji: string): Promise<MessageReaction[]>;
+  toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<Reaction[]>;
 }

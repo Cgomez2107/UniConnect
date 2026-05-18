@@ -4,7 +4,25 @@
  * New code should use the BaseMessagingClient from the shared-api package.
  */
 import { deps } from "@/store/deps";
-import type { ConversationUI, MessageUI } from "@/types/ui";
+import type { ConversationUI, MessageUI, MessageReactionUI } from "@/types/ui";
+
+export function groupReactions(reactions: any[] | null | undefined): MessageReactionUI[] {
+  if (!reactions || !Array.isArray(reactions)) return [];
+  const map = new Map<string, { emoji: string; users: string[] }>();
+  for (const r of reactions) {
+    const emoji = r.emoji;
+    if (!emoji) continue;
+    if (!map.has(emoji)) {
+      map.set(emoji, { emoji, users: [] });
+    }
+    map.get(emoji)!.users.push(r.userId ?? r.user_id ?? "");
+  }
+  return Array.from(map.values()).map((g) => ({
+    emoji: g.emoji,
+    count: g.users.length,
+    users: g.users,
+  }));
+}
 
 function mapConversation(conv: any): ConversationUI {
   return {
@@ -23,6 +41,7 @@ function mapConversation(conv: any): ConversationUI {
 }
 
 function mapMessage(msg: any): MessageUI {
+  const flat = msg.reactions ?? [];
   return {
     id: msg.id,
     conversationId: msg.conversationId,
@@ -35,6 +54,7 @@ function mapMessage(msg: any): MessageUI {
     replyPreview: msg.replyPreview ?? null,
     createdAt: msg.createdAt?.toISOString?.() ?? msg.createdAt,
     readAt: msg.readAt?.toISOString?.() ?? msg.readAt ?? null,
+    reactions: groupReactions(flat),
     sender: msg.sender
       ? { fullName: msg.sender.fullName, avatarUrl: msg.sender.avatarUrl ?? null }
       : undefined,
@@ -65,7 +85,7 @@ const messagingService = {
   async sendMessage(
     conversationId: string,
     content: string,
-    options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string }
+    options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string; mediaFilename?: string }
   ): Promise<MessageUI> {
     const msg = await deps.apiClients.messaging.sendMessage({
       conversationId,
@@ -73,6 +93,7 @@ const messagingService = {
       ...(options?.replyToMessageId && { replyToMessageId: options.replyToMessageId }),
       ...(options?.mediaUrl && { mediaUrl: options.mediaUrl }),
       ...(options?.mediaType && { mediaType: options.mediaType }),
+      ...(options?.mediaFilename && { mediaFilename: options.mediaFilename }),
     });
     return mapMessage(msg);
   },
@@ -82,7 +103,7 @@ const messagingService = {
   },
 
   async toggleReaction(messageId: string, emoji: string): Promise<{ emoji: string; userId: string }[]> {
-    return deps.apiClients.messaging.toggleReaction(messageId, emoji);
+    return (deps.apiClients.messaging as any).toggleReaction(messageId, emoji);
   },
 };
 

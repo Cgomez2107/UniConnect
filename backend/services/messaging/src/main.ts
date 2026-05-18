@@ -125,23 +125,22 @@ function bootstrap(): void {
 		chatNotificationObserver,
 	);
 	const markMessageAsRead = new MarkMessageAsRead(repository);
-	const markConversationAsRead = new MarkConversationAsRead(repository);
+  const markConversationAsRead = new MarkConversationAsRead(repository);
+  const toggleReaction = new ToggleReaction(repository);
 
-	const toggleReaction = new ToggleReaction(repository);
-
-	const controller = new MessagingController(
-		getConversations,
-		getConversationById,
-		getOrCreateConversation,
-		touchConversation,
-		getMessageById,
-		listMessages,
-		getUnreadCount,
-		sendMessage,
-		markMessageAsRead,
-		markConversationAsRead,
-		toggleReaction,
-	);
+  const controller = new MessagingController(
+    getConversations,
+    getConversationById,
+    getOrCreateConversation,
+    touchConversation,
+    getMessageById,
+    listMessages,
+    getUnreadCount,
+    sendMessage,
+    markMessageAsRead,
+    markConversationAsRead,
+    toggleReaction,
+  );
 
 	const server = createServer((req, res) => {
 		void (async () => {

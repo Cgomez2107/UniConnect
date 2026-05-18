@@ -53,6 +53,7 @@ function toApiMessage(message: Message) {
     reactions: message.reactions,
     created_at: message.createdAt,
     read_at: message.readAt,
+    reactions: message.reactions ?? [],
     sender: message.sender
       ? {
           full_name: message.sender.fullName,
@@ -237,6 +238,28 @@ export class MessagingController {
         sendJson(res, error.statusCode, { error: error.message, reason: error.reason, name: error.name });
         return;
       }
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async toggleReaction(req: IncomingMessage, res: ServerResponse, messageId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const body = await readJsonBody<{ emoji: string }>(req);
+      if (!body.emoji) {
+        sendError(res, 400, "El campo 'emoji' es requerido.");
+        return;
+      }
+
+      const reactions = await this.toggleReactionUseCase.execute(messageId, actorUserId, body.emoji);
+      sendData(res, 200, { reactions });
+    } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

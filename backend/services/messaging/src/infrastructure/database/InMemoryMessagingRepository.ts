@@ -4,7 +4,7 @@ import type {
   ConversationSummary,
   CreateConversationInput,
 } from "../../domain/entities/Conversation.js";
-import type { CreateMessageInput, Message, MessageReaction } from "../../domain/entities/Message.js";
+import type { CreateMessageInput, Message, Reaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 
 interface StoredConversation {
@@ -274,25 +274,29 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
     };
   }
 
-  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<MessageReaction[]> {
-    const msg = this.messages.get(messageId);
-    if (!msg) {
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<Reaction[]> {
+    const message = this.messages.get(messageId);
+    if (!message) {
       throw new Error("Mensaje no encontrado.");
     }
 
-    const currentReactions = msg.reactions ?? [];
-    const existingIndex = currentReactions.findIndex(
-      (r) => r.userId === userId && r.emoji === emoji,
-    );
-
-    let newReactions: MessageReaction[];
-    if (existingIndex >= 0) {
-      newReactions = currentReactions.filter((_, i) => i !== existingIndex);
-    } else {
-      newReactions = [...currentReactions, { emoji, userId }];
+    const conversation = this.conversations.get(message.conversationId);
+    if (!conversation || !this.isParticipant(conversation, currentUserId)) {
+      throw new Error("No tienes permisos para reaccionar a este mensaje.");
     }
 
-    this.messages.set(messageId, { ...msg, reactions: newReactions });
-    return newReactions;
+    const current = message.reactions ?? [];
+    const existingIdx = current.findIndex((r) => r.emoji === emoji && r.userId === currentUserId);
+
+    let updated: Reaction[];
+    if (existingIdx >= 0) {
+      updated = current.filter((_, i) => i !== existingIdx);
+    } else {
+      updated = [...current, { emoji, userId: currentUserId }];
+    }
+
+    this.messages.set(messageId, { ...message, reactions: updated });
+    return updated;
+  }
   }
 }

@@ -4,7 +4,7 @@ import type {
   ConversationSummary,
   CreateConversationInput,
 } from "../../domain/entities/Conversation.js";
-import type { CreateMessageInput, Message, MessageReaction } from "../../domain/entities/Message.js";
+import type { CreateMessageInput, Message, Reaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 
 interface ConversationRow {
@@ -34,6 +34,7 @@ interface MessageRow {
   reactions: any;
   created_at: string | Date;
   read_at: string | Date | null;
+  reactions: string | null;
   sender_full_name: string | null;
   sender_avatar_url: string | null;
 }
@@ -89,6 +90,19 @@ function mapConversation(row: ConversationRow): ConversationSummary {
   };
 }
 
+function parseReactions(raw: unknown): Reaction[] {
+  if (Array.isArray(raw)) return raw as Reaction[];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as Reaction[];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function mapMessage(row: MessageRow): Message {
   const rawContent = row.content ?? "";
   const legacy = decodeLegacyMediaContent(rawContent);
@@ -115,6 +129,7 @@ function mapMessage(row: MessageRow): Message {
     reactions,
     createdAt: new Date(row.created_at).toISOString(),
     readAt: row.read_at ? new Date(row.read_at).toISOString() : null,
+    reactions: parseReactions(row.reactions),
     sender: {
       fullName: row.sender_full_name ?? "Usuario",
       avatarUrl: row.sender_avatar_url,
@@ -294,6 +309,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           COALESCE(to_jsonb(m)->'reactions', '[]'::jsonb) AS reactions,
           m.created_at,
           m.read_at,
+          COALESCE(to_jsonb(m)->>'reactions', '[]') AS reactions,
           p.full_name AS sender_full_name,
           p.avatar_url AS sender_avatar_url
         FROM messages m
@@ -345,6 +361,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           COALESCE(to_jsonb(m)->'reactions', '[]'::jsonb) AS reactions,
           m.created_at,
           m.read_at,
+          COALESCE(to_jsonb(m)->>'reactions', '[]') AS reactions,
           p.full_name AS sender_full_name,
           p.avatar_url AS sender_avatar_url
         FROM messages m
@@ -526,45 +543,39 @@ export class PostgresMessagingRepository implements IMessagingRepository {
     return parseInt(result.rows[0]?.count ?? "0", 10);
   }
 
-  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<MessageReaction[]> {
-    const msgResult = await this.pool.query<{ conversation_id: string; reactions: any }>(
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<Reaction[]> {
+    const msg = await this.pool.query<{ conversation_id: string; reactions: any }>(
       `
-        SELECT m.conversation_id, COALESCE(to_jsonb(m)->'reactions', '[]'::jsonb) AS reactions
-        FROM messages m
-        WHERE m.id = $1
-        LIMIT 1
+      SELECT m.conversation_id, m.reactions
+      FROM messages m
+      JOIN conversations c ON c.id = m.conversation_id
+      WHERE m.id = $1
+        AND (c.participant_a = $2 OR c.participant_b = $2)
+      LIMIT 1
       `,
-      [messageId],
+      [messageId, currentUserId],
     );
 
-    if (!msgResult.rows[0]) {
-      throw new Error("Mensaje no encontrado.");
+    if (!msg.rows[0]) {
+      throw new Error("Mensaje no encontrado o sin permisos.");
     }
 
-    const currentReactions: MessageReaction[] = Array.isArray(msgResult.rows[0].reactions)
-      ? msgResult.rows[0].reactions
-      : [];
+    const current: Reaction[] = parseReactions(msg.rows[0].reactions);
+    const existingIdx = current.findIndex((r) => r.emoji === emoji && r.userId === currentUserId);
 
-    const existingIndex = currentReactions.findIndex(
-      (r) => r.userId === userId && r.emoji === emoji,
-    );
-
-    let newReactions: MessageReaction[];
-    if (existingIndex >= 0) {
-      newReactions = currentReactions.filter((_, i) => i !== existingIndex);
+    let updated: Reaction[];
+    if (existingIdx >= 0) {
+      updated = current.filter((_, i) => i !== existingIdx);
     } else {
-      newReactions = [...currentReactions, { emoji, userId }];
+      updated = [...current, { emoji, userId: currentUserId }];
     }
 
     await this.pool.query(
-      `
-        UPDATE messages
-        SET reactions = $1::jsonb
-        WHERE id = $2
-      `,
-      [JSON.stringify(newReactions), messageId],
+      `UPDATE messages SET reactions = $1::jsonb WHERE id = $2`,
+      [JSON.stringify(updated), messageId],
     );
 
-    return newReactions;
+    return updated;
+  }
   }
 }
