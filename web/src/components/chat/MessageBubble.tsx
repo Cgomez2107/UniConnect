@@ -1,8 +1,26 @@
 import React, { useMemo } from "react";
-import { MessageUI, UserSessionUI } from "@/types/ui";
+import { MessageUI, UserSessionUI, MessageReactionUI } from "@/types/ui";
 import { buildDecoratedMessage } from "@/chat/models/messageFactory.js";
 import type { IRenderContext } from "@/chat/models/IMessage.js";
 import { ReactionBar } from "./ReactionBar";
+
+function normalizeReactions(reactions: any[]): MessageReactionUI[] {
+  if (!reactions || reactions.length === 0) return [];
+  if ("users" in reactions[0]) return reactions as MessageReactionUI[];
+  const map = new Map<string, string[]>();
+  for (const r of reactions) {
+    const userId = r.userId ?? r.user_id;
+    if (!map.has(r.emoji)) map.set(r.emoji, []);
+    if (userId && !map.get(r.emoji)!.includes(userId)) {
+      map.get(r.emoji)!.push(userId);
+    }
+  }
+  return Array.from(map.entries()).map(([emoji, users]) => ({
+    emoji,
+    count: users.length,
+    users,
+  }));
+}
 
 interface MessageBubbleProps {
   message: MessageUI;
@@ -90,12 +108,15 @@ export function MessageBubble({
             )}
           </div>
         </div>
-        {message.reactions && message.reactions.length > 0 && (
-          <ReactionBar
-            reactions={message.reactions}
-            currentUserId={currentUser?.id}
-          />
-        )}
+        {(() => {
+          const normalized = normalizeReactions(message.reactions);
+          return normalized.length > 0 ? (
+            <ReactionBar
+              reactions={normalized}
+              currentUserId={currentUser?.id}
+            />
+          ) : null;
+        })()}
         <div className="flex gap-2 mt-1 px-1">
           {onReply && (
             <button

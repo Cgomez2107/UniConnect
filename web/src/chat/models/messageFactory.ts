@@ -2,7 +2,6 @@ import { BaseMessage } from "./BaseMessage.js";
 import { FileDecorator } from "./FileDecorator.js";
 import { MentionDecorator } from "./MentionDecorator.js";
 import { ReactionDecorator } from "./ReactionDecorator.js";
-import { MessageDecorator } from "./MessageDecorator.js";
 import type { IMessage, FileData, MentionData, ReactionData } from "./IMessage.js";
 
 interface RawMessageData {
@@ -14,7 +13,25 @@ interface RawMessageData {
   mediaType?: string | null;
   mediaFilename?: string | null;
   mentions?: MentionData[];
-  reactions?: ReactionData[];
+  reactions?: any[];
+}
+
+function normalizeReactions(reactions: any[]): ReactionData[] {
+  if (!reactions || reactions.length === 0) return [];
+  if ("users" in reactions[0]) return reactions as ReactionData[];
+  const map = new Map<string, string[]>();
+  for (const r of reactions) {
+    const userId = r.userId ?? r.user_id;
+    if (!map.has(r.emoji)) map.set(r.emoji, []);
+    if (userId && !map.get(r.emoji)!.includes(userId)) {
+      map.get(r.emoji)!.push(userId);
+    }
+  }
+  return Array.from(map.entries()).map(([emoji, users]) => ({
+    emoji,
+    count: users.length,
+    users,
+  }));
 }
 
 export function buildDecoratedMessage(raw: RawMessageData): IMessage {
@@ -22,11 +39,7 @@ export function buildDecoratedMessage(raw: RawMessageData): IMessage {
     typeof raw.createdAt === "string" ? new Date(raw.createdAt) : raw.createdAt;
 
   const base = new BaseMessage(raw.id, raw.content, raw.senderId, timestamp);
-  let decorated: MessageDecorator = new MessageDecorator(base) {
-    render(context: any) {
-      return base.render(context);
-    }
-  };
+  let decorated: IMessage = base;
 
   if (raw.mediaUrl && raw.mediaType && raw.mediaFilename) {
     decorated = new FileDecorator(decorated, {
@@ -41,8 +54,9 @@ export function buildDecoratedMessage(raw: RawMessageData): IMessage {
     decorated = new MentionDecorator(decorated, raw.mentions);
   }
 
-  if (raw.reactions && raw.reactions.length > 0) {
-    decorated = new ReactionDecorator(decorated, raw.reactions);
+  const normalized = normalizeReactions(raw.reactions);
+  if (normalized.length > 0) {
+    decorated = new ReactionDecorator(decorated, normalized);
   }
 
   return decorated;
