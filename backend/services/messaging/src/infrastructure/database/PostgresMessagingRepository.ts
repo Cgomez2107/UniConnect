@@ -356,7 +356,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
         FROM messages m
         LEFT JOIN profiles p ON p.id = m.sender_id
         WHERE m.conversation_id = $1
-        ORDER BY m.created_at ASC
+        ORDER BY m.created_at DESC
         LIMIT $2 OFFSET $3
       `,
       [conversationId, limit, offset],
@@ -532,10 +532,10 @@ export class PostgresMessagingRepository implements IMessagingRepository {
     return parseInt(result.rows[0]?.count ?? "0", 10);
   }
 
-  async toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<Reaction[]> {
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string) {
     const msg = await this.pool.query<{ conversation_id: string; reactions: string | null }>(
       `
-      SELECT m.conversation_id, m.reactions
+      SELECT m.conversation_id, COALESCE(m.reactions, '[]'::jsonb) AS reactions
       FROM messages m
       JOIN conversations c ON c.id = m.conversation_id
       WHERE m.id = $1
@@ -564,6 +564,6 @@ export class PostgresMessagingRepository implements IMessagingRepository {
       [JSON.stringify(updated), messageId],
     );
 
-    return updated;
+    return { conversationId: msg.rows[0].conversation_id, reactions: updated };
   }
 }

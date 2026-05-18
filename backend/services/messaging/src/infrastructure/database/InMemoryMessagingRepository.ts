@@ -274,7 +274,7 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
     };
   }
 
-  async toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<Reaction[]> {
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string) {
     const message = this.messages.get(messageId);
     if (!message) {
       throw new Error("Mensaje no encontrado.");
@@ -296,6 +296,6 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
     }
 
     this.messages.set(messageId, { ...message, reactions: updated });
-    return updated;
+    return { conversationId: message.conversationId, reactions: updated };
   }
 }

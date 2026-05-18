@@ -14,10 +14,21 @@ export default function StatsRow({ publications, groups, subjects, indicadores }
   return (
     <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-md p-4 mb-6">
       <div className="flex items-center justify-center divide-x divide-neutral-200 dark:divide-neutral-600">
-        <StatBox value={indicadores?.mensajesEnviados ?? publications} label={indicadores ? "Mensajes" : "Publicaciones"} />
-        <StatBox value={indicadores?.gruposParticipa ?? groups} label={indicadores ? "Grupos" : "Grupos"} />
-        <StatBox value={indicadores?.gruposBajoAdministracion ?? 0} label={indicadores ? "Admin" : "Admin"} />
-        <StatBox value={subjects} label="Materias" />
+        {indicadores ? (
+          <>
+            <StatBox value={indicadores.mensajesEnviados} label="💬 Mensajes" />
+            <StatBox value={indicadores.gruposParticipa} label="👥 Participa" />
+            <StatBox value={indicadores.gruposBajoAdministracion} label="📊 Grupos creados" />
+            <StatBox value={subjects} label="📚 Materias" />
+          </>
+        ) : (
+          <>
+            <StatBox value={publications} label="📝 Publicaciones" />
+            <StatBox value={groups} label="👥 Grupos" />
+            <StatBox value={0} label="📊 Admin" />
+            <StatBox value={subjects} label="📚 Materias" />
+          </>
+        )}
       </div>
     </div>
   );

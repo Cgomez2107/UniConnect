@@ -50,12 +50,25 @@ export interface UserTypingEvent {
 }
 
 /**
+ * Evento: Reacción actualizada en un mensaje
+ */
+export interface ReactionUpdatedEvent {
+  readonly type: "ReactionUpdated";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly messageId: string;
+  readonly conversationId: string;
+  readonly reactions: Array<{ emoji: string; userId: string }>;
+}
+
+/**
  * Type Union: Todos los eventos de chat
  */
 export type ChatEvent =
   | NuevoMensajeEvent
   | MessageReadEvent
-  | UserTypingEvent;
+  | UserTypingEvent
+  | ReactionUpdatedEvent;
 
 /**
  * Sistema de canales para enrutamiento de eventos

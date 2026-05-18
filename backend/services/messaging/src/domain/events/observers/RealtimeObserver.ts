@@ -91,6 +91,17 @@ export class RealtimeObserver implements IChatObserver {
         });
         break;
 
+      case "ReactionUpdated":
+        await this.realtimeService.broadcast(channel, {
+          type: "reaction_updated",
+          data: {
+            messageId: event.messageId,
+            conversationId: event.conversationId,
+            reactions: event.reactions,
+          },
+        });
+        break;
+
       default:
         const exhaustiveCheck: never = event;
         throw new Error(`Evento no manejado: ${exhaustiveCheck}`);

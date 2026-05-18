@@ -29,17 +29,17 @@ export function buildDecoratedMessage(raw: RawMessageData): IMessage {
   const base = new BaseMessage(raw.id, raw.content, raw.senderId, timestamp);
   let decorated: IMessage = base;
 
-  if (raw.mediaUrl && raw.mediaType) {
+  if (raw.mentions && raw.mentions.length > 0) {
+    decorated = new MentionDecorator(decorated, raw.mentions);
+  }
+
+  if (raw.mediaUrl) {
     decorated = new FileDecorator(decorated, {
       url: raw.mediaUrl,
-      mimeType: raw.mediaType,
+      mimeType: raw.mediaType || 'application/octet-stream',
       filename: deriveFilename(raw),
       size: 0,
     });
-  }
-
-  if (raw.mentions && raw.mentions.length > 0) {
-    decorated = new MentionDecorator(decorated, raw.mentions);
   }
 
   return decorated;

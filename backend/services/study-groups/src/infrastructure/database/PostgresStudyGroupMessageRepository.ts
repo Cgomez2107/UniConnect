@@ -82,7 +82,7 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
   async toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<any[]> {
     const msg = await this.pool.query<any>(
       `
-      SELECT m.request_id, m.reactions
+      SELECT m.request_id, COALESCE(m.reactions, '[]'::jsonb) AS reactions
       FROM study_group_messages m
       WHERE m.id = $1
       LIMIT 1

@@ -242,11 +242,21 @@ export function GroupDashboardPage() {
             newMsg.sender.fullName = newMsg.sender.fullName || newMsg.senderFullName;
             newMsg.sender.full_name = newMsg.sender.full_name || newMsg.senderFullName;
             newMsg.mentions = transformMentions(newMsg.mentions);
-            newMsg.reactions = transformReactions(newMsg.reactions);
             setMessages((prev) => {
               if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
+          }
+
+          if (data.event === "reaction_updated" && data.payload) {
+            const { messageId, reactions } = data.payload;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId || m._tempId === messageId
+                  ? { ...m, reactions }
+                  : m
+              )
+            );
           }
         } catch (err) {
           console.error("[GroupDashboardPage WS] Error parsing message:", err);
@@ -826,7 +836,7 @@ export function GroupDashboardPage() {
           <p className="text-success-600 dark:text-success-400 text-sm">Transferencia aceptada correctamente.</p>
         </div>
       )}
-      {pendingTransferId && isAdmin && (
+      {pendingTransferId && (
         <div className="bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800 px-4 sm:px-6 py-2 flex items-center justify-between">
           <p className="text-primary-700 dark:text-primary-300 text-sm">Tienes una transferencia de administración pendiente.</p>
           <Button variant="primary" size="sm" onClick={handleAcceptTransfer} loading={acceptTransferLoading}>

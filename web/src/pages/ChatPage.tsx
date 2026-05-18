@@ -87,7 +87,8 @@ export const ChatPage: React.FC = () => {
       const msgsResponse = await apiClient.get(`/messages`, {
         params: { conversationId, limit: 50 },
       });
-      setMessages((msgsResponse.data?.data || msgsResponse.data || []).map((m: any) => ({
+      const rawMsgs: any[] = msgsResponse.data?.data || msgsResponse.data || [];
+      setMessages(rawMsgs.sort((a: any, b: any) => new Date(a.created_at || a.createdAt).getTime() - new Date(b.created_at || b.createdAt).getTime()).map((m: any) => ({
         id: m.id,
         content: m.content,
         senderId: m.sender_id || m.senderId,
@@ -126,8 +127,10 @@ export const ChatPage: React.FC = () => {
     };
 
     ws.onmessage = (event) => {
+      console.log("[ChatPage WS] raw event type:", typeof event.data, "len:", event.data?.length);
       try {
         const data = JSON.parse(event.data);
+        console.log("[ChatPage WS] parsed event:", data.event, Object.keys(data));
         const payload = data.payload || data;
 
         if (data.event === "new_message") {
@@ -136,6 +139,19 @@ export const ChatPage: React.FC = () => {
           setMessages((prev) => {
             if (prev.some((m) => m.id === mappedMsg.id)) return prev;
             return [...prev, { ...mappedMsg, clientStatus: "sent" }];
+          });
+        } else if (data.event === "reaction_updated") {
+          console.log("[ChatPage WS] reaction_updated ENTERED");
+          const { messageId, reactions } = payload;
+          setMessages((prev) => {
+            const found = prev.find((m) => m.id === messageId);
+            if (!found) {
+              console.warn("[ChatPage WS] message not found", messageId);
+              return prev;
+            }
+            return prev.map((m) =>
+              m.id === messageId ? { ...m, reactions: reactions || [] } : m
+            );
           });
         } else if (data.type === "message" || data.event === "message:received") {
           setMessages((prev) => {

@@ -148,6 +148,17 @@ export function GroupChatPage() {
               return [...prev, { ...mappedMsg, clientStatus: "sent" }];
             });
           }
+
+          if (data.event === "reaction_updated") {
+            const { messageId, reactions } = payload;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId || m._tempId === messageId
+                  ? { ...m, reactions: transformReactions(reactions) }
+                  : m
+              )
+            );
+          }
         } catch {
           // ignore
         }

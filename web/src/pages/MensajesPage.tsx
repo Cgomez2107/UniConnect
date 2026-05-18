@@ -48,7 +48,9 @@ export function MensajesPage() {
       setLoadingMessages(true);
       try {
         const msgs = await messagingService.getMessages(selectedConversation.id);
-        setMessages(msgs || []);
+        setMessages((msgs || []).sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        ));
       } catch (err) {
         console.error("Error loading messages:", err);
       } finally {
@@ -94,6 +96,15 @@ export function MensajesPage() {
                 return [...prev, msg];
               });
             });
+          }
+        } else if (data.event === "reaction_updated") {
+          const { messageId, reactions } = data.payload || {};
+          if (messageId) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId ? { ...m, reactions: groupReactions(reactions || []) } : m,
+              ),
+            );
           }
         }
       } catch {

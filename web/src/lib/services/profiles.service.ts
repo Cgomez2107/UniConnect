@@ -56,11 +56,12 @@ const profilesService = {
     return deps.apiClients.profiles.getProfileById(userId);
   },
 
-  async updateProfile(data: { fullName?: string; bio?: string; phone?: string }): Promise<ProfileUI> {
+  async updateProfile(data: { fullName?: string; bio?: string; phone?: string; semester?: number }): Promise<ProfileUI> {
     const profile = await deps.apiClients.profiles.updateProfile({
       fullName: data.fullName,
       bio: data.bio,
       phone: data.phone,
+      semester: data.semester,
     });
     return mapProfile(profile);
   },

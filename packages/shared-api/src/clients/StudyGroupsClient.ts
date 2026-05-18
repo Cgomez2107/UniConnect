@@ -166,10 +166,11 @@ export class StudyGroupsClient extends BaseClient {
     });
   }
 
-  async getMessages(groupId: string): Promise<Message[]> {
+  async getMessages(groupId: string, limit?: number): Promise<Message[]> {
+    const params = limit ? `?limit=${limit}` : "";
     const response = await this.transport.request<MessageDTO[]>({
       method: "GET",
-      url: `/study-groups/${groupId}/messages`,
+      url: `/study-groups/${groupId}/messages${params}`,
     });
     return this.ensureArray(response.data).map((dto) => mapMessageDtoToDomain(dto));
   }

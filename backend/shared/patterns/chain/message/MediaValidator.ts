@@ -8,6 +8,16 @@ const ALLOWED_MIME_TYPES = [
   "image/webp",
   "application/pdf",
   "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/x-rar-compressed",
+  "application/x-7z-compressed",
 ];
 
 const MAX_FILENAME_LENGTH = 200;

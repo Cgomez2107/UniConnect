@@ -149,7 +149,7 @@ function bootstrap(): void {
 	);
 	const markMessageAsRead = new MarkMessageAsRead(repository);
   const markConversationAsRead = new MarkConversationAsRead(repository);
-  const toggleReaction = new ToggleReaction(repository);
+  const toggleReaction = new ToggleReaction(repository, chatSubject, realtimeObserver);
 
   const controller = new MessagingController(
     getConversations,

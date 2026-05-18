@@ -1,14 +1,20 @@
 import { Colors } from "@/constants/Colors"
 import type { Insignia } from "@/types"
 import { Image, StyleSheet, Text, useColorScheme, View } from "react-native"
+import { useState } from "react"
 
 interface Props {
   insignias: Insignia[]
 }
 
 const BADGE_EMOJI_FALLBACK: Record<string, string> = {
-  primer_publicacion: "📝",
+  "primer-mensaje": "💬",
+  conversador: "🗣️",
   colaborador: "🤝",
+  "trabajador-equipo": "👥",
+  "sucesor-confiable": "✅",
+  "lider-emerito": "👑",
+  primer_publicacion: "📝",
   red_social: "🌐",
   estrella: "⭐",
   experto: "🏆",
@@ -24,6 +30,20 @@ function fechaLocal(raw: string): string {
   try { return new Date(raw).toLocaleDateString(); } catch { return ""; }
 }
 
+function BadgeIcon({ insignia }: { insignia: Insignia }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  if (insignia.iconoUrl && !imgFailed) {
+    return (
+      <Image
+        source={{ uri: insignia.iconoUrl }}
+        style={styles.badgeImage}
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+  return <Text style={styles.badgeIcon}>{BADGE_EMOJI_FALLBACK[insignia.id] ?? "🏅"}</Text>;
+}
+
 export function BadgePanel({ insignias }: Props) {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
@@ -36,7 +56,6 @@ export function BadgePanel({ insignias }: Props) {
       <View style={styles.grid}>
         {insignias.map((insignia, index) => {
           const hasFecha = !!insignia.fechaObtenida;
-          const hasIcon = !!insignia.iconoUrl;
           return (
             <View
               key={badgeKey(insignia, index)}
@@ -48,11 +67,7 @@ export function BadgePanel({ insignias }: Props) {
                 },
               ]}
             >
-              {hasIcon ? (
-                <Image source={{ uri: insignia.iconoUrl }} style={styles.badgeImage} />
-              ) : (
-                <Text style={styles.badgeIcon}>{BADGE_EMOJI_FALLBACK[insignia.id] ?? "🏅"}</Text>
-              )}
+              <BadgeIcon insignia={insignia} />
               <Text
                 style={[styles.badgeName, { color: C.textPrimary }]}
                 numberOfLines={2}

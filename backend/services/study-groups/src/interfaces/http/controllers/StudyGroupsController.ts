@@ -173,7 +173,7 @@ export class StudyGroupsController {
     const limitRaw = requestUrl.searchParams.get("limit");
 
     const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
-    const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 20;
+    const pageSize = limitRaw ? Math.min(200, Math.max(1, Number(limitRaw))) : 50;
 
     try {
       const messages = await this.listStudyGroupMessages.execute({

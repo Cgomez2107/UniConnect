@@ -256,8 +256,8 @@ export class MessagingController {
         return;
       }
 
-      const reactions = await this.toggleReactionUseCase.execute(messageId, actorUserId, body.emoji);
-      sendData(res, 200, { reactions });
+      const { conversationId, reactions } = await this.toggleReactionUseCase.execute(messageId, actorUserId, body.emoji);
+      sendData(res, 200, { conversation_id: conversationId, message_id: messageId, reactions });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { Student } from "../../../domain/entities/Student.js";
 import type { SearchStudentsBySubject } from "../../../application/use-cases/SearchStudentsBySubject.js";
 import type { GetStudentPublicProfile } from "../../../application/use-cases/GetStudentPublicProfile.js";
 import type { GetFullProfile } from "../../../application/use-cases/GetFullProfile.js";
@@ -145,10 +146,25 @@ export class ProfilesCatalogController {
     }
 
     try {
-      const student = await this.getPublicProfile.execute(userId, userId);
+      let student: Student | null = null;
+      try {
+        student = await this.getPublicProfile.execute(userId, userId);
+      } catch (profileErr) {
+        console.error("[getMyProfile] Error fetching profile, attempting to create:", profileErr);
+      }
+
       if (!student) {
-        sendError(res, 404, "Perfil no encontrado");
-        return;
+        try {
+          const fallbackName = req.headers["x-user-name"] || "Usuario";
+          student = await this.createProfileUC.execute({
+            id: userId,
+            fullName: typeof fallbackName === "string" ? fallbackName : "Usuario",
+          });
+        } catch (createErr) {
+          console.error("[getMyProfile] Could not create fallback profile:", createErr);
+          sendError(res, 404, "Perfil no encontrado. Complete su registro.");
+          return;
+        }
       }
 
       const fullProfile = await this.getFullProfileUC.execute(student);
@@ -174,8 +190,8 @@ export class ProfilesCatalogController {
         insignias: meta.insignias ?? [],
       });
     } catch (error) {
-      const mapped = mapErrorToHttpStatus(error);
-      sendError(res, mapped.statusCode, mapped.message);
+      console.error("[getMyProfile] Unexpected error:", error);
+      sendError(res, 500, "Error interno al obtener perfil");
     }
   }
 
@@ -271,8 +287,8 @@ export class ProfilesCatalogController {
       }));
       sendData(res, 200, mapped, { total: mapped.length });
     } catch (error) {
-      const mapped = mapErrorToHttpStatus(error);
-      sendError(res, mapped.statusCode, mapped.message);
+      console.error("[getMyPrograms] Error fetching programs for user", userId, ":", error);
+      sendData(res, 200, [], { total: 0 });
     }
   }
 

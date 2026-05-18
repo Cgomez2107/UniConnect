@@ -96,9 +96,9 @@ export function NotificationsPage() {
                   <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
                     {formatDate(n.createdAt)}
                   </p>
-                  {isTransfer(n.type) && n.data?.requestId && (
+                  {isTransfer(n.type) && (n.data?.groupId ?? n.data?.requestId) && (
                     <button
-                      onClick={() => navigate(`/grupo/${n.data?.requestId}?acceptTransfer=${n.data?.transferId}`)}
+                      onClick={() => navigate(`/grupo/${n.data?.groupId ?? n.data?.requestId}?acceptTransfer=${n.data?.transferId}`)}
                       className="text-xs text-primary-600 hover:text-primary-700 font-medium mt-1"
                     >
                       Ver grupo →

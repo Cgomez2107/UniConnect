@@ -42,7 +42,9 @@ export function PerfilPage() {
     .filter(Boolean) as { id: string; name: string }[];
   const publicationCount = publications.length;
   const subjectCount = subjects.length;
-  const groupCount = 0;
+  const groupCount = indicadores
+    ? indicadores.gruposBajoAdministracion + indicadores.gruposParticipa
+    : 0;
 
   const handleSignOut = async () => {
     try {

@@ -262,6 +262,7 @@ export default function useEditProfileForm() {
         fullName: state.name.trim(),
         bio: state.bio.trim() || undefined,
         phone: state.phone.trim() || undefined,
+        semester: state.semester ? Number(state.semester) : undefined,
       });
 
       if (avatarChanged.current && state.avatarFile && user?.id) {
