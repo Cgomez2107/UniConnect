@@ -421,6 +421,13 @@ export interface AdminEvent {
 // NOTIFICACIONES
 // ============================================================================
 
+export type Prioridad = 'normal' | 'urgente' | 'critica';
+
+export interface Accion {
+  label: string;
+  endpoint: string;
+}
+
 export interface AppNotification {
   id: string;
   userId: string;
@@ -430,6 +437,8 @@ export interface AppNotification {
   payload: Record<string, unknown> | null;
   createdAt: string;
   readAt: string | null;
+  priority?: Prioridad;
+  action?: Accion;
 }
 
 // ============================================================================

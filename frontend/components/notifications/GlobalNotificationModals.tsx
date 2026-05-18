@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Platform 
 } from "react-native";
-import { useNotificationStore } from "@/store/useNotificationStore";
+import { useNotificationStore, type Prioridad } from "@/store/useNotificationStore";
 import { supabase } from "@/lib/supabase";
 import { fetchApi } from "@/lib/api/httpClient";
 
@@ -18,6 +18,25 @@ import { fetchApi } from "@/lib/api/httpClient";
  * Centraliza la visualización de modales basados en una cola de notificaciones.
  * Muestra las notificaciones una por una.
  */
+
+const PRIORITY_COLORS: Record<Prioridad, string> = {
+  normal: "rgba(255, 255, 255, 0.1)",
+  urgente: "#F59E0B",
+  critica: "#EF4444",
+};
+
+function getPriorityBorder(priority?: Prioridad): string {
+  return PRIORITY_COLORS[priority ?? "normal"] ?? PRIORITY_COLORS.normal;
+}
+
+function getPriorityIcon(priority?: Prioridad): string {
+  switch (priority) {
+    case "urgente": return "⚠️";
+    case "critica": return "🚨";
+    default: return "🔔";
+  }
+}
+
 export function GlobalNotificationModals() {
   const { queue, popNotification } = useNotificationStore();
   const current = queue[0]; // La notificación al frente de la cola
@@ -52,6 +71,7 @@ export function GlobalNotificationModals() {
 // 1. Modal de Transferencia de Administración
 function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void }) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const priority = data.priority ?? "normal";
   
   // Lógica robusta para obtener el nombre del grupo
   const groupName = data.payload?.groupName || (data.title !== "transferencia_admin_solicitada" ? data.title : "un grupo");
@@ -75,8 +95,8 @@ function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void 
   return (
     <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
-        <View style={styles.container}>
-          <Text style={styles.icon}>🛡️</Text>
+        <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+          <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
           <Text style={styles.title}>Invitación de Administración</Text>
           <Text style={styles.description}>
             Desean delegarte el control total del grupo <Text style={styles.boldWhite}>{groupName}</Text>. ¿Aceptas la responsabilidad?
@@ -104,8 +124,8 @@ function JoinRequestModal({ data, onClose }: { data: any, onClose: () => void })
   return (
     <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
-        <View style={[styles.container, { borderColor: '#0047AB' }]}>
-          <Text style={styles.icon}>👋</Text>
+        <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+          <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
           <Text style={styles.title}>Nueva Solicitud</Text>
           <Text style={styles.description}>
             Tu grupo <Text style={styles.boldWhite}>{groupName}</Text> tiene una nueva solicitud de ingreso de {applicantName}.
@@ -131,8 +151,8 @@ function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
   return (
     <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
-        <View style={[styles.container, { borderColor: '#10B981' }]}>
-          <Text style={styles.icon}>🎉</Text>
+        <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+          <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
           <Text style={styles.title}>¡Bienvenido!</Text>
           <Text style={styles.description}>
             Tu solicitud para el grupo <Text style={styles.boldWhite}>{groupName}</Text> ha sido aceptada.

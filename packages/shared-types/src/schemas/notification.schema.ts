@@ -11,6 +11,13 @@ export const NotificationTypeEnum = z.enum([
   "system",
 ]);
 
+export const PrioridadEnum = z.enum(["normal", "urgente", "critica"]);
+
+export const AccionSchema = z.object({
+  label: z.string().min(1).max(100),
+  endpoint: z.string().min(1),
+});
+
 export const NotificationSchema = z.object({
   id: UuidSchema,
   userId: UuidSchema,
@@ -21,6 +28,8 @@ export const NotificationSchema = z.object({
   read: z.boolean(),
   data: z.record(z.any()).optional(),
   createdAt: DateStringSchema,
+  priority: PrioridadEnum.optional(),
+  action: AccionSchema.optional(),
 });
 
 export const NotificationDTOSchema = z.object({
@@ -41,4 +50,6 @@ export const NotificationDTOSchema = z.object({
   read: z.boolean(),
   data: z.record(z.any()).optional(),
   created_at: DateStringSchema,
+  priority: PrioridadEnum.optional(),
+  action: AccionSchema.optional(),
 });

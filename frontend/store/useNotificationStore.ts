@@ -7,12 +7,21 @@ export type NotificationType =
   | "miembro_aceptado"
   | "miembro_rechazado";
 
+export type Prioridad = "normal" | "urgente" | "critica";
+
+export interface Accion {
+  label: string;
+  endpoint: string;
+}
+
 export interface NotificationData {
   id?: string;
   type: NotificationType;
   title: string;
   body: string;
   payload: any;
+  priority?: Prioridad;
+  action?: Accion;
 }
 
 interface NotificationState {

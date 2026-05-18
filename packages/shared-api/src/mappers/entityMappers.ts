@@ -140,6 +140,8 @@ export function mapNotificationDtoToDomain(dto: Record<string, any>): Notificati
     description: dto.description ?? dto.body ?? undefined,
     actionUrl: dto.actionUrl ?? dto.action_url ?? undefined,
     read: dto.read ?? (dto.readAt != null || dto.read_at != null),
+    priority: dto.priority ?? dto.prioridad ?? undefined,
+    action: dto.action ?? undefined,
   };
   const camelCased = snakeToCamel<Notification>(withMappedKeys);
   return parseStringDatesToObjects<Notification>(camelCased);
