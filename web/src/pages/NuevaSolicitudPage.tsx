@@ -58,7 +58,11 @@ export function NuevaSolicitudPage() {
         });
         navigate("/solicitudes");
       } catch (err: any) {
-        throw new Error(err?.response?.data?.message || "Error al crear el grupo.");
+        if (err?.status === 409) {
+          setError(err?.response?.data?.error || "No puedes crear más grupos para esta materia");
+          return;
+        }
+        throw new Error(err?.response?.data?.message || err?.response?.data?.error || "Error al crear el grupo.");
       }
     },
     (formValues) => {

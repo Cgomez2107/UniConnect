@@ -14,6 +14,35 @@ test.describe("C2 - Create study group", () => {
   test("should create a group, navigate to its detail page, and show Transferir admin button", async ({ page }) => {
     const groupTitle = `Grupo E2E ${Date.now()}`;
 
+    const token = await page.evaluate(() => {
+      const raw = localStorage.getItem("uniconnect-auth-session");
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed?.state?.accessToken ?? null;
+      } catch {
+        return null;
+      }
+    });
+    expect(token).toBeTruthy();
+
+    const gatewayUrl = "http://localhost:3000";
+
+    const existingResponse = await page.request.get(`${gatewayUrl}/api/v1/study-groups/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (existingResponse.ok()) {
+      const body = await existingResponse.json();
+      const groups: any[] = body?.data ?? body ?? [];
+      for (const g of groups) {
+        if (g.title && ((g.title as string).startsWith("Grupo E2E") || (g.title as string).startsWith("Limite E2E"))) {
+          await page.request.post(`${gatewayUrl}/api/v1/study-groups/${g.id}/cancel`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      }
+    }
+
     await page.goto("/nueva-solicitud");
     await expect(page).toHaveURL(/\/nueva-solicitud/);
 
