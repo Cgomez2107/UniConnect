@@ -71,10 +71,13 @@ transport.setTokenRefreshProvider(async () => {
 
 transport.setOnSessionExpired(() => {
   try {
+    const hadSession = !!window.localStorage.getItem(AUTH_SESSION_KEY);
     window.localStorage.removeItem(AUTH_SESSION_KEY);
     window.localStorage.removeItem("accessToken");
     window.localStorage.removeItem("user");
-    window.location.href = "/login";
+    if (hadSession) {
+      window.location.href = "/login";
+    }
   } catch {
     // ignore
   }

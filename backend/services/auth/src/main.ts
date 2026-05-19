@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import type { ServerResponse } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import bcryptjs from "bcryptjs";
 import { PostgreSQLAuthRepository } from "./infrastructure/repositories/PostgreSQLAuthRepository.js";
 import { PostgreSQLTokenRepository } from "./infrastructure/repositories/PostgreSQLTokenRepository.js";
 import { JWTService } from "./infrastructure/jwt/JWTService.js";
@@ -380,6 +381,27 @@ async function main() {
       res.end(JSON.stringify({ error: "Not found" }));
     }
   });
+
+  if (nodeEnv === "development" && !supabaseServiceRoleKey) {
+    const devSeedPasswordHash = await bcryptjs.hash("Test1234", 10);
+    const devUsers = [
+      { email: "test@ucaldas.edu.co", fullName: "Estudiante Test" },
+      { email: "estudiante.prueba@ucaldas.edu.co", fullName: "Estudiante Prueba" },
+    ];
+    for (const u of devUsers) {
+      const exists = await authRepository.findByEmail(u.email);
+      if (!exists) {
+        await authRepository.create({
+          email: u.email,
+          fullName: u.fullName,
+          passwordHash: devSeedPasswordHash,
+          role: "estudiante",
+          isActive: true,
+        });
+        console.log(JSON.stringify({ service: "auth", level: "info", message: `Dev seed: user created ${u.email}` }));
+      }
+    }
+  }
 
   (server as any).listen({ port: PORT, host: "::" }, () => {
     console.log(

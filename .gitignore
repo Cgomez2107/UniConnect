@@ -47,3 +47,6 @@ openspec/*
 .github/*
 .opencode/*
 skills-lock.json
+
+test-results/
+playwright-report/

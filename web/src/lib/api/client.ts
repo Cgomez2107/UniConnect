@@ -173,10 +173,13 @@ apiClient.interceptors.response.use(
 
     // 401 Unauthorized - Token expirado/inválido
     if (status === 401) {
+      const hadSession = !!localStorage.getItem(AUTH_SESSION_KEY) || !!localStorage.getItem("accessToken");
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
       localStorage.removeItem(AUTH_SESSION_KEY);
-      window.location.href = "/login";
+      if (hadSession) {
+        window.location.href = "/login";
+      }
     }
 
     // 403 Forbidden - Acceso prohibido
