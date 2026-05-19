@@ -20,5 +20,7 @@ export * from "./types/domain.js";
 export * from "./types/dto.js";
 export * from "./lib/mappers.js";
 export * from "./lib/errors.js";
+export * from "./validation/MessageValidationErrors.js";
+export * from "./validation/ValidationResult.js";
 
 export const SHARED_TYPES_VERSION = "0.2.0";
