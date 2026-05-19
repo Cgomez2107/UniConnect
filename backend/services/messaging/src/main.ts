@@ -61,27 +61,6 @@ function bootstrap(): void {
 	// ✅ Crear ChatSubject para eventos en tiempo real
 	const chatSubject = new ChatSubject("messaging-domain");
 
-	// ✅ Registrar observers de chat (tiempo real)
-	const realtimeObserver = new RealtimeObserver({
-		async broadcast(channel, message) {
-			console.log(
-				JSON.stringify({
-					service: "messaging",
-					level: "info",
-					message: "WebSocket broadcast",
-					channel,
-					eventType: message.type,
-				}),
-			);
-		},
-	});
-
-	// ✅ Idempotency store (evita duplicados)
-	const idempotencyObserver = new IdempotencyObserver({
-		async markProcessed(_messageId) { return true; },
-		async cleanup(_olderThanSeconds) {},
-	});
-
 	// ✅ Gateway de notificaciones vía Supabase Realtime
 	const realtimeGateway = (env.supabaseUrl && env.supabaseServiceRoleKey)
 		? new SupabaseRealtimeGateway(env.supabaseUrl, env.supabaseServiceRoleKey)
@@ -96,6 +75,29 @@ function bootstrap(): void {
 			}),
 		);
 	}
+
+	// ✅ Registrar observers de chat (tiempo real)
+	const realtimeObserver = new RealtimeObserver(
+		realtimeGateway || {
+			async broadcast(channel, message) {
+				console.log(
+					JSON.stringify({
+						service: "messaging",
+						level: "info",
+						message: "WebSocket broadcast",
+						channel,
+						eventType: message.type,
+					}),
+				);
+			},
+		}
+	);
+
+	// ✅ Idempotency store (evita duplicados)
+	const idempotencyObserver = new IdempotencyObserver({
+		async markProcessed(_messageId) { return true; },
+		async cleanup(_olderThanSeconds) {},
+	});
 
 	// ✅ IUserRepository — resuelve contacto del destinatario antes de emitir
 	const userRepository: IUserRepository = {
