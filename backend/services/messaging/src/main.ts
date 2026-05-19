@@ -9,6 +9,7 @@ import { GetUnreadCount } from "./application/use-cases/GetUnreadCount.js";
 import { MarkMessageAsRead } from "./application/use-cases/MarkMessageAsRead.js";
 import { MarkConversationAsRead } from "./application/use-cases/MarkConversationAsRead.js";
 import { SendMessage } from "./application/use-cases/SendMessage.js";
+import { ToggleReaction } from "./application/use-cases/ToggleReaction.js";
 import { TouchConversation } from "./application/use-cases/TouchConversation.js";
 import { ChatSubject, RealtimeObserver, IdempotencyObserver, ChatNotificationObserver, type IRealtimeService, type IIdempotencyStore } from "./domain/events/index.js";
 import { loadMessagingEnv } from "./config/env.js";
@@ -147,20 +148,22 @@ function bootstrap(): void {
 		chatNotificationObserver,
 	);
 	const markMessageAsRead = new MarkMessageAsRead(repository);
-	const markConversationAsRead = new MarkConversationAsRead(repository);
+  const markConversationAsRead = new MarkConversationAsRead(repository);
+  const toggleReaction = new ToggleReaction(repository, chatSubject, realtimeObserver);
 
-	const controller = new MessagingController(
-		getConversations,
-		getConversationById,
-		getOrCreateConversation,
-		touchConversation,
-		getMessageById,
-		listMessages,
-		getUnreadCount,
-		sendMessage,
-		markMessageAsRead,
-		markConversationAsRead,
-	);
+  const controller = new MessagingController(
+    getConversations,
+    getConversationById,
+    getOrCreateConversation,
+    touchConversation,
+    getMessageById,
+    listMessages,
+    getUnreadCount,
+    sendMessage,
+    markMessageAsRead,
+    markConversationAsRead,
+    toggleReaction,
+  );
 
 	const server = createServer((req, res) => {
 		void (async () => {

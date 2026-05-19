@@ -8,6 +8,10 @@
     "lint": "echo \"@uniconnect/shared lint scaffold\"",
     "test": "echo \"@uniconnect/shared tests scaffold\""
   },
+  "dependencies": {
+    "@uniconnect/shared-types": "workspace:*",
+    "zod": "^3.23.0"
+  },
   "devDependencies": {
     "typescript": "^5.7.2",
     "@types/node": "^22.10.1"

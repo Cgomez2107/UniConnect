@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
+    "seed": "tsx scripts/seed-test-user.ts",
     "test:integration": "vitest run tests/integration/auth.integration.spec.ts --coverage"
   },
   "dependencies": {

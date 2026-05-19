@@ -11,8 +11,11 @@ export class GroupPermissionRepository implements IGroupPermissionRepository, IA
     try {
       const result = await this.pool.query(
         `SELECT EXISTS (
+          SELECT 1 FROM study_requests
+          WHERE id = $1 AND author_id = $2
+          UNION
           SELECT 1 FROM applications
-          WHERE request_id = $1 AND user_id = $2 AND status = 'aceptada'
+          WHERE request_id = $1 AND applicant_id = $2 AND status = 'aceptada'
           UNION
           SELECT 1 FROM study_request_admins
           WHERE request_id = $1 AND user_id = $2

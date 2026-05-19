@@ -9,10 +9,6 @@ import * as DocumentPicker from "expo-document-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 
-const ALLOWED_EXTENSIONS = [
-  "pdf", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "txt", "jpg", "jpeg", "png",
-] as const;
-
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 interface PickedFile {
@@ -37,10 +33,6 @@ export function useUploadResourceForm() {
   const { uploading, error: uploadError, upload } = useUploadResource();
 
   const validateFile = useCallback((fileName: string, sizeBytes: number): string | null => {
-    const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-    if (!(ALLOWED_EXTENSIONS as readonly string[]).includes(ext)) {
-      return "Formato no permitido. Usa: pdf, docx, xlsx, pptx, txt, jpg, png.";
-    }
     if (sizeBytes > MAX_FILE_SIZE_BYTES) {
       return "El archivo excede el máximo de 10 MB.";
     }

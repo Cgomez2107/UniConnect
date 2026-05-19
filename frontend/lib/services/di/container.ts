@@ -74,6 +74,7 @@ import { GetUpcomingEvents } from "../domain/use-cases/events/GetUpcomingEvents"
 import { GetEventById } from "../domain/use-cases/events/GetEventById";
 import { SearchStudentsBySubject } from "../domain/use-cases/students/SearchStudentsBySubject";
 import { GetStudentPublicProfile } from "../domain/use-cases/students/GetStudentPublicProfile";
+import { GetDecoratedStudentProfile } from "../domain/use-cases/students/GetDecoratedStudentProfile";
 import { UploadResourceFromDevice } from "../domain/use-cases/resources/UploadResourceFromDevice";
 import { GetProfileByUserId } from "../domain/use-cases/profile/GetProfileByUserId";
 import { GetMyPrograms } from "../domain/use-cases/profile/GetMyPrograms";
@@ -167,6 +168,7 @@ export class DIContainer {
   private getEventById?: GetEventById;
   private searchStudentsBySubject?: SearchStudentsBySubject;
   private getStudentPublicProfile?: GetStudentPublicProfile;
+  private getDecoratedStudentProfile?: GetDecoratedStudentProfile;
   private getProfileByUserId?: GetProfileByUserId;
   private getMyPrograms?: GetMyPrograms;
   private getMySubjects?: GetMySubjects;
@@ -704,5 +706,12 @@ export class DIContainer {
       this.adminPanelGateway = new AdminPanelGateway(this.getAdminPanelRepository());
     }
     return this.adminPanelGateway;
+  }
+
+  getGetDecoratedStudentProfile(): GetDecoratedStudentProfile {
+    if (!this.getDecoratedStudentProfile) {
+      this.getDecoratedStudentProfile = new GetDecoratedStudentProfile(this.getStudentRepository());
+    }
+    return this.getDecoratedStudentProfile;
   }
 }

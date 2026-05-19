@@ -1,5 +1,6 @@
 import { ApplyToStudyRequest } from "./application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "./application/use-cases/AcceptAdminTransfer.js";
+import { CancelStudyRequest } from "./application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "./application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById.js";
 import { ListApplicationsByRequest } from "./application/use-cases/ListApplicationsByRequest.js";
@@ -7,11 +8,14 @@ import { ListStudyGroupMessages } from "./application/use-cases/ListStudyGroupMe
 import { ListUserNotifications } from "./application/use-cases/ListUserNotifications.js";
 import { ListMembersByRequest } from "./application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
+import { ListMyStudyRequests } from "./application/use-cases/ListMyStudyRequests.js";
+import { ListMyApplications } from "./application/use-cases/ListMyApplications.js";
 import { LeaveAdminRole } from "./application/use-cases/LeaveAdminRole.js";
 import { RejectAdminTransfer } from "./application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
+import { ToggleStudyGroupMessageReaction } from "./application/use-cases/ToggleStudyGroupMessageReaction.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
 import { NotificationObserver, PersistenceObserver, StudyGroupSubject } from "./domain/events/index.js";
 import { StudyGroupMembershipService } from "./domain/services/StudyGroupMembershipService.js";
@@ -240,20 +244,41 @@ function bootstrap(): void {
 
   const groupPermissionRepo = new GroupPermissionRepository(pool);
 
-  const mockRealtimeService: IGroupRealtimeService = {
-    async broadcast(channel, message) {
-      console.log(
-        JSON.stringify({
-          service: "study-groups",
-          level: "info",
-          message: "WebSocket broadcast",
-          channel,
-          eventType: message.type,
-        }),
-      );
-    },
-  };
-  const realtimeObserver = new GroupRealtimeObserver(mockRealtimeService);
+  const realtimeObserverService: IGroupRealtimeService = realtimeGateway
+    ? {
+        async broadcast(channel, message) {
+          const groupId = channel.replace("grupo:", "");
+          const payload: Record<string, unknown> = {
+            id: message.data.messageId,
+            sender_id: message.data.senderId,
+            senderId: message.data.senderId,
+            content: message.data.content,
+            created_at: message.data.timestamp,
+            sender: {
+              full_name: message.data.senderName,
+              fullName: message.data.senderName,
+            },
+            ...(typeof message.data.payload === "object" && message.data.payload != null
+              ? (message.data.payload as Record<string, unknown>)
+              : {}),
+          };
+          await realtimeGateway!.emitToGroup(groupId, "new_group_message", payload);
+        },
+      }
+    : {
+        async broadcast(channel, message) {
+          console.log(
+            JSON.stringify({
+              service: "study-groups",
+              level: "warn",
+              message: "WebSocket broadcast SKIPPED (no Supabase Realtime configured)",
+              channel,
+              eventType: message.type,
+            }),
+          );
+        },
+      };
+  const realtimeObserver = new GroupRealtimeObserver(realtimeObserverService);
   const mockIdempotencyStore: IGroupIdempotencyStore = {
     async markProcessed(_messageId) {
       return true;
@@ -301,6 +326,10 @@ function bootstrap(): void {
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const leaveAdminRole = new LeaveAdminRole(studyGroupRepository, subject);
+  const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
+  const listMyApplicationsUC = new ListMyApplications(applicationRepository);
+  const cancelStudyRequestUC = new CancelStudyRequest(repository);
+  const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -316,6 +345,10 @@ function bootstrap(): void {
     acceptAdminTransfer,
     rejectAdminTransfer,
     leaveAdminRole,
+    listMyStudyRequestsUC,
+    listMyApplicationsUC,
+    cancelStudyRequestUC,
+    toggleStudyGroupMessageReaction,
   );
   const server = createStudyGroupsServer(controller);
 

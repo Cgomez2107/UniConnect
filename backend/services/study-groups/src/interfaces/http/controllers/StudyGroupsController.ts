@@ -3,6 +3,7 @@ import { z, ZodError } from "zod";
 
 import { ApplyToStudyRequest } from "../../../application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "../../../application/use-cases/AcceptAdminTransfer.js";
+import { CancelStudyRequest } from "../../../application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "../../../application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequestById.js";
 import { ListApplicationsByRequest } from "../../../application/use-cases/ListApplicationsByRequest.js";
@@ -10,11 +11,14 @@ import { ListStudyGroupMessages } from "../../../application/use-cases/ListStudy
 import { ListUserNotifications } from "../../../application/use-cases/ListUserNotifications.js";
 import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
+import { ListMyStudyRequests } from "../../../application/use-cases/ListMyStudyRequests.js";
+import { ListMyApplications } from "../../../application/use-cases/ListMyApplications.js";
 import { LeaveAdminRole } from "../../../application/use-cases/LeaveAdminRole.js";
 import { RejectAdminTransfer } from "../../../application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
+import { ToggleStudyGroupMessageReaction } from "../../../application/use-cases/ToggleStudyGroupMessageReaction.js";
 import type { CreateStudyGroupMessageDto } from "../dto/CreateStudyGroupMessageDto.js";
 import { CreateGroupRequestSchema } from "@uniconnect/shared-types/contracts/study-group";
 import type { CreateGroupRequest } from "@uniconnect/shared-types/contracts/study-group";
@@ -61,6 +65,10 @@ export class StudyGroupsController {
     private readonly acceptAdminTransfer: AcceptAdminTransfer,
     private readonly rejectAdminTransfer: RejectAdminTransfer,
     private readonly leaveAdminRole: LeaveAdminRole,
+    private readonly listMyStudyRequestsUC: ListMyStudyRequests,
+    private readonly listMyApplicationsUC: ListMyApplications,
+    private readonly cancelStudyRequestUC: CancelStudyRequest,
+    private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
   ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -178,7 +186,7 @@ export class StudyGroupsController {
     const limitRaw = requestUrl.searchParams.get("limit");
 
     const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
-    const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 20;
+    const pageSize = limitRaw ? Math.min(200, Math.max(1, Number(limitRaw))) : 50;
 
     try {
       const messages = await this.listStudyGroupMessages.execute({
@@ -294,8 +302,8 @@ export class StudyGroupsController {
       return;
     }
 
-    const body = await readJsonBody<ApplyToStudyGroupDto>(req);
     try {
+      const body = await readJsonBody<ApplyToStudyGroupDto>(req);
       const created = await this.applyToStudyRequest.execute({
         requestId,
         applicantId: actorUserId,
@@ -425,6 +433,32 @@ export class StudyGroupsController {
     }
   }
 
+  async toggleMessageReaction(
+    req: IncomingMessage,
+    res: ServerResponse,
+    messageId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const body = await readJsonBody<{ emoji: string }>(req);
+      if (!body.emoji) {
+        sendError(res, 400, "El campo 'emoji' es requerido.");
+        return;
+      }
+
+      const reactions = await this.toggleStudyGroupMessageReaction.execute(messageId, actorUserId, body.emoji);
+      sendData(res, 200, { reactions });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async leaveAdmin(
     req: IncomingMessage,
     res: ServerResponse,
@@ -443,6 +477,58 @@ export class StudyGroupsController {
       });
 
       sendData(res, 200, { message: "Salida de administracion registrada." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listMyStudyRequests(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Autenticación requerida");
+      return;
+    }
+
+    try {
+      const requests = await this.listMyStudyRequestsUC.execute(actorUserId);
+      sendData(res, 200, requests, { total: requests.length });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listMyApplications(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Autenticación requerida");
+      return;
+    }
+
+    try {
+      const applications = await this.listMyApplicationsUC.execute(actorUserId);
+      sendData(res, 200, applications, { total: applications.length });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async cancelStudyRequest(
+    req: IncomingMessage,
+    res: ServerResponse,
+    requestId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const updated = await this.cancelStudyRequestUC.execute(requestId);
+      sendData(res, 200, updated);
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

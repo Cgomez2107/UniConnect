@@ -36,8 +36,16 @@ export function useInvitationsHub() {
 
   const loadHub = useCallback(
     async (isRefresh = false) => {
-      if (isHydrating || !user?.id) return;
-      
+      if (isHydrating) {
+        return;
+      }
+
+      if (!user?.id) {
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       if (isRefresh) {
         setRefreshing(true);
       } else {

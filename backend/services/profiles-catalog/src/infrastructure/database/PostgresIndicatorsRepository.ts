@@ -21,7 +21,10 @@ export class PostgresIndicatorsRepository implements IIndicatorsRepository {
 
   async getIndicators(userId: string): Promise<Indicators> {
     const mensajes = await this.pool.query<CountRow>(
-      "SELECT COUNT(*)::int AS count FROM messages WHERE sender_id = $1",
+      `SELECT (
+         (SELECT COUNT(*)::int FROM messages WHERE sender_id = $1) +
+         (SELECT COUNT(*)::int FROM study_group_messages WHERE sender_id = $1)
+       ) AS count`,
       [userId],
     );
 
@@ -57,7 +60,10 @@ export class PostgresIndicatorsRepository implements IIndicatorsRepository {
 
   async getBadges(userId: string): Promise<Badge[]> {
     const totalMensajes = await this.pool.query<CountRow>(
-      "SELECT COUNT(*)::int AS count FROM messages WHERE sender_id = $1",
+      `SELECT (
+         (SELECT COUNT(*)::int FROM messages WHERE sender_id = $1) +
+         (SELECT COUNT(*)::int FROM study_group_messages WHERE sender_id = $1)
+       ) AS count`,
       [userId],
     );
 

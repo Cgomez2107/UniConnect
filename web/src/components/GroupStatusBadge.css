@@ -1,0 +1,54 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border-radius: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge.size-small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.status-badge.size-medium {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.status-badge.size-large {
+  padding: 8px 16px;
+  font-size: 16px;
+}
+
+.badge-icon {
+  display: inline-block;
+  font-size: 1.2em;
+}
+
+.status-abierta {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-llena {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.status-transferencia {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.status-cerrada {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.status-expirada {
+  background-color: #ffebee;
+  color: #c62828;
+}

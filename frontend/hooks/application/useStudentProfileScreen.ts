@@ -10,7 +10,8 @@ export function useStudentProfileScreen(studentId: string) {
   const { getOrCreateConversation } = useMessaging();
   const [startingChat, setStartingChat] = useState(false);
 
-  const { profile, loading, error, refresh } = useStudentProfile(studentId);
+  // D02: vistaCompleta=true para obtener estadísticas e insignias decoradas
+  const { profile, loading, error, refresh, perfilDecorado, indicadores, insignias } = useStudentProfile(studentId, true);
 
   const initials = useMemo(
     () =>
@@ -44,5 +45,9 @@ export function useStudentProfileScreen(studentId: string) {
     initials,
     startingChat,
     handleStartChat,
+    // D02 — Datos decorados
+    perfilDecorado,
+    indicadores,
+    insignias,
   };
 }

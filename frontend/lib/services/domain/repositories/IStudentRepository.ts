@@ -1,4 +1,4 @@
-import type { StudentPublicProfile, StudentSearchResult } from "@/types"
+import type { StudentPublicProfile, StudentSearchResult, PerfilCompleto } from "@/types"
 
 export interface IStudentRepository {
   searchBySubject(
@@ -8,4 +8,7 @@ export interface IStudentRepository {
     pageSize?: number
   ): Promise<StudentSearchResult[]>
   getPublicProfile(studentId: string, currentUserId: string): Promise<StudentPublicProfile | null>
+
+  /** D02: Obtiene perfil decorado con estadísticas e insignias (?vista=completa) */
+  getDecoratedProfile(studentId: string): Promise<PerfilCompleto | null>
 }

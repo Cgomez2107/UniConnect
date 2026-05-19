@@ -5,8 +5,8 @@ function bootstrap(): void {
 	const env = loadGatewayEnv();
 	const server = createGatewayServer(env);
 
-	// Cast to any to allow :: binding for network access (IPv4 and IPv6)
-	(server as any).listen({ port: env.port, host: "::" }, () => {
+	// Listen on 0.0.0.0 to accept IPv4 connections from all interfaces (web, iOS, Android)
+	(server as any).listen({ port: env.port, host: "0.0.0.0" }, () => {
 		// Startup log stays concise and structured for future central logging.
 		console.log(
 			JSON.stringify({
@@ -14,7 +14,7 @@ function bootstrap(): void {
 				level: "info",
 				message: "Gateway listening",
 				port: env.port,
-				host: "::",
+				host: "0.0.0.0",
 				nodeEnv: env.nodeEnv,
 			}),
 		);

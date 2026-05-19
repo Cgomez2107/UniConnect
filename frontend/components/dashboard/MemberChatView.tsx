@@ -522,7 +522,7 @@ export function MemberChatView({
             </div>
             <h3 className="text-2xl font-['Manrope'] font-bold text-white text-center mb-2">¿Salir del grupo?</h3>
             <p className="text-neutral-400 text-center text-sm leading-relaxed mb-8">
-              Esta acción eliminará tu acceso al chat y recursos de <span className="text-white font-bold">"{groupTitle}"</span>. Podrás volver a postularte si hay cupos disponibles.
+              Esta acción eliminará tu acceso al chat y recursos de <span className="text-white font-bold">{groupTitle}</span>. Podrás volver a postularte si hay cupos disponibles.
             </p>
             <div className="flex flex-col gap-3">
               <button

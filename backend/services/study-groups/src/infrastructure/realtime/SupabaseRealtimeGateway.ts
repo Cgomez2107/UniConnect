@@ -23,6 +23,49 @@ export class SupabaseRealtimeGateway implements IStudyGroupSocketGateway {
     this.logger = logger ?? console;
   }
 
+  async emitToGroup(groupId: string, event: string, payload: Record<string, unknown>): Promise<void> {
+    const channelName = `chat-${groupId}`;
+
+    let channel = this.channels.get(channelName);
+    if (!channel) {
+      channel = this.supabase.channel(channelName, {
+        config: { broadcast: { self: true, ack: false } },
+      });
+      const subResult: { status: string } = await new Promise((resolve) => {
+        channel!.subscribe((status: string) => resolve({ status }));
+      });
+      if (subResult.status !== "SUBSCRIBED") {
+        this.logger.warn(
+          JSON.stringify({
+            gateway: "SupabaseRealtimeGateway",
+            event: "channel_subscribe_status",
+            channel: channelName,
+            status: subResult.status,
+            groupId,
+          }),
+        );
+      }
+      this.channels.set(channelName, channel);
+    }
+
+    const result = await channel.send({
+      type: "broadcast",
+      event,
+      payload,
+    });
+
+    this.logger.info(
+      JSON.stringify({
+        gateway: "SupabaseRealtimeGateway",
+        event: "group_broadcast_sent",
+        groupId,
+        channel: channelName,
+        broadcastEvent: event,
+        sendResult: result,
+      }),
+    );
+  }
+
   async emitToUser(userId: string, event: string, payload: Record<string, unknown>): Promise<void> {
     const channelName = `${CHANNEL_PREFIX}${userId}`;
 
@@ -31,18 +74,20 @@ export class SupabaseRealtimeGateway implements IStudyGroupSocketGateway {
       channel = this.supabase.channel(channelName, {
         config: { broadcast: { self: true, ack: false } },
       });
-      channel.subscribe((status) => {
-        if (status !== "SUBSCRIBED") {
-          this.logger.warn(
-            JSON.stringify({
-              gateway: "SupabaseRealtimeGateway",
-              event: "channel_subscribe_status",
-              channel: channelName,
-              status,
-            }),
-          );
-        }
+      const subResult: { status: string } = await new Promise((resolve) => {
+        channel!.subscribe((status: string) => resolve({ status }));
       });
+      if (subResult.status !== "SUBSCRIBED") {
+        this.logger.warn(
+          JSON.stringify({
+            gateway: "SupabaseRealtimeGateway",
+            event: "channel_subscribe_status",
+            channel: channelName,
+            status: subResult.status,
+            userId,
+          }),
+        );
+      }
       this.channels.set(channelName, channel);
     }
 

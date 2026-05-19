@@ -1,7 +1,7 @@
 {
   "name": "@uniconnect/shared-types",
   "version": "0.2.0",
-  "private": false,
+  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

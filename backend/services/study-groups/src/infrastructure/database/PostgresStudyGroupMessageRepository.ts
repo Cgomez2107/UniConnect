@@ -78,4 +78,48 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
 
     return mapMessage(result.rows[0]);
   }
+
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<any[]> {
+    const msg = await this.pool.query<any>(
+      `
+      SELECT m.request_id, COALESCE(m.reactions, '[]'::jsonb) AS reactions
+      FROM study_group_messages m
+      WHERE m.id = $1
+      LIMIT 1
+      `,
+      [messageId],
+    );
+
+    if (!msg.rows[0]) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    const { request_id } = msg.rows[0];
+
+    const memberCheck = await this.pool.query<{ is_member: boolean }>(
+      `SELECT is_request_member($1, $2) AS is_member`,
+      [request_id, currentUserId],
+    );
+
+    if (!memberCheck.rows[0]?.is_member) {
+      throw new Error("No tienes permisos para reaccionar a este mensaje.");
+    }
+
+    const current: any[] = Array.isArray(msg.rows[0].reactions) ? msg.rows[0].reactions : [];
+    const existingIdx = current.findIndex((r: any) => r.emoji === emoji && r.userId === currentUserId);
+
+    let updated: any[];
+    if (existingIdx >= 0) {
+      updated = current.filter((_: any, i: number) => i !== existingIdx);
+    } else {
+      updated = [...current, { emoji, userId: currentUserId }];
+    }
+
+    await this.pool.query(
+      `UPDATE study_group_messages SET reactions = $1::jsonb WHERE id = $2`,
+      [JSON.stringify(updated), messageId],
+    );
+
+    return updated;
+  }
 }

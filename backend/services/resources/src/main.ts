@@ -1,11 +1,11 @@
 import { createServer } from "node:http";
 
-import { CreateStudyResource } from "./application/use-cases/CreateStudyResource.ts";
-import { DeleteStudyResource } from "./application/use-cases/DeleteStudyResource.ts";
-import { GetStudyResourceById } from "./application/use-cases/GetStudyResourceById.ts";
+import { CreateStudyResource } from "./application/use-cases/CreateStudyResource.js";
+import { DeleteStudyResource } from "./application/use-cases/DeleteStudyResource.js";
+import { GetStudyResourceById } from "./application/use-cases/GetStudyResourceById.js";
 import { ListStudyResources } from "./application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "./application/use-cases/UpdateStudyResource.js";
-import { loadResourcesEnv } from "./config/env.ts";
+import { loadResourcesEnv } from "./config/env.js";
 import type { IStudyResourceRepository } from "./domain/repositories/IStudyResourceRepository.js";
 import { InMemoryStudyResourceRepository } from "./infrastructure/database/InMemoryStudyResourceRepository.js";
 import { PostgresStudyResourceRepository } from "./infrastructure/database/PostgresStudyResourceRepository.js";
@@ -38,8 +38,50 @@ function createRepository(
   return new InMemoryStudyResourceRepository();
 }
 
+function validateResourcesEnv(): void {
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT_ACCESS_SECRET } = process.env;
+
+  const missing: string[] = [];
+  if (!SUPABASE_URL?.trim()) missing.push("SUPABASE_URL");
+  if (!SUPABASE_SERVICE_ROLE_KEY?.trim()) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (!JWT_ACCESS_SECRET?.trim()) missing.push("JWT_ACCESS_SECRET");
+
+  if (missing.length > 0) {
+    console.error(
+      JSON.stringify({
+        service: "resources",
+        level: "fatal",
+        message:
+          "Variables de entorno faltantes requeridas para el servicio de almacenamiento: " +
+          missing.join(", ") +
+          ". Revisa backend/services/resources/.env o la configuración compartida.",
+        missing,
+      }),
+    );
+    process.exit(1);
+  }
+
+  const url = SUPABASE_URL!.trim();
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      throw new Error("Protocolo inválido");
+    }
+  } catch {
+    console.error(
+      JSON.stringify({
+        service: "resources",
+        level: "fatal",
+        message: `SUPABASE_URL no es una URL válida: "${url}". Debe ser una URL https:// de Supabase.`,
+      }),
+    );
+    process.exit(1);
+  }
+}
+
 function bootstrap(): void {
   const env = loadResourcesEnv();
+  validateResourcesEnv();
 
   const hasDatabaseConfig =
     !!env.dbHost && !!env.dbPort && !!env.dbName && !!env.dbUser && !!env.dbPassword;

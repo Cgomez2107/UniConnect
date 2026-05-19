@@ -1,55 +1,222 @@
 # ============================================================================
-# docker-compose.yml - Stack local: backend + frontend + db
-# Ubicacion: repo root
+# docker-compose.yml - Stack: backend services + web + frontend
+# Services connect to Supabase DB via their own .env files
 # ============================================================================
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: uniconnect-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME:-uniconnect_dev}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
-    ports:
-      - "5432:5432"
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - uniconnect-network
-
-  backend:
+  backend-setup:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    container_name: uniconnect-backend
-    command: sh -c "pnpm install && pnpm dev"
+    container_name: uniconnect-backend-setup
+    working_dir: /app
+    command: sh -c "pnpm -w install --frozen-lockfile"
+    stdin_open: false
+    environment:
+      CI: "true"
+      PNPM_STORE_DIR: /pnpm-store
+    volumes:
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
+    networks:
+      - uniconnect-network
+
+  gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: uniconnect-gateway
+    working_dir: /app
+    command: sh -c "pnpm --filter @uniconnect/gateway dev"
     environment:
       NODE_ENV: development
       PORT: 3000
-      DATABASE_HOST: db
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${DB_NAME:-uniconnect_dev}
-      DATABASE_USER: ${DB_USER:-postgres}
-      DATABASE_PASSWORD: ${DB_PASSWORD:-postgres_password_dev}
+      PNPM_STORE_DIR: /pnpm-store
+      STUDY_GROUPS_BASE_URL: http://study-groups:3101
+      RESOURCES_BASE_URL: http://resources:3103
+      MESSAGING_BASE_URL: http://messaging:3104
+      PROFILES_CATALOG_BASE_URL: http://profiles-catalog:3105
+      EVENTS_BASE_URL: http://events:3106
+      AUTH_BASE_URL: http://auth:3102
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_secret_access}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_secret_refresh}
     ports:
       - "3000:3000"
     volumes:
-      - ./backend/services:/app/services
-      - ./backend/shared:/app/shared
-      - ./backend/gateway:/app/gateway
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
     depends_on:
-      db:
-        condition: service_healthy
+      backend-setup:
+        condition: service_completed_successfully
+      auth:
+        condition: service_started
+      study-groups:
+        condition: service_started
+      resources:
+        condition: service_started
+      messaging:
+        condition: service_started
+      profiles-catalog:
+        condition: service_started
+      events:
+        condition: service_started
+    networks:
+      - uniconnect-network
+
+  auth:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: uniconnect-auth
+    working_dir: /app
+    command: sh -c "pnpm --filter @uniconnect/auth dev"
+    env_file:
+      - ./backend/services/auth/.env
+    environment:
+      PNPM_STORE_DIR: /pnpm-store
+      PROFILES_CATALOG_BASE_URL: http://profiles-catalog:3105
+    ports:
+      - "3102:3102"
+    volumes:
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
+    networks:
+      - uniconnect-network
+
+  study-groups:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: uniconnect-study-groups
+    working_dir: /app
+    command: sh -c "pnpm --filter @uniconnect/study-groups dev"
+    env_file:
+      - ./backend/services/study-groups/.env
+    environment:
+      PNPM_STORE_DIR: /pnpm-store
+    ports:
+      - "3101:3101"
+    volumes:
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
+    networks:
+      - uniconnect-network
+
+  resources:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: uniconnect-resources
+    working_dir: /app
+    command: sh -c "pnpm --filter @uniconnect/resources dev"
+    env_file:
+      - ./backend/services/resources/.env
+    environment:
+      PNPM_STORE_DIR: /pnpm-store
+    ports:
+      - "3103:3103"
+    volumes:
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
+    networks:
+      - uniconnect-network
+
+  messaging:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: uniconnect-messaging
+    working_dir: /app
+    command: sh -c "pnpm --filter @uniconnect/messaging dev"
+    env_file:
+      - ./backend/services/messaging/.env
+    environment:
+      PNPM_STORE_DIR: /pnpm-store
+    ports:
+      - "3104:3104"
+    volumes:
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
+    networks:
+      - uniconnect-network
+
+  profiles-catalog:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: uniconnect-profiles-catalog
+    working_dir: /app
+    command: sh -c "pnpm --filter @uniconnect/profiles-catalog dev"
+    env_file:
+      - ./backend/services/profiles-catalog/.env
+    environment:
+      PNPM_STORE_DIR: /pnpm-store
+      SUPABASE_URL: https://becitrklvpadvjwdbmck.supabase.co
+    ports:
+      - "3105:3105"
+    volumes:
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
+    networks:
+      - uniconnect-network
+
+  events:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: uniconnect-events
+    working_dir: /app
+    command: sh -c "pnpm --filter @uniconnect/events dev"
+    env_file:
+      - ./backend/services/events/.env
+    environment:
+      PNPM_STORE_DIR: /pnpm-store
+    ports:
+      - "3106:3106"
+    volumes:
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
+    networks:
+      - uniconnect-network
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        VITE_API_URL: "http://localhost:3000/api/v1"
+    container_name: uniconnect-web
+    environment:
+      VITE_API_URL: "http://localhost:3000/api/v1"
+    ports:
+      - "8080:80"
+    depends_on:
+      - gateway
     networks:
       - uniconnect-network
 
@@ -58,7 +225,7 @@ services:
     container_name: uniconnect-frontend
     working_dir: /app
     environment:
-      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://backend:3000/api/v1}
+      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://gateway:3000/api/v1}
       EXPO_PUBLIC_SUPABASE_URL: ${EXPO_PUBLIC_SUPABASE_URL:-https://your-supabase-project.supabase.co}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${EXPO_PUBLIC_SUPABASE_ANON_KEY:-your_supabase_anon_key_here}
       EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: ${EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB:-your_google_client_id_web.apps.googleusercontent.com}
@@ -73,12 +240,14 @@ services:
       - "19002:19002"
     command: sh -c "npm install && npm run start -- --host lan"
     depends_on:
-      - backend
+      - gateway
     networks:
       - uniconnect-network
 
 volumes:
-  db-data:
+  backend-pnpm-store:
+    driver: local
+  backend-node-modules:
     driver: local
 
 networks:

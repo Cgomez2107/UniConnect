@@ -22,8 +22,10 @@ export async function handleStudyGroupsRoutes(
   const membersMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/members$/);
   const applicationsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/applications$/);
   const messagesMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages$/);
+  const messageReactionsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
   const applyMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/apply$/);
   const leaveMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/leave$/);
+  const cancelMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/cancel$/);
   const reviewMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/applications\/([^/]+)\/review$/);
   const transferMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/transfer$/);
   const transferAcceptMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/accept$/);
@@ -35,6 +37,16 @@ export async function handleStudyGroupsRoutes(
       status: "ok",
       timestamp: new Date().toISOString(),
     });
+    return true;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/study-groups/me") {
+    await controller.listMyStudyRequests(req, res);
+    return true;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/api/v1/study-groups/applications") {
+    await controller.listMyApplications(req, res);
     return true;
   }
 
@@ -88,6 +100,11 @@ export async function handleStudyGroupsRoutes(
     return true;
   }
 
+  if (req.method === "POST" && cancelMatch) {
+    await controller.cancelStudyRequest(req, res, cancelMatch[1]);
+    return true;
+  }
+
   if (req.method === "PUT" && reviewMatch) {
     await controller.review(req, res, reviewMatch[1]);
     return true;
@@ -105,6 +122,11 @@ export async function handleStudyGroupsRoutes(
 
   if (req.method === "POST" && transferRejectMatch) {
     await controller.rejectTransfer(req, res, transferRejectMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && messageReactionsMatch) {
+    await controller.toggleMessageReaction(req, res, messageReactionsMatch[2]);
     return true;
   }
 

@@ -1,5 +1,6 @@
 import { GlobalNotificationModals } from "@/components/notifications/GlobalNotificationModals";
 import { RealtimeNotificationHandler } from "@/components/notifications/RealtimeNotificationHandler";
+import { ToastProvider } from "@/context";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Stack } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -40,32 +41,34 @@ export default function RootLayout() {
   }
 
   return (
-    <React.Fragment>
-      {/* 
-          Componentes globales de lógica y UI. 
-          Se mantienen fuera del Stack para persistir entre navegaciones.
-      */}
-      <RealtimeNotificationHandler />
-      <GlobalNotificationModals />
+    <ToastProvider>
+      <React.Fragment>
+        {/* 
+            Componentes globales de lógica y UI. 
+            Se mantienen fuera del Stack para persistir entre navegaciones.
+        */}
+        <RealtimeNotificationHandler />
+        <GlobalNotificationModals />
 
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="oauth-callback" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(admin)" />
-        <Stack.Screen name="chat/[conversationId]" />
-        <Stack.Screen name="nueva-solicitud"  options={{ presentation: "modal" }} />
-        <Stack.Screen name="subir-recurso"    options={{ presentation: "modal" }} />
-        <Stack.Screen name="editar-perfil"    options={{ presentation: "modal" }} />
-        <Stack.Screen name="solicitud/[id]" />
-        <Stack.Screen name="study-groups/[id]" />
-        <Stack.Screen name="study-groups/[id]/admin" />
-        <Stack.Screen name="postular/[id]" />
-        <Stack.Screen name="perfil-estudiante/[id]" />
-        <Stack.Screen name="recurso/[id]" />
-      </Stack>
-    </React.Fragment>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="oauth-callback" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(admin)" />
+          <Stack.Screen name="chat/[conversationId]" />
+          <Stack.Screen name="nueva-solicitud"  options={{ presentation: "modal" }} />
+          <Stack.Screen name="subir-recurso"    options={{ presentation: "modal" }} />
+          <Stack.Screen name="editar-perfil"    options={{ presentation: "modal" }} />
+          <Stack.Screen name="solicitud/[id]" />
+          <Stack.Screen name="study-groups/[id]" />
+          <Stack.Screen name="study-groups/[id]/admin" />
+          <Stack.Screen name="postular/[id]" />
+          <Stack.Screen name="perfil-estudiante/[id]" />
+          <Stack.Screen name="recurso/[id]" />
+        </Stack>
+      </React.Fragment>
+    </ToastProvider>
   );
 }

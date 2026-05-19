@@ -14,6 +14,7 @@
  * Servicio         -> lib/services/studentService.ts
  */
 
+import { BadgePanel } from "@/components/perfil/BadgePanel"
 import { InfoRow } from "@/components/shared/InfoRow"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { SectionCard } from "@/components/shared/SectionCard"
@@ -37,6 +38,8 @@ export default function StudentProfileScreen() {
     initials,
     startingChat,
     handleStartChat,
+    indicadores,
+    insignias,
   } = useStudentProfileScreen(id)
 
   // Estado de carga
@@ -234,6 +237,11 @@ export default function StudentProfileScreen() {
               : "Este estudiante aún no ha escrito una biografía."}
           </Text>
         </SectionCard>
+
+        {/* D02: Panel de insignias (solo si existen datos decorados) */}
+        {insignias && insignias.length > 0 && (
+          <BadgePanel insignias={insignias} />
+        )}
       </ScrollView>
 
       {/* ── FAB: Botón flotante de chat ── */}

@@ -1,0 +1,55 @@
+{
+  "name": "@uniconnect/shared-state",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared state management with Zustand factories and storage adapters",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./stores": {
+      "import": "./dist/stores/index.js",
+      "types": "./dist/stores/index.d.ts"
+    },
+    "./adapters": {
+      "import": "./dist/adapters/index.js",
+      "types": "./dist/adapters/index.d.ts"
+    },
+    "./observers": {
+      "import": "./dist/observers/index.js",
+      "types": "./dist/observers/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@uniconnect/shared-api": "workspace:*",
+    "@uniconnect/shared-types": "workspace:*",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "uniconnect",
+    "state",
+    "zustand",
+    "storage",
+    "observer"
+  ]
+}

@@ -22,11 +22,8 @@ export function useUploadResource(): UseUploadResourceReturn {
 	const [error, setError] = useState<string | null>(null)
 
 	const validateFile = useCallback(
-		(fileName: string, sizeBytes: number): string | null => {
+		(_fileName: string, sizeBytes: number): string | null => {
 			const useCase = container.getUploadResourceFromDevice()
-			if (!useCase.validateFileFormat(fileName)) {
-				return "Formato no permitido. Usa: pdf, docx, xlsx, pptx, txt, jpg, png."
-			}
 			if (!useCase.validateFileSize(sizeBytes)) {
 				return "El archivo excede el máximo de 10 MB."
 			}

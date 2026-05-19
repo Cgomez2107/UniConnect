@@ -65,7 +65,7 @@ BEGIN
   FROM study_group_messages m
   JOIN profiles p ON p.id = m.sender_id
   WHERE m.request_id = p_request_id
-  ORDER BY m.created_at DESC
+  ORDER BY m.created_at ASC
   LIMIT GREATEST(1, LEAST(p_limit, 100))
   OFFSET GREATEST(0, p_offset);
 END;

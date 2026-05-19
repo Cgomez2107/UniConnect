@@ -43,6 +43,11 @@ function buildStudyGroupsServer() {
   const requestAdminTransfer: UseCaseStub = { execute: vi.fn().mockResolvedValue(sampleTransfer) };
   const acceptAdminTransfer: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
   const leaveAdminRole: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
+  const rejectAdminTransfer: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
+  const listMyStudyRequests: UseCaseStub = { execute: vi.fn().mockResolvedValue([]) };
+  const listMyApplications: UseCaseStub = { execute: vi.fn().mockResolvedValue([]) };
+  const cancelStudyRequest: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
+  const toggleStudyGroupMessageReaction: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
 
   const controller = new StudyGroupsController(
     listOpenStudyRequests as never,
@@ -57,7 +62,12 @@ function buildStudyGroupsServer() {
     reviewApplication as never,
     requestAdminTransfer as never,
     acceptAdminTransfer as never,
+    rejectAdminTransfer as never,
     leaveAdminRole as never,
+    listMyStudyRequests as never,
+    listMyApplications as never,
+    cancelStudyRequest as never,
+    toggleStudyGroupMessageReaction as never,
   );
 
   return {
@@ -75,6 +85,11 @@ function buildStudyGroupsServer() {
     requestAdminTransfer,
     acceptAdminTransfer,
     leaveAdminRole,
+    rejectAdminTransfer,
+    listMyStudyRequests,
+    listMyApplications,
+    cancelStudyRequest,
+    toggleStudyGroupMessageReaction,
   };
 }
 
@@ -90,7 +105,7 @@ describe("Study Groups integration /study-groups", () => {
 
     expectTypeOf(validBody).toEqualTypeOf<CreateGroupRequest["body"]>();
 
-    const response = await request(server)
+    const response = await request(server as any)
       .post("/api/v1/study-groups")
       .set("Content-Type", "application/json")
       .set("x-user-id", "user-001")
@@ -112,7 +127,7 @@ describe("Study Groups integration /study-groups", () => {
   it("responde VALIDATION_ERROR cuando falta subjectId", async () => {
     const { server, createStudyRequest } = buildStudyGroupsServer();
 
-    const response = await request(server)
+    const response = await request(server as any)
       .post("/api/v1/study-groups")
       .set("Content-Type", "application/json")
       .set("x-user-id", "user-001")
@@ -149,19 +164,19 @@ describe("Study Groups integration /study-groups", () => {
       leaveAdminRole,
     } = buildStudyGroupsServer();
 
-    await request(server).get("/health").expect(200);
-    await request(server).get("/api/v1/study-groups").expect(200);
-    await request(server).get("/api/v1/study-groups/req-001").expect(200);
-    await request(server).get("/api/v1/study-groups/req-001/members").set("x-user-id", "user-001").expect(200);
-    await request(server).get("/api/v1/study-groups/req-001/applications").set("x-user-id", "user-001").expect(200);
-    await request(server).get("/api/v1/study-groups/req-001/messages").set("x-user-id", "user-001").expect(200);
-    await request(server).post("/api/v1/study-groups/req-001/apply").set("x-user-id", "user-001").send({ message: "Me interesa" }).expect(201);
-    await request(server).post("/api/v1/study-groups/req-001/messages").set("x-user-id", "user-001").send({ content: "Hola" }).expect(201);
-    await request(server).get("/api/v1/notifications").set("x-user-id", "user-001").expect(200);
-    await request(server).post("/api/v1/study-groups/req-001/leave").set("x-user-id", "user-001").expect(200);
-    await request(server).post("/api/v1/study-groups/req-001/transfer").set("x-user-id", "user-001").send({ targetUserId: "user-002" }).expect(201);
-    await request(server).put("/api/v1/study-groups/applications/app-001/review").set("x-user-id", "user-001").send({ status: "aceptada" }).expect(200);
-    await request(server).post("/api/v1/study-groups/transfers/tr-001/accept").set("x-user-id", "user-001").expect(200);
+    await request(server as any).get("/health").expect(200);
+    await request(server as any).get("/api/v1/study-groups").expect(200);
+    await request(server as any).get("/api/v1/study-groups/req-001").expect(200);
+    await request(server as any).get("/api/v1/study-groups/req-001/members").set("x-user-id", "user-001").expect(200);
+    await request(server as any).get("/api/v1/study-groups/req-001/applications").set("x-user-id", "user-001").expect(200);
+    await request(server as any).get("/api/v1/study-groups/req-001/messages").set("x-user-id", "user-001").expect(200);
+    await request(server as any).post("/api/v1/study-groups/req-001/apply").set("x-user-id", "user-001").send({ message: "Me interesa" }).expect(201);
+    await request(server as any).post("/api/v1/study-groups/req-001/messages").set("x-user-id", "user-001").send({ content: "Hola" }).expect(201);
+    await request(server as any).get("/api/v1/notifications").set("x-user-id", "user-001").expect(200);
+    await request(server as any).post("/api/v1/study-groups/req-001/leave").set("x-user-id", "user-001").expect(200);
+    await request(server as any).post("/api/v1/study-groups/req-001/transfer").set("x-user-id", "user-001").send({ targetUserId: "user-002" }).expect(201);
+    await request(server as any).put("/api/v1/study-groups/applications/app-001/review").set("x-user-id", "user-001").send({ status: "aceptada" }).expect(200);
+    await request(server as any).post("/api/v1/study-groups/transfers/tr-001/accept").set("x-user-id", "user-001").expect(200);
 
     expect(listOpenStudyRequests.execute).toHaveBeenCalled();
     expect(getStudyRequestById.execute).toHaveBeenCalled();
@@ -180,7 +195,7 @@ describe("Study Groups integration /study-groups", () => {
   it("responde VALIDATION_ERROR cuando review no trae status", async () => {
     const { server, reviewApplication } = buildStudyGroupsServer();
 
-    const response = await request(server)
+    const response = await request(server as any)
       .put("/api/v1/study-groups/applications/app-001/review")
       .set("x-user-id", "user-001")
       .send({})
@@ -196,7 +211,7 @@ describe("Study Groups integration /study-groups", () => {
   it("responde VALIDATION_ERROR cuando transfer no trae targetUserId", async () => {
     const { server, requestAdminTransfer } = buildStudyGroupsServer();
 
-    const response = await request(server)
+    const response = await request(server as any)
       .post("/api/v1/study-groups/req-001/transfer")
       .set("x-user-id", "user-001")
       .send({})
