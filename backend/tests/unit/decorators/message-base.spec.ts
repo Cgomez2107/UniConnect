@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { BaseMessage } from "../../../services/messaging/src/domain/decorators/BaseMessage";
+import { BaseMessage } from "../../../services/messaging/src/domain/decorators/BaseMessage.js";
 
 describe("US-T01 Tarea 1 - MensajeBase", () => {
   it("debe asignar content, userId y timestamp correctamente", () => {

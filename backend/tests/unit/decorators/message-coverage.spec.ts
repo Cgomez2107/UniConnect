@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { BaseMessage } from "../../../services/messaging/src/domain/decorators/BaseMessage";
-import { FileDecorator } from "../../../services/messaging/src/domain/decorators/FileDecorator";
-import type { FileMetadata } from "../../../services/messaging/src/domain/decorators/FileDecorator";
-import { MentionDecorator } from "../../../services/messaging/src/domain/decorators/MentionDecorator";
-import type { Mention } from "../../../services/messaging/src/domain/decorators/MentionDecorator";
-import { ReactionDecorator } from "../../../services/messaging/src/domain/decorators/ReactionDecorator";
-import type { Reaction } from "../../../services/messaging/src/domain/decorators/ReactionDecorator";
-import type { IMessage } from "../../../services/messaging/src/domain/decorators/IMessage";
+import { BaseMessage } from "../../../services/messaging/src/domain/decorators/BaseMessage.js";
+import { FileDecorator } from "../../../services/messaging/src/domain/decorators/FileDecorator.js";
+import type { FileMetadata } from "../../../services/messaging/src/domain/decorators/FileDecorator.js";
+import { MentionDecorator } from "../../../services/messaging/src/domain/decorators/MentionDecorator.js";
+import type { Mention } from "../../../services/messaging/src/domain/decorators/MentionDecorator.js";
+import { ReactionDecorator } from "../../../services/messaging/src/domain/decorators/ReactionDecorator.js";
+import type { Reaction } from "../../../services/messaging/src/domain/decorators/ReactionDecorator.js";
+import type { IMessage } from "../../../services/messaging/src/domain/decorators/IMessage.js";
 
 function acceptsMessage(message: IMessage): string {
   const metadata = message.getMetadata();

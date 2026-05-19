@@ -36,6 +36,11 @@ describe("ProfilesCatalog - integración (perfil base vs completa)", () => {
       getFullProfileUC as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
     );
 
     const { req, res, getBody } = createMockReqRes(`/perfil/${student.id}`, "GET");
@@ -74,6 +79,11 @@ describe("ProfilesCatalog - integración (perfil base vs completa)", () => {
       getFullProfileUC as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
     );
 
     const { req, res, getBody } = createMockReqRes(`/perfil/${student.id}?vista=completa`, "GET");
@@ -104,7 +114,7 @@ describe("ProfilesCatalog - integración (perfil base vs completa)", () => {
     } as any;
 
     const getFullProfileUC = new GetFullProfile(failingRepo);
-    const controller = new ProfilesCatalogController({} as any, mockGetPublic as any, getFullProfileUC as any, {} as any, {} as any);
+    const controller = new ProfilesCatalogController({} as any, mockGetPublic as any, getFullProfileUC as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     const { req, res, getBody } = createMockReqRes(`/perfil/${student.id}?vista=completa`, "GET");
     await controller.getStudentProfile(req as any, res as any, student.id);
