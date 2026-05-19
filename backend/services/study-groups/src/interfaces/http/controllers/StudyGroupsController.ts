@@ -576,6 +576,7 @@ export class StudyGroupsController {
           daysOfWeek: body.daysOfWeek,
           frequency: "weekly",
           location: body.location,
+          reminderMinutes: body.reminderMinutes,
         });
         sendData(res, 201, result);
       } else {
@@ -591,6 +592,7 @@ export class StudyGroupsController {
           startTime: body.startTime,
           durationMinutes: body.durationMinutes,
           location: body.location,
+          reminderMinutes: body.reminderMinutes,
         });
         sendData(res, 201, result);
       }

@@ -43,11 +43,15 @@ export class SessionScheduler {
         const userIds = await this.sessionRepository.listAttendeeUserIds(session.id);
 
         for (const userId of userIds) {
+          const nowMs = Date.now();
+          const startMs = new Date(session.startTime).getTime();
+          const minutesLeft = Math.max(0, Math.round((startMs - nowMs) / 60000));
+
           await this.notificationService.notificar({
             userId,
             type: "recordatorio_sesion",
             title: session.title || "Recordatorio de sesion",
-            body: `Tu sesion de estudio comienza en 30 minutos (${new Date(session.startTime).toLocaleTimeString()}).`,
+            body: `Tu sesion de estudio comienza en ${minutesLeft} minutos (${new Date(session.startTime).toLocaleTimeString()}).`,
             payload: {
               sessionId: session.id,
               requestId: session.requestId,

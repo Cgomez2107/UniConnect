@@ -7,7 +7,6 @@ import { NotFoundError, AuthorizationError } from "../../../../../shared/libs/er
 
 const MAX_WEEKS = 52;
 const DEFAULT_WEEKS = 4;
-const REMINDER_OFFSET_MINUTES = 30;
 
 export interface CreateSingleSessionInput {
   readonly actorUserId: string;
@@ -17,6 +16,7 @@ export interface CreateSingleSessionInput {
   readonly startTime: string;
   readonly durationMinutes: number;
   readonly location?: string;
+  readonly reminderMinutes?: number;
 }
 
 export interface CreateRecurringSessionInput {
@@ -31,6 +31,7 @@ export interface CreateRecurringSessionInput {
   readonly daysOfWeek: number[];
   readonly frequency: "weekly";
   readonly location?: string;
+  readonly reminderMinutes?: number;
 }
 
 export type CreateSessionResult = {
@@ -57,7 +58,8 @@ export class CreateStudySession {
 
     const startTime = new Date(input.startTime);
     const endTime = new Date(startTime.getTime() + input.durationMinutes * 60_000);
-    const remindAt = new Date(startTime.getTime() - REMINDER_OFFSET_MINUTES * 60_000);
+    const offsetMinutes = input.reminderMinutes ?? 30;
+    const remindAt = new Date(startTime.getTime() - offsetMinutes * 60_000);
 
     const session = await this.sessionRepository.create({
       seriesId: null,
@@ -133,7 +135,8 @@ export class CreateStudySession {
           ),
         );
         const sessionEnd = new Date(sessionStart.getTime() + input.durationMinutes * 60_000);
-        const remindAt = new Date(sessionStart.getTime() - REMINDER_OFFSET_MINUTES * 60_000);
+        const offsetMinutes = input.reminderMinutes ?? 30;
+        const remindAt = new Date(sessionStart.getTime() - offsetMinutes * 60_000);
 
         sessions.push({
           seriesId: series.id,

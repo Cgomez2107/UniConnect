@@ -10,4 +10,5 @@ export interface CreateSessionDto {
   readonly time?: string;
   readonly daysOfWeek?: number[];
   readonly frequency?: "weekly";
+  readonly reminderMinutes?: number;
 }
