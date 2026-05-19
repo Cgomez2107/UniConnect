@@ -17,6 +17,8 @@ import { useNotificationStore } from "@/store/useNotificationStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
+import type { GroupState } from "@/types";
 
 // Backend: [{ userId, name }] → UI: [{ userId, displayName, position }]
 function transformMentions(mentions?: any[]): MentionData[] | undefined {
@@ -138,6 +140,14 @@ export function GroupDashboardPage() {
 
   const isAuthor = solicitud?.createdBy === user?.id || solicitud?.authorId === user?.id;
   const isAdmin = isAuthor || members.some((m: any) => m.userId === user?.id && (m.role === "admin" || m.role === "autor"));
+
+  const groupState: GroupState | null = solicitud
+    ? solicitud.hasPendingTransfer
+      ? "PendienteTransferencia"
+      : solicitud.status === "abierta"
+        ? "Activo"
+        : "Disuelto"
+    : null;
 
   // --- Conditional applications fetch (admin only) ---
   useEffect(() => {
@@ -799,7 +809,10 @@ export function GroupDashboardPage() {
           <Avatar name={solicitud.title || solicitud.name || "Grupo"} size="sm" className="!bg-secondary-500 !text-primary-900" />
           <div className="min-w-0">
             <h1 className="text-base font-bold leading-tight truncate">{solicitud.title || solicitud.name || "Grupo de estudio"}</h1>
-            <p className="text-xs text-white/60">{members.length} miembros</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-white/60">{members.length} miembros</p>
+              {groupState && <GroupStateBadge state={groupState} size="small" />}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">

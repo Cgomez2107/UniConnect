@@ -2,6 +2,20 @@ import React from "react";
 import { Toast } from "./Toast";
 import { useNotificationStore } from "@/store/useNotificationStore";
 
+const TOAST_TYPE_MAP: Record<string, "success" | "error" | "info" | "warning"> = {
+  system: "error",
+  message: "info",
+  studyGroupApplication: "info",
+  studyGroupAccepted: "success",
+  studyGroupRejected: "warning",
+  mention: "info",
+  friendRequest: "info",
+};
+
+function getToastType(notificationType: string): "success" | "error" | "info" | "warning" {
+  return TOAST_TYPE_MAP[notificationType] ?? "info";
+}
+
 function isToastNotification(n: any): boolean {
   return n.id?.startsWith("toast-");
 }
@@ -17,7 +31,7 @@ export function ToastContainer() {
           key={notification.id}
           notification={{
             id: notification.id,
-            type: "info",
+            type: getToastType(notification.type),
             message: notification.title || notification.description || "",
             timestamp: notification.createdAt instanceof Date ? notification.createdAt.getTime() : Date.now(),
           }}

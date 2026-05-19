@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { parseGroupError } from "./groupErrorInterceptor";
+import { showToastBridge } from "./toastBridge";
 
 // Soportar tanto VITE_API_URL (nueva) como EXPO_PUBLIC_API_BASE_URL (antigua) para retrocompatibilidad
 // Orden de precedencia:
@@ -110,11 +112,19 @@ export async function fetchApi<T>(
 
     if (!response.ok) {
         const parsed = result as Record<string, unknown> | null;
-        const message =
+        const rawMessage =
             (typeof parsed?.error === "string" ? parsed.error : null) ??
             (typeof parsed?.details === "string" ? parsed.details : null) ??
             `Error ${response.status} al conectar con el servidor.`;
-        throw new Error(message);
+
+        const status = response.status;
+        if ([400, 403, 409, 422].includes(status)) {
+            const friendly = parseGroupError(rawMessage);
+            showToastBridge(friendly, "error");
+            throw new Error(friendly);
+        }
+
+        throw new Error(rawMessage);
     }
 
     if (result !== null && typeof result === "object" && "data" in result) {

@@ -1,4 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
+import { parseGroupError } from "./groupErrorInterceptor";
+import { useNotificationStore } from "../../store/useNotificationStore";
+import type { Notification } from "@uniconnect/shared-types";
 
 /**
  * ============================================================================
@@ -189,6 +192,27 @@ apiClient.interceptors.response.use(
     // 500+ Server Error
     if (status && status >= 500) {
       console.error("[API] Error del servidor:", error.response?.data);
+    }
+
+    // Estado inválido / error de dominio: mostrar toast al usuario
+    if (status && [400, 403, 409, 422].includes(status)) {
+      const friendly = parseGroupError(error);
+      try {
+        const store = useNotificationStore.getState();
+        if (typeof store.addNotification === "function") {
+          const toastNotif: Notification = {
+            id: `toast-${Date.now()}`,
+            userId: "",
+            type: "system",
+            title: friendly,
+            read: false,
+            createdAt: new Date(),
+          };
+          store.addNotification(toastNotif);
+        }
+      } catch (e) {
+        console.warn("[API] No se pudo mostrar toast de error:", e);
+      }
     }
 
     return Promise.reject(error);
