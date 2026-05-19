@@ -106,6 +106,9 @@ function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void 
             <Text style={styles.description}>
               Desean delegarte el control total del grupo <Text style={styles.boldWhite}>{groupName}</Text>. ¿Aceptas la responsabilidad?
             </Text>
+            <Text style={styles.timestamp}>
+              {new Date(data.createdAt).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </Text>
           </View>
           {/* Decoradores */}
           <View style={styles.decoratorDivider} />
@@ -140,6 +143,9 @@ function JoinRequestModal({ data, onClose }: { data: any, onClose: () => void })
             <Text style={styles.description}>
               Tu grupo <Text style={styles.boldWhite}>{groupName}</Text> tiene una nueva solicitud de ingreso de {applicantName}.
             </Text>
+            <Text style={styles.timestamp}>
+              {new Date(data.createdAt).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </Text>
           </View>
           {/* Decoradores */}
           <View style={styles.decoratorDivider} />
@@ -171,6 +177,9 @@ function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
             <Text style={styles.title}>¡Bienvenido!</Text>
             <Text style={styles.description}>
               Tu solicitud para el grupo <Text style={styles.boldWhite}>{groupName}</Text> ha sido aceptada.
+            </Text>
+            <Text style={styles.timestamp}>
+              {new Date(data.createdAt).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </Text>
           </View>
           {/* Decoradores */}
@@ -215,6 +224,9 @@ function DefaultActionModal({ data, onClose }: { data: any, onClose: () => void 
           <View style={styles.coreContainer}>
             <Text style={styles.title}>{data.title ?? "Notificación"}</Text>
             <Text style={styles.description}>{data.body ?? data.description ?? ""}</Text>
+            <Text style={styles.timestamp}>
+              {new Date(data.createdAt).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </Text>
           </View>
           {/* Decoradores */}
           <View style={styles.decoratorDivider} />
@@ -260,6 +272,7 @@ const styles = StyleSheet.create({
   title: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", textAlign: "center" as const, marginBottom: 12 },
   description: { color: "#A3A3A3", fontSize: 14, textAlign: "center" as const, lineHeight: 20 },
   boldWhite: { fontWeight: 'bold', color: 'white' },
+  timestamp: { color: "#6B7280", fontSize: 11, textAlign: "center" as const, marginTop: 8 },
   // Decoradores: separados visualmente del core
   decoratorDivider: { height: 1, backgroundColor: "rgba(255, 255, 255, 0.1)", marginBottom: 16 },
   buttonContainer: { width: "100%", gap: 12 },

@@ -19,6 +19,7 @@ export interface NotificationData {
   type: NotificationType;
   title: string;
   body: string;
+  createdAt: string;
   payload: any;
   priority?: Prioridad;
   action?: Accion;

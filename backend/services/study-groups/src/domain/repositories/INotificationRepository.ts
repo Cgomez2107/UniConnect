@@ -7,6 +7,8 @@ export interface INotificationRepository {
     title: string;
     body: string;
     payload: Record<string, unknown> | null;
+    priority?: string;
+    action?: { label: string; endpoint: string } | null;
   }): Promise<string>;
   listByUser(input: {
     actorUserId: string;

@@ -56,7 +56,10 @@ export function RealtimeNotificationHandler() {
             if (type === "transferencia_admin_aceptada") {
                markTransferAccepted(notification.payload.requestId);
             } else {
-               pushNotification(notification as any);
+               pushNotification({
+                  ...notification,
+                  createdAt: notification.created_at,
+                } as any);
             }
           }
         )

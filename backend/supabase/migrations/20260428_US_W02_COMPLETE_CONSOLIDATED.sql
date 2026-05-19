@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS user_notifications (
   title       TEXT NOT NULL,
   body        TEXT NOT NULL,
   payload     JSONB NULL,
+  priority    TEXT NULL DEFAULT 'normal',
+  action      JSONB NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   read_at     TIMESTAMPTZ NULL
 );

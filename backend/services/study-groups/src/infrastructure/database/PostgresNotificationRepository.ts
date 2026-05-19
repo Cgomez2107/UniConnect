@@ -10,6 +10,8 @@ interface NotificationRow {
   title: string;
   body: string;
   payload: Record<string, unknown> | null;
+  priority: string | null;
+  action: Record<string, unknown> | null;
   created_at: Date | string;
   read_at: Date | string | null;
 }
@@ -22,6 +24,8 @@ function mapNotification(row: NotificationRow): UserNotification {
     title: row.title,
     body: row.body,
     payload: row.payload,
+    priority: row.priority ?? undefined,
+    action: row.action ? (row.action as { label: string; endpoint: string }) : null,
     createdAt: new Date(row.created_at).toISOString(),
     readAt: row.read_at ? new Date(row.read_at).toISOString() : null,
   };
@@ -36,14 +40,16 @@ export class PostgresNotificationRepository implements INotificationRepository {
     title: string;
     body: string;
     payload: Record<string, unknown> | null;
+    priority?: string;
+    action?: { label: string; endpoint: string } | null;
   }): Promise<string> {
     const result = await this.pool.query<{ id: string }>(
       `
-        INSERT INTO user_notifications (user_id, type, title, body, payload)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO user_notifications (user_id, type, title, body, payload, priority, action)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
       `,
-      [input.userId, input.type, input.title, input.body, input.payload],
+      [input.userId, input.type, input.title, input.body, input.payload, input.priority ?? 'normal', input.action ?? null],
     );
 
     return result.rows[0].id;

@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS user_notifications (
   title       TEXT NOT NULL,
   body        TEXT NOT NULL,
   payload     JSONB NULL,
+  priority    TEXT NULL DEFAULT 'normal',
+  action      JSONB NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   read_at     TIMESTAMPTZ NULL
 );
@@ -201,6 +203,8 @@ RETURNS TABLE (
   title TEXT,
   body TEXT,
   payload JSONB,
+  priority TEXT,
+  action JSONB,
   created_at TIMESTAMPTZ,
   read_at TIMESTAMPTZ
 )
@@ -221,6 +225,8 @@ BEGIN
     n.title,
     n.body,
     n.payload,
+    n.priority,
+    n.action,
     n.created_at,
     n.read_at
   FROM user_notifications n
@@ -260,13 +266,18 @@ BEGIN
   FROM study_requests
   WHERE id = v_transfer.request_id;
 
-  INSERT INTO user_notifications (user_id, type, title, body, payload)
+  INSERT INTO user_notifications (user_id, type, title, body, payload, priority, action)
   VALUES (
     v_transfer.to_user_id,
     'admin_transfer',
     'Invitacion para ser administrador',
     COALESCE(v_request_title, 'Solicitud de estudio') || ' te invito a administrar el grupo.',
-    jsonb_build_object('transferId', v_transfer.id, 'requestId', v_transfer.request_id)
+    jsonb_build_object('transferId', v_transfer.id, 'requestId', v_transfer.request_id),
+    'urgente',
+    jsonb_build_object(
+      'label',    'Revisar solicitud',
+      'endpoint', '/api/v1/study-groups/transfers/' || v_transfer.id || '/accept'
+    )
   );
 END;
 $$;

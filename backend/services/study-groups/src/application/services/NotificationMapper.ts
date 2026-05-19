@@ -12,6 +12,8 @@ type PersistenceInput = {
   title: string;
   body: string;
   payload: Record<string, unknown> | null;
+  priority?: string;
+  action?: { label: string; endpoint: string } | null;
 };
 
 type MappingResult = {
@@ -51,7 +53,15 @@ function buildNotificacion(
   };
 
   return {
-    persistence: { userId, type, title, body: meta.mensaje, payload },
+    persistence: {
+      userId,
+      type,
+      title,
+      body: meta.mensaje,
+      payload,
+      priority: meta.nivel,
+      ...(meta.accion ? { action: meta.accion } : {}),
+    },
     dto,
   };
 }
