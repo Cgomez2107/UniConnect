@@ -103,6 +103,14 @@ export interface Subject {
 export type RequestStatus = "abierta" | "cerrada" | "expirada";
 export type ApplicationStatus = "pendiente" | "aceptada" | "rechazada";
 
+/** Estados del ciclo de vida de administración (State pattern del backend) */
+export type GroupState =
+  | "Activo"
+  | "PendienteTransferencia"
+  | "TransferenciaAceptada"
+  | "Disuelto"
+  | "Bloqueado";
+
 export interface StudyRequest {
   id: string;
   author_id: string;
