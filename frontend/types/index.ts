@@ -152,6 +152,11 @@ export interface Application {
 // Mensajería
 
 
+export interface Reaction {
+  emoji: string;
+  user_id: string;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -166,6 +171,7 @@ export interface Message {
   client_error?: string | null;
   created_at: string;
   read_at: string | null;
+  reactions?: Reaction[];
   // join
   sender?: { full_name: string; avatar_url: string | null };
 }

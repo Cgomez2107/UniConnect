@@ -95,9 +95,11 @@ export default function ChatScreen() {
     sendMessage,
     retryMessage,
     handleMarkAsRead,
+    subscribeToConversation,
   } = useMessaging();
 
   const conversationIdValue = typeof conversationId === "string" ? conversationId : "";
+  const userId = user?.id ?? "";
 
   const chatItems = useMemo<ChatListItem[]>(() => {
     const items: ChatListItem[] = [];
@@ -129,6 +131,11 @@ export default function ChatScreen() {
     if (!conversationIdValue) return;
     getMessages(conversationIdValue).catch(() => undefined);
   }, [conversationIdValue, getMessages]);
+
+  useEffect(() => {
+    if (!conversationIdValue || !userId) return;
+    subscribeToConversation(conversationIdValue, userId);
+  }, [conversationIdValue, userId, subscribeToConversation]);
 
   useEffect(() => {
     const sub = Keyboard.addListener("keyboardDidShow", () => {

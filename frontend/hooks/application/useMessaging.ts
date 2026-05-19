@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { DIContainer } from "@/lib/services/di/container"
+import { supabase } from "@/lib/supabase"
 import { useUnreadCountStore } from "@/store/unreadCountStore"
-import type { Message, Conversation } from "@/types"
+import type { Message, Conversation, Reaction } from "@/types"
 import type { CreateMessagePayload } from "@/lib/services/domain/repositories/IMessageRepository"
 
 interface PendingMessage {
@@ -269,6 +270,111 @@ export function useMessaging() {
     [container]
   )
 
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+
+  const channelCleanup = useCallback(() => {
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current).catch(() => undefined)
+      channelRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      channelCleanup()
+    }
+  }, [channelCleanup])
+
+  function mapRealtimePayloadToMessage(payload: Record<string, unknown>): Message {
+    let reactions: Reaction[] | undefined
+    if (payload.reactions) {
+      if (typeof payload.reactions === "string") {
+        try { reactions = JSON.parse(payload.reactions) } catch { reactions = [] }
+      } else {
+        reactions = payload.reactions as Reaction[]
+      }
+    }
+
+    return {
+      id: (payload.id as string) ?? "",
+      conversation_id: (payload.conversation_id as string) ?? "",
+      sender_id: (payload.sender_id as string) ?? "",
+      content: (payload.content as string) ?? "",
+      media_url: (payload.media_url as string | null) ?? null,
+      media_type: (payload.media_type as string | null) ?? null,
+      media_filename: (payload.media_filename as string | null) ?? null,
+      reply_to_message_id: (payload.reply_to_message_id as string | null) ?? null,
+      reply_preview: (payload.reply_preview as string | null) ?? null,
+      created_at: (payload.created_at as string) ?? new Date().toISOString(),
+      read_at: (payload.read_at as string | null) ?? null,
+      reactions,
+      client_status: "sent",
+      client_error: null,
+    }
+  }
+
+  const subscribeToConversation = useCallback(
+    (conversationId: string, currentUserId: string) => {
+      channelCleanup()
+
+      const channelName = `dm-${conversationId}`
+      const channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const msg = mapRealtimePayloadToMessage(payload.new as Record<string, unknown>)
+            // Own message — skip; POST response handles tempId → real replacement
+            if (msg.sender_id === currentUserId) return
+            setState((prev) => {
+              if (prev.messages.some((m) => m.id === msg.id)) return prev
+              const updated = [...prev.messages, msg]
+              updated.sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              )
+              return { ...prev, messages: updated }
+            })
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "messages",
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const newReactions = (payload.new as Record<string, unknown>).reactions
+            if (!newReactions) return
+            let parsed: Reaction[]
+            if (typeof newReactions === "string") {
+              try { parsed = JSON.parse(newReactions) } catch { return }
+            } else {
+              parsed = newReactions as Reaction[]
+            }
+            const messageId = (payload.new as Record<string, unknown>).id as string
+            setState((prev) => ({
+              ...prev,
+              messages: prev.messages.map((m) =>
+                m.id === messageId ? { ...m, reactions: parsed } : m
+              ),
+            }))
+          }
+        )
+        .subscribe()
+
+      channelRef.current = channel
+    },
+    [channelCleanup]
+  )
+
   return {
     ...state,
     getConversations,
@@ -277,5 +383,6 @@ export function useMessaging() {
     retryMessage,
     getOrCreateConversation,
     handleMarkAsRead,
+    subscribeToConversation,
   }
 }

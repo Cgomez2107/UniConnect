@@ -16,7 +16,7 @@ import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHt
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
 const SearchStudentsQuerySchema = z.object({
-  subjectId: z.string().min(1, "subjectId es requerido"),
+  subjectId: z.string().min(1, "subjectId es requerido").optional(),
   search: z.string().optional(),
 });
 
@@ -50,7 +50,7 @@ export class ProfilesCatalogController {
         : undefined;
 
     try {
-      const parsed = SearchStudentsQuerySchema.parse({ subjectId, search });
+      const parsed = SearchStudentsQuerySchema.parse({ subjectId: subjectId ?? undefined, search: search ?? undefined });
 
       const result = await this.searchStudentsUC.execute({
         subjectId: parsed.subjectId,
@@ -61,7 +61,8 @@ export class ProfilesCatalogController {
       sendData(res, 200, result, { total: result.length });
     } catch (error) {
       if (error instanceof ZodError) {
-        sendError(res, 400, "Error de validación: el campo 'subjectId' es requerido.");
+        const messages = error.issues.map((i) => i.message).join("; ");
+        sendError(res, 400, `Error de validación: ${messages}`);
         return;
       }
 

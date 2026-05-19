@@ -8,16 +8,6 @@ import { uploadResourceFile } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import type { UserProgram } from "@/types";
 
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "text/plain",
-  "image/jpeg",
-  "image/png",
-];
-const ALLOWED_EXTENSIONS = ["pdf", "docx", "xlsx", "pptx", "txt", "jpg", "jpeg", "png"];
 const MAX_SIZE = 10 * 1024 * 1024;
 
 function formatSize(bytes: number): string {
@@ -73,12 +63,6 @@ export function SubirRecursoPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-    if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
-      setUploadError("Formato no permitido. Usa: PDF, DOCX, XLSX, PPTX, TXT, JPG, PNG.");
-      return;
-    }
-
     if (file.size > MAX_SIZE) {
       setUploadError("El archivo excede el límite de 10 MB.");
       return;
@@ -116,7 +100,7 @@ export function SubirRecursoPage() {
         description: description.trim() || undefined,
         fileUrl,
         fileName: pickedFile.name,
-        fileType: pickedFile.type || undefined,
+        fileType: pickedFile.name.split(".").pop()?.toLowerCase() || undefined,
         fileSizeKb: Math.round(pickedFile.size / 1024),
         programId,
       });
@@ -256,7 +240,7 @@ export function SubirRecursoPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.xlsx,.pptx,.txt,.jpg,.png"
+              accept="*/*"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -288,7 +272,7 @@ export function SubirRecursoPage() {
                   Seleccionar archivo
                 </p>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                  PDF, DOCX, XLSX, PPTX, TXT, JPG, PNG · máx 10 MB
+                  Cualquier formato · máx 10 MB
                 </p>
               </button>
             )}

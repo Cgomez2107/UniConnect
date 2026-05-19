@@ -4,10 +4,6 @@ import type { IResourceUploadRepository } from "../../repositories/IResourceUplo
 export class UploadResourceFromDevice {
   constructor(private repository: IResourceUploadRepository) {}
 
-  validateFileFormat(fileName: string): boolean {
-    return this.repository.validateFileFormat(fileName)
-  }
-
   validateFileSize(sizeBytes: number): boolean {
     return this.repository.validateFileSize(sizeBytes)
   }
