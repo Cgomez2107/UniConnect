@@ -2,15 +2,9 @@ import { supabase } from "@/lib/supabase";
 import { parseGroupError } from "./groupErrorInterceptor";
 import { showToastBridge } from "./toastBridge";
 
-// Soportar tanto VITE_API_URL (nueva) como EXPO_PUBLIC_API_BASE_URL (antigua) para retrocompatibilidad
-// Orden de precedencia:
-// 1. VITE_API_URL (nueva variable estándar)
-// 2. EXPO_PUBLIC_API_BASE_URL (antigua variable, para compatibilidad)
-// 3. URL por defecto local
 const API_BASE_URL =
-    process.env.VITE_API_URL ||
     process.env.EXPO_PUBLIC_API_BASE_URL ||
-    "http://localhost:3000/api/v1";
+    process.env.VITE_API_URL;
 
 const TOKEN_CACHE_TTL_MS = 10_000;
 let cachedAccessToken: string | null = null;
