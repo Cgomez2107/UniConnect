@@ -1,14 +1,11 @@
 import { useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MobileHeader } from "./MobileHeader";
-import { useNotificationStore } from "../../store/useNotificationStore";
+import BellDropdown from "../notifications/BellDropdown";
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
-  const notificationUnread = useNotificationStore((s) => s.unreadCount);
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -43,19 +40,8 @@ export function AppLayout() {
           onToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
         />
         {/* Desktop notification bar */}
-        <div className="hidden lg:flex items-center justify-end h-12 px-6 bg-white border-b border-neutral-200">
-          <button
-            onClick={() => navigate("/notificaciones")}
-            className="relative p-2 rounded-lg hover:bg-neutral-100 transition-colors"
-            aria-label="Notificaciones"
-          >
-            <Bell size={20} className="text-neutral-600" />
-            {notificationUnread > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-error-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 leading-none shadow-lg">
-                {notificationUnread > 99 ? "99+" : notificationUnread}
-              </span>
-            )}
-          </button>
+        <div className="hidden lg:flex items-center justify-end h-12 px-6 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+          <BellDropdown />
         </div>
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <Outlet />

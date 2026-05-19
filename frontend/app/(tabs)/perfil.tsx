@@ -15,6 +15,7 @@ import { StatsRow } from "@/components/perfil/StatsRow";
 import { InfoRow } from "@/components/shared/InfoRow";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { SectionCard } from "@/components/shared/SectionCard";
+import BellButton from "@/components/notifications/BellButton";
 import { Colors } from "@/constants/Colors";
 import { useProfile } from "@/hooks/application/useProfile";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -77,6 +78,11 @@ export default function PerfilScreen() {
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+
+      <View style={[styles.profileHeader, { borderBottomColor: C.border }]}>
+        <View style={{ flex: 1 }} />
+        <BellButton />
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -211,6 +217,20 @@ export default function PerfilScreen() {
           </>
         )}
 
+        {/* Notificaciones */}
+        <SectionCard title="Notificaciones">
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomColor: C.border }]}
+            onPress={() => (router as any).push("/ajustes/notificaciones")}
+          >
+            <Text style={{ fontSize: 14 }}>🔔</Text>
+            <Text style={[styles.settingsRowText, { color: C.textPrimary }]}>
+              Configurar notificaciones
+            </Text>
+            <Text style={[styles.settingsRowArrow, { color: C.textSecondary }]}>›</Text>
+          </TouchableOpacity>
+        </SectionCard>
+
         {/* Cerrar sesion */}
         <TouchableOpacity
           style={[styles.signOut, { borderColor: C.borderError }]}
@@ -226,6 +246,28 @@ export default function PerfilScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  profileHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  settingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  settingsRowText: {
+    fontSize: 14,
+    flex: 1,
+    marginLeft: 10,
+  },
+  settingsRowArrow: {
+    fontSize: 20,
+    fontWeight: "300",
+  },
   programRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
   primaryBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   primaryBadgeText: { fontSize: 10, fontWeight: "700" },
