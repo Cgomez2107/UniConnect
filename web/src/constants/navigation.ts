@@ -5,6 +5,7 @@ import {
   MessageSquare,
   Calendar,
   UserCircle,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,4 +22,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Mensajes", route: "/mensajes", icon: MessageSquare },
   { label: "Eventos", route: "/eventos", icon: Calendar },
   { label: "Perfil", route: "/perfil", icon: UserCircle },
+  { label: "Notificaciones", route: "/ajustes/notificaciones", icon: Bell },
 ];
