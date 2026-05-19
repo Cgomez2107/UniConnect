@@ -22,7 +22,7 @@ describe("Perf: comparar latencia entre vista base y completa (lógica)", () => 
     } as any;
 
     const getFullProfileUC = new GetFullProfile(slowIndicatorsRepo);
-    const controller = new ProfilesCatalogController({} as any, mockGetPublic as any, getFullProfileUC as any, {} as any, {} as any);
+    const controller = new ProfilesCatalogController({} as any, mockGetPublic as any, getFullProfileUC as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     const iterations = 5;
     const baseTimes: number[] = [];

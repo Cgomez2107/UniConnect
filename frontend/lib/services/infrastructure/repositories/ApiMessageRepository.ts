@@ -1,5 +1,5 @@
 import { fetchApi } from "@/lib/api/httpClient";
-import type { Message } from "@/types";
+import type { Message, Reaction } from "@/types";
 import type {
   CreateMessagePayload,
   IMessageRepository,
@@ -22,6 +22,7 @@ interface ApiMessage {
   reply_to_message_id?: string | null;
   replyPreview?: string | null;
   reply_preview?: string | null;
+  reactions?: Reaction[] | string | null;
   createdAt?: string;
   created_at?: string;
   readAt?: string | null;
@@ -32,6 +33,15 @@ interface ApiMessage {
     avatarUrl?: string | null;
     avatar_url?: string | null;
   } | null;
+}
+
+function parseReactions(raw: unknown): Reaction[] | undefined {
+  if (!raw) return undefined
+  if (Array.isArray(raw)) return raw as Reaction[]
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw) as Reaction[] } catch { return undefined }
+  }
+  return undefined
 }
 
 function mapMessage(raw: ApiMessage): Message {
@@ -47,6 +57,7 @@ function mapMessage(raw: ApiMessage): Message {
     reply_preview: raw.replyPreview ?? raw.reply_preview ?? null,
     created_at: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
     read_at: raw.readAt ?? raw.read_at ?? null,
+    reactions: parseReactions(raw.reactions),
     sender: raw.sender
       ? {
           full_name: raw.sender.fullName ?? raw.sender.full_name ?? "Usuario",

@@ -4,20 +4,6 @@ import * as FileSystem from "expo-file-system/legacy"
 import type { CreateStudyResourcePayload, StudyResource } from "@/types"
 import type { IResourceUploadRepository } from "../../domain/repositories/IResourceUploadRepository"
 
-const ALLOWED_EXTENSIONS = [
-  "pdf",
-  "docx",
-  "doc",
-  "xlsx",
-  "xls",
-  "pptx",
-  "ppt",
-  "txt",
-  "jpg",
-  "jpeg",
-  "png",
-] as const
-
 const MAX_FILE_SIZE_KB = 10_240
 
 const MIME_TYPES: Record<string, string> = {
@@ -35,11 +21,6 @@ const MIME_TYPES: Record<string, string> = {
 }
 
 export class SupabaseResourceUploadRepository implements IResourceUploadRepository {
-  validateFileFormat(fileName: string): boolean {
-    const ext = fileName.split(".").pop()?.toLowerCase() ?? ""
-    return (ALLOWED_EXTENSIONS as readonly string[]).includes(ext)
-  }
-
   validateFileSize(sizeBytes: number): boolean {
     return sizeBytes / 1024 <= MAX_FILE_SIZE_KB
   }
@@ -52,10 +33,6 @@ export class SupabaseResourceUploadRepository implements IResourceUploadReposito
     }
   ): Promise<StudyResource> {
     const { subject_id, title, description, file_uri, file_name, file_size_bytes } = payload
-
-    if (!this.validateFileFormat(file_name)) {
-      throw new Error(`Formato no permitido. Usa: ${ALLOWED_EXTENSIONS.join(", ")}`)
-    }
 
     if (!this.validateFileSize(file_size_bytes)) {
       throw new Error("El archivo excede el máximo de 10 MB.")

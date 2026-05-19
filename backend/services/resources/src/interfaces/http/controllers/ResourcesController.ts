@@ -102,6 +102,19 @@ export class ResourcesController {
         sendError(res, 400, "Error de validación: todos los campos requeridos deben estar presentes.");
         return;
       }
+
+      if (error instanceof Error && "code" in error) {
+        const pgCode = (error as any).code;
+        if (pgCode === "23503") {
+          sendError(res, 400, "La materia o el programa seleccionado no existe.");
+          return;
+        }
+        if (pgCode === "22001") {
+          sendError(res, 400, "El nombre o tipo del archivo es demasiado largo.");
+          return;
+        }
+      }
+
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

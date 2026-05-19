@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
 
 export async function readJsonBody<T>(req: IncomingMessage): Promise<T> {
-  const chunks: Buffer[] = [];
+  const chunks: Uint8Array[] = [];
 
   for await (const chunk of req) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);

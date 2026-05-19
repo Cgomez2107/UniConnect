@@ -220,13 +220,17 @@ export const ChatPage: React.FC = () => {
       });
       const msg = response.data?.data || response.data;
       pendingTempIds.current.delete(tempId);
-      setMessages((prev) =>
-        prev.map((m) =>
+      setMessages((prev) => {
+        // If WS already delivered this message, just remove the temp entry
+        if (prev.some((m) => m.id === msg.id)) {
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) =>
           m.id === tempId
             ? { ...m, id: msg.id, clientStatus: "sent", readAt: null }
             : m
-        )
-      );
+        );
+      });
       loadConversations();
     } catch {
       pendingTempIds.current.delete(tempId);
@@ -251,13 +255,16 @@ export const ChatPage: React.FC = () => {
         replyToMessageId: failedMsg.replyToMessageId || undefined,
       });
       const msg = response.data?.data || response.data;
-      setMessages((prev) =>
-        prev.map((m) =>
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) {
+          return prev.filter((m) => m.id !== failedMsg.id);
+        }
+        return prev.map((m) =>
           m.id === failedMsg.id
             ? { ...m, id: msg.id, content: msg.content, clientStatus: "sent" }
             : m
-        )
-      );
+        );
+      });
     } catch {
       setMessages((prev) =>
         prev.map((m) =>
@@ -284,19 +291,22 @@ export const ChatPage: React.FC = () => {
         mediaFilename: file.name,
       });
       const msg = response.data?.data || response.data;
-      setMessages((prev) => [...prev, {
-        id: msg.id,
-        content: msg.content,
-        senderId: msg.sender_id || msg.senderId || user?.id || "",
-        senderName: "Tú",
-        createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
-        readAt: null,
-        clientStatus: "sent",
-        mediaUrl,
-        mediaType: file.type,
-        mediaFilename: file.name,
-        reactions: [],
-      }]);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.sender_id || msg.senderId || user?.id || "",
+          senderName: "Tú",
+          createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
+          readAt: null,
+          clientStatus: "sent",
+          mediaUrl,
+          mediaType: file.type,
+          mediaFilename: file.name,
+          reactions: [],
+        }];
+      });
     } catch (err) {
       console.error("Error uploading image:", err);
     } finally {
@@ -323,18 +333,21 @@ export const ChatPage: React.FC = () => {
         mediaFilename: file.name,
       });
       const msg = response.data?.data || response.data;
-      setMessages((prev) => [...prev, {
-        id: msg.id,
-        content: msg.content,
-        senderId: msg.sender_id || msg.senderId || user?.id || "",
-        senderName: "Tú",
-        createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
-        readAt: null,
-        clientStatus: "sent",
-        mediaUrl: result.url,
-        mediaType: file.type,
-        mediaFilename: file.name,
-      }]);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.sender_id || msg.senderId || user?.id || "",
+          senderName: "Tú",
+          createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
+          readAt: null,
+          clientStatus: "sent",
+          mediaUrl: result.url,
+          mediaType: file.type,
+          mediaFilename: file.name,
+        }];
+      });
     } catch (err) {
       console.error("Error uploading file:", err);
     } finally {
