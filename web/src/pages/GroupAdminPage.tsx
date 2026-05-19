@@ -18,6 +18,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
 import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
+import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
 import type { GroupState } from "@/types";
 
 // Backend: [{ userId, name }] → UI: [{ userId, displayName, position }]
@@ -142,12 +143,18 @@ export function GroupDashboardPage() {
   const isAdmin = isAuthor || members.some((m: any) => m.userId === user?.id && (m.role === "admin" || m.role === "autor"));
 
   const groupState: GroupState | null = solicitud
-    ? solicitud.hasPendingTransfer
-      ? "PendienteTransferencia"
-      : solicitud.status === "abierta"
-        ? "Activo"
-        : "Disuelto"
+    ? solicitud.status === "cerrada"
+      ? "Disuelto"
+      : solicitud.status === "expirada"
+        ? "Bloqueado"
+        : solicitud.hasPendingTransfer
+          ? solicitud.pendingTransferStatus === "aceptada"
+            ? "TransferenciaAceptada"
+            : "PendienteTransferencia"
+          : "Activo"
     : null;
+
+  const perms = groupState ? getGroupPermissions(groupState) : null;
 
   // --- Conditional applications fetch (admin only) ---
   useEffect(() => {
@@ -816,20 +823,21 @@ export function GroupDashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isAuthor && (
-            solicitud.hasPendingTransfer ? (
-              <Button variant="secondary" size="sm" disabled>
-                Transferencia solicitada
-              </Button>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
-                Transferir admin
-              </Button>
-            )
+          {isAuthor && perms?.canTransfer && (
+            <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
+              Transferir admin
+            </Button>
           )}
-          <Button variant="danger" size="sm" onClick={() => setShowLeaveConfirm(true)} loading={leaveLoading}>
-            Salir
-          </Button>
+          {isAuthor && solicitud.hasPendingTransfer && !perms?.canTransfer && (
+            <Button variant="secondary" size="sm" disabled>
+              Transferencia solicitada
+            </Button>
+          )}
+          {!perms?.isReadOnly && (
+            <Button variant="danger" size="sm" onClick={() => setShowLeaveConfirm(true)} loading={leaveLoading}>
+              Salir
+            </Button>
+          )}
         </div>
       </header>
 

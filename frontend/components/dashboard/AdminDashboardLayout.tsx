@@ -15,6 +15,8 @@ import { fetchApi } from "@/lib/api/httpClient";
 import { transformRawMessage } from "@/chat/utils/messageFactory";
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
+import type { GroupState } from "@/types";
 
 const ROLE_LABELS: Record<StudyGroupMember["role"], string> = {
   autor: "Creador",
@@ -91,6 +93,14 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     if (isCreator) return true;
     return adminCount <= 1;
   }, [members, isCreator]);
+
+  const groupState: GroupState = useMemo(() => {
+    if (hasPendingTransfer) return "PendienteTransferencia";
+    if (activeRequest?.is_active === false) return "Disuelto";
+    return "Activo";
+  }, [hasPendingTransfer, activeRequest?.is_active]);
+
+  const perms = useMemo(() => getGroupPermissions(groupState), [groupState]);
 
   const filteredApps = useMemo(() => {
     return applications.filter(app => {
@@ -466,6 +476,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
             onClick={() => {
               if (loadingTransferCheck) return;
               if (hasPendingTransfer) return;
+              if (perms.isReadOnly) return;
               if (transferMode) {
                 setTransferMode(false);
                 setSelectedCandidateId(null);
@@ -475,9 +486,9 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
               if (isOnlyAdmin) setShowDelegateWarning(true);
               else setShowLeaveConfirm(true);
             }}
-            disabled={hasPendingTransfer || loadingTransferCheck || leavingGroup}
+            disabled={hasPendingTransfer || loadingTransferCheck || leavingGroup || perms.isReadOnly}
             className={`py-2.5 px-6 rounded-xl border flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all relative z-[9999] cursor-pointer ${
-              hasPendingTransfer
+              hasPendingTransfer || perms.isReadOnly
                 ? "bg-neutral-900 border-neutral-800 text-neutral-600 cursor-not-allowed"
                 : "border-red-600 text-red-600 hover:bg-red-600 hover:text-white shadow-lg shadow-red-900/5"
             }`}
@@ -714,7 +725,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
         </div>
       )}
 
-      {showDelegateWarning && (
+      {showDelegateWarning && perms.canTransfer && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] flex items-center justify-center p-6">
           <div className="bg-[#1A1A1A] border border-[#0047AB]/30 rounded-[32px] p-10 max-w-sm w-full shadow-2xl">
             <div className="w-16 h-16 bg-[#0047AB]/10 rounded-3xl flex items-center justify-center mb-6 mx-auto border border-[#0047AB]/20">

@@ -22,7 +22,7 @@ const PERMISSIONS_MATRIX: Record<string, GroupPermissions> = {
     isReadOnly: false,
   },
   PendienteTransferencia: {
-    canJoin: true,
+    canJoin: false,
     canEdit: false,
     canTransfer: false,
     canAcceptTransfer: true,
@@ -31,7 +31,7 @@ const PERMISSIONS_MATRIX: Record<string, GroupPermissions> = {
     isReadOnly: false,
   },
   TransferenciaAceptada: {
-    canJoin: true,
+    canJoin: false,
     canEdit: false,
     canTransfer: false,
     canAcceptTransfer: false,

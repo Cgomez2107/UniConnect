@@ -12,7 +12,7 @@ import { useRequestDetail } from "@/hooks/application/useRequestDetail";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +23,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { GroupState } from "@/types";
 
 interface StudyGroupDetailScreenProps {
   requestId?: string;
@@ -66,6 +67,11 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
     onRequestCanceled: () => router.replace("/(tabs)/invitaciones" as any),
   });
 
+  const groupState: GroupState = useMemo(() => {
+    if (request?.status === "cerrada" || request?.status === "expirada") return "Disuelto";
+    return "Activo";
+  }, [request?.status]);
+
   if (request?.id) {
     // Si es administrador, mostrar dashboard completo
     if (canManageRequest) {
@@ -86,6 +92,7 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
           groupSubtitle={groupSubtitle}
           groupDescription={request.description}
           facultyName={request.faculty_name}
+          groupState={groupState}
         />
       );
     }
