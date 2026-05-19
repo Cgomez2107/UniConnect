@@ -385,20 +385,21 @@ async function main() {
   if (nodeEnv === "development" && !supabaseServiceRoleKey) {
     const devSeedPasswordHash = await bcryptjs.hash("Test1234", 10);
     const devUsers = [
-      { email: "test@ucaldas.edu.co", fullName: "Estudiante Test" },
-      { email: "estudiante.prueba@ucaldas.edu.co", fullName: "Estudiante Prueba" },
+      { id: "a41040fc-fa2b-4b44-a68b-4418a0279623", email: "test@ucaldas.edu.co", fullName: "Estudiante Test" },
+      { id: "a0f6e12e-1c9c-4c87-9c23-a129a92aafdf", email: "estudiante.prueba@ucaldas.edu.co", fullName: "Estudiante Prueba" },
     ];
     for (const u of devUsers) {
       const exists = await authRepository.findByEmail(u.email);
       if (!exists) {
         await authRepository.create({
+          id: u.id,
           email: u.email,
           fullName: u.fullName,
           passwordHash: devSeedPasswordHash,
           role: "estudiante",
           isActive: true,
         });
-        console.log(JSON.stringify({ service: "auth", level: "info", message: `Dev seed: user created ${u.email}` }));
+        console.log(JSON.stringify({ service: "auth", level: "info", message: `Dev seed: user created ${u.email} with fixed id ${u.id}` }));
       }
     }
   }

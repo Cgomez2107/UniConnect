@@ -71,7 +71,7 @@ export class StudyGroupsClient extends BaseClient {
       url: "/study-groups",
       body: {
         subjectId: payload.subjectId,
-        title: payload.title,
+        name: payload.title,
         description: payload.description,
         maxMembers: payload.maxMembers,
       },
