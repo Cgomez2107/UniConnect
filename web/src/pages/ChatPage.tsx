@@ -11,6 +11,8 @@ import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import { groupReactions } from "@/lib/services/messaging.service";
 import { useConversationsStore } from "@/store/useConversationsStore";
+import { isForbiddenContent } from "@/hooks/useMessageValidation";
+import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 
 interface Message {
   id: string;
@@ -246,6 +248,15 @@ export const ChatPage: React.FC = () => {
   };
 
   const handleRetry = async (failedMsg: any) => {
+    if (isForbiddenContent(failedMsg.content || "")) {
+      alert(ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m
+        )
+      );
+      return;
+    }
     setMessages((prev) =>
       prev.map((m) => (m.id === failedMsg.id ? { ...m, clientStatus: "sending" } : m))
     );

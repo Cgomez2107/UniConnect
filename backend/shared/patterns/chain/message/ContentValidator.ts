@@ -4,9 +4,9 @@ import { ContentError } from "../../../libs/errors/ContentError.js";
 export class ContentValidator extends MessageValidator {
   private readonly forbiddenPatterns: RegExp[];
 
-  constructor(forbiddenWords: string[] = []) {
+  constructor(forbiddenWords: string[] = ["spam", "violencia", "odio"]) {
     super();
-    this.forbiddenPatterns = forbiddenWords.map(w => new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'));
+    this.forbiddenPatterns = forbiddenWords.map(word => new RegExp(word, "gi"));
   }
 
   async validate(content: string, metadata?: Record<string, unknown>): Promise<void> {

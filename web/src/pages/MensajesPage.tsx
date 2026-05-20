@@ -11,6 +11,8 @@ import { apiClient } from "@/lib/api/client";
 import { uploadChatImageFile } from "@/lib/supabase";
 import { useUnreadCountStore } from "@/store/useUnreadCountStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { isForbiddenContent } from "@/hooks/useMessageValidation";
+import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 
 export function MensajesPage() {
   const { user } = useAuth();
@@ -155,12 +157,13 @@ export function MensajesPage() {
       setConversationsList(conversations);
     }
   }, [conversations, conversationsList.length]);
-
-
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageText.trim() || !selectedConversation) return;
+    if (isForbiddenContent(messageText)) {
+      alert(ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT]);
+      return;
+    }
 
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg = {
@@ -203,6 +206,15 @@ export function MensajesPage() {
 
   const handleRetry = async (failedMsg: any) => {
     if (!selectedConversation) return;
+    if (isForbiddenContent(failedMsg.content || "")) {
+      alert(ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m
+        )
+      );
+      return;
+    }
     setMessages((prev) =>
       prev.map((m) => (m.id === failedMsg.id ? { ...m, clientStatus: "sending" } : m))
     );

@@ -97,18 +97,45 @@ export class ValidationErrorMapper {
    */
   static toHttpResponse(error: Error) {
     const { code, message } = this.getErrorResponse(error);
+    const frontendCode = this.getFrontendErrorCode(code);
+    const frontendMessage = this.getFrontendMessage(code, message);
 
     return {
       statusCode: this.getHttpStatus(code),
       body: {
-        error: code,
-        message,
-        details: {
-          timestamp: new Date().toISOString(),
-          errorName: error.name,
-        },
+        error: frontendCode,
+        message: frontendMessage,
       },
     };
+  }
+
+  private static getFrontendErrorCode(code: ValidationErrorCode): string {
+    switch (code) {
+      case ValidationErrorCode.MESSAGE_TOO_LONG:
+        return "MSG_LIMIT_EXCEEDED";
+      case ValidationErrorCode.BANNED_CONTENT:
+        return "BANNED_CONTENT";
+      case ValidationErrorCode.FILE_TOO_LARGE:
+        return "FILE_TOO_LARGE";
+      default:
+        return code;
+    }
+  }
+
+  private static getFrontendMessage(
+    code: ValidationErrorCode,
+    fallbackMessage: string
+  ): string {
+    switch (code) {
+      case ValidationErrorCode.MESSAGE_TOO_LONG:
+        return "El mensaje excede el límite de caracteres";
+      case ValidationErrorCode.BANNED_CONTENT:
+        return "El mensaje contiene contenido no permitido";
+      case ValidationErrorCode.FILE_TOO_LARGE:
+        return "El archivo excede el tamaño máximo de 50MB";
+      default:
+        return fallbackMessage;
+    }
   }
 
   /**

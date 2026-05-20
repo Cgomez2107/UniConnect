@@ -10,6 +10,8 @@ import { snakeToCamel } from "@uniconnect/shared-api";
 import { useChatObserver } from "@/hooks/useChatObserver";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+import { isForbiddenContent } from "@/hooks/useMessageValidation";
+import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 
 function transformMentions(mentions?: any[]): MentionData[] | undefined {
   if (!mentions || mentions.length === 0) return undefined;
@@ -260,6 +262,15 @@ export function GroupChatPage() {
 
   const handleRetry = async (failedMsg: any) => {
     if (!id) return;
+    if (isForbiddenContent(failedMsg.content || "")) {
+      alert(ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m
+        )
+      );
+      return;
+    }
     setMessages((prev) =>
       prev.map((m) => (m.id === failedMsg.id ? { ...m, clientStatus: "sending" } : m))
     );

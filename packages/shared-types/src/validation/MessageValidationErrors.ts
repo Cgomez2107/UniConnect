@@ -52,7 +52,7 @@ export const ValidationErrorMessages: Record<ValidationErrorCode, string> = {
   [ValidationErrorCode.UNSUPPORTED_FILE_TYPE]:
     "Este tipo de archivo no está soportado. Intenta con imágenes, PDFs o documentos.",
   [ValidationErrorCode.FILE_TOO_LARGE]:
-    "El archivo es demasiado grande. Máximo 50 MB.",
+    "El archivo es demasiado grande. Máximo 10 MB.",
   [ValidationErrorCode.INVALID_FILENAME]:
     "El nombre del archivo contiene caracteres no permitidos.",
   [ValidationErrorCode.FILENAME_TOO_LONG]:

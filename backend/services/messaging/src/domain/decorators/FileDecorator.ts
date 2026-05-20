@@ -29,7 +29,7 @@ export interface FileMetadata {
  *
  * Garantías:
  * - Válida que mimeType sea conocido
- * - Válida que size sea razonable (< 100MB)
+ * - Válida que size sea razonable (< 50MB)
  * - Propaga todas las propiedades del mensaje base
  * - Componible: puede ser envuelto por otro decorador
  */
@@ -44,9 +44,9 @@ export class FileDecorator extends MessageDecorator {
       throw new Error("filename no puede estar vacío");
     }
 
-    if (file.size <= 0 || file.size > 100 * 1024 * 1024) {
-      // 100MB max
-      throw new Error("size debe estar entre 0 y 100MB");
+    if (file.size <= 0 || file.size > 50 * 1024 * 1024) {
+      // 50MB max
+      throw new Error("size debe estar entre 0 y 50MB");
     }
 
     if (!file.mimeType || file.mimeType.trim().length === 0) {
