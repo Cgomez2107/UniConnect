@@ -229,7 +229,7 @@ function bootstrap(): void {
 
   const strategies = [
     realtimeGateway
-      ? new InAppWebSocketStrategy(realtimeGateway)
+      ? new InAppWebSocketStrategy(realtimeGateway, notificationRepository)
       : null,
     emailGateway && userRepository
       ? new EmailInstitucionalStrategy(emailGateway, userRepository)

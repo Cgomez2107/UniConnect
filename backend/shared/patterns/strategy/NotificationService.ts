@@ -28,6 +28,7 @@ export class NotificationService {
         try {
           return await s.enviar(notificacion);
         } catch (err) {
+          console.error("[Strategy Error] Canal fallido:", err);
           return {
             canal: s.canal,
             exitoso: false,

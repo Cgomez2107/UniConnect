@@ -48,7 +48,7 @@ const DUMMY_EVENT: StudyGroupEvent = {
 const BASE_TIME = new Date("2026-05-11T12:00:00.000Z");
 
 describe("NotificationObserver → NotificationService — flujo completo", () => {
-  it("persiste en repositorio y luego delega en NotificationService", async () => {
+  it("delegada en NotificationService sin persistencia duplicada en el observer", async () => {
     const repoSpy = createSpy<[{
       userId: string; type: string; title: string; body: string; payload: Record<string, unknown> | null;
     }], Promise<string>>();
@@ -76,9 +76,7 @@ describe("NotificationObserver → NotificationService — flujo completo", () =
 
     await observer.handle(DUMMY_EVENT);
 
-    assert.equal(repoSpy.mock.calls.length, 1);
-    assert.equal(repoSpy.mock.calls[0][0].userId, "user-recipient");
-    assert.equal(repoSpy.mock.calls[0][0].type, "solicitud_ingreso");
+    assert.equal(repoSpy.mock.calls.length, 0);
 
     assert.ok(capturedDto !== null, "NotificationService.notificar() deberia haber sido llamado");
     const dtoResult: NotificacionDTO = capturedDto as NotificacionDTO;

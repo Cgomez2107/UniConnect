@@ -6,10 +6,10 @@ import { deps } from "@/store/deps";
 import { apiClient } from "@/lib/api/client";
 
 const studyGroupsService = {
-  async listStudyGroups(subjectId?: string) {
+  async listStudyGroups(params?: { subjectId?: string; subjectIds?: string[]; page?: number; limit?: number }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = deps.apiClients.studyGroups as any;
-    return client.list(subjectId ? { subjectId } : undefined);
+    return client.list(params);
   },
 
   async getStudyGroupById(id: string) {

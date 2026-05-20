@@ -32,6 +32,8 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "dotenv": "^16.4.7",
     "tsx": "^4.19.2"
   }
 }
