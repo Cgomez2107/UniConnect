@@ -68,6 +68,10 @@ function isForumRoute(pathname: string): boolean {
   return pathname === "/api/v1/forum" || pathname.startsWith("/api/v1/forum/");
 }
 
+function isPollRoute(pathname: string): boolean {
+  return pathname === "/api/v1/polls" || pathname.startsWith("/api/v1/polls/");
+}
+
 function isAuthRoute(pathname: string): boolean {
   return pathname.startsWith("/api/v1/auth");
 }
@@ -407,6 +411,11 @@ async function handleRequest(
     await proxyRequest(req, res, env.messagingBaseUrl, undefined, (info) => {
       onMessagingResponse(info, requestUrl, payload);
     });
+    return;
+  }
+
+  if (isPollRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.messagingBaseUrl);
     return;
   }
 

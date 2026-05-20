@@ -49,6 +49,7 @@ export class ChatSubject implements ISubject {
    * }
    */
   private readonly channels: Map<ChatChannel, Set<IChatObserver>> = new Map();
+  private readonly globalObservers: Set<IChatObserver> = new Set();
 
   private readonly name: string;
 
@@ -126,21 +127,33 @@ export class ChatSubject implements ISubject {
    * @param event - Evento a emitir
    */
   async emit(channel: ChatChannel, event: ChatEvent): Promise<void> {
-    const observers = this.channels.get(channel);
+    const channelObservers = this.channels.get(channel);
 
-    if (!observers) {
+    if (!channelObservers && this.globalObservers.size === 0) {
       console.log(
         `[${this.name}] Evento "${event.type}" en canal "${channel}" pero sin observers (ok)`,
       );
       return;
     }
 
+    const allObservers = new Set<IChatObserver>();
+
+    if (channelObservers) {
+      for (const obs of channelObservers) {
+        allObservers.add(obs);
+      }
+    }
+
+    for (const obs of this.globalObservers) {
+      allObservers.add(obs);
+    }
+
     console.log(
-      `[${this.name}] Emitiendo evento "${event.type}" en canal "${channel}" a ${observers.size} observers`,
+      `[${this.name}] Emitiendo evento "${event.type}" en canal "${channel}" a ${allObservers.size} observers`,
     );
 
-    // Ejecutar todos los observers del canal
-    const promises = Array.from(observers).map(async (observer) => {
+    // Ejecutar todos los observers del canal y globales
+    const promises = Array.from(allObservers).map(async (observer) => {
       try {
         await observer.handle(event, channel);
         console.log(
@@ -167,10 +180,23 @@ export class ChatSubject implements ISubject {
   }
 
   /**
-   * Limpia todos los canales
+   * Suscribe un observer a TODOS los canales (eventos globales).
+   * El observer recibirá cualquier evento emitido en cualquier canal,
+   * además de los observers específicos de cada canal.
+   */
+  subscribeAll(observer: IChatObserver): void {
+    this.globalObservers.add(observer);
+    console.log(
+      `[${this.name}] Observer "${observer.name}" suscrito a todos los canales. Total global: ${this.globalObservers.size}`,
+    );
+  }
+
+  /**
+   * Limpia todos los canales y observadores globales
    */
   clear(): void {
-    console.log(`[${this.name}] Limpiando ${this.channels.size} canales`);
+    console.log(`[${this.name}] Limpiando ${this.channels.size} canales y ${this.globalObservers.size} globales`);
     this.channels.clear();
+    this.globalObservers.clear();
   }
 }
