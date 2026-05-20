@@ -33,6 +33,7 @@ import { CompanionsPage } from "./pages/CompanionsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import DirectorioPage from "./pages/DirectorioPage";
+import { StudyGroupsMobilePage } from "./pages/StudyGroupsMobilePage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import { fetchNotifications } from "./lib/services/notifications.service";
@@ -163,6 +164,7 @@ function App() {
           <Route path="/perfil-estudiante/:id" element={<StudentProfilePage />} />
           <Route path="/notificaciones" element={<NotificationsPage />} />
           <Route path="/ajustes/notificaciones" element={<NotificationSettingsPage />} />
+          <Route path="/ui/study-groups" element={<StudyGroupsMobilePage />} />
         </Route>
         <Route
           path="/"

@@ -1,11 +1,22 @@
-/**
- * components/dashboard/AdminDashboardLayout.tsx
- * 
- * Panel de administración de grupos de estudio con diseño premium.
- * Reconstrucción integral con todas las funcionalidades de gestión.
- */
-
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
 import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
@@ -24,18 +35,45 @@ const ROLE_LABELS: Record<StudyGroupMember["role"], string> = {
   miembro: "Miembro",
 };
 
+const COLORS = {
+  bg: "#1A1A1A",
+  bgDark: "#161616",
+  surface: "#1E1E1E",
+  surfaceAlt: "#262626",
+  surfaceLight: "#2D2D2D",
+  border: "#2D2D2D",
+  primary: "#0047AB",
+  primaryDark: "#00378B",
+  white: "#FFFFFF",
+  textPrimary: "#FFFFFF",
+  textSecondary: "#F5F5F5",
+  textMuted: "#9CA3A0",
+  textDim: "#6B7280",
+  textDark: "#4B5563",
+  red: "#EF4444",
+  redBg: "rgba(239,68,68,0.1)",
+  green: "#10B981",
+  greenBg: "rgba(16,185,129,0.1)",
+  emerald: "#10B981",
+  yellow: "#EAB308",
+  overlay: "rgba(0,0,0,0.9)",
+};
+
 interface AdminDashboardLayoutProps {
   requestId?: string;
 }
 
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
-  // --- AUTH & HOOK DATA ---
   const { user } = useAuthStore();
   const userId = user?.id ?? "";
-  
+
   const {
     activeRequest,
-    activeRequestId,
     applications,
     members,
     messages,
@@ -49,7 +87,6 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     updateDescription,
   } = useStudyGroupDashboard({ requestId });
 
-  // --- UI STATES ---
   const [activeTab, setActiveTab] = useState<"pendientes" | "aceptadas" | "rechazadas">("pendientes");
   const [newMessage, setNewMessage] = useState("");
   const [isEditingDesc, setIsEditingDesc] = useState(false);
@@ -63,23 +100,20 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   const [leavingGroup, setLeavingGroup] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [startingChat, setStartingChat] = useState(false);
-  
-  // --- MENTION STATES ---
+
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [selectedMentions, setSelectedMentions] = useState<any[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<any | null>(null);
-  
+
   const router = useRouter();
   const { getOrCreateConversation } = useMessaging();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
-  // --- DERIVED STATE ---
   const isAdmin = useMemo(() => {
-    const member = members.find(m => m.userId === userId);
-    return member?.role === 'admin' || member?.role === 'autor';
+    const member = members.find((m) => m.userId === userId);
+    return member?.role === "admin" || member?.role === "autor";
   }, [members, userId]);
 
   const isCreator = useMemo(() => {
@@ -87,9 +121,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   }, [activeRequest?.author_id, userId]);
 
   const isOnlyAdmin = useMemo(() => {
-    const adminCount = members.filter(m => m.role === 'admin' || m.role === 'autor').length;
-    // IMPORTANTE: El Creador (autor) SIEMPRE debe delegar antes de salir para transferir la propiedad,
-    // incluso si existen otros administradores, de lo contrario el backend rechazará la salida directa.
+    const adminCount = members.filter((m) => m.role === "admin" || m.role === "autor").length;
     if (isCreator) return true;
     return adminCount <= 1;
   }, [members, isCreator]);
@@ -103,14 +135,13 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   const perms = useMemo(() => getGroupPermissions(groupState), [groupState]);
 
   const filteredApps = useMemo(() => {
-    return applications.filter(app => {
+    return applications.filter((app) => {
       if (activeTab === "pendientes") return app.status === "pendiente";
       if (activeTab === "aceptadas") return app.status === "aceptada";
       return app.status === "rechazada";
     });
   }, [applications, activeTab]);
 
-  // --- HANDLERS ---
   const handleInputChange = (text: string) => {
     setNewMessage(text);
     const lastWord = text.split(" ").pop() || "";
@@ -129,58 +160,65 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     const updated = [...words, `@${name} `].join(" ");
     setNewMessage(updated);
     setShowMentions(false);
-    if (!selectedMentions.some(m => m.userId === member.userId)) {
+    if (!selectedMentions.some((m) => m.userId === member.userId)) {
       setSelectedMentions([...selectedMentions, { userId: member.userId, displayName: name }]);
     }
   };
 
   const handleSend = () => {
     if ((!newMessage.trim() && !pendingAttachment) || sendingMessage) return;
-    
-    const finalMentions = selectedMentions.filter(m => 
+
+    const finalMentions = selectedMentions.filter((m) =>
       newMessage.includes(`@${m.displayName}`)
     );
 
     handleSendMessage(newMessage, finalMentions, pendingAttachment || undefined);
-    
-    // Limpiar todo después de enviar
+
     setNewMessage("");
     setSelectedMentions([]);
     setPendingAttachment(null);
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !userId) return;
-
-    setUploadingFile(true);
+  const handleFileSelect = async () => {
     try {
+      setUploadingFile(true);
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      if (!file || !userId) return;
+
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const path = `${userId}/chat/${fileName}`;
-      
+
+      const expoFile = new File(file.uri);
+      const arrayBuffer = await expoFile.arrayBuffer();
+
       const { data, error } = await supabase.storage
         .from("resources")
-        .upload(path, file);
+        .upload(path, arrayBuffer, {
+          contentType: file.mimeType ?? "application/octet-stream",
+          upsert: false,
+        });
 
       if (error) throw error;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("resources")
-        .getPublicUrl(path);
+      const { data: publicUrlData } = supabase.storage.from("resources").getPublicUrl(path);
 
-      // En lugar de enviar inmediatamente, lo dejamos "preparado"
       setPendingAttachment({
-        url: publicUrl,
-        type: file.type,
-        filename: file.name
+        url: publicUrlData.publicUrl,
+        type: file.mimeType || "application/octet-stream",
+        filename: file.name,
       });
-
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      alert("No se pudo subir el archivo. Inténtalo de nuevo.");
+    } catch (err) {
+      console.error("Error uploading file:", err);
+      Alert.alert("Error", "No se pudo subir el archivo. Inténtalo de nuevo.");
     } finally {
       setUploadingFile(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -189,10 +227,10 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     setLeavingGroup(true);
     try {
       await fetchApi(`/study-groups/${requestId}/leave`, { method: "POST" });
-      window.location.reload();
+      setShowLeaveConfirm(false);
+      router.replace("/(tabs)/feed" as any);
     } catch (err: any) {
       console.error("Error leaving group:", err);
-      // Opcional: Podríamos mostrar un mensaje de error visual aquí
     } finally {
       setLeavingGroup(false);
     }
@@ -211,8 +249,8 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     }
   };
 
-  const checkPendingTransfers = React.useCallback(async () => {
-    if (!userId || !activeRequestId) {
+  const checkPendingTransfers = useCallback(async () => {
+    if (!userId || !requestId) {
       setLoadingTransferCheck(false);
       return;
     }
@@ -220,11 +258,11 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
       const { data } = await supabase
         .from("study_request_admin_transfers")
         .select("id")
-        .eq("request_id", activeRequestId)
+        .eq("request_id", requestId)
         .eq("from_user_id", userId)
         .eq("status", "pendiente")
         .maybeSingle();
-      
+
       setHasPendingTransfer(!!data);
     } catch (err) {
       console.error("Error checking transfers:", err);
@@ -232,9 +270,8 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     } finally {
       setLoadingTransferCheck(false);
     }
-  }, [userId, activeRequestId]);
+  }, [userId, requestId]);
 
-  // --- EFFECTS ---
   useEffect(() => {
     if (activeRequest?.description) setDescDraft(activeRequest.description);
   }, [activeRequest?.description]);
@@ -244,9 +281,9 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
   }, [checkPendingTransfers]);
 
   useEffect(() => {
-    if (!activeRequestId || !userId) return;
+    if (!requestId || !userId) return;
 
-    const channel = supabase.channel(`presence_${activeRequestId}`, {
+    const channel = supabase.channel(`presence_${requestId}`, {
       config: {
         presence: {
           key: userId,
@@ -275,471 +312,1467 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     return () => {
       channel.unsubscribe();
     };
-  }, [activeRequestId, userId]);
+  }, [requestId, userId]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (scrollRef.current && messages.length > 0) {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [messages]);
 
-  // --- REDIRECCIÓN PROACTIVA (PREVENCIÓN 403) ---
   const transferAccepted = useNotificationStore((s) => s.transferAccepted);
   const resetTransferAccepted = useNotificationStore((s) => s.resetTransferAccepted);
 
   useEffect(() => {
     if (transferAccepted) {
       console.log("[AdminDashboard] Transferencia aceptada detectada. Redirigiendo para evitar 403...");
-      
-      // Resetear señal
       resetTransferAccepted();
-      
-      // Redirigir al feed limpiando cualquier modal o pantalla previa
       router.dismissAll();
       router.replace("/(tabs)/feed" as any);
     }
   }, [transferAccepted, router, resetTransferAccepted]);
 
-  // --- RENDER HELPERS ---
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#1A1A1A]">
-        <div className="w-12 h-12 border-4 border-[#0047AB]/20 border-t-[#0047AB] rounded-full animate-spin" />
-      </div>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
     );
   }
 
   return (
-    <div className="flex h-full w-full bg-[#1A1A1A] text-white overflow-hidden font-['Inter']">
-      
-      {/* COLUMNA IZQUIERDA: Chat Grupal (65%) */}
-      <div className="w-[65%] flex flex-col border-r border-[#2D2D2D] relative">
-        <div className="p-6 bg-[#1A1A1A]/80 backdrop-blur-md border-b border-[#2D2D2D] flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-black font-['Manrope'] tracking-tight">Chat Grupal</h2>
-            <div className="flex items-center gap-2 mt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#0047AB] animate-pulse" />
-              <p className="text-[10px] text-[#0047AB] font-bold uppercase tracking-wider">
-                {members.length} MIEMBROS ACTIVOS
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-             <button className="text-neutral-500 hover:text-white transition-colors">
-                <span className="material-symbols-outlined">search</span>
-             </button>
-             <button className="text-neutral-500 hover:text-white transition-colors">
-                <span className="material-symbols-outlined">more_vert</span>
-             </button>
-          </div>
-        </div>
+    <View style={styles.container}>
+      <View style={styles.mainRow}>
+        {/* LEFT COLUMN: Chat */}
+        <View style={styles.leftColumn}>
+          {/* Chat Header */}
+          <View style={styles.chatHeader}>
+            <View>
+              <Text style={styles.chatTitle}>Chat Grupal</Text>
+              <View style={styles.chatSubtitleRow}>
+                <View style={styles.onlineDot} />
+                <Text style={styles.chatSubtitle}>
+                  {members.length} MIEMBROS ACTIVOS
+                </Text>
+              </View>
+            </View>
+            <View style={styles.chatHeaderActions}>
+              <Ionicons name="search" size={20} color={COLORS.textDim} />
+              <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textDim} />
+            </View>
+          </View>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900/5 via-transparent to-transparent">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex flex-col ${msg.senderId === userId ? "items-end" : "items-start"}`}>
-              <div className="flex items-center gap-2 mb-1.5 px-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
-                  {msg.senderFullName || "Integrante"}
-                </span>
-                <span className="text-[9px] text-neutral-700">
-                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-              
-              {(() => {
-                const decoratedMessage = transformRawMessage(msg);
-                return (
-                  <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
-                    msg.senderId === userId 
-                      ? "bg-[#0047AB] text-white rounded-tr-none shadow-lg shadow-blue-900/20" 
-                      : "bg-[#2D2D2D] text-neutral-200 rounded-tl-none border border-white/5"
-                  }`}>
-                    {decoratedMessage.render({ currentUserId: userId })}
-                    {msg.senderId === userId && (
-                       <span className="material-symbols-outlined text-[12px] ml-2 align-middle opacity-50">done_all</span>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          ))}
-        </div>
-
-        <div className="p-6 bg-[#1A1A1A] border-t border-[#2D2D2D] relative">
-          {/* Pending Attachment Preview */}
-          {pendingAttachment && (
-            <div className="absolute bottom-full left-6 mb-4 flex items-center gap-3 bg-[#0047AB]/10 border border-[#0047AB]/30 p-3 rounded-2xl animate-in slide-in-from-bottom-2">
-              <div className="w-10 h-10 rounded-xl bg-[#0047AB] flex items-center justify-center text-white">
-                <span className="material-symbols-outlined">
-                  {pendingAttachment.type.startsWith('image/') ? 'image' : 'description'}
-                </span>
-              </div>
-              <div className="max-w-[200px]">
-                <p className="text-[11px] font-black text-white truncate">{pendingAttachment.filename}</p>
-                <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Listo para enviar</p>
-              </div>
-              <button 
-                onClick={() => setPendingAttachment(null)}
-                className="w-6 h-6 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined text-sm">close</span>
-              </button>
-            </div>
-          )}
-
-          {/* Mention Suggestions Popover */}
-          {showMentions && (
-            <div className="absolute bottom-full left-6 mb-2 w-64 bg-[#2D2D2D] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2">
-              <div className="px-4 py-3 border-b border-white/5 bg-white/5">
-                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Mencionar integrante</p>
-              </div>
-              <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                {members
-                  .filter(m => (m.fullName || "").toLowerCase().includes(mentionQuery))
-                  .map(member => (
-                    <button
-                      key={member.userId}
-                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
-                      onClick={() => insertMention(member)}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-[#0047AB] flex items-center justify-center text-[10px] font-bold text-white border border-white/10">
-                        {(member.fullName || "??").substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white">{member.fullName || "Integrante"}</p>
-                        <p className="text-[10px] text-neutral-500">{ROLE_LABELS[member.role]}</p>
-                      </div>
-                    </button>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-4 bg-[#262626] p-4 rounded-2xl border border-white/5 focus-within:border-[#0047AB]/50 transition-all shadow-inner">
-            <input 
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingFile}
-              className={`text-neutral-500 hover:text-[#0047AB] transition-colors ${uploadingFile ? "animate-pulse cursor-not-allowed" : ""}`}
-            >
-              {uploadingFile ? (
-                <div className="w-5 h-5 border-2 border-[#0047AB] border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <span className="material-symbols-outlined">attach_file</span>
-              )}
-            </button>
-            <input 
-              value={newMessage}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-                if (e.key === "Escape") {
-                  setShowMentions(false);
-                }
-              }}
-              disabled={uploadingFile}
-              placeholder={uploadingFile ? "Subiendo archivo..." : "Escribe un mensaje aquí... (usa @ para mencionar)"}
-              className="flex-1 bg-transparent border-none text-white text-sm focus:ring-0 placeholder:text-neutral-600"
-            />
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-neutral-500 hover:text-yellow-500 cursor-pointer">mood</span>
-              <button
-                onClick={handleSend}
-                disabled={(!newMessage.trim() && !pendingAttachment) || sendingMessage || uploadingFile}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  (newMessage.trim() || pendingAttachment) && !sendingMessage && !uploadingFile
-                    ? "bg-[#0047AB] text-white shadow-lg shadow-blue-900/40 scale-105"
-                    : "bg-neutral-800 text-neutral-600"
-                }`}
-              >
-                <span className="material-symbols-outlined text-sm">send</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* COLUMNA DERECHA: Gestión Administrativa (35%) */}
-      <div className="w-[35%] flex flex-col bg-[#161616] overflow-y-auto custom-scrollbar border-l border-[#2D2D2D]">
-        
-        {/* BOTÓN SALIR (Alineado a la derecha) */}
-        <div className="p-6 flex justify-end">
-          <button 
-            onClick={() => {
-              if (loadingTransferCheck) return;
-              if (hasPendingTransfer) return;
-              if (perms.isReadOnly) return;
-              if (transferMode) {
-                setTransferMode(false);
-                setSelectedCandidateId(null);
-                return;
-              }
-              // Validación corregida: El Creador siempre debe delegar
-              if (isOnlyAdmin) setShowDelegateWarning(true);
-              else setShowLeaveConfirm(true);
-            }}
-            disabled={hasPendingTransfer || loadingTransferCheck || leavingGroup || perms.isReadOnly}
-            className={`py-2.5 px-6 rounded-xl border flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all relative z-[9999] cursor-pointer ${
-              hasPendingTransfer || perms.isReadOnly
-                ? "bg-neutral-900 border-neutral-800 text-neutral-600 cursor-not-allowed"
-                : "border-red-600 text-red-600 hover:bg-red-600 hover:text-white shadow-lg shadow-red-900/5"
-            }`}
+          {/* Messages */}
+          <ScrollView
+            ref={scrollRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
           >
-            <span className="material-symbols-outlined text-[18px]">
-              {transferMode ? "close" : "logout"}
-            </span>
-            <span>
-              {hasPendingTransfer 
-                ? "Solicitud enviada" 
-                : transferMode ? "Cancelar Salida" : "Salir del Grupo"}
-            </span>
-          </button>
-        </div>
+            {messages.map((msg) => (
+              <View
+                key={msg.id}
+                style={[
+                  styles.messageRow,
+                  msg.senderId === userId ? styles.messageRowMine : styles.messageRowOther,
+                ]}
+              >
+                <View style={styles.messageMeta}>
+                  <Text style={styles.messageSender}>
+                    {msg.senderFullName || "Integrante"}
+                  </Text>
+                  <Text style={styles.messageTime}>{formatTime(msg.createdAt)}</Text>
+                </View>
 
-        {/* INFO GRUPO */}
-        <div className="px-6 pb-8 border-b border-[#2D2D2D]">
-          <span className="text-[9px] font-black uppercase tracking-widest text-[#0047AB] mb-2 block">
-            {activeRequest?.faculty_name || "FACULTAD DE INTELIGENCIA ARTIFICIAL E INGENIERÍAS"}
-          </span>
-          <h1 className="text-3xl font-black font-['Manrope'] tracking-tighter text-white mb-2 leading-none">
-            {activeRequest?.title || "Cargando..."}
-          </h1>
-          <div className="flex items-center gap-3 mb-6">
-             <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-lg border border-white/5">
-                <span className="material-symbols-outlined text-[12px] text-neutral-400">menu_book</span>
-                <span className="text-[10px] font-bold text-neutral-300">{activeRequest?.subject_name || "General"}</span>
-             </div>
-             <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-lg border border-white/5">
-                <span className="material-symbols-outlined text-[12px] text-neutral-400">group</span>
-                <span className="text-[10px] font-bold text-neutral-300">{members.length} / {activeRequest?.max_members || 0}</span>
-             </div>
-          </div>
+                <View
+                  style={[
+                    styles.messageBubble,
+                    msg.senderId === userId
+                      ? styles.messageBubbleMine
+                      : styles.messageBubbleOther,
+                  ]}
+                >
+                  {(() => {
+                    const decoratedMessage = transformRawMessage(msg);
+                    return (
+                      <View style={styles.messageContent}>
+                        {decoratedMessage.render({ currentUserId: userId })}
+                        {msg.senderId === userId && (
+                          <Ionicons
+                            name="checkmark-done"
+                            size={12}
+                            color={COLORS.white}
+                            style={styles.doneIcon}
+                          />
+                        )}
+                      </View>
+                    );
+                  })()}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
 
-          <div className="group relative bg-[#1E1E1E] rounded-2xl p-4 border border-white/5 hover:border-[#0047AB]/30 transition-all">
-             <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Descripción</span>
-                <button 
-                  onClick={() => {
+          {/* Input Area */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.inputArea}
+          >
+            {/* Mention Suggestions Popover */}
+            {showMentions && (
+              <View style={styles.mentionsContainer}>
+                <View style={styles.mentionsHeader}>
+                  <Text style={styles.mentionsTitle}>Mencionar integrante</Text>
+                </View>
+                <ScrollView style={styles.mentionsList} nestedScrollEnabled>
+                  {members
+                    .filter((m) => (m.fullName || "").toLowerCase().includes(mentionQuery))
+                    .map((member) => (
+                      <TouchableOpacity
+                        key={member.userId}
+                        style={styles.mentionItem}
+                        onPress={() => insertMention(member)}
+                      >
+                        <View style={styles.mentionAvatar}>
+                          <Text style={styles.mentionAvatarText}>
+                            {(member.fullName || "??").substring(0, 2).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View>
+                          <Text style={styles.mentionName}>
+                            {member.fullName || "Integrante"}
+                          </Text>
+                          <Text style={styles.mentionRole}>
+                            {ROLE_LABELS[member.role]}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Pending Attachment Preview */}
+            {pendingAttachment && (
+              <View style={styles.attachmentPreview}>
+                <View style={styles.attachmentIconBox}>
+                  <Ionicons
+                    name={pendingAttachment.type?.startsWith("image/") ? "image-outline" : "document-outline"}
+                    size={20}
+                    color={COLORS.white}
+                  />
+                </View>
+                <View style={styles.attachmentInfo}>
+                  <Text style={styles.attachmentName} numberOfLines={1}>
+                    {pendingAttachment.filename}
+                  </Text>
+                  <Text style={styles.attachmentReady}>Listo para enviar</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setPendingAttachment(null)}
+                  style={styles.attachmentRemove}
+                >
+                  <Ionicons name="close" size={14} color={COLORS.red} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.inputRow}>
+              <TouchableOpacity
+                onPress={handleFileSelect}
+                disabled={uploadingFile}
+                style={styles.attachButton}
+              >
+                {uploadingFile ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <Ionicons name="attach" size={22} color={COLORS.textDim} />
+                )}
+              </TouchableOpacity>
+              <TextInput
+                value={newMessage}
+                onChangeText={handleInputChange}
+                onSubmitEditing={handleSend}
+                editable={!uploadingFile}
+                placeholder={uploadingFile ? "Subiendo archivo..." : "Escribe un mensaje aquí... (usa @ para mencionar)"}
+                placeholderTextColor={COLORS.textDark}
+                style={styles.textInput}
+                returnKeyType="send"
+              />
+              <View style={styles.inputRight}>
+                <Ionicons name="happy-outline" size={22} color={COLORS.textDim} />
+                <TouchableOpacity
+                  onPress={handleSend}
+                  disabled={(!newMessage.trim() && !pendingAttachment) || sendingMessage || uploadingFile}
+                  style={[
+                    styles.sendButton,
+                    (newMessage.trim() || pendingAttachment) && !sendingMessage && !uploadingFile
+                      ? styles.sendButtonActive
+                      : styles.sendButtonInactive,
+                  ]}
+                >
+                  <Ionicons
+                    name="send"
+                    size={16}
+                    color={
+                      (newMessage.trim() || pendingAttachment) && !sendingMessage && !uploadingFile
+                        ? COLORS.white
+                        : COLORS.textDark
+                    }
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+
+        {/* RIGHT COLUMN: Admin Management */}
+        <View style={styles.rightColumn}>
+          {/* Leave Button */}
+          <View style={styles.leaveBtnRow}>
+            <TouchableOpacity
+              onPress={() => {
+                if (loadingTransferCheck) return;
+                if (hasPendingTransfer) return;
+                if (perms.isReadOnly) return;
+                if (transferMode) {
+                  setTransferMode(false);
+                  setSelectedCandidateId(null);
+                  return;
+                }
+                if (isOnlyAdmin) setShowDelegateWarning(true);
+                else setShowLeaveConfirm(true);
+              }}
+              disabled={hasPendingTransfer || loadingTransferCheck || leavingGroup || perms.isReadOnly}
+              style={[
+                styles.leaveBtn,
+                (hasPendingTransfer || perms.isReadOnly) && styles.leaveBtnDisabled,
+              ]}
+            >
+              <Ionicons
+                name={transferMode ? "close" : "log-out-outline"}
+                size={18}
+                color={
+                  hasPendingTransfer || perms.isReadOnly
+                    ? COLORS.textDark
+                    : COLORS.red
+                }
+              />
+              <Text
+                style={[
+                  styles.leaveBtnText,
+                  (hasPendingTransfer || perms.isReadOnly) && styles.leaveBtnTextDisabled,
+                ]}
+              >
+                {hasPendingTransfer
+                  ? "Solicitud enviada"
+                  : transferMode
+                    ? "Cancelar Salida"
+                    : "Salir del Grupo"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Group Info */}
+          <View style={styles.groupInfoSection}>
+            <Text style={styles.facultyLabel}>
+              {activeRequest?.faculty_name || "FACULTAD DE INTELIGENCIA ARTIFICIAL E INGENIERÍAS"}
+            </Text>
+            <Text style={styles.groupTitle}>
+              {activeRequest?.title || "Cargando..."}
+            </Text>
+            <View style={styles.groupTags}>
+              <View style={styles.tag}>
+                <Ionicons name="book-outline" size={12} color={COLORS.textMuted} />
+                <Text style={styles.tagText}>
+                  {activeRequest?.subject_name || "General"}
+                </Text>
+              </View>
+              <View style={styles.tag}>
+                <Ionicons name="people-outline" size={12} color={COLORS.textMuted} />
+                <Text style={styles.tagText}>
+                  {members.length} / {activeRequest?.max_members || 0}
+                </Text>
+              </View>
+            </View>
+
+            {/* Description */}
+            <View style={styles.descriptionCard}>
+              <View style={styles.descriptionHeader}>
+                <Text style={styles.descriptionLabel}>Descripción</Text>
+                <TouchableOpacity
+                  onPress={() => {
                     if (isEditingDesc) {
-                       updateDescription(descDraft);
-                       setIsEditingDesc(false);
+                      updateDescription(descDraft);
+                      setIsEditingDesc(false);
                     } else {
-                       setIsEditingDesc(true);
+                      setIsEditingDesc(true);
                     }
                   }}
-                  className="text-[#0047AB] hover:text-blue-400 transition-colors"
                 >
-                   <span className="material-symbols-outlined text-sm">{isEditingDesc ? "check" : "edit_square"}</span>
-                </button>
-             </div>
-             {isEditingDesc ? (
-                <textarea 
+                  <Ionicons
+                    name={isEditingDesc ? "checkmark" : "create-outline"}
+                    size={16}
+                    color={COLORS.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {isEditingDesc ? (
+                <TextInput
                   value={descDraft}
-                  onChange={(e) => setDescDraft(e.target.value)}
-                  className="w-full bg-[#161616] border-none rounded-xl text-sm text-neutral-300 p-3 min-h-[80px] focus:ring-1 focus:ring-[#0047AB]"
+                  onChangeText={setDescDraft}
+                  multiline
+                  style={styles.descInput}
                 />
-             ) : (
-                <p className="text-sm text-neutral-400 leading-relaxed">
+              ) : (
+                <Text style={styles.descText}>
                   {activeRequest?.description || "Sin descripción disponible."}
-                </p>
-             )}
-          </div>
-        </div>
-
-        {/* GESTIÓN DE SOLICITUDES */}
-        <div className="p-6 border-b border-[#2D2D2D]">
-           <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                 <h3 className="text-xs font-black uppercase tracking-widest text-white">Solicitudes</h3>
-                 <span className="px-2 py-0.5 bg-[#0047AB] text-white text-[9px] font-black rounded-full">
-                    {stats?.pending || 0}
-                 </span>
-              </div>
-              <div className="flex bg-[#1E1E1E] p-1 rounded-xl border border-white/5">
-                 {(["pendientes", "aceptadas", "rechazadas"] as const).map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${
-                        activeTab === tab ? "bg-[#0047AB] text-white shadow-lg shadow-blue-900/20" : "text-neutral-500 hover:text-neutral-300"
-                      }`}
-                    >
-                       {tab}
-                    </button>
-                 ))}
-              </div>
-           </div>
-
-           <div className="space-y-3 min-h-[100px]">
-              {filteredApps.length > 0 ? filteredApps.map(app => (
-                 <div key={app.id} className="p-4 bg-[#1E1E1E] rounded-2xl border border-white/5 flex items-center justify-between group animate-in fade-in slide-in-from-right-4">
-                    <div className="flex items-center gap-3">
-                       <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center border border-white/5 overflow-hidden">
-                          {app.profiles?.avatar_url ? <img src={app.profiles.avatar_url} className="w-full h-full object-cover" /> : <span className="text-xs font-black">{app.profiles?.full_name?.substring(0,1) || "?"}</span>}
-                       </div>
-                       <div>
-                          <h4 className="text-[11px] font-black text-white">{app.profiles?.full_name || "Cargando..."}</h4>
-                          <span className="text-[9px] text-neutral-500">{new Date(app.created_at).toLocaleDateString()}</span>
-                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                       <button 
-                         onClick={() => handlePrivateChat(app.applicant_id)}
-                         className="w-8 h-8 rounded-lg bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5"
-                       >
-                          <span className="material-symbols-outlined text-sm">chat_bubble</span>
-                       </button>
-                       {app.status === "pendiente" && (
-                          <>
-                             <button 
-                               onClick={() => handleReviewApplication(app.id, "aceptada")}
-                               className="w-8 h-8 rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white transition-all flex items-center justify-center border border-green-500/20"
-                             >
-                                <span className="material-symbols-outlined text-sm">check</span>
-                             </button>
-                             <button 
-                               onClick={() => handleReviewApplication(app.id, "rechazada")}
-                               className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
-                             >
-                                <span className="material-symbols-outlined text-sm">close</span>
-                             </button>
-                          </>
-                       )}
-                    </div>
-                 </div>
-              )) : (
-                 <div className="py-8 flex flex-col items-center justify-center opacity-30">
-                    <span className="material-symbols-outlined text-3xl mb-2">inbox</span>
-                    <p className="text-[10px] font-black uppercase tracking-widest">Sin solicitudes</p>
-                 </div>
+                </Text>
               )}
-           </div>
-        </div>
+            </View>
+          </View>
 
-        {/* LISTA DE INTEGRANTES */}
-        <div className="p-6">
-           <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500">Integrantes del Grupo</h3>
-              <span className="text-[10px] font-black text-neutral-700">{members.length} TOTAL</span>
-           </div>
+          {/* Applications Management */}
+          <View style={styles.applicationsSection}>
+            <View style={styles.applicationsHeader}>
+              <View style={styles.applicationsTitleRow}>
+                <Text style={styles.sectionTitle}>Solicitudes</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{stats?.pending || 0}</Text>
+                </View>
+              </View>
+              <View style={styles.tabRow}>
+                {(["pendientes", "aceptadas", "rechazadas"] as const).map((tab) => (
+                  <TouchableOpacity
+                    key={tab}
+                    onPress={() => setActiveTab(tab)}
+                    style={[
+                      styles.tab,
+                      activeTab === tab && styles.tabActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tabText,
+                        activeTab === tab && styles.tabTextActive,
+                      ]}
+                    >
+                      {tab}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-           <div className="space-y-4">
-              {members.map(member => (
-                 <div 
-                    key={member.userId} 
-                    className={`p-4 rounded-2xl border transition-all ${
-                      selectedCandidateId === member.userId ? "bg-[#0047AB]/10 border-[#0047AB]" : "bg-[#1E1E1E] border-white/5"
-                    }`}
-                 >
-                    <div className="flex items-center justify-between">
-                       <div className="flex items-center gap-4">
-                          <div className="w-11 h-11 rounded-2xl bg-neutral-800 border border-white/5 overflow-hidden shadow-inner">
-                             {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-black">{member.fullName?.substring(0,1)}</div>}
-                          </div>
-                          <div>
-                             <h4 className="text-sm font-black text-neutral-200">{member.fullName || "Integrante"}</h4>
-                             <div className="flex items-center gap-2 mt-0.5">
-                               <span className={`text-[9px] font-black uppercase tracking-widest ${member.role === "autor" ? "text-yellow-500" : "text-neutral-500"}`}>
-                                  {ROLE_LABELS[member.role]}
-                               </span>
-                               <span className="text-[8px] text-neutral-600">•</span>
-                               <div className="flex items-center gap-1">
-                                 <div className={`w-1.5 h-1.5 rounded-full ${onlineUsers.includes(member.userId) ? "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-neutral-600"}`} />
-                                 <span className={`text-[9px] font-bold uppercase tracking-tight ${onlineUsers.includes(member.userId) ? "text-emerald-500" : "text-neutral-600"}`}>
-                                   {onlineUsers.includes(member.userId) ? "Conectado" : "Desconectado"}
-                                 </span>
-                               </div>
-                             </div>
-                          </div>
-                       </div>
+            <ScrollView
+              style={styles.applicationsList}
+              contentContainerStyle={styles.applicationsListContent}
+              nestedScrollEnabled
+            >
+              {filteredApps.length > 0 ? (
+                filteredApps.map((app) => (
+                  <View key={app.id} style={styles.applicationCard}>
+                    <View style={styles.applicationLeft}>
+                      <View style={styles.applicationAvatar}>
+                        {app.profiles?.avatar_url ? (
+                          <Image
+                            source={{ uri: app.profiles.avatar_url }}
+                            style={styles.avatarImage}
+                          />
+                        ) : (
+                          <Text style={styles.avatarInitial}>
+                            {app.profiles?.full_name?.substring(0, 1) || "?"}
+                          </Text>
+                        )}
+                      </View>
+                      <View>
+                        <Text style={styles.applicationName}>
+                          {app.profiles?.full_name || "Cargando..."}
+                        </Text>
+                        <Text style={styles.applicationDate}>
+                          {new Date(app.created_at).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.applicationActions}>
+                      <TouchableOpacity
+                        onPress={() => handlePrivateChat(app.applicant_id)}
+                        style={styles.iconBtn}
+                      >
+                        <Ionicons
+                          name="chatbubble-outline"
+                          size={16}
+                          color={COLORS.textDim}
+                        />
+                      </TouchableOpacity>
+                      {app.status === "pendiente" && (
+                        <>
+                          <TouchableOpacity
+                            onPress={() => handleReviewApplication(app.id, "aceptada")}
+                            style={styles.iconBtnSuccess}
+                          >
+                            <Ionicons name="checkmark" size={16} color={COLORS.green} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleReviewApplication(app.id, "rechazada")}
+                            style={styles.iconBtnDanger}
+                          >
+                            <Ionicons name="close" size={16} color={COLORS.red} />
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIcon}>📭</Text>
+                  <Text style={styles.emptyText}>Sin solicitudes</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
 
-                       <div className="flex gap-2">
-                          {transferMode && member.userId !== userId ? (
-                             <button
-                                onClick={() => setSelectedCandidateId(member.userId)}
-                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                  selectedCandidateId === member.userId ? "bg-[#0047AB] text-white" : "bg-white/5 text-neutral-400 hover:bg-white/10"
-                                }`}
-                             >
-                                {selectedCandidateId === member.userId ? "Elegido" : "Elegir"}
-                             </button>
-                          ) : (
-                             <>
-                                <button 
-                                  onClick={() => handlePrivateChat(member.userId)}
-                                  className={`w-9 h-9 rounded-xl bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5 ${member.userId === userId ? "opacity-30 cursor-not-allowed" : "active:scale-90"}`}
-                                  disabled={member.userId === userId}
-                                >
-                                   <span className="material-symbols-outlined text-sm">chat_bubble</span>
-                                </button>
-                                <button className="w-9 h-9 rounded-xl bg-white/5 text-neutral-500 hover:text-white transition-all flex items-center justify-center border border-white/5">
-                                   <span className="material-symbols-outlined text-sm">more_horiz</span>
-                                </button>
-                             </>
-                          )}
-                       </div>
-                    </div>
-                 </div>
+          {/* Members List */}
+          <View style={styles.membersSection}>
+            <View style={styles.membersHeader}>
+              <Text style={styles.membersTitle}>Integrantes del Grupo</Text>
+              <Text style={styles.membersCount}>{members.length} TOTAL</Text>
+            </View>
+
+            <ScrollView
+              style={styles.membersList}
+              contentContainerStyle={styles.membersListContent}
+              nestedScrollEnabled
+            >
+              {members.map((member) => (
+                <View
+                  key={member.userId}
+                  style={[
+                    styles.memberCard,
+                    selectedCandidateId === member.userId && styles.memberCardSelected,
+                  ]}
+                >
+                  <View style={styles.memberRow}>
+                    <View style={styles.memberLeft}>
+                      <View style={styles.memberAvatar}>
+                        {member.avatarUrl ? (
+                          <Image
+                            source={{ uri: member.avatarUrl }}
+                            style={styles.avatarImage}
+                          />
+                        ) : (
+                          <View style={styles.memberAvatarPlaceholder}>
+                            <Text style={styles.memberAvatarInitial}>
+                              {member.fullName?.substring(0, 1) || "?"}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <View>
+                        <Text style={styles.memberName}>
+                          {member.fullName || "Integrante"}
+                        </Text>
+                        <View style={styles.memberMeta}>
+                          <Text
+                            style={[
+                              styles.memberRole,
+                              member.role === "autor" && styles.memberRoleCreator,
+                            ]}
+                          >
+                            {ROLE_LABELS[member.role]}
+                          </Text>
+                          <Text style={styles.memberMetaSep}>•</Text>
+                          <View
+                            style={
+                              onlineUsers.includes(member.userId)
+                                ? styles.statusDotOnline
+                                : styles.statusDotOffline
+                            }
+                          />
+                          <Text
+                            style={
+                              onlineUsers.includes(member.userId)
+                                ? styles.statusTextOnline
+                                : styles.statusTextOffline
+                            }
+                          >
+                            {onlineUsers.includes(member.userId) ? "Conectado" : "Desconectado"}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.memberActions}>
+                      {transferMode && member.userId !== userId ? (
+                        <TouchableOpacity
+                          onPress={() => setSelectedCandidateId(member.userId)}
+                          style={[
+                            styles.chooseBtn,
+                            selectedCandidateId === member.userId && styles.chooseBtnSelected,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.chooseBtnText,
+                              selectedCandidateId === member.userId && styles.chooseBtnTextSelected,
+                            ]}
+                          >
+                            {selectedCandidateId === member.userId ? "Elegido" : "Elegir"}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <>
+                          <TouchableOpacity
+                            onPress={() => handlePrivateChat(member.userId)}
+                            disabled={member.userId === userId}
+                            style={[
+                              styles.iconBtn,
+                              member.userId === userId && styles.iconBtnDisabled,
+                            ]}
+                          >
+                            <Ionicons
+                              name="chatbubble-outline"
+                              size={16}
+                              color={
+                                member.userId === userId
+                                  ? COLORS.textDark
+                                  : COLORS.textDim
+                              }
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.iconBtn}>
+                            <Ionicons
+                              name="ellipsis-horizontal"
+                              size={16}
+                              color={COLORS.textDim}
+                            />
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                </View>
               ))}
-           </div>
+            </ScrollView>
 
-           {transferMode && (
-              <div className="mt-8 animate-in slide-in-from-bottom-4">
-                 <button 
-                   onClick={async () => {
-                     if (selectedCandidateId) {
-                        await requestAdminTransfer(selectedCandidateId);
-                        setTransferMode(false);
-                        setHasPendingTransfer(true);
-                     }
-                   }}
-                   disabled={!selectedCandidateId}
-                   className="w-full py-4 bg-[#0047AB] text-white font-black rounded-2xl hover:bg-[#00378B] shadow-xl shadow-blue-900/30 transition-all active:scale-95 disabled:opacity-30"
-                 >
-                    CONFIRMAR Y SALIR
-                 </button>
-              </div>
-           )}
-        </div>
-      </div>
+            {transferMode && (
+              <View style={styles.transferConfirm}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (selectedCandidateId) {
+                      await requestAdminTransfer(selectedCandidateId);
+                      setTransferMode(false);
+                      setHasPendingTransfer(true);
+                    }
+                  }}
+                  disabled={!selectedCandidateId}
+                  style={[
+                    styles.transferBtn,
+                    !selectedCandidateId && styles.transferBtnDisabled,
+                  ]}
+                >
+                  <Text style={styles.transferBtnText}>CONFIRMAR Y SALIR</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
 
-      {/* MODALES DE ACCIÓN */}
-      {showLeaveConfirm && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] flex items-center justify-center p-6">
-          <div className="bg-[#1A1A1A] border border-white/10 rounded-[32px] p-10 max-w-sm w-full shadow-2xl">
-            <h3 className="text-2xl font-black font-['Manrope'] text-white text-center mb-2">¿Abandonar grupo?</h3>
-            <p className="text-neutral-500 text-center text-sm mb-8">Esta acción es permanente e inmediata.</p>
-            <div className="flex flex-col gap-3">
-              <button onClick={handleLeaveDirectly} className="w-full py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-900/20">SÍ, SALIR</button>
-              <button onClick={() => setShowLeaveConfirm(false)} className="w-full py-4 bg-transparent text-neutral-500 font-bold rounded-2xl hover:bg-white/5 transition-all">CANCELAR</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Leave Confirm Modal */}
+      <Modal
+        visible={showLeaveConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLeaveConfirm(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLeaveConfirm(false)}>
+          <Pressable style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Abandonar grupo?</Text>
+            <Text style={styles.modalDesc}>Esta acción es permanente e inmediata.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={handleLeaveDirectly}
+                style={styles.modalBtnDanger}
+              >
+                <Text style={styles.modalBtnDangerText}>SÍ, SALIR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowLeaveConfirm(false)}
+                style={styles.modalBtnCancel}
+              >
+                <Text style={styles.modalBtnCancelText}>CANCELAR</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
-      {showDelegateWarning && perms.canTransfer && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] flex items-center justify-center p-6">
-          <div className="bg-[#1A1A1A] border border-[#0047AB]/30 rounded-[32px] p-10 max-w-sm w-full shadow-2xl">
-            <div className="w-16 h-16 bg-[#0047AB]/10 rounded-3xl flex items-center justify-center mb-6 mx-auto border border-[#0047AB]/20">
-              <span className="material-symbols-outlined text-3xl text-[#0047AB]">shield_person</span>
-            </div>
-            <h3 className="text-2xl font-black font-['Manrope'] text-white text-center mb-2">Acción Requerida</h3>
-            <p className="text-neutral-500 text-center text-sm leading-relaxed mb-10">Como único administrador, debes delegar el control antes de salir.</p>
-            <div className="flex flex-col gap-3">
-              <button onClick={() => { setShowDelegateWarning(false); setTransferMode(true); }} className="w-full py-4 bg-[#0047AB] text-white font-black rounded-2xl hover:bg-[#00378B] shadow-lg shadow-blue-900/30 transition-all">EMPEZAR DELEGACIÓN</button>
-              <button onClick={() => setShowDelegateWarning(false)} className="w-full py-4 bg-transparent text-neutral-500 font-bold rounded-2xl hover:bg-white/5 transition-all">CERRAR</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Delegate Warning Modal */}
+      <Modal
+        visible={showDelegateWarning && perms.canTransfer}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDelegateWarning(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowDelegateWarning(false)}>
+          <Pressable style={styles.modalContent}>
+            <View style={styles.warningIconBox}>
+              <Ionicons name="shield-checkmark" size={32} color={COLORS.primary} />
+            </View>
+            <Text style={styles.modalTitle}>Acción Requerida</Text>
+            <Text style={styles.modalDesc}>
+              Como único administrador, debes delegar el control antes de salir.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDelegateWarning(false);
+                  setTransferMode(true);
+                }}
+                style={styles.modalBtnPrimary}
+              >
+                <Text style={styles.modalBtnPrimaryText}>EMPEZAR DELEGACIÓN</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowDelegateWarning(false)}
+                style={styles.modalBtnCancel}
+              >
+                <Text style={styles.modalBtnCancelText}>CERRAR</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.bg,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  mainRow: {
+    flex: 1,
+    flexDirection: "row",
+  },
+
+  // LEFT COLUMN
+  leftColumn: {
+    flex: 0.65,
+    flexDirection: "column",
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border,
+  },
+  chatHeader: {
+    padding: 24,
+    backgroundColor: "rgba(26,26,26,0.8)",
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  chatTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    letterSpacing: -0.5,
+    color: COLORS.white,
+  },
+  chatSubtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 2,
+  },
+  onlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
+  },
+  chatSubtitle: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.primary,
+  },
+  chatHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  messagesContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  messagesContent: {
+    padding: 32,
+    gap: 24,
+  },
+  messageRow: {
+    flexDirection: "column",
+  },
+  messageRowMine: {
+    alignItems: "flex-end",
+  },
+  messageRowOther: {
+    alignItems: "flex-start",
+  },
+  messageMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
+  messageSender: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.textDim,
+    textTransform: "uppercase",
+  },
+  messageTime: {
+    fontSize: 9,
+    color: COLORS.textDark,
+  },
+  messageBubble: {
+    maxWidth: "80%",
+    padding: 16,
+    borderRadius: 16,
+  },
+  messageBubbleMine: {
+    backgroundColor: COLORS.primary,
+    borderTopRightRadius: 4,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  messageBubbleOther: {
+    backgroundColor: COLORS.surfaceLight,
+    borderTopLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  messageContent: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+  },
+  doneIcon: {
+    marginLeft: 8,
+    opacity: 0.5,
+  },
+
+  // INPUT AREA
+  inputArea: {
+    padding: 24,
+    backgroundColor: COLORS.bg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  attachmentPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+    backgroundColor: "rgba(0,71,171,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(0,71,171,0.3)",
+    padding: 12,
+    borderRadius: 16,
+  },
+  attachmentIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attachmentInfo: {
+    maxWidth: 200,
+  },
+  attachmentName: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: COLORS.white,
+  },
+  attachmentReady: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.primary,
+  },
+  attachmentRemove: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.redBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // MENTIONS
+  mentionsContainer: {
+    width: "100%",
+    maxHeight: 240,
+    marginBottom: 8,
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  mentionsHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  mentionsTitle: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: COLORS.primary,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  mentionsList: {
+    maxHeight: 192,
+  },
+  mentionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  mentionAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  mentionAvatarText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: COLORS.white,
+  },
+  mentionName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.white,
+  },
+  mentionRole: {
+    fontSize: 10,
+    color: COLORS.textDim,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    backgroundColor: COLORS.surfaceAlt,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  attachButton: {
+    padding: 4,
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: "transparent",
+    color: COLORS.white,
+    fontSize: 14,
+    paddingVertical: 4,
+  },
+  inputRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sendButtonActive: {
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  sendButtonInactive: {
+    backgroundColor: "#262626",
+  },
+
+  // RIGHT COLUMN
+  rightColumn: {
+    flex: 0.35,
+    backgroundColor: COLORS.bgDark,
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.border,
+  },
+  leaveBtnRow: {
+    padding: 24,
+    alignItems: "flex-end",
+  },
+  leaveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.red,
+  },
+  leaveBtnDisabled: {
+    backgroundColor: "#171717",
+    borderColor: "#262626",
+  },
+  leaveBtnText: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: COLORS.red,
+  },
+  leaveBtnTextDisabled: {
+    color: COLORS.textDark,
+  },
+
+  // GROUP INFO
+  groupInfoSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  facultyLabel: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.primary,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  groupTitle: {
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: -1,
+    color: COLORS.white,
+    marginBottom: 8,
+  },
+  groupTags: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 24,
+  },
+  tag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  tagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+  },
+  descriptionCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  descriptionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  descriptionLabel: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.textDim,
+    textTransform: "uppercase",
+  },
+  descInput: {
+    backgroundColor: COLORS.bgDark,
+    borderRadius: 12,
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    padding: 12,
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  descText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    lineHeight: 20,
+  },
+
+  // APPLICATIONS
+  applicationsSection: {
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  applicationsHeader: {
+    marginBottom: 24,
+  },
+  applicationsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.white,
+    textTransform: "uppercase",
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: COLORS.primary,
+    borderRadius: 999,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    color: COLORS.white,
+  },
+  tabRow: {
+    flexDirection: "row",
+    backgroundColor: COLORS.surface,
+    padding: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    marginTop: 12,
+  },
+  tab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabText: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: -0.5,
+    color: COLORS.textDim,
+    textTransform: "uppercase",
+  },
+  tabTextActive: {
+    color: COLORS.white,
+  },
+  applicationsList: {
+    minHeight: 100,
+  },
+  applicationsListContent: {
+    gap: 12,
+  },
+  applicationCard: {
+    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  applicationLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  applicationAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "#262626",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  avatarInitial: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: COLORS.white,
+  },
+  applicationName: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: COLORS.white,
+  },
+  applicationDate: {
+    fontSize: 9,
+    color: COLORS.textDim,
+  },
+  applicationActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  iconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  iconBtnDisabled: {
+    opacity: 0.3,
+  },
+  iconBtnSuccess: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: COLORS.greenBg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(16,185,129,0.2)",
+  },
+  iconBtnDanger: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: COLORS.redBg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.2)",
+  },
+  emptyState: {
+    paddingVertical: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0.3,
+  },
+  emptyIcon: {
+    fontSize: 32,
+  },
+  emptyText: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.white,
+    textTransform: "uppercase",
+    marginTop: 8,
+  },
+
+  // MEMBERS
+  membersSection: {
+    padding: 24,
+  },
+  membersHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 24,
+  },
+  membersTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.textDim,
+    textTransform: "uppercase",
+  },
+  membersCount: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: COLORS.textDark,
+  },
+  membersList: {
+    maxHeight: 400,
+  },
+  membersListContent: {
+    gap: 16,
+  },
+  memberCard: {
+    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  memberCardSelected: {
+    backgroundColor: "rgba(0,71,171,0.1)",
+    borderColor: COLORS.primary,
+  },
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  memberLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  memberAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#262626",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
+  },
+  memberAvatarPlaceholder: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberAvatarInitial: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: COLORS.white,
+  },
+  memberName: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: COLORS.textSecondary,
+  },
+  memberMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 2,
+  },
+  memberRole: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.textDim,
+    textTransform: "uppercase",
+  },
+  memberRoleCreator: {
+    color: COLORS.yellow,
+  },
+  memberMetaSep: {
+    fontSize: 8,
+    color: COLORS.textDark,
+  },
+  statusDotOnline: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.emerald,
+  },
+  statusDotOffline: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.textDark,
+  },
+  statusTextOnline: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+    color: COLORS.emerald,
+  },
+  statusTextOffline: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+    color: COLORS.textDark,
+  },
+  memberActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  chooseBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  chooseBtnSelected: {
+    backgroundColor: COLORS.primary,
+  },
+  chooseBtnText: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+  },
+  chooseBtnTextSelected: {
+    color: COLORS.white,
+  },
+  transferConfirm: {
+    marginTop: 32,
+  },
+  transferBtn: {
+    width: "100%",
+    paddingVertical: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  transferBtnDisabled: {
+    opacity: 0.3,
+  },
+  transferBtnText: {
+    color: COLORS.white,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+
+  // MODALS
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: COLORS.overlay,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 32,
+    padding: 40,
+    maxWidth: 360,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: COLORS.white,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: 14,
+    color: COLORS.textDim,
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 20,
+  },
+  modalActions: {
+    gap: 12,
+  },
+  modalBtnDanger: {
+    width: "100%",
+    paddingVertical: 16,
+    backgroundColor: COLORS.red,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: COLORS.red,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalBtnDangerText: {
+    color: COLORS.white,
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 1,
+  },
+  modalBtnCancel: {
+    width: "100%",
+    paddingVertical: 16,
+    backgroundColor: "transparent",
+    borderRadius: 16,
+    alignItems: "center",
+  },
+  modalBtnCancelText: {
+    color: COLORS.textDim,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  modalBtnPrimary: {
+    width: "100%",
+    paddingVertical: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalBtnPrimaryText: {
+    color: COLORS.white,
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 1,
+  },
+  warningIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 24,
+    backgroundColor: "rgba(0,71,171,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+    alignSelf: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,71,171,0.2)",
+  },
+});
