@@ -104,6 +104,7 @@ export class ProfilesCatalogController {
         sendData(res, 200, result);
       }
     } catch (error) {
+      console.error("Error en getStudentProfile:", error instanceof Error ? error.message : error);
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

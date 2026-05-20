@@ -36,6 +36,7 @@ import DirectorioPage from "./pages/DirectorioPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import { fetchNotifications } from "./lib/services/notifications.service";
+import { useNotificationWebSocket } from "./hooks/useNotificationWebSocket";
 import "./App.css";
 
 function PrivateRoute({
@@ -84,6 +85,8 @@ function App() {
     })();
   }, [hydrate]);
 
+  useNotificationWebSocket();
+
   useEffect(() => {
     if (!isAuthenticated) return;
     fetchNotifications();
@@ -124,6 +127,14 @@ function App() {
           }
         />
         <Route
+          path="/chat/:conversationId"
+          element={
+            <PrivateRoute isAuthenticated={isAuthenticated}>
+              <ChatPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
           element={
             <PrivateRoute isAuthenticated={isAuthenticated}>
               <AppLayout />
@@ -147,7 +158,6 @@ function App() {
           <Route path="/perfil" element={<PerfilPage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/mensajes" element={<MensajesPage />} />
-          <Route path="/chat/:conversationId" element={<ChatPage />} />
           <Route path="/directorio" element={<CompanionsPage />} />
           <Route path="/companions" element={<CompanionsPage />} />
           <Route path="/perfil-estudiante/:id" element={<StudentProfilePage />} />

@@ -8,10 +8,6 @@ export class PersistenceObserver implements IObserver {
   constructor(private readonly repository: IAdminTransferRepository) {}
 
   async handle(event: StudyGroupEvent): Promise<void> {
-    if (event.type === "ADMIN_TRANSFER_ACCEPTED") {
-      await this.repository.acceptTransferAtomically(event.transferId, event.acceptedBy);
-    }
-
     if (event.type === "ADMIN_ROLE_LEFT") {
       await this.repository.leaveAdminRole({
         requestId: event.requestId,

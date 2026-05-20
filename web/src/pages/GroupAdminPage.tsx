@@ -80,10 +80,12 @@ export function GroupDashboardPage() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaveLoading, setLeaveLoading] = useState(false);
 
-  // --- Accept transfer ---
+  // --- Accept / Reject transfer ---
   const [acceptTransferLoading, setAcceptTransferLoading] = useState(false);
   const [acceptTransferError, setAcceptTransferError] = useState<string | null>(null);
   const [acceptTransferSuccess, setAcceptTransferSuccess] = useState(false);
+  const [rejectTransferLoading, setRejectTransferLoading] = useState(false);
+  const [rejectTransferError, setRejectTransferError] = useState<string | null>(null);
   const pendingTransferId = searchParams.get("acceptTransfer");
 
   // --- Role detection (set after data loads) ---
@@ -215,6 +217,27 @@ export function GroupDashboardPage() {
     }
   }, [pendingTransferId, id, navigate]);
 
+  // --- Reject transfer handler ---
+  const handleRejectTransfer = useCallback(async () => {
+    if (!pendingTransferId) return;
+    setRejectTransferLoading(true);
+    setRejectTransferError(null);
+    try {
+      await studyGroupsService.rejectAdminTransfer(pendingTransferId);
+      const [data, membersData] = await Promise.all([
+        studyGroupsService.getStudyGroupById(id!),
+        studyGroupsService.getStudyGroupMembers(id!),
+      ]);
+      setSolicitud(data);
+      setMembers(membersData);
+      navigate(`/grupo/${id}`, { replace: true });
+    } catch (err: any) {
+      setRejectTransferError(err?.response?.data?.message || "Error al rechazar la transferencia.");
+    } finally {
+      setRejectTransferLoading(false);
+    }
+  }, [pendingTransferId, id, navigate]);
+
   // --- Realtime chat subscription ---
   useChatObserver(id ?? null, (newMsg) => {
     setMessages((prev) => {
@@ -289,8 +312,8 @@ export function GroupDashboardPage() {
         }, 3000);
       };
 
-      ws.onerror = (err) => {
-        console.error("[GroupDashboardPage WS] Error:", err);
+      ws.onerror = (event: Event) => {
+        console.error("[GroupDashboardPage WS] Error:", (event as any).message || event);
       };
     };
 
@@ -852,6 +875,11 @@ export function GroupDashboardPage() {
           <p className="text-error-600 dark:text-error-400 text-sm">{acceptTransferError}</p>
         </div>
       )}
+      {rejectTransferError && (
+        <div className="bg-error-50 dark:bg-error-900/20 border-b border-error-200 dark:border-error-800 px-4 sm:px-6 py-2">
+          <p className="text-error-600 dark:text-error-400 text-sm">{rejectTransferError}</p>
+        </div>
+      )}
       {acceptTransferSuccess && (
         <div className="bg-success-50 dark:bg-success-900/20 border-b border-success-200 dark:border-success-800 px-4 sm:px-6 py-2">
           <p className="text-success-600 dark:text-success-400 text-sm">Transferencia aceptada correctamente.</p>
@@ -860,9 +888,14 @@ export function GroupDashboardPage() {
       {pendingTransferId && (
         <div className="bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800 px-4 sm:px-6 py-2 flex items-center justify-between">
           <p className="text-primary-700 dark:text-primary-300 text-sm">Tienes una transferencia de administración pendiente.</p>
-          <Button variant="primary" size="sm" onClick={handleAcceptTransfer} loading={acceptTransferLoading}>
-            Aceptar transferencia
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="danger" size="sm" onClick={handleRejectTransfer} loading={rejectTransferLoading}>
+              Rechazar
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleAcceptTransfer} loading={acceptTransferLoading}>
+              Aceptar transferencia
+            </Button>
+          </div>
         </div>
       )}
 

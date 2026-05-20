@@ -9,6 +9,7 @@ import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequ
 import { ListApplicationsByRequest } from "../../../application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "../../../application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "../../../application/use-cases/ListUserNotifications.js";
+import { MarkAllNotificationsAsRead } from "../../../application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "../../../application/use-cases/ListMyStudyRequests.js";
@@ -76,6 +77,7 @@ export class StudyGroupsController {
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
     private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
+    private readonly markAllNotificationsAsRead: MarkAllNotificationsAsRead,
     private readonly preferenceService: PreferenceService,
   ) { }
 
@@ -273,6 +275,22 @@ export class StudyGroupsController {
       });
 
       sendData(res, 200, notifications, { total: notifications.length, page, pageSize });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async markNotificationsRead(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.markAllNotificationsAsRead.execute(actorUserId);
+      sendData(res, 200, { success: true });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -483,6 +501,7 @@ export class StudyGroupsController {
 
       sendData(res, 200, { message: "Transferencia aceptada correctamente." });
     } catch (error) {
+      console.error("Error en acceptAdminTransfer:", error instanceof Error ? error.message : error);
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

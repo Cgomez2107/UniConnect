@@ -376,7 +376,7 @@ export const ChatPage: React.FC = () => {
   return (
     <div className="flex flex-col h-screen bg-neutral-50">
       {/* Header */}
-      <header className="bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shadow-sm">
+      <header className="bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -459,7 +459,7 @@ export const ChatPage: React.FC = () => {
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className="px-4 py-2 bg-primary-50 border-t border-primary-200 flex items-center gap-2">
+        <div className="px-4 py-2 bg-primary-50 border-t border-primary-200 flex items-center gap-2 shrink-0">
           <span className="text-xs text-primary-700 flex-1 truncate">
             Respondiendo a: {replyingTo.content}
           </span>

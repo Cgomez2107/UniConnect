@@ -60,6 +60,11 @@ export async function handleStudyGroupsRoutes(
     return true;
   }
 
+  if (req.method === "PUT" && requestUrl.pathname === "/api/v1/notifications/read-all") {
+    await controller.markNotificationsRead(req, res);
+    return true;
+  }
+
   if (req.method === "GET" && requestUrl.pathname === "/api/v1/notifications/preferences") {
     await controller.getPreferences(req, res);
     return true;

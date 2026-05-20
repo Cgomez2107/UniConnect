@@ -69,6 +69,10 @@ const studyGroupsService = {
     return deps.apiClients.studyGroups.acceptTransfer(transferId);
   },
 
+  async rejectAdminTransfer(transferId: string) {
+    return deps.apiClients.studyGroups.rejectTransfer(transferId);
+  },
+
   async cancelMyApplication(requestId: string) {
     return deps.apiClients.studyGroups.cancel(requestId);
   },

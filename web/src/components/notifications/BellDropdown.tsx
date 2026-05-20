@@ -49,20 +49,20 @@ export default function BellDropdown() {
 
   const handleMarkRead = async (n: Notification) => {
     if (n.read) return;
-    storeMarkAsRead(n.id);
     try {
       await markAsRead(n.id);
+      storeMarkAsRead(n.id);
     } catch {
-      // silent
+      console.error("Error marking notification as read:", n.id);
     }
   };
 
   const handleMarkAllRead = async () => {
-    storeMarkAllAsRead();
     try {
       await markAllAsRead();
+      storeMarkAllAsRead();
     } catch {
-      // silent
+      console.error("Error marking all notifications as read");
     }
   };
 

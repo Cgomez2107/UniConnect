@@ -1,15 +1,24 @@
 import { useEffect } from "react";
 import { Bell } from "lucide-react";
 import { useNotificationStore } from "@/store/useNotificationStore";
-import { fetchNotifications } from "@/lib/services/notifications.service";
+import { fetchNotifications, markAllAsRead } from "@/lib/services/notifications.service";
 import NotificationItem from "@/components/notifications/NotificationItem";
 
 export function NotificationsPage() {
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const storeMarkAllAsRead = useNotificationStore((s) => s.markAllAsRead);
 
   useEffect(() => {
     fetchNotifications();
+    (async () => {
+      try {
+        await markAllAsRead();
+        storeMarkAllAsRead();
+      } catch {
+        console.error("Error marking all as read from NotificationsPage");
+      }
+    })();
   }, []);
 
   return (

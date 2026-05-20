@@ -6,6 +6,7 @@ import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById
 import { ListApplicationsByRequest } from "./application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "./application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "./application/use-cases/ListUserNotifications.js";
+import { MarkAllNotificationsAsRead } from "./application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "./application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "./application/use-cases/ListMyStudyRequests.js";
@@ -39,6 +40,7 @@ import { PostgresNotificationRepository } from "./infrastructure/database/Postgr
 import { PostgresStudyGroupMessageRepository } from "./infrastructure/database/PostgresStudyGroupMessageRepository.js";
 import { PostgresStudyRequestRepository } from "./infrastructure/database/PostgresStudyRequestRepository.js";
 import { PostgresPreferenceRepository } from "./infrastructure/database/PostgresPreferenceRepository.js";
+import { ChatSystemMessageObserver } from "./domain/events/observers/ChatSystemMessageObserver.js";
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
 import type { IStudyRequestRepository } from "./domain/repositories/IStudyRequestRepository.js";
@@ -214,6 +216,11 @@ function bootstrap(): void {
   const persistenceObserver = new PersistenceObserver(adminTransferRepository);
   subject.subscribe(persistenceObserver);
 
+  if (pool) {
+    const chatSystemMessageObserver = new ChatSystemMessageObserver(pool);
+    subject.subscribe(chatSystemMessageObserver);
+  }
+
   const membershipService = new StudyGroupMembershipService(subject);
 
   const groupChatSubject = new GroupChatSubject("study-groups-chat");
@@ -330,6 +337,7 @@ function bootstrap(): void {
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
   const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
+  const markAllNotificationsAsRead = new MarkAllNotificationsAsRead(notificationRepository);
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -349,6 +357,7 @@ function bootstrap(): void {
     listMyApplicationsUC,
     cancelStudyRequestUC,
     toggleStudyGroupMessageReaction,
+    markAllNotificationsAsRead,
     preferenceService,
   );
   const server = createStudyGroupsServer(controller);
