@@ -420,7 +420,7 @@ async function handleRequest(
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
   const appVersion = getAppVersion();
 
-  if (PUBLIC_PATHS.has(requestUrl.pathname) || requestUrl.pathname.startsWith("/docs")) {
+  if (PUBLIC_PATHS.has(requestUrl.pathname) || requestUrl.pathname === "/docs" || requestUrl.pathname.startsWith("/docs/")) {
     handleDocsRequest(requestUrl, res);
     return;
   }

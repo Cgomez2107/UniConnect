@@ -90,7 +90,7 @@ El Gateway sirve dos rutas públicas:
 
 ```ts
 const PUBLIC_PATHS = new Set([
-  "/docs", "/docs/", "/api/v1/openapi.json", "/favicon.ico",
+  "/docs", "/docs/", "/api/v1/openapi.json",
 ]);
 ```
 
