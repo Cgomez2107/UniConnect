@@ -17,6 +17,11 @@ import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransf
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
 import { ToggleStudyGroupMessageReaction } from "./application/use-cases/ToggleStudyGroupMessageReaction.js";
+import { CreateStudySession } from "./application/use-cases/CreateStudySession.js";
+import { CancelStudySession } from "./application/use-cases/CancelStudySession.js";
+import { UpdateAvailability } from "./application/use-cases/UpdateAvailability.js";
+import { ListSessionsByGroup } from "./application/use-cases/ListSessionsByGroup.js";
+import { SessionScheduler } from "./application/services/SessionScheduler.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
 import { NotificationObserver, PersistenceObserver, StudyGroupSubject } from "./domain/events/index.js";
 import { StudyGroupMembershipService } from "./domain/services/StudyGroupMembershipService.js";
@@ -26,6 +31,9 @@ import type { INotificationRepository } from "./domain/repositories/INotificatio
 import type { IMemberRepository } from "./domain/repositories/IMemberRepository.js";
 import type { IStudyGroupMessageRepository } from "./domain/repositories/IStudyGroupMessageRepository.js";
 import type { IStudyGroupRepository } from "./domain/repositories/IStudyGroupRepository.js";
+import type { IStudySessionRepository } from "./domain/repositories/IStudySessionRepository.js";
+import type { ISessionSeriesRepository } from "./domain/repositories/ISessionSeriesRepository.js";
+import type { ISessionAttendeeRepository } from "./domain/repositories/ISessionAttendeeRepository.js";
 import { createStudyGroupsServer } from "./app/createStudyGroupsServer.js";
 import { InMemoryStudyRequestRepository } from "./infrastructure/database/InMemoryStudyRequestRepository.js";
 import { InMemoryAdminTransferRepository } from "./infrastructure/database/InMemoryAdminTransferRepository.js";
@@ -33,12 +41,18 @@ import { InMemoryApplicationRepository } from "./infrastructure/database/InMemor
 import { InMemoryMemberRepository } from "./infrastructure/database/InMemoryMemberRepository.js";
 import { InMemoryNotificationRepository } from "./infrastructure/database/InMemoryNotificationRepository.js";
 import { InMemoryStudyGroupMessageRepository } from "./infrastructure/database/InMemoryStudyGroupMessageRepository.js";
+import { InMemoryStudySessionRepository } from "./infrastructure/database/InMemoryStudySessionRepository.js";
+import { InMemorySessionSeriesRepository } from "./infrastructure/database/InMemorySessionSeriesRepository.js";
+import { InMemorySessionAttendeeRepository } from "./infrastructure/database/InMemorySessionAttendeeRepository.js";
 import { PostgresAdminTransferRepository } from "./infrastructure/database/PostgresAdminTransferRepository.js";
 import { PostgresApplicationRepository } from "./infrastructure/database/PostgresApplicationRepository.js";
 import { PostgresMemberRepository } from "./infrastructure/database/PostgresMemberRepository.js";
 import { PostgresNotificationRepository } from "./infrastructure/database/PostgresNotificationRepository.js";
 import { PostgresStudyGroupMessageRepository } from "./infrastructure/database/PostgresStudyGroupMessageRepository.js";
 import { PostgresStudyRequestRepository } from "./infrastructure/database/PostgresStudyRequestRepository.js";
+import { PostgresStudySessionRepository } from "./infrastructure/database/PostgresStudySessionRepository.js";
+import { PostgresSessionSeriesRepository } from "./infrastructure/database/PostgresSessionSeriesRepository.js";
+import { PostgresSessionAttendeeRepository } from "./infrastructure/database/PostgresSessionAttendeeRepository.js";
 import { PostgresPreferenceRepository } from "./infrastructure/database/PostgresPreferenceRepository.js";
 import { ChatSystemMessageObserver } from "./domain/events/observers/ChatSystemMessageObserver.js";
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
@@ -151,6 +165,23 @@ function createNotificationRepository(
   return new InMemoryNotificationRepository();
 }
 
+function createSessionRepositories(
+  pool: Pool | null,
+): { session: IStudySessionRepository; series: ISessionSeriesRepository; attendee: ISessionAttendeeRepository } {
+  if (pool) {
+    return {
+      session: new PostgresStudySessionRepository(pool),
+      series: new PostgresSessionSeriesRepository(pool),
+      attendee: new PostgresSessionAttendeeRepository(pool),
+    };
+  }
+  return {
+    session: new InMemoryStudySessionRepository(),
+    series: new InMemorySessionSeriesRepository(),
+    attendee: new InMemorySessionAttendeeRepository(),
+  };
+}
+
 function bootstrap(): void {
   const env = loadStudyGroupsEnv();
 
@@ -176,6 +207,8 @@ function bootstrap(): void {
       async setCanalActivo(_userId: string, _eventType: string, _canal: string, _activo: boolean): Promise<void> {},
     },
   );
+
+  const sessionRepos = createSessionRepositories(pool);
 
   const realtimeGateway = (env.supabaseUrl && env.supabaseServiceRoleKey)
     ? new SupabaseRealtimeGateway(env.supabaseUrl, env.supabaseServiceRoleKey)
@@ -338,6 +371,29 @@ function bootstrap(): void {
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
   const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
   const markAllNotificationsAsRead = new MarkAllNotificationsAsRead(notificationRepository);
+  const createStudySessionUC = new CreateStudySession(
+    sessionRepos.session,
+    sessionRepos.series,
+    studyGroupRepository,
+  );
+  const cancelStudySessionUC = new CancelStudySession(
+    sessionRepos.session,
+    studyGroupRepository,
+    sessionRepos.attendee,
+    subject,
+  );
+  const updateAvailabilityUC = new UpdateAvailability(
+    sessionRepos.attendee,
+    sessionRepos.session,
+    studyGroupRepository,
+    subject,
+  );
+  const listSessionsByGroupUC = new ListSessionsByGroup(
+    sessionRepos.session,
+    sessionRepos.attendee,
+  );
+  const scheduler = new SessionScheduler(sessionRepos.session, notificationService);
+  scheduler.start();
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -359,6 +415,10 @@ function bootstrap(): void {
     toggleStudyGroupMessageReaction,
     markAllNotificationsAsRead,
     preferenceService,
+    createStudySessionUC,
+    cancelStudySessionUC,
+    updateAvailabilityUC,
+    listSessionsByGroupUC,
   );
   const server = createStudyGroupsServer(controller);
 
@@ -384,6 +444,7 @@ function bootstrap(): void {
     });
 
     try {
+      scheduler.stop();
       subject.clear();
       groupChatSubject.clear();
 

@@ -3,10 +3,16 @@ export interface StudyResource {
   readonly userId: string;
   readonly programId: string;
   readonly subjectId: string;
+  readonly resourceType: 'file' | 'link';
   readonly title: string;
   readonly description: string | null;
-  readonly fileUrl: string;
-  readonly fileName: string;
+  readonly url: string | null;
+  readonly ogTitle: string | null;
+  readonly ogDescription: string | null;
+  readonly ogImage: string | null;
+  readonly ogScrapedAt: string | null;
+  readonly fileUrl: string | null;
+  readonly fileName: string | null;
   readonly fileType: string | null;
   readonly fileSizeKb: number | null;
   readonly createdAt: string;
@@ -24,10 +30,16 @@ export interface CreateStudyResourceInput {
   readonly userId: string;
   readonly programId: string;
   readonly subjectId: string;
+  readonly resourceType: 'file' | 'link';
   readonly title: string;
   readonly description?: string;
-  readonly fileUrl: string;
-  readonly fileName: string;
+  readonly url?: string;
+  readonly ogTitle?: string;
+  readonly ogDescription?: string;
+  readonly ogImage?: string;
+  readonly ogScrapedAt?: string;
+  readonly fileUrl?: string;
+  readonly fileName?: string;
   readonly fileType?: string;
   readonly fileSizeKb?: number;
 }

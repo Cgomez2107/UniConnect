@@ -1,27 +1,64 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { z, ZodError } from "zod";
 
 import { CreateStudyResource } from "../../../application/use-cases/CreateStudyResource.js";
 import { DeleteStudyResource } from "../../../application/use-cases/DeleteStudyResource.js";
 import { GetStudyResourceById } from "../../../application/use-cases/GetStudyResourceById.js";
 import { ListStudyResources } from "../../../application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "../../../application/use-cases/UpdateStudyResource.js";
+import type { StudyResource } from "../../../domain/entities/StudyResource.js";
+import type { CreateResourceDto } from "../dto/CreateResourceDto.js";
 import type { UpdateResourceDto } from "../dto/UpdateResourceDto.js";
+import type { ResourceCardResponse } from "../dto/ResourceCardResponse.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
-const CreateResourceBodySchema = z.object({
-  programId: z.string().min(1),
-  subjectId: z.string().min(1),
-  title: z.string().min(1).max(200),
-  description: z.string().optional(),
-  fileUrl: z.string().min(1),
-  fileName: z.string().min(1),
-  fileType: z.string().optional(),
-  fileSizeKb: z.number().positive().optional(),
-});
+function toCardResponse(resource: StudyResource): ResourceCardResponse {
+  if (resource.resourceType === "link") {
+    return {
+      id: resource.id,
+      title: resource.title,
+      description: resource.description ?? null,
+      createdAt: resource.createdAt,
+      updatedAt: resource.updatedAt,
+      author: resource.profiles
+        ? { fullName: resource.profiles.fullName, avatarUrl: resource.profiles.avatarUrl }
+        : null,
+      subject: resource.subjects
+        ? { name: resource.subjects.name }
+        : null,
+      type: "link",
+      url: resource.url ?? null,
+      ogTitle: resource.ogTitle ?? null,
+      ogDescription: resource.ogDescription ?? null,
+      ogImage: resource.ogImage ?? null,
+    };
+  }
+
+  return {
+    id: resource.id,
+    title: resource.title,
+    description: resource.description ?? null,
+    createdAt: resource.createdAt,
+    updatedAt: resource.updatedAt,
+    author: resource.profiles
+      ? { fullName: resource.profiles.fullName, avatarUrl: resource.profiles.avatarUrl }
+      : null,
+    subject: resource.subjects
+      ? { name: resource.subjects.name }
+      : null,
+    type: "file",
+    fileUrl: resource.fileUrl ?? null,
+    fileName: resource.fileName ?? null,
+    fileType: resource.fileType ?? null,
+    fileSizeKb: resource.fileSizeKb ?? null,
+  };
+}
+
+function toCardArray(resources: StudyResource[]): ResourceCardResponse[] {
+  return resources.map(toCardResponse);
+}
 
 export class ResourcesController {
   constructor(
@@ -42,15 +79,19 @@ export class ResourcesController {
       const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
       const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 10;
 
+      const resourceTypeRaw = requestUrl.searchParams.get("resourceType");
+      const resourceType = resourceTypeRaw === "file" || resourceTypeRaw === "link" ? resourceTypeRaw : undefined;
+
       const result = await this.listStudyResources.execute({
         subjectId: requestUrl.searchParams.get("subjectId") ?? undefined,
         userId: requestUrl.searchParams.get("userId") ?? undefined,
         search: requestUrl.searchParams.get("search") ?? undefined,
+        resourceType,
         page,
         pageSize,
       });
 
-      sendData(res, 200, result, { total: result.length, page, pageSize });
+      sendData(res, 200, toCardArray(result.rows), { total: result.total, page, pageSize });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -66,7 +107,7 @@ export class ResourcesController {
         return;
       }
 
-      sendData(res, 200, result);
+      sendData(res, 200, toCardResponse(result));
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -81,40 +122,31 @@ export class ResourcesController {
         return;
       }
 
-      const body = await readJsonBody(req);
-      const parsed = CreateResourceBodySchema.parse(body);
+      const body = await readJsonBody<CreateResourceDto>(req);
 
-      const created = await this.createStudyResource.execute({
-        actorUserId,
-        programId: parsed.programId,
-        subjectId: parsed.subjectId,
-        title: parsed.title,
-        description: parsed.description,
-        fileUrl: parsed.fileUrl,
-        fileName: parsed.fileName,
-        fileType: parsed.fileType,
-        fileSizeKb: parsed.fileSizeKb,
-      });
+      const resourceType = body.resourceType || (body.url ? "link" : "file");
 
-      sendData(res, 201, created);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        sendError(res, 400, "Error de validación: todos los campos requeridos deben estar presentes.");
+      if (resourceType !== "file" && resourceType !== "link") {
+        sendError(res, 400, "resourceType debe ser 'file' o 'link'.");
         return;
       }
 
-      if (error instanceof Error && "code" in error) {
-        const pgCode = (error as any).code;
-        if (pgCode === "23503") {
-          sendError(res, 400, "La materia o el programa seleccionado no existe.");
-          return;
-        }
-        if (pgCode === "22001") {
-          sendError(res, 400, "El nombre o tipo del archivo es demasiado largo.");
-          return;
-        }
-      }
+      const created = await this.createStudyResource.execute({
+        actorUserId,
+        resourceType,
+        programId: body.programId ?? "",
+        subjectId: body.subjectId ?? "",
+        title: body.title ?? "",
+        description: body.description,
+        url: body.url,
+        fileUrl: resourceType === "link" ? undefined : (body.fileUrl ?? ""),
+        fileName: resourceType === "link" ? undefined : (body.fileName ?? ""),
+        fileType: body.fileType,
+        fileSizeKb: body.fileSizeKb,
+      });
 
+      sendData(res, 201, toCardResponse(created));
+    } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
@@ -156,12 +188,7 @@ export class ResourcesController {
         description: body.description,
       });
 
-      if (!updated) {
-        sendError(res, 404, "Recurso no encontrado.");
-        return;
-      }
-
-      sendData(res, 200, updated);
+      sendData(res, 200, toCardResponse(updated));
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

@@ -125,6 +125,36 @@ export interface AdminRoleLeftEvent {
 }
 
 /**
+ * Evento: Participante actualiza su disponibilidad (confirmed/declined)
+ */
+export interface AvailabilityUpdatedEvent {
+  readonly type: "AVAILABILITY_UPDATED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly sessionId: string;
+  readonly requestId: string;
+  readonly userId: string;
+  readonly userName: string;
+  readonly status: "confirmed" | "declined";
+  readonly groupName: string;
+  readonly organizerId: string;
+}
+
+/**
+ * Evento: Sesión de estudio cancelada
+ */
+export interface SessionCancelledEvent {
+  readonly type: "SESSION_CANCELLED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly sessionId: string;
+  readonly requestId: string;
+  readonly title: string;
+  readonly groupName: string;
+  readonly attendeeIds: string[];
+}
+
+/**
  * Type Union: Representa TODOS los eventos posibles del dominio
  */
 export type StudyGroupEvent =
@@ -135,7 +165,9 @@ export type StudyGroupEvent =
   | AdminTransferAcceptedEvent
   | AdminTransferRejectedEvent
   | AdminTransferCompletedEvent
-  | AdminRoleLeftEvent;
+  | AdminRoleLeftEvent
+  | AvailabilityUpdatedEvent
+  | SessionCancelledEvent;
 
 /**
  * Extrae el tipo específico de un evento
