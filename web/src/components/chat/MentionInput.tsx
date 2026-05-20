@@ -28,6 +28,7 @@ interface MentionInputProps {
   onSendImage?: (file: File) => void;
   onUploadFile?: (file: File) => Promise<{ url: string; type: string }>;
   uploadingImage?: boolean;
+  uploadingFile?: boolean;
   sending?: boolean;
   placeholder?: string;
   disabled?: boolean;
@@ -153,13 +154,13 @@ export function MentionInput({
         const content = text.trim() || pendingFile.file.name;
         const fullContent = buildContentWithMentions(content);
         const mentions = extractMentions(fullContent);
-        onSend(fullContent, mentions, { mediaUrl: url, mediaType: type });
+        await onSend(fullContent, mentions, { mediaUrl: url, mediaType: type });
+        setPendingFile(null);
+        setText("");
       } catch (err) {
         console.error("Error al enviar archivo:", err);
       } finally {
         setUploadingFile(false);
-        setPendingFile(null);
-        setText("");
       }
       return;
     }
@@ -167,8 +168,12 @@ export function MentionInput({
     if (!text.trim() || !onSend) return;
     const fullContent = buildContentWithMentions(text.trim());
     const mentions = extractMentions(fullContent);
-    onSend(fullContent, mentions);
-    setText("");
+    try {
+      await onSend(fullContent, mentions);
+      setText("");
+    } catch (err) {
+      console.error("Error al enviar mensaje:", err);
+    }
   }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions]);
 
   const handleKeyDown = useCallback(

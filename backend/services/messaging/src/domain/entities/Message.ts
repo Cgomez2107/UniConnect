@@ -1,3 +1,8 @@
+export interface Reaction {
+  emoji: string;
+  userId: string;
+}
+
 export interface Message {
   readonly id: string;
   readonly conversationId: string;
@@ -10,6 +15,7 @@ export interface Message {
   readonly replyPreview: string | null;
   readonly createdAt: string;
   readonly readAt: string | null;
+  readonly reactions: Reaction[];
   readonly sender: {
     readonly fullName: string;
     readonly avatarUrl: string | null;

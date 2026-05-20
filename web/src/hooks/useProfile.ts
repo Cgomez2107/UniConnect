@@ -3,7 +3,7 @@ import useAuth from "@/hooks/useAuth";
 import profilesService from "@/lib/services/profiles.service";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 import type { ProfileUI } from "@/types/ui";
-import type { UserProgram, UserSubject } from "@/types";
+import type { UserProgram, UserSubject, IndicadoresEstadisticas, Insignia } from "@/types";
 import type { StudyGroup } from "@uniconnect/shared-types";
 
 export interface UseProfileData {
@@ -16,6 +16,9 @@ export interface UseProfileData {
   primaryProgram: UserProgram | null;
   initials: string;
   refresh: () => Promise<void>;
+  // D02 — Decoradores (pueden ser undefined si el backend no los envía)
+  indicadores?: IndicadoresEstadisticas;
+  insignias?: Insignia[];
 }
 
 function getInitials(fullName: string): string {
@@ -35,6 +38,8 @@ export default function useProfile(): UseProfileData {
   const [publications, setPublications] = useState<StudyGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [indicadores, setIndicadores] = useState<IndicadoresEstadisticas | undefined>(undefined);
+  const [insignias, setInsignias] = useState<Insignia[] | undefined>(undefined);
 
   const loadAll = useCallback(async () => {
     if (!user?.id) {
@@ -63,6 +68,14 @@ export default function useProfile(): UseProfileData {
       setPrograms(programsData);
       setSubjects(subjectsData);
       setPublications(publicationsData);
+
+      // D02: Cargar perfil decorado (best-effort — si falla, no rompe la UI)
+      profilesService.getDecoratedProfile(user.id).then((decorated) => {
+        if (decorated) {
+          setIndicadores(decorated.indicadores);
+          setInsignias(decorated.insignias);
+        }
+      }).catch(() => {});
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error cargando datos del perfil";
       setError(msg);
@@ -88,5 +101,7 @@ export default function useProfile(): UseProfileData {
     primaryProgram,
     initials,
     refresh: loadAll,
+    indicadores,
+    insignias,
   };
 }

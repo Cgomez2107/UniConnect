@@ -1,0 +1,110 @@
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches: [main]
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9.12.0"
+
+jobs:
+  test-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install shared-types dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: packages/shared-types
+
+      - name: Build shared-types (first, so dist/ exists before backend hoists it)
+        run: pnpm build
+        working-directory: packages/shared-types
+
+      - name: Install backend dependencies (hoists shared-types with dist/ included)
+        run: pnpm install --frozen-lockfile
+        working-directory: backend
+
+      - name: Typecheck backend
+        run: pnpm typecheck
+        working-directory: backend
+
+      - name: Run shared-types contract tests
+        run: pnpm test:contracts
+        working-directory: packages/shared-types
+
+      - name: Run Sprint 4 contract integration tests
+        run: npx vitest run tests/integration/sprint4/ --reporter=verbose
+        working-directory: backend
+
+
+  build-and-deploy:
+    needs: [test-and-validate]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: gateway
+            cwd: backend
+            config: fly.toml
+          - name: auth
+            cwd: backend
+            config: services/auth/fly.toml
+          - name: study-groups
+            cwd: backend
+            config: services/study-groups/fly.toml
+          - name: resources
+            cwd: backend
+            config: services/resources/fly.toml
+          - name: messaging
+            cwd: backend
+            config: services/messaging/fly.toml
+          - name: profiles-catalog
+            cwd: backend
+            config: services/profiles-catalog/fly.toml
+          - name: events
+            cwd: backend
+            config: services/events/fly.toml
+          - name: frontend
+            cwd: frontend
+            config: fly.toml
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy ${{ matrix.service.name }} to Fly.io
+        run: flyctl deploy --remote-only -c ${{ matrix.service.config }}
+        working-directory: ${{ matrix.service.cwd }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Validate ${{ matrix.service.name }} deployment
+        run: |
+          echo "🔍 Validando despliegue de ${{ matrix.service.name }}..."
+          APP_NAME=$(grep '^app =' "${{ matrix.service.config }}" | head -1 | cut -d'"' -f2)
+          echo "App: $APP_NAME"
+          STATUS=$(flyctl status --app "$APP_NAME" --json 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 || echo '"status":"unknown"')
+          echo "Estado de $APP_NAME: $STATUS"
+          if echo "$STATUS" | grep -qi "deployed"; then
+            echo "✅ ${{ matrix.service.name }} desplegado correctamente"
+          else
+            echo "⚠️  No se pudo verificar el estado de ${{ matrix.service.name }}"
+            echo "   Revisa manualmente: flyctl status --app $APP_NAME"
+          fi
+        working-directory: ${{ matrix.service.cwd }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

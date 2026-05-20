@@ -28,6 +28,7 @@ export interface UpdateProfilePayload {
   fullName?: string;
   bio?: string;
   phone?: string;
+  semester?: number;
 }
 
 export interface StudentSearchResult {
@@ -81,6 +82,7 @@ export class ProfilesClient extends BaseClient {
         ...(data.fullName !== undefined && { full_name: data.fullName }),
         ...(data.bio !== undefined && { bio: data.bio }),
         ...(data.phone !== undefined && { phone_number: data.phone }),
+        ...(data.semester !== undefined && { semester: data.semester }),
       },
     });
     return mapProfileDtoToDomain(response.data);

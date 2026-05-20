@@ -48,7 +48,9 @@ function isProfilesCatalogRoute(pathname: string): boolean {
     pathname.startsWith("/api/v1/students") ||
     pathname.startsWith("/api/v1/catalog") ||
     pathname.startsWith("/perfil/") ||
-    pathname === "/perfil"
+    pathname === "/perfil" ||
+    pathname.startsWith("/api/v1/perfil/") ||
+    pathname === "/api/v1/perfil"
   );
 }
 
@@ -109,13 +111,19 @@ function broadcastToStudyGroup(groupId: string, event: string, payload: unknown)
 
 function broadcastToConversation(conversationId: string, event: string, payload: unknown): void {
   const room = conversationRooms.get(conversationId);
-  if (!room) return;
+  if (!room) {
+    console.log(JSON.stringify({ service: "gateway", level: "warn", message: "broadcastToConversation: ROOM EMPTY", conversationId, event }));
+    return;
+  }
   const message = JSON.stringify({ event, payload });
+  let sent = 0;
   for (const ws of room) {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(message);
+      sent++;
     }
   }
+  console.log(JSON.stringify({ service: "gateway", level: "info", message: "broadcastToConversation: sent", conversationId, event, sent, roomSize: room.size }));
 }
 
 function handleWebSocketUpgrade(
@@ -224,7 +232,7 @@ function handleWebSocketUpgrade(
 function onStudygroupsResponse(
   info: ProxyResponse,
   requestUrl: URL,
-  _jwtPayload: JWTPayload,
+  jwtPayload: JWTPayload,
 ): void {
   console.log(JSON.stringify({ service: "gateway", level: "info", message: "onStudygroupsResponse called", method: info.method, pathname: info.pathname, status: info.status }));
   const groupIdMatch = info.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages$/);
@@ -239,6 +247,26 @@ function onStudygroupsResponse(
       messagePayload = info.body;
     }
     broadcastToStudyGroup(groupId, "new_group_message", messagePayload);
+  }
+
+  const reactionMatch = info.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
+  if (info.method === "POST" && reactionMatch && info.status === 200) {
+    const groupId = reactionMatch[1];
+    const messageId = reactionMatch[2];
+    const rawBody = (() => {
+      try {
+        const parsed = JSON.parse(info.body);
+        return parsed?.data || parsed;
+      } catch {
+        return info.body;
+      }
+    })();
+    const reactions = (rawBody as any)?.reactions ?? rawBody;
+    broadcastToStudyGroup(groupId, "reaction_updated", {
+      messageId,
+      userId: jwtPayload.sub,
+      reactions,
+    });
   }
 }
 
@@ -269,6 +297,30 @@ function onMessagingResponse(
         conversationId,
         userId: jwtPayload.sub,
       });
+    }
+  }
+
+  const reactionMatch = info.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/reactions$/);
+  if (info.method === "POST" && reactionMatch && info.status === 200) {
+    const messageId = reactionMatch[1];
+    const rawBody = (() => {
+      try {
+        const parsed = JSON.parse(info.body);
+        return parsed?.data || parsed;
+      } catch {
+        return info.body;
+      }
+    })();
+    const conversationId = (rawBody as any)?.conversation_id;
+    const reactions = (rawBody as any)?.reactions ?? rawBody;
+    console.log(JSON.stringify({ service: "gateway", level: "debug", message: "reaction_updated detected", messageId, conversationId, hasReactions: !!reactions }));
+    if (conversationId) {
+      broadcastToConversation(conversationId, "reaction_updated", {
+        messageId,
+        userId: jwtPayload.sub,
+        reactions,
+      });
+      console.log(JSON.stringify({ service: "gateway", level: "info", message: "reaction_updated broadcasted", conversationId, messageId }));
     }
   }
 }
@@ -359,7 +411,10 @@ async function handleRequest(
   }
 
   if (isProfilesCatalogRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.profilesCatalogBaseUrl);
+    const stripPerfilPrefix = requestUrl.pathname.startsWith("/api/v1/perfil")
+      ? "/api/v1"
+      : undefined;
+    await proxyRequest(req, res, env.profilesCatalogBaseUrl, stripPerfilPrefix);
     return;
   }
 

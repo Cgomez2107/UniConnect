@@ -22,6 +22,7 @@ export async function handleStudyGroupsRoutes(
   const membersMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/members$/);
   const applicationsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/applications$/);
   const messagesMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages$/);
+  const messageReactionsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
   const applyMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/apply$/);
   const leaveMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/leave$/);
   const cancelMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/cancel$/);
@@ -29,6 +30,10 @@ export async function handleStudyGroupsRoutes(
   const transferMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/transfer$/);
   const transferAcceptMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/accept$/);
   const transferRejectMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/reject$/);
+  const sessionsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/sessions$/);
+  const sessionDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/sessions\/([^/]+)$/);
+  const sessionAvailabilityMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/sessions\/([^/]+)\/availability$/);
+  const sessionAttendeesMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/sessions\/([^/]+)\/attendees$/);
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
@@ -121,6 +126,36 @@ export async function handleStudyGroupsRoutes(
 
   if (req.method === "POST" && transferRejectMatch) {
     await controller.rejectTransfer(req, res, transferRejectMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && messageReactionsMatch) {
+    await controller.toggleMessageReaction(req, res, messageReactionsMatch[2]);
+    return true;
+  }
+
+  if (req.method === "GET" && sessionsMatch) {
+    await controller.listSessions(req, res, sessionsMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && sessionsMatch) {
+    await controller.createSession(req, res, sessionsMatch[1]);
+    return true;
+  }
+
+  if (req.method === "DELETE" && sessionDetailMatch) {
+    await controller.cancelSession(req, res, sessionDetailMatch[2]);
+    return true;
+  }
+
+  if (req.method === "POST" && sessionAvailabilityMatch) {
+    await controller.updateAvailability(req, res, sessionAvailabilityMatch[2]);
+    return true;
+  }
+
+  if (req.method === "GET" && sessionAttendeesMatch) {
+    await controller.listSessionAttendees(req, res, sessionAttendeesMatch[2]);
     return true;
   }
 

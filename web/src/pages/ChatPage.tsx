@@ -8,6 +8,7 @@ import useAuth from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { snakeToCamel } from "@uniconnect/shared-api";
+import { groupReactions } from "@/lib/services/messaging.service";
 import { useConversationsStore } from "@/store/useConversationsStore";
 
 interface Message {
@@ -22,6 +23,8 @@ interface Message {
   replyPreview?: string | null;
   mediaUrl?: string | null;
   mediaType?: string | null;
+  mediaFilename?: string | null;
+  reactions?: { emoji: string; userId: string }[];
 }
 
 interface Conversation {
@@ -84,7 +87,8 @@ export const ChatPage: React.FC = () => {
       const msgsResponse = await apiClient.get(`/messages`, {
         params: { conversationId, limit: 50 },
       });
-      setMessages((msgsResponse.data?.data || msgsResponse.data || []).map((m: any) => ({
+      const rawMsgs: any[] = msgsResponse.data?.data || msgsResponse.data || [];
+      setMessages(rawMsgs.sort((a: any, b: any) => new Date(a.created_at || a.createdAt).getTime() - new Date(b.created_at || b.createdAt).getTime()).map((m: any) => ({
         id: m.id,
         content: m.content,
         senderId: m.sender_id || m.senderId,
@@ -96,6 +100,7 @@ export const ChatPage: React.FC = () => {
         replyPreview: m.reply_preview || m.replyPreview || null,
         mediaUrl: m.media_url || m.mediaUrl || null,
         mediaType: m.media_type || m.mediaType || null,
+        reactions: m.reactions || [],
       })));
     } catch (error) {
       console.error("Error fetching conversation:", error);
@@ -122,8 +127,10 @@ export const ChatPage: React.FC = () => {
     };
 
     ws.onmessage = (event) => {
+      console.log("[ChatPage WS] raw event type:", typeof event.data, "len:", event.data?.length);
       try {
         const data = JSON.parse(event.data);
+        console.log("[ChatPage WS] parsed event:", data.event, Object.keys(data));
         const payload = data.payload || data;
 
         if (data.event === "new_message") {
@@ -132,6 +139,19 @@ export const ChatPage: React.FC = () => {
           setMessages((prev) => {
             if (prev.some((m) => m.id === mappedMsg.id)) return prev;
             return [...prev, { ...mappedMsg, clientStatus: "sent" }];
+          });
+        } else if (data.event === "reaction_updated") {
+          console.log("[ChatPage WS] reaction_updated ENTERED");
+          const { messageId, reactions } = payload;
+          setMessages((prev) => {
+            const found = prev.find((m) => m.id === messageId);
+            if (!found) {
+              console.warn("[ChatPage WS] message not found", messageId);
+              return prev;
+            }
+            return prev.map((m) =>
+              m.id === messageId ? { ...m, reactions: reactions || [] } : m
+            );
           });
         } else if (data.type === "message" || data.event === "message:received") {
           setMessages((prev) => {
@@ -182,6 +202,7 @@ export const ChatPage: React.FC = () => {
       clientStatus: "sending",
       replyToMessageId: replyingTo?.id || null,
       replyPreview: replyingTo?.content || null,
+      reactions: [],
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -199,13 +220,17 @@ export const ChatPage: React.FC = () => {
       });
       const msg = response.data?.data || response.data;
       pendingTempIds.current.delete(tempId);
-      setMessages((prev) =>
-        prev.map((m) =>
+      setMessages((prev) => {
+        // If WS already delivered this message, just remove the temp entry
+        if (prev.some((m) => m.id === msg.id)) {
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) =>
           m.id === tempId
             ? { ...m, id: msg.id, clientStatus: "sent", readAt: null }
             : m
-        )
-      );
+        );
+      });
       loadConversations();
     } catch {
       pendingTempIds.current.delete(tempId);
@@ -230,13 +255,16 @@ export const ChatPage: React.FC = () => {
         replyToMessageId: failedMsg.replyToMessageId || undefined,
       });
       const msg = response.data?.data || response.data;
-      setMessages((prev) =>
-        prev.map((m) =>
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) {
+          return prev.filter((m) => m.id !== failedMsg.id);
+        }
+        return prev.map((m) =>
           m.id === failedMsg.id
             ? { ...m, id: msg.id, content: msg.content, clientStatus: "sent" }
             : m
-        )
-      );
+        );
+      });
     } catch {
       setMessages((prev) =>
         prev.map((m) =>
@@ -260,19 +288,25 @@ export const ChatPage: React.FC = () => {
         content: file.name,
         mediaUrl,
         mediaType: file.type,
+        mediaFilename: file.name,
       });
       const msg = response.data?.data || response.data;
-      setMessages((prev) => [...prev, {
-        id: msg.id,
-        content: msg.content,
-        senderId: msg.sender_id || msg.senderId || user?.id || "",
-        senderName: "Tú",
-        createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
-        readAt: null,
-        clientStatus: "sent",
-        mediaUrl,
-        mediaType: file.type,
-      }]);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.sender_id || msg.senderId || user?.id || "",
+          senderName: "Tú",
+          createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
+          readAt: null,
+          clientStatus: "sent",
+          mediaUrl,
+          mediaType: file.type,
+          mediaFilename: file.name,
+          reactions: [],
+        }];
+      });
     } catch (err) {
       console.error("Error uploading image:", err);
     } finally {
@@ -296,19 +330,24 @@ export const ChatPage: React.FC = () => {
         content: file.name,
         mediaUrl: result.url,
         mediaType: file.type,
+        mediaFilename: file.name,
       });
       const msg = response.data?.data || response.data;
-      setMessages((prev) => [...prev, {
-        id: msg.id,
-        content: msg.content,
-        senderId: msg.sender_id || msg.senderId || user?.id || "",
-        senderName: "Tú",
-        createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
-        readAt: null,
-        clientStatus: "sent",
-        mediaUrl: result.url,
-        mediaType: file.type,
-      }]);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.sender_id || msg.senderId || user?.id || "",
+          senderName: "Tú",
+          createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
+          readAt: null,
+          clientStatus: "sent",
+          mediaUrl: result.url,
+          mediaType: file.type,
+          mediaFilename: file.name,
+        }];
+      });
     } catch (err) {
       console.error("Error uploading file:", err);
     } finally {
@@ -384,6 +423,9 @@ export const ChatPage: React.FC = () => {
                 replyPreview: msg.replyPreview || null,
                 mediaUrl: msg.mediaUrl || null,
                 mediaType: msg.mediaType || null,
+                mediaFilename: msg.mediaFilename ?? null,
+                mentions: undefined,
+                reactions: groupReactions(msg.reactions),
               }}
               currentUser={userUI}
               previousSenderSame={
@@ -391,6 +433,15 @@ export const ChatPage: React.FC = () => {
               }
               onRetry={handleRetry}
               onReply={(m) => setReplyingTo(m)}
+              onToggleReaction={async (messageId, emoji) => {
+                const result = await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
+                const data = result.data?.data || result.data;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === messageId ? { ...m, reactions: data.reactions } : m
+                  )
+                );
+              }}
             />
           ))
         )}

@@ -4,7 +4,7 @@ import type {
   ConversationSummary,
   CreateConversationInput,
 } from "../../domain/entities/Conversation.js";
-import type { CreateMessageInput, Message } from "../../domain/entities/Message.js";
+import type { CreateMessageInput, Message, Reaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 
 interface ConversationRow {
@@ -33,6 +33,7 @@ interface MessageRow {
   reply_preview: string | null;
   created_at: string | Date;
   read_at: string | Date | null;
+  reactions: string | null;
   sender_full_name: string | null;
   sender_avatar_url: string | null;
 }
@@ -88,6 +89,19 @@ function mapConversation(row: ConversationRow): ConversationSummary {
   };
 }
 
+function parseReactions(raw: unknown): Reaction[] {
+  if (Array.isArray(raw)) return raw as Reaction[];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as Reaction[];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function mapMessage(row: MessageRow): Message {
   const rawContent = row.content ?? "";
   const legacy = decodeLegacyMediaContent(rawContent);
@@ -106,6 +120,7 @@ function mapMessage(row: MessageRow): Message {
     replyPreview: row.reply_preview,
     createdAt: new Date(row.created_at).toISOString(),
     readAt: row.read_at ? new Date(row.read_at).toISOString() : null,
+    reactions: parseReactions(row.reactions),
     sender: {
       fullName: row.sender_full_name ?? "Usuario",
       avatarUrl: row.sender_avatar_url,
@@ -284,6 +299,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           to_jsonb(m)->>'reply_preview' AS reply_preview,
           m.created_at,
           m.read_at,
+          COALESCE(to_jsonb(m)->>'reactions', '[]') AS reactions,
           p.full_name AS sender_full_name,
           p.avatar_url AS sender_avatar_url
         FROM messages m
@@ -334,12 +350,13 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           to_jsonb(m)->>'reply_preview' AS reply_preview,
           m.created_at,
           m.read_at,
+          COALESCE(to_jsonb(m)->>'reactions', '[]') AS reactions,
           p.full_name AS sender_full_name,
           p.avatar_url AS sender_avatar_url
         FROM messages m
         LEFT JOIN profiles p ON p.id = m.sender_id
         WHERE m.conversation_id = $1
-        ORDER BY m.created_at ASC
+        ORDER BY m.created_at DESC
         LIMIT $2 OFFSET $3
       `,
       [conversationId, limit, offset],
@@ -513,5 +530,40 @@ export class PostgresMessagingRepository implements IMessagingRepository {
     );
 
     return parseInt(result.rows[0]?.count ?? "0", 10);
+  }
+
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string) {
+    const msg = await this.pool.query<{ conversation_id: string; reactions: string | null }>(
+      `
+      SELECT m.conversation_id, COALESCE(m.reactions, '[]'::jsonb) AS reactions
+      FROM messages m
+      JOIN conversations c ON c.id = m.conversation_id
+      WHERE m.id = $1
+        AND (c.participant_a = $2 OR c.participant_b = $2)
+      LIMIT 1
+      `,
+      [messageId, currentUserId],
+    );
+
+    if (!msg.rows[0]) {
+      throw new Error("Mensaje no encontrado o sin permisos.");
+    }
+
+    const current: Reaction[] = parseReactions(msg.rows[0].reactions);
+    const existingIdx = current.findIndex((r) => r.emoji === emoji && r.userId === currentUserId);
+
+    let updated: Reaction[];
+    if (existingIdx >= 0) {
+      updated = current.filter((_, i) => i !== existingIdx);
+    } else {
+      updated = [...current, { emoji, userId: currentUserId }];
+    }
+
+    await this.pool.query(
+      `UPDATE messages SET reactions = $1::jsonb WHERE id = $2`,
+      [JSON.stringify(updated), messageId],
+    );
+
+    return { conversationId: msg.rows[0].conversation_id, reactions: updated };
   }
 }

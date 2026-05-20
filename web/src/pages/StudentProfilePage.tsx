@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/ui/Avatar";
 import { deps } from "@/store/deps";
+import profilesService from "@/lib/services/profiles.service";
 import useAuth from "@/hooks/useAuth";
+
+import type { IndicadoresEstadisticas, Insignia } from "@/types";
+import BadgePanel from "@/components/profile/BadgePanel";
 
 interface StudentProfileData {
   id: string;
@@ -76,6 +80,8 @@ export function StudentProfilePage() {
   const [profile, setProfile] = useState<StudentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [indicadores, setIndicadores] = useState<IndicadoresEstadisticas | undefined>(undefined);
+  const [insignias, setInsignias] = useState<Insignia[] | undefined>(undefined);
 
   useEffect(() => {
     if (!id) { setLoading(false); setError("ID de estudiante no válido"); return; }
@@ -98,6 +104,18 @@ export function StudentProfilePage() {
           facultyName: extractField(data, "facultyName", "faculty_name", "faculty", "facultyName"),
           sharedSubjects: data.sharedSubjects ?? data.shared_subjects ?? [],
         });
+
+        // D02: Cargar perfil decorado como best-effort
+        try {
+          const decoratedUI = await profilesService.getDecoratedProfile(id);
+          if (decoratedUI) {
+            setIndicadores(decoratedUI.indicadores);
+            setInsignias(decoratedUI.insignias);
+          }
+        } catch {
+          // Best-effort — no rompe la UI
+        }
+
         setLoading(false);
         return;
       } catch (err: any) {
@@ -248,6 +266,13 @@ export function StudentProfilePage() {
               {profile.bio || "Este estudiante aún no ha escrito una descripción."}
             </p>
           </div>
+
+          {/* D02: BadgePanel de insignias (solo si existen datos decorados) */}
+          {insignias && insignias.length > 0 && (
+            <div className="mt-4">
+              <BadgePanel insignias={insignias} />
+            </div>
+          )}
         </div>
       </div>
 

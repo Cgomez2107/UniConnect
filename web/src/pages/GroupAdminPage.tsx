@@ -16,6 +16,36 @@ import { useChatObserver } from "@/hooks/useChatObserver";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { snakeToCamel } from "@uniconnect/shared-api";
+import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+
+// Backend: [{ userId, name }] → UI: [{ userId, displayName, position }]
+function transformMentions(mentions?: any[]): MentionData[] | undefined {
+  if (!mentions || mentions.length === 0) return undefined;
+  return mentions.map((m) => ({
+    userId: m.userId ?? m.user_id ?? "",
+    displayName: m.name ?? m.displayName ?? "",
+    position: 0,
+  }));
+}
+
+// Backend: [{ emoji, userId }] (individual) → UI: [{ emoji, count, users: [id1, id2] }] (aggregated)
+function transformReactions(reactions?: any[]): ReactionData[] | undefined {
+  if (!reactions || reactions.length === 0) return undefined;
+  const grouped = new Map<string, { emoji: string; users: string[] }>();
+  for (const r of reactions) {
+    const emoji = r.emoji;
+    if (!emoji) continue;
+    if (!grouped.has(emoji)) {
+      grouped.set(emoji, { emoji, users: [] });
+    }
+    grouped.get(emoji)!.users.push(r.userId ?? r.user_id ?? "");
+  }
+  return Array.from(grouped.values()).map((g) => ({
+    emoji: g.emoji,
+    count: g.users.length,
+    users: g.users,
+  }));
+}
 
 type AppTab = "pendiente" | "aceptada" | "rechazada";
 type RightTab = "postulaciones" | "miembros" | "info";
@@ -169,7 +199,7 @@ export function GroupDashboardPage() {
   }, [pendingTransferId, id, navigate]);
 
   // --- Realtime chat subscription ---
-  useChatObserver(id, (newMsg) => {
+  useChatObserver(id ?? null, (newMsg) => {
     setMessages((prev) => {
       if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
       return [...prev, newMsg];
@@ -211,10 +241,22 @@ export function GroupDashboardPage() {
             }
             newMsg.sender.fullName = newMsg.sender.fullName || newMsg.senderFullName;
             newMsg.sender.full_name = newMsg.sender.full_name || newMsg.senderFullName;
+            newMsg.mentions = transformMentions(newMsg.mentions);
             setMessages((prev) => {
               if (prev.some((m) => m.id === newMsg.id || m._tempId === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
+          }
+
+          if (data.event === "reaction_updated" && data.payload) {
+            const { messageId, reactions } = data.payload;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId || m._tempId === messageId
+                  ? { ...m, reactions }
+                  : m
+              )
+            );
           }
         } catch (err) {
           console.error("[GroupDashboardPage WS] Error parsing message:", err);
@@ -265,14 +307,14 @@ export function GroupDashboardPage() {
   const isAdminRef = useRef(isAdmin);
   isAdminRef.current = isAdmin;
 
-  useGroupEventsObserver(id, {
+  useGroupEventsObserver(id ?? null, {
     onNewApplication: (app) => {
       if (!isAdminRef.current) return;
       const name = app.user?.fullName || app.user?.full_name || "Alguien";
       addNotification({
         id: `toast-${Date.now()}`,
         userId: user?.id || "system",
-        type: "application_update",
+        type: "studyGroupApplication",
         title: `Nueva solicitud de ${name}`,
         description: "",
         read: false,
@@ -287,7 +329,7 @@ export function GroupDashboardPage() {
       addNotification({
         id: `toast-${Date.now() + 1}`,
         userId: user?.id || "system",
-        type: "application_update",
+        type: "studyGroupApplication",
         title: `${name} fue aceptado/a`,
         description: "",
         read: false,
@@ -308,7 +350,7 @@ export function GroupDashboardPage() {
       addNotification({
         id: `toast-${Date.now() + 2}`,
         userId: user?.id || "system",
-        type: "application_update",
+        type: "studyGroupApplication",
         title: `${name} fue rechazado/a`,
         description: "",
         read: false,
@@ -434,7 +476,13 @@ export function GroupDashboardPage() {
         setTransferSuccess(false);
       }, 2000);
     } catch (err: any) {
-      setTransferError(err?.response?.data?.message || "Error al solicitar la transferencia.");
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message || "";
+      if (status === 422 && msg.toLowerCase().includes("transfer")) {
+        setTransferError("Ya se ha solicitado una transferencia. Espera a que se complete.");
+      } else {
+        setTransferError(msg || "Error al solicitar la transferencia.");
+      }
     } finally {
       setTransferLoading(false);
     }
@@ -514,8 +562,8 @@ export function GroupDashboardPage() {
       mediaFilename: msg.media_filename || msg.mediaFilename || null,
       createdAt: msg.created_at || msg.createdAt || new Date().toISOString(),
       content: msg.content || "",
-      mentions: msg.mentions || undefined,
-      reactions: msg.reactions || undefined,
+      mentions: transformMentions(msg.mentions),
+      reactions: transformReactions(msg.reactions),
     })),
     [messages, id, memberNameMap],
   );
@@ -560,7 +608,7 @@ export function GroupDashboardPage() {
         }
         return prev.map((m: any) =>
           m.id === tempId
-            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, media_url: m.media_url || msg.media_url }
+            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, mediaUrl: m.mediaUrl || m.media_url || (msg as any).mediaUrl || (msg as any).media_url }
             : m
         );
       });
@@ -632,7 +680,7 @@ export function GroupDashboardPage() {
         }
         return prev.map((m: any) =>
           m.id === tempId
-            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, media_url: m.media_url || msg.media_url }
+            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, mediaUrl: m.mediaUrl || m.media_url || (msg as any).mediaUrl || (msg as any).media_url }
             : m
         );
       });
@@ -677,7 +725,7 @@ export function GroupDashboardPage() {
         }
         return prev.map((m: any) =>
           m.id === tempId
-            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, media_url: m.media_url || msg.media_url }
+            ? { ...m, ...msg, clientStatus: "sent", _tempId: undefined, mediaUrl: m.mediaUrl || m.media_url || (msg as any).mediaUrl || (msg as any).media_url }
             : m
         );
       });
@@ -756,9 +804,15 @@ export function GroupDashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           {isAuthor && (
-            <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
-              Transferir admin
-            </Button>
+            solicitud.hasPendingTransfer ? (
+              <Button variant="secondary" size="sm" disabled>
+                Transferencia solicitada
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
+                Transferir admin
+              </Button>
+            )
           )}
           <Button variant="danger" size="sm" onClick={() => setShowLeaveConfirm(true)} loading={leaveLoading}>
             Salir
@@ -782,7 +836,7 @@ export function GroupDashboardPage() {
           <p className="text-success-600 dark:text-success-400 text-sm">Transferencia aceptada correctamente.</p>
         </div>
       )}
-      {pendingTransferId && isAdmin && (
+      {pendingTransferId && (
         <div className="bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800 px-4 sm:px-6 py-2 flex items-center justify-between">
           <p className="text-primary-700 dark:text-primary-300 text-sm">Tienes una transferencia de administración pendiente.</p>
           <Button variant="primary" size="sm" onClick={handleAcceptTransfer} loading={acceptTransferLoading}>
@@ -823,6 +877,18 @@ export function GroupDashboardPage() {
                       previousSenderSame={index > 0 && enhancedMessages[index - 1].senderId === msg.senderId}
                       onRetry={handleRetry}
                       onReply={(m) => setReplyingTo(m)}
+                      onToggleReaction={async (messageId, emoji) => {
+                        try {
+                          const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);
+                          setMessages((prev) =>
+                            prev.map((m) =>
+                              m.id === messageId ? { ...m, reactions: result.reactions } : m
+                            )
+                          );
+                        } catch (err: any) {
+                          console.error("Error al reaccionar:", err?.response?.data?.message || err.message);
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -1062,13 +1128,23 @@ export function GroupDashboardPage() {
                   <h2 className="text-sm font-bold text-primary-900 dark:text-white mb-2">Acciones de administración</h2>
                   <div className="space-y-2">
                     {isAuthor && (
-                      <Button
-                        variant="secondary"
-                        className="w-full justify-center"
-                        onClick={() => setShowTransferModal(true)}
-                      >
-                        Transferir administración
-                      </Button>
+                      solicitud.hasPendingTransfer ? (
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-center"
+                          disabled
+                        >
+                          Transferencia solicitada
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-center"
+                          onClick={() => setShowTransferModal(true)}
+                        >
+                          Transferir administración
+                        </Button>
+                      )
                     )}
                     <Button
                       variant="danger"

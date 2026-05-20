@@ -4,7 +4,7 @@ import type {
   ConversationSummary,
   CreateConversationInput,
 } from "../../domain/entities/Conversation.js";
-import type { CreateMessageInput, Message } from "../../domain/entities/Message.js";
+import type { CreateMessageInput, Message, Reaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 
 interface StoredConversation {
@@ -143,6 +143,7 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
       replyPreview: input.replyPreview ?? null,
       createdAt: new Date().toISOString(),
       readAt: null,
+      reactions: [],
       sender: {
         fullName: "Usuario",
         avatarUrl: null,
@@ -271,5 +272,30 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
       lastMessageAt: latest?.createdAt ?? null,
       unreadCount,
     };
+  }
+
+  async toggleReaction(messageId: string, currentUserId: string, emoji: string) {
+    const message = this.messages.get(messageId);
+    if (!message) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    const conversation = this.conversations.get(message.conversationId);
+    if (!conversation || !this.isParticipant(conversation, currentUserId)) {
+      throw new Error("No tienes permisos para reaccionar a este mensaje.");
+    }
+
+    const current = message.reactions ?? [];
+    const existingIdx = current.findIndex((r) => r.emoji === emoji && r.userId === currentUserId);
+
+    let updated: Reaction[];
+    if (existingIdx >= 0) {
+      updated = current.filter((_, i) => i !== existingIdx);
+    } else {
+      updated = [...current, { emoji, userId: currentUserId }];
+    }
+
+    this.messages.set(messageId, { ...message, reactions: updated });
+    return { conversationId: message.conversationId, reactions: updated };
   }
 }

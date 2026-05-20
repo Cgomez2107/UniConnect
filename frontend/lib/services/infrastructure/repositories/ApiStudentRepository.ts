@@ -1,7 +1,7 @@
 import { SupabaseStudentRepository } from "./SupabaseStudentRepository";
 import { fetchApi } from "@/lib/api/httpClient";
 import type { IStudentRepository } from "../../domain/repositories/IStudentRepository";
-import type { StudentSearchResult, StudentPublicProfile } from "@/types";
+import type { StudentSearchResult, StudentPublicProfile, PerfilCompleto } from "@/types";
 
 /**
  * Repositorio de estudiantes que delega al microservicio profiles-catalog.
@@ -32,6 +32,16 @@ export class ApiStudentRepository implements IStudentRepository {
         }
     }
 
+    async getDecoratedProfile(studentId: string): Promise<PerfilCompleto | null> {
+        try {
+            const data = await fetchApi<any>(`/perfil/${studentId}?vista=completa`);
+            if (!data) return null;
+            return mapPerfilCompletoFromApi(data);
+        } catch {
+            return null;
+        }
+    }
+
     async getPublicProfile(studentId: string, currentUserId: string): Promise<StudentPublicProfile | null> {
         try {
             const params = new URLSearchParams();
@@ -56,6 +66,31 @@ function mapStudentSearchResultFromApi(raw: any): StudentSearchResult {
         semester: raw.semester ?? null,
         program_name: raw.programName ?? raw.program_name ?? null,
         faculty_name: raw.facultyName ?? raw.faculty_name ?? null,
+    };
+}
+
+function mapPerfilCompletoFromApi(raw: any): PerfilCompleto {
+    return {
+        id: raw.id,
+        nombre: raw.fullName ?? raw.full_name ?? "",
+        carrera: raw.carrera ?? raw.programName ?? raw.program_name ?? "Sin programa",
+        semestre: raw.semestre ?? raw.semester ?? 0,
+        asignaturasActivas: (raw.asignaturasActivas ?? raw.shared_subjects ?? []).map((s: any) => ({
+            id: s.id ?? s.subject_id,
+            nombre: s.nombre ?? s.name ?? "",
+        })),
+        indicadores: {
+            gruposBajoAdministracion: raw.indicadores?.gruposBajoAdministracion ?? 0,
+            gruposParticipa: raw.indicadores?.gruposParticipa ?? 0,
+            mensajesEnviados: raw.indicadores?.mensajesEnviados ?? 0,
+        },
+        insignias: (raw.insignias ?? []).map((i: any) => ({
+            id: i.id,
+            nombre: i.nombre,
+            descripcion: i.descripcion ?? "",
+            iconoUrl: i.iconoUrl ?? "",
+            fechaObtenida: i.fechaObtenida ?? "",
+        })),
     };
 }
 

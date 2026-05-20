@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { z, ZodError } from "zod";
 
 import { ApplyToStudyRequest } from "../../../application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "../../../application/use-cases/AcceptAdminTransfer.js";
@@ -17,16 +18,30 @@ import { RejectAdminTransfer } from "../../../application/use-cases/RejectAdminT
 import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
-import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
+import { ToggleStudyGroupMessageReaction } from "../../../application/use-cases/ToggleStudyGroupMessageReaction.js";
+import { CreateStudySession } from "../../../application/use-cases/CreateStudySession.js";
+import { CancelStudySession } from "../../../application/use-cases/CancelStudySession.js";
+import { UpdateAvailability } from "../../../application/use-cases/UpdateAvailability.js";
+import { ListSessionsByGroup } from "../../../application/use-cases/ListSessionsByGroup.js";
 import type { CreateStudyGroupMessageDto } from "../dto/CreateStudyGroupMessageDto.js";
-import type { CreateStudyGroupDto } from "../dto/CreateStudyGroupDto.js";
-import type { RequestAdminTransferDto } from "../dto/RequestAdminTransferDto.js";
-import type { ReviewApplicationDto } from "../dto/ReviewApplicationDto.js";
+import type { CreateSessionDto } from "../dto/CreateSessionDto.js";
+import type { UpdateAvailabilityDto } from "../dto/UpdateAvailabilityDto.js";
+import { CreateGroupRequestSchema } from "@uniconnect/shared-types/contracts/study-group";
+import type { CreateGroupRequest } from "@uniconnect/shared-types/contracts/study-group";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
+import { validateBody } from "../../../middleware/validationMiddleware.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
-import { DtoValidationError, Validators, validateDto } from "../../../../../../shared/libs/validation/index.js";
-import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
+import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
+
+const ReviewApplicationBodySchema = z.object({
+  status: z.enum(["aceptada", "rechazada"]),
+});
+
+const RequestTransferBodySchema = z.object({
+  targetUserId: z.string().min(1),
+});
 
 /**
  * Controlador HTTP del dominio study-groups.
@@ -59,6 +74,11 @@ export class StudyGroupsController {
     private readonly listMyStudyRequestsUC: ListMyStudyRequests,
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
+    private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
+    private readonly createStudySessionUC: CreateStudySession,
+    private readonly cancelStudySessionUC: CancelStudySession,
+    private readonly updateAvailabilityUC: UpdateAvailability,
+    private readonly listSessionsByGroupUC: ListSessionsByGroup,
   ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -114,14 +134,19 @@ export class StudyGroupsController {
       return;
     }
 
-    const body = await readJsonBody<CreateStudyGroupDto>(req);
+    const body = await readJsonBody<ApplyToStudyGroupDto>(req);
     try {
+      const parsed = validateBody<CreateGroupRequest["body"]>(CreateGroupRequestSchema.shape.body, body, res);
+      if (!parsed) {
+        return;
+      }
+
       const created = await this.createStudyRequest.execute({
         actorUserId,
-        subjectId: body.subjectId ?? "",
-        title: body.title ?? "",
-        description: body.description ?? "",
-        maxMembers: body.maxMembers ?? Number.NaN,
+        subjectId: parsed.subjectId,
+        title: parsed.name,
+        description: parsed.description,
+        maxMembers: parsed.maxMembers,
       });
 
       sendData(res, 201, created);
@@ -171,7 +196,7 @@ export class StudyGroupsController {
     const limitRaw = requestUrl.searchParams.get("limit");
 
     const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
-    const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 20;
+    const pageSize = limitRaw ? Math.min(200, Math.max(1, Number(limitRaw))) : 50;
 
     try {
       const messages = await this.listStudyGroupMessages.execute({
@@ -220,11 +245,6 @@ export class StudyGroupsController {
 
       sendData(res, 201, created);
     } catch (error) {
-      if (error instanceof DtoValidationError) {
-        sendJson(res, 400, { error: error.message, fields: error.fields });
-        return;
-      }
-
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
@@ -319,30 +339,20 @@ export class StudyGroupsController {
       return;
     }
 
-    const body = await readJsonBody<ReviewApplicationDto>(req);
+    const body = await readJsonBody(req);
     try {
-      validateDto(
-        body,
-        {
-          status: [
-            (value) => Validators.required(value, "status"),
-            (value) => Validators.oneOf(value, ["aceptada", "rechazada"], "status"),
-          ],
-        },
-      );
-
-      const validatedStatus = body.status as "aceptada" | "rechazada";
+      const parsed = ReviewApplicationBodySchema.parse(body);
 
       await this.reviewApplication.execute({
         applicationId,
         actorUserId,
-        status: validatedStatus,
+        status: parsed.status,
       });
 
       sendData(res, 200, { message: "Postulación revisada correctamente." });
     } catch (error) {
-      if (error instanceof DtoValidationError) {
-        sendJson(res, 400, { error: error.message, fields: error.fields });
+      if (error instanceof ZodError) {
+        sendError(res, 400, "Error de validación: el campo 'status' debe ser 'aceptada' o 'rechazada'.");
         return;
       }
 
@@ -362,26 +372,21 @@ export class StudyGroupsController {
       return;
     }
 
-    const body = await readJsonBody<RequestAdminTransferDto>(req);
+    const body = await readJsonBody(req);
 
     try {
-      validateDto(
-        body,
-        {
-          targetUserId: [(value) => Validators.required(value, "targetUserId")],
-        },
-      );
+      const parsed = RequestTransferBodySchema.parse(body);
 
       const created = await this.requestAdminTransfer.execute({
         requestId,
         actorUserId,
-        targetUserId: body.targetUserId as string,
+        targetUserId: parsed.targetUserId,
       });
 
       sendData(res, 201, created);
     } catch (error) {
-      if (error instanceof DtoValidationError) {
-        sendJson(res, 400, { error: error.message, fields: error.fields });
+      if (error instanceof ZodError) {
+        sendError(res, 400, "Error de validación: el campo 'targetUserId' es requerido.");
         return;
       }
 
@@ -432,6 +437,32 @@ export class StudyGroupsController {
       });
 
       sendData(res, 200, { message: "Transferencia rechazada correctamente." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async toggleMessageReaction(
+    req: IncomingMessage,
+    res: ServerResponse,
+    messageId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const body = await readJsonBody<{ emoji: string }>(req);
+      if (!body.emoji) {
+        sendError(res, 400, "El campo 'emoji' es requerido.");
+        return;
+      }
+
+      const reactions = await this.toggleStudyGroupMessageReaction.execute(messageId, actorUserId, body.emoji);
+      sendData(res, 200, { reactions });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -508,6 +539,143 @@ export class StudyGroupsController {
     try {
       const updated = await this.cancelStudyRequestUC.execute(requestId);
       sendData(res, 200, updated);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async createSession(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const body = await readJsonBody<CreateSessionDto>(req);
+    try {
+      if (body.daysOfWeek && body.frequency) {
+        if (!body.startDate || !body.time || !body.durationMinutes) {
+          sendError(res, 400, "startDate, time, and durationMinutes are required for recurring sessions.");
+          return;
+        }
+        if (!Array.isArray(body.daysOfWeek) || body.daysOfWeek.length === 0) {
+          sendError(res, 400, "daysOfWeek must be a non-empty array.");
+          return;
+        }
+        const seriesEndDate = body.seriesEndDate ?? body.endDate;
+        const result = await this.createStudySessionUC.executeRecurring({
+          actorUserId,
+          requestId,
+          title: body.title,
+          description: body.description,
+          startDate: body.startDate,
+          endDate: seriesEndDate,
+          time: body.time,
+          durationMinutes: body.durationMinutes,
+          daysOfWeek: body.daysOfWeek,
+          frequency: "weekly",
+          location: body.location,
+          reminderMinutes: body.reminderMinutes,
+        });
+        sendData(res, 201, result);
+      } else {
+        if (!body.startTime || !body.durationMinutes) {
+          sendError(res, 400, "startTime and durationMinutes are required.");
+          return;
+        }
+        const result = await this.createStudySessionUC.executeSingle({
+          actorUserId,
+          requestId,
+          title: body.title,
+          description: body.description,
+          startTime: body.startTime,
+          durationMinutes: body.durationMinutes,
+          location: body.location,
+          reminderMinutes: body.reminderMinutes,
+        });
+        sendData(res, 201, result);
+      }
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listSessions(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const requestUrl = new URL(req.url ?? "/", "http://localhost");
+    try {
+      const sessions = await this.listSessionsByGroupUC.execute(requestId, {
+        from: requestUrl.searchParams.get("from") ?? undefined,
+        to: requestUrl.searchParams.get("to") ?? undefined,
+        status: requestUrl.searchParams.get("status") ?? undefined,
+      });
+      sendData(res, 200, sessions, { total: sessions.length });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async cancelSession(req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const result = await this.cancelStudySessionUC.execute(sessionId, actorUserId);
+      sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async updateAvailability(req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const body = await readJsonBody<UpdateAvailabilityDto>(req);
+    if (!body.status || !["confirmed", "declined"].includes(body.status)) {
+      sendError(res, 400, "status must be 'confirmed' or 'declined'.");
+      return;
+    }
+
+    try {
+      const result = await this.updateAvailabilityUC.execute(
+        sessionId,
+        actorUserId,
+        "",
+        body.status,
+      );
+      sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listSessionAttendees(req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const attendees = await this.listSessionsByGroupUC.listAttendees(sessionId);
+      sendData(res, 200, attendees, { total: attendees.length });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

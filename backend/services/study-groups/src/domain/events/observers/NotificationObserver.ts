@@ -14,22 +14,25 @@ export class NotificationObserver implements IObserver {
   ) {}
 
   async handle(event: StudyGroupEvent): Promise<void> {
-    const { persistence, dto } = this.mapper.map(event);
+    const results = this.mapper.map(event);
 
-    await this.notificationRepository.create(persistence);
+    for (const { persistence, dto } of results) {
+      await this.notificationRepository.create(persistence);
 
-    const resumen: ResumenNotificacion = await this.notificationService.notificar(dto);
+      const resumen: ResumenNotificacion = await this.notificationService.notificar(dto);
 
-    console.log(
-      JSON.stringify({
-        observer: this.name,
-        event: event.type,
-        dispatchResult: {
-          total: resumen.total,
-          exitosos: resumen.exitosos,
-          fallidos: resumen.fallidos,
-        },
-      }),
-    );
+      console.log(
+        JSON.stringify({
+          observer: this.name,
+          event: event.type,
+          targetUser: dto.userId,
+          dispatchResult: {
+            total: resumen.total,
+            exitosos: resumen.exitosos,
+            fallidos: resumen.fallidos,
+          },
+        }),
+      );
+    }
   }
 }

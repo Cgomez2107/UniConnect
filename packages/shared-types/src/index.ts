@@ -1,27 +1,23 @@
-/**
- * @uniconnect/shared-types
- * Canonical type definitions for UniConnect
- *
- * Exports domain types (camelCase UI layer), API DTOs (snake_case backend),
- * and error types used across all packages.
- */
+export * from "./schemas/_common.schema.js";
+export * from "./schemas/auth.schema.js";
+export * from "./schemas/user.schema.js";
+export * from "./schemas/study-group.schema.js";
+export * from "./schemas/messaging.schema.js";
+export * from "./schemas/resource.schema.js";
+export * from "./schemas/event.schema.js";
+export * from "./schemas/notification.schema.js";
 
-// ============================================================================
-// Domain Types (UI Layer - camelCase)
-// ============================================================================
-export * from "./domain";
+export * from "./api/_base.contract.js";
+export * from "./api/auth.contract.js";
+export * from "./api/study-group.contract.js";
+export * from "./api/resource.contract.js";
+export * from "./api/messaging.contract.js";
+export * from "./api/event.contract.js";
+export * from "./api/notification.contract.js";
 
-// ============================================================================
-// API DTOs (Backend Layer - snake_case)
-// ============================================================================
-export * from "./dto";
+export * from "./types/domain.js";
+export * from "./types/dto.js";
+export * from "./lib/mappers.js";
+export * from "./lib/errors.js";
 
-// ============================================================================
-// Error Types
-// ============================================================================
-export * from "./errors";
-
-// ============================================================================
-// Version Info (for debugging)
-// ============================================================================
-export const SHARED_TYPES_VERSION = "0.1.0";
+export const SHARED_TYPES_VERSION = "0.2.0";

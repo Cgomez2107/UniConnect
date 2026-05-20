@@ -1,5 +1,3 @@
-import { createServer } from "node:http";
-
 import { ApplyToStudyRequest } from "./application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "./application/use-cases/AcceptAdminTransfer.js";
 import { CancelStudyRequest } from "./application/use-cases/CancelStudyRequest.js";
@@ -17,6 +15,12 @@ import { RejectAdminTransfer } from "./application/use-cases/RejectAdminTransfer
 import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
+import { ToggleStudyGroupMessageReaction } from "./application/use-cases/ToggleStudyGroupMessageReaction.js";
+import { CreateStudySession } from "./application/use-cases/CreateStudySession.js";
+import { CancelStudySession } from "./application/use-cases/CancelStudySession.js";
+import { UpdateAvailability } from "./application/use-cases/UpdateAvailability.js";
+import { ListSessionsByGroup } from "./application/use-cases/ListSessionsByGroup.js";
+import { SessionScheduler } from "./application/services/SessionScheduler.js";
 import { loadStudyGroupsEnv } from "./config/env.js";
 import { NotificationObserver, PersistenceObserver, StudyGroupSubject } from "./domain/events/index.js";
 import { StudyGroupMembershipService } from "./domain/services/StudyGroupMembershipService.js";
@@ -26,18 +30,28 @@ import type { INotificationRepository } from "./domain/repositories/INotificatio
 import type { IMemberRepository } from "./domain/repositories/IMemberRepository.js";
 import type { IStudyGroupMessageRepository } from "./domain/repositories/IStudyGroupMessageRepository.js";
 import type { IStudyGroupRepository } from "./domain/repositories/IStudyGroupRepository.js";
+import type { IStudySessionRepository } from "./domain/repositories/IStudySessionRepository.js";
+import type { ISessionSeriesRepository } from "./domain/repositories/ISessionSeriesRepository.js";
+import type { ISessionAttendeeRepository } from "./domain/repositories/ISessionAttendeeRepository.js";
+import { createStudyGroupsServer } from "./app/createStudyGroupsServer.js";
 import { InMemoryStudyRequestRepository } from "./infrastructure/database/InMemoryStudyRequestRepository.js";
 import { InMemoryAdminTransferRepository } from "./infrastructure/database/InMemoryAdminTransferRepository.js";
 import { InMemoryApplicationRepository } from "./infrastructure/database/InMemoryApplicationRepository.js";
 import { InMemoryMemberRepository } from "./infrastructure/database/InMemoryMemberRepository.js";
 import { InMemoryNotificationRepository } from "./infrastructure/database/InMemoryNotificationRepository.js";
 import { InMemoryStudyGroupMessageRepository } from "./infrastructure/database/InMemoryStudyGroupMessageRepository.js";
+import { InMemoryStudySessionRepository } from "./infrastructure/database/InMemoryStudySessionRepository.js";
+import { InMemorySessionSeriesRepository } from "./infrastructure/database/InMemorySessionSeriesRepository.js";
+import { InMemorySessionAttendeeRepository } from "./infrastructure/database/InMemorySessionAttendeeRepository.js";
 import { PostgresAdminTransferRepository } from "./infrastructure/database/PostgresAdminTransferRepository.js";
 import { PostgresApplicationRepository } from "./infrastructure/database/PostgresApplicationRepository.js";
 import { PostgresMemberRepository } from "./infrastructure/database/PostgresMemberRepository.js";
 import { PostgresNotificationRepository } from "./infrastructure/database/PostgresNotificationRepository.js";
 import { PostgresStudyGroupMessageRepository } from "./infrastructure/database/PostgresStudyGroupMessageRepository.js";
 import { PostgresStudyRequestRepository } from "./infrastructure/database/PostgresStudyRequestRepository.js";
+import { PostgresStudySessionRepository } from "./infrastructure/database/PostgresStudySessionRepository.js";
+import { PostgresSessionSeriesRepository } from "./infrastructure/database/PostgresSessionSeriesRepository.js";
+import { PostgresSessionAttendeeRepository } from "./infrastructure/database/PostgresSessionAttendeeRepository.js";
 import { PostgresPreferenceRepository } from "./infrastructure/database/PostgresPreferenceRepository.js";
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
@@ -66,10 +80,6 @@ import {
   type IRealtimeService as IGroupRealtimeService,
   type IIdempotencyStore as IGroupIdempotencyStore,
 } from "../../messaging/src/domain/events/index.js";
-
-function sendJsonError(statusCode: number, message: string): string {
-  return JSON.stringify({ error: message });
-}
 
 interface Repositories {
   studyRequest: IStudyRequestRepository;
@@ -153,6 +163,23 @@ function createNotificationRepository(
   return new InMemoryNotificationRepository();
 }
 
+function createSessionRepositories(
+  pool: Pool | null,
+): { session: IStudySessionRepository; series: ISessionSeriesRepository; attendee: ISessionAttendeeRepository } {
+  if (pool) {
+    return {
+      session: new PostgresStudySessionRepository(pool),
+      series: new PostgresSessionSeriesRepository(pool),
+      attendee: new PostgresSessionAttendeeRepository(pool),
+    };
+  }
+  return {
+    session: new InMemoryStudySessionRepository(),
+    series: new InMemorySessionSeriesRepository(),
+    attendee: new InMemorySessionAttendeeRepository(),
+  };
+}
+
 function bootstrap(): void {
   const env = loadStudyGroupsEnv();
 
@@ -178,6 +205,8 @@ function bootstrap(): void {
       async setCanalActivo(_userId: string, _eventType: string, _canal: string, _activo: boolean): Promise<void> {},
     },
   );
+
+  const sessionRepos = createSessionRepositories(pool);
 
   const realtimeGateway = (env.supabaseUrl && env.supabaseServiceRoleKey)
     ? new SupabaseRealtimeGateway(env.supabaseUrl, env.supabaseServiceRoleKey)
@@ -333,6 +362,30 @@ function bootstrap(): void {
   const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
+  const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
+  const createStudySessionUC = new CreateStudySession(
+    sessionRepos.session,
+    sessionRepos.series,
+    studyGroupRepository,
+  );
+  const cancelStudySessionUC = new CancelStudySession(
+    sessionRepos.session,
+    studyGroupRepository,
+    sessionRepos.attendee,
+    subject,
+  );
+  const updateAvailabilityUC = new UpdateAvailability(
+    sessionRepos.attendee,
+    sessionRepos.session,
+    studyGroupRepository,
+    subject,
+  );
+  const listSessionsByGroupUC = new ListSessionsByGroup(
+    sessionRepos.session,
+    sessionRepos.attendee,
+  );
+  const scheduler = new SessionScheduler(sessionRepos.session, notificationService);
+  scheduler.start();
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -351,47 +404,13 @@ function bootstrap(): void {
     listMyStudyRequestsUC,
     listMyApplicationsUC,
     cancelStudyRequestUC,
+    toggleStudyGroupMessageReaction,
+    createStudySessionUC,
+    cancelStudySessionUC,
+    updateAvailabilityUC,
+    listSessionsByGroupUC,
   );
-
-  const server = createServer((req, res) => {
-    const resp = res as any;
-    // Manejo de CORS - Permitir solo orígenes específicos con credenciales
-    const origin = req.headers.origin;
-    const allowedOrigins = [
-      "http://localhost:8081",
-      "http://localhost:8082",
-      "http://127.0.0.1:8081",
-      "http://127.0.0.1:8082",
-      "http://192.168.140.38:8081",
-      "http://192.168.140.38:8082",
-    ];
-    
-    const originStr = Array.isArray(origin) ? origin[0] : origin;
-    if (originStr && allowedOrigins.includes(originStr)) {
-      resp.setHeader("Access-Control-Allow-Origin", originStr);
-    }
-    
-    resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning, bypass-tunnel-reminder");
-    resp.setHeader("Access-Control-Allow-Credentials", "true");
-
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    void (async () => {
-      const handled = await handleStudyGroupsRoutes(req, res, controller);
-      if (!handled) {
-        res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(sendJsonError(404, "Route not found"));
-      }
-    })().catch((error: any) => {
-      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(sendJsonError(500, error instanceof Error ? error.message : "Unexpected service error"));
-    });
-  });
+  const server = createStudyGroupsServer(controller);
 
   (server as any).listen({ port: env.port, host: "::" }, () => {
     console.log(
@@ -415,6 +434,7 @@ function bootstrap(): void {
     });
 
     try {
+      scheduler.stop();
       subject.clear();
       groupChatSubject.clear();
 

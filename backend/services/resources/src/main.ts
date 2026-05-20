@@ -1,11 +1,11 @@
 import { createServer } from "node:http";
 
-import { CreateStudyResource } from "./application/use-cases/CreateStudyResource.ts";
-import { DeleteStudyResource } from "./application/use-cases/DeleteStudyResource.ts";
-import { GetStudyResourceById } from "./application/use-cases/GetStudyResourceById.ts";
+import { CreateStudyResource } from "./application/use-cases/CreateStudyResource.js";
+import { DeleteStudyResource } from "./application/use-cases/DeleteStudyResource.js";
+import { GetStudyResourceById } from "./application/use-cases/GetStudyResourceById.js";
 import { ListStudyResources } from "./application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "./application/use-cases/UpdateStudyResource.js";
-import { loadResourcesEnv } from "./config/env.ts";
+import { loadResourcesEnv } from "./config/env.js";
 import type { IStudyResourceRepository } from "./domain/repositories/IStudyResourceRepository.js";
 import { InMemoryStudyResourceRepository } from "./infrastructure/database/InMemoryStudyResourceRepository.js";
 import { PostgresStudyResourceRepository } from "./infrastructure/database/PostgresStudyResourceRepository.js";

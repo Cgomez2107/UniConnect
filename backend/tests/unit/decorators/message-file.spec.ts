@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { BaseMessage } from "../../../services/messaging/src/domain/decorators/BaseMessage";
-import { FileDecorator } from "../../../services/messaging/src/domain/decorators/FileDecorator";
-import type { FileMetadata } from "../../../services/messaging/src/domain/decorators/FileDecorator";
+import { BaseMessage } from "../../../services/messaging/src/domain/decorators/BaseMessage.js";
+import { FileDecorator } from "../../../services/messaging/src/domain/decorators/FileDecorator.js";
+import type { FileMetadata } from "../../../services/messaging/src/domain/decorators/FileDecorator.js";
 
 describe("US-T01 Tarea 2 - MensajeConArchivo", () => {
   it("getMetadata() debe incluir informacion del archivo (url, mimeType, size)", () => {

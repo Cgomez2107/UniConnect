@@ -9,6 +9,7 @@ import { GetUnreadCount } from "./application/use-cases/GetUnreadCount.js";
 import { MarkMessageAsRead } from "./application/use-cases/MarkMessageAsRead.js";
 import { MarkConversationAsRead } from "./application/use-cases/MarkConversationAsRead.js";
 import { SendMessage } from "./application/use-cases/SendMessage.js";
+import { ToggleReaction } from "./application/use-cases/ToggleReaction.js";
 import { TouchConversation } from "./application/use-cases/TouchConversation.js";
 import { ChatSubject, RealtimeObserver, IdempotencyObserver, ChatNotificationObserver, type IRealtimeService, type IIdempotencyStore } from "./domain/events/index.js";
 import { loadMessagingEnv } from "./config/env.js";
@@ -60,27 +61,6 @@ function bootstrap(): void {
 	// ✅ Crear ChatSubject para eventos en tiempo real
 	const chatSubject = new ChatSubject("messaging-domain");
 
-	// ✅ Registrar observers de chat (tiempo real)
-	const realtimeObserver = new RealtimeObserver({
-		async broadcast(channel, message) {
-			console.log(
-				JSON.stringify({
-					service: "messaging",
-					level: "info",
-					message: "WebSocket broadcast",
-					channel,
-					eventType: message.type,
-				}),
-			);
-		},
-	});
-
-	// ✅ Idempotency store (evita duplicados)
-	const idempotencyObserver = new IdempotencyObserver({
-		async markProcessed(_messageId) { return true; },
-		async cleanup(_olderThanSeconds) {},
-	});
-
 	// ✅ Gateway de notificaciones vía Supabase Realtime
 	const realtimeGateway = (env.supabaseUrl && env.supabaseServiceRoleKey)
 		? new SupabaseRealtimeGateway(env.supabaseUrl, env.supabaseServiceRoleKey)
@@ -95,6 +75,29 @@ function bootstrap(): void {
 			}),
 		);
 	}
+
+	// ✅ Registrar observers de chat (tiempo real)
+	const realtimeObserver = new RealtimeObserver(
+		realtimeGateway || {
+			async broadcast(channel, message) {
+				console.log(
+					JSON.stringify({
+						service: "messaging",
+						level: "info",
+						message: "WebSocket broadcast",
+						channel,
+						eventType: message.type,
+					}),
+				);
+			},
+		}
+	);
+
+	// ✅ Idempotency store (evita duplicados)
+	const idempotencyObserver = new IdempotencyObserver({
+		async markProcessed(_messageId) { return true; },
+		async cleanup(_olderThanSeconds) {},
+	});
 
 	// ✅ IUserRepository — resuelve contacto del destinatario antes de emitir
 	const userRepository: IUserRepository = {
@@ -147,20 +150,22 @@ function bootstrap(): void {
 		chatNotificationObserver,
 	);
 	const markMessageAsRead = new MarkMessageAsRead(repository);
-	const markConversationAsRead = new MarkConversationAsRead(repository);
+  const markConversationAsRead = new MarkConversationAsRead(repository);
+  const toggleReaction = new ToggleReaction(repository, chatSubject, realtimeObserver);
 
-	const controller = new MessagingController(
-		getConversations,
-		getConversationById,
-		getOrCreateConversation,
-		touchConversation,
-		getMessageById,
-		listMessages,
-		getUnreadCount,
-		sendMessage,
-		markMessageAsRead,
-		markConversationAsRead,
-	);
+  const controller = new MessagingController(
+    getConversations,
+    getConversationById,
+    getOrCreateConversation,
+    touchConversation,
+    getMessageById,
+    listMessages,
+    getUnreadCount,
+    sendMessage,
+    markMessageAsRead,
+    markConversationAsRead,
+    toggleReaction,
+  );
 
 	const server = createServer((req, res) => {
 		void (async () => {

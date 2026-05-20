@@ -30,3 +30,6 @@ CREATE INDEX IF NOT EXISTS idx_messages_media_url
 CREATE INDEX IF NOT EXISTS idx_messages_reply_to_message_id
   ON messages(reply_to_message_id)
   WHERE reply_to_message_id IS NOT NULL;
+
+ALTER TABLE messages
+  ADD COLUMN IF NOT EXISTS reactions JSONB DEFAULT '[]'::jsonb;

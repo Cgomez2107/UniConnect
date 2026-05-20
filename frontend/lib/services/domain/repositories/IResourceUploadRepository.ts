@@ -1,7 +1,6 @@
 import type { CreateStudyResourcePayload, StudyResource } from "@/types"
 
 export interface IResourceUploadRepository {
-  validateFileFormat(fileName: string): boolean
   validateFileSize(sizeBytes: number): boolean
   uploadFromDevice(
     userId: string,

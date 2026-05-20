@@ -1,0 +1,1 @@
+export { validateBody, validateParams, validateQuery } from "../../../../shared/middleware/validationMiddleware.js";

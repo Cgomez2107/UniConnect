@@ -10,11 +10,12 @@ import MiniRequestCard from "@/components/profile/MiniRequestCard";
 import LoadingState from "@/components/profile/LoadingState";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import BadgePanel from "@/components/profile/BadgePanel";
 
 export function PerfilPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { profile, programs, subjects, publications, isLoading, error, primaryProgram } = useProfile();
+  const { profile, programs, subjects, publications, isLoading, error, primaryProgram, indicadores, insignias } = useProfile();
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   if (!user) {
@@ -41,7 +42,9 @@ export function PerfilPage() {
     .filter(Boolean) as { id: string; name: string }[];
   const publicationCount = publications.length;
   const subjectCount = subjects.length;
-  const groupCount = 0;
+  const groupCount = indicadores
+    ? indicadores.gruposBajoAdministracion + indicadores.gruposParticipa
+    : 0;
 
   const handleSignOut = async () => {
     try {
@@ -90,8 +93,8 @@ export function PerfilPage() {
             value={
               programs.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {programs.map((p) => (
-                    <span key={p.program_id} className="inline-flex items-center gap-1">
+                  {programs.map((p, index) => (
+                    <span key={p.program_id ?? p.programs?.id ?? `prog-${index}`} className="inline-flex items-center gap-1">
                       <span>{p.programs?.name || p.program_id}</span>
                       {p.is_primary && (
                         <span className="px-2 py-0.5 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded-full text-xs font-medium">
@@ -173,9 +176,9 @@ export function PerfilPage() {
         >
           {publications.length > 0 ? (
             <div className="space-y-3">
-              {publications.map((pub: any) => (
+              {publications.map((pub: any, index) => (
                 <MiniRequestCard
-                  key={pub.id}
+                  key={pub?.id ?? pub?.title ?? `pub-${index}`}
                   title={pub.title || pub.name}
                   subjectName={pub.subjectName}
                   status={pub.status}
@@ -198,7 +201,9 @@ export function PerfilPage() {
           )}
         </SectionCard>
 
-        <StatsRow publications={publicationCount} groups={groupCount} subjects={subjectCount} />
+        <StatsRow publications={publicationCount} groups={groupCount} subjects={subjectCount} indicadores={indicadores} />
+
+        {insignias && insignias.length > 0 && <BadgePanel insignias={insignias} />}
 
         <div className="text-center mt-8">
           <button

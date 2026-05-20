@@ -133,8 +133,15 @@ export function mapStudyGroupDomainToDto(domain: StudyGroup): StudyGroupDTO {
 /**
  * Map NotificationDTO to Notification domain type
  */
-export function mapNotificationDtoToDomain(dto: NotificationDTO): Notification {
-  const camelCased = snakeToCamel<Notification>(dto);
+export function mapNotificationDtoToDomain(dto: Record<string, any>): Notification {
+  const withMappedKeys = {
+    ...dto,
+    data: dto.data ?? dto.payload ?? undefined,
+    description: dto.description ?? dto.body ?? undefined,
+    actionUrl: dto.actionUrl ?? dto.action_url ?? undefined,
+    read: dto.read ?? (dto.readAt != null || dto.read_at != null),
+  };
+  const camelCased = snakeToCamel<Notification>(withMappedKeys);
   return parseStringDatesToObjects<Notification>(camelCased);
 }
 

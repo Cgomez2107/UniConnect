@@ -14,7 +14,7 @@ type PersistenceInput = {
   payload: Record<string, unknown> | null;
 };
 
-type MappingResult = {
+export type MappingResult = {
   persistence: PersistenceInput;
   dto: NotificacionDTO;
 };
@@ -57,10 +57,10 @@ function buildNotificacion(
 }
 
 export class NotificationMapper {
-  map(event: StudyGroupEvent): MappingResult {
+  map(event: StudyGroupEvent): MappingResult[] {
     switch (event.type) {
       case "JOIN_REQUEST":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.recipientUserId,
           "solicitud_ingreso",
           event.groupName,
@@ -73,10 +73,10 @@ export class NotificationMapper {
             groupName: event.groupName,
           },
           "normal",
-        );
+        )];
 
       case "MEMBER_ACCEPTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.applicantId,
           "miembro_aceptado",
           event.groupName,
@@ -89,10 +89,10 @@ export class NotificationMapper {
           },
           "normal",
           { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.requestId}` },
-        );
+        )];
 
       case "MEMBER_REJECTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.applicantId,
           "miembro_rechazado",
           "Solicitud rechazada",
@@ -103,10 +103,10 @@ export class NotificationMapper {
             rejectedBy: event.rejectedBy,
           },
           "normal",
-        );
+        )];
 
       case "ADMIN_TRANSFER_REQUESTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.newAdminId,
           "transferencia_admin_solicitada",
           event.groupName,
@@ -118,10 +118,10 @@ export class NotificationMapper {
           },
           "urgente",
           { label: "Revisar solicitud", endpoint: `/api/v1/study-groups/transfers/${event.transferId}/accept` },
-        );
+        )];
 
       case "ADMIN_TRANSFER_ACCEPTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.oldAdminId,
           "transferencia_admin_aceptada",
           "Transferencia aceptada",
@@ -133,10 +133,10 @@ export class NotificationMapper {
           },
           "normal",
           { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.groupId}` },
-        );
+        )];
 
       case "ADMIN_TRANSFER_REJECTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.oldAdminId,
           "transferencia_admin_rechazada",
           "Transferencia rechazada",
@@ -147,10 +147,10 @@ export class NotificationMapper {
             newAdminId: event.newAdminId,
           },
           "normal",
-        );
+        )];
 
       case "ADMIN_TRANSFER_COMPLETED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.newAdminId,
           "transferencia_admin_transferida",
           event.groupName,
@@ -162,10 +162,10 @@ export class NotificationMapper {
           },
           "urgente",
           { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.groupId}` },
-        );
+        )];
 
       case "ADMIN_ROLE_LEFT":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.userId,
           "admin_role_left",
           event.groupName,
@@ -174,6 +174,37 @@ export class NotificationMapper {
             requestId: event.requestId,
           },
           "normal",
+        )];
+
+      case "AVAILABILITY_UPDATED":
+        return [buildNotificacion(
+          event.organizerId,
+          "disponibilidad_actualizada",
+          event.groupName,
+          `${event.userName} ha ${event.status === "confirmed" ? "confirmado" : "declinado"} su asistencia a la sesion.`,
+          {
+            sessionId: event.sessionId,
+            requestId: event.requestId,
+            userId: event.userId,
+            status: event.status,
+          },
+          "normal",
+        )];
+
+      case "SESSION_CANCELLED":
+        return event.attendeeIds.map(attendeeId =>
+          buildNotificacion(
+            attendeeId,
+            "sesion_cancelada",
+            event.groupName,
+            `La sesion "${event.title}" ha sido cancelada.`,
+            {
+              sessionId: event.sessionId,
+              requestId: event.requestId,
+              title: event.title,
+            },
+            "urgente",
+          ),
         );
 
       default: {

@@ -84,9 +84,10 @@ function App() {
   }, [hydrate]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchNotifications();
-    }
+    if (!isAuthenticated) return;
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30_000);
+    return () => clearInterval(interval);
   }, [isAuthenticated]);
 
   // Block rendering until hydration completes

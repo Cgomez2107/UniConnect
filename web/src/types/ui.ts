@@ -11,6 +11,19 @@ export interface ProfileUI {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // D02 — Decoradores opcionales (pueden venir o no del backend)
+  indicadores?: {
+    gruposBajoAdministracion: number;
+    gruposParticipa: number;
+    mensajesEnviados: number;
+  };
+  insignias?: Array<{
+    id: string;
+    nombre: string;
+    descripcion: string;
+    iconoUrl: string;
+    fechaObtenida: string;
+  }>;
 }
 
 export interface AdminUserUI {
