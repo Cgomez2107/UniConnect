@@ -27,7 +27,7 @@ import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { validateBody } from "../../../middleware/validationMiddleware.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
-import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
 import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
 import type { PreferenceService } from "../../../application/services/PreferenceService.js";
 
@@ -339,7 +339,7 @@ export class StudyGroupsController {
         }),
       );
 
-      sendData(res, 200, { preferences });
+      sendJson(res, 200, { preferences: preferences ?? [] });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -357,7 +357,7 @@ export class StudyGroupsController {
       const body = await readJsonBody(req);
       const parsed = UpdatePreferenceBodySchema.parse(body);
       await this.preferenceService.setCanalActivo(actorUserId, parsed.eventType, parsed.canal, parsed.active);
-      sendData(res, 200, { success: true });
+      sendJson(res, 200, { message: "Preferencia actualizada correctamente", success: true });
     } catch (error) {
       if (error instanceof ZodError) {
         sendError(res, 400, "Datos invalidos: " + error.errors.map(e => e.message).join(", "));
