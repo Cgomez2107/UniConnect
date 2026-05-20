@@ -12,11 +12,12 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Colors } from "@/constants/Colors";
 import { useChatComposer } from "@/hooks/application/useChatComposer";
 import { useMessaging } from "@/hooks/application/useMessaging";
+import { useMessageValidation } from "@/hooks/useMessageValidation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUnreadCountStore } from "@/store/unreadCountStore";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -177,6 +178,38 @@ export default function ChatScreen() {
     retryMessage,
   });
 
+  // Integrar validación
+  const { validationState, validateMessage, clearValidation } = useMessageValidation({
+    maxLength: 5000,
+    debounceMs: 300,
+  });
+
+  // Wrapper para el onChange que valida mientras escribe
+  const handleTextChange = useCallback((text: string) => {
+    chatInputProps.text.onChangeText(text);
+    chatInputProps.text.onTyping(text);
+    // Validar mientras escribe (debounced)
+    void validateMessage(text);
+  }, [chatInputProps, validateMessage]);
+
+  // Wrapper para validar antes de enviar
+  const handleSendWithValidation = useCallback(async () => {
+    const currentText = chatInputProps.text.value;
+    if (!currentText.trim()) return;
+
+    // Validar
+    await validateMessage(currentText);
+    
+    // Si hay error, no enviar
+    if (validationState.error) {
+      return;
+    }
+
+    // Enviar
+    chatInputProps.send.onSend();
+    clearValidation();
+  }, [chatInputProps, validateMessage, validationState.error, clearValidation]);
+
   const displayName = otherUserName
     ? decodeURIComponent(otherUserName)
     : "Chat";
@@ -321,7 +354,16 @@ export default function ChatScreen() {
 
       {/* ── Input ───────────────────────────────────────────────────────── */}
       {!loading && !error && (
-        <ChatInput {...chatInputProps} />
+        <ChatInput
+          {...{
+            text: { ...chatInputProps.text, onChangeText: handleTextChange },
+            reply: chatInputProps.reply,
+            media: chatInputProps.media,
+            send: { ...chatInputProps.send, onSend: handleSendWithValidation },
+            voice: chatInputProps.voice,
+          }}
+          validationState={validationState}
+        />
       )}
     </KeyboardAvoidingView>
   );

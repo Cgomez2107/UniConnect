@@ -84,17 +84,34 @@ export function useMessageAutocomplete(
 
       // Si el término es vacío, mostrar todos
       let suggestions: AutocompleteUser[] = [];
+      
+      // Agregar opción @all al inicio si hay más de un usuario
+      const allOption: AutocompleteUser = {
+        id: "@all",
+        name: "all",
+        email: "Menciona a todos los miembros",
+      };
+
       if (searchTerm.length === 0) {
-        suggestions = users.slice(0, maxSuggestions);
+        suggestions = [allOption, ...users.slice(0, maxSuggestions - 1)];
       } else if (searchTerm.length >= minChars) {
         const lowerTerm = searchTerm.toLowerCase();
-        suggestions = users
+        
+        // Filtrar usuarios
+        const userSuggestions = users
           .filter(
             (user) =>
               user.name.toLowerCase().includes(lowerTerm) ||
               user.email?.toLowerCase().includes(lowerTerm)
           )
           .slice(0, maxSuggestions);
+
+        // Incluir @all si coincide con la búsqueda
+        if ("all".includes(lowerTerm)) {
+          suggestions = [allOption, ...userSuggestions.slice(0, maxSuggestions - 1)];
+        } else {
+          suggestions = userSuggestions;
+        }
       }
 
       setState({
