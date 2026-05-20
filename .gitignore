@@ -47,3 +47,4 @@ openspec/*
 .github/*
 .opencode/*
 skills-lock.json
+.turbo/

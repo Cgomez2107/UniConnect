@@ -1,0 +1,788 @@
+{
+  "title": "UniConnect Academic Q&A Service",
+  "version": "0.1.0",
+  "serverUrl": "http://localhost:3107",
+  "basePath": "/api/v1",
+  "paths": {
+    "/api/v1/forum/questions": {
+      "get": {
+        "summary": "Listar preguntas del foro académico",
+        "description": "Obtiene una lista paginada de preguntas del foro. Puede filtrarse por materia.",
+        "tags": [
+          "Academic Q&A"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "default": 1
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 20
+                }
+              ]
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de preguntas obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_forum_questions_200Response"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear una nueva pregunta",
+        "description": "Publica una nueva pregunta en el foro académico. El usuario autenticado aparece como autor.",
+        "tags": [
+          "Academic Q&A"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_forum_questions_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pregunta creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_forum_questions_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación — datos de entrada inválidos"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/questions/{questionId}": {
+      "get": {
+        "summary": "Obtener detalle de una pregunta",
+        "description": "Retorna una pregunta específica con todas sus respuestas.",
+        "tags": [
+          "Academic Q&A"
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle de la pregunta obtenido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_forum_questions_questionId_200Response"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pregunta no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/questions/{questionId}/answers": {
+      "get": {
+        "summary": "Listar respuestas de una pregunta",
+        "description": "Obtiene todas las respuestas asociadas a una pregunta específica.",
+        "tags": [
+          "Academic Q&A"
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de respuestas obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_forum_questions_questionId_answers_200Response"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pregunta no encontrada"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear una respuesta",
+        "description": "Publica una respuesta a una pregunta existente en el foro.",
+        "tags": [
+          "Academic Q&A"
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_forum_questions_questionId_answers_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Respuesta creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_forum_questions_questionId_answers_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación — datos de entrada inválidos"
+          },
+          "404": {
+            "description": "Pregunta no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/questions/{questionId}/solution": {
+      "post": {
+        "summary": "Marcar respuesta como solución",
+        "description": "Marca una respuesta como la solución aceptada de una pregunta. Solo el autor de la pregunta puede marcar la solución.",
+        "tags": [
+          "Academic Q&A"
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_forum_questions_questionId_solution_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solución marcada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_forum_questions_questionId_solution_200Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "404": {
+            "description": "Pregunta o respuesta no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/votes": {
+      "post": {
+        "summary": "Votar por una pregunta o respuesta",
+        "description": "Emite un voto positivo o negativo sobre una pregunta o respuesta.",
+        "tags": [
+          "Academic Q&A"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_forum_votes_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Voto registrado exitosamente"
+          },
+          "400": {
+            "description": "Error de validación — tipo de voto o destino inválido"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Get_forum_questions_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "authorId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "subjectId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "answerCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "voteCount": {
+                  "type": "integer"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "authorId",
+                "status",
+                "answerCount",
+                "voteCount",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_forum_questions_RequestBody": {
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 300
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "title",
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "Post_forum_questions_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "authorId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string"
+              },
+              "answerCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "voteCount": {
+                "type": "integer"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "body",
+              "authorId",
+              "status",
+              "answerCount",
+              "voteCount",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_forum_questions_questionId_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "question": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  },
+                  "authorId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "subjectId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "answerCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "voteCount": {
+                    "type": "integer"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "body",
+                  "authorId",
+                  "status",
+                  "answerCount",
+                  "voteCount",
+                  "createdAt",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              },
+              "answers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "questionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "authorId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "voteCount": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "questionId",
+                    "authorId",
+                    "body",
+                    "voteCount",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "question",
+              "answers"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_forum_questions_questionId_answers_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "questionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "authorId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "voteCount": {
+                  "type": "integer"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "questionId",
+                "authorId",
+                "body",
+                "voteCount",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_forum_questions_questionId_answers_RequestBody": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "Post_forum_questions_questionId_answers_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "questionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "authorId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "body": {
+                "type": "string"
+              },
+              "voteCount": {
+                "type": "integer"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "questionId",
+              "authorId",
+              "body",
+              "voteCount",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_forum_questions_questionId_solution_RequestBody": {
+        "type": "object",
+        "properties": {
+          "answerId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "answerId"
+        ],
+        "additionalProperties": false
+      },
+      "Post_forum_questions_questionId_solution_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_forum_votes_RequestBody": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "question",
+              "answer"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "voteType": {
+            "type": "string",
+            "enum": [
+              "upvote",
+              "downvote"
+            ]
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId",
+          "voteType"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Academic Q&A",
+      "description": "Foro académico de preguntas y respuestas"
+    }
+  ]
+}

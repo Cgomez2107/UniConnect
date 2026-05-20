@@ -7,7 +7,7 @@
       "persistent": true
     },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "generate:api-types", "generate:zod-schemas"],
       "outputs": ["dist/**"]
     },
     "lint": {
@@ -23,6 +23,30 @@
     "academic-qna:build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
+    },
+    "generate:openapi": {
+      "cache": false
+    },
+    "merge:openapi": {
+      "dependsOn": [
+        "auth#generate:openapi",
+        "study-groups#generate:openapi",
+        "messaging#generate:openapi",
+        "resources#generate:openapi",
+        "profiles-catalog#generate:openapi",
+        "events#generate:openapi",
+        "academic-qna#generate:openapi"
+      ],
+      "outputs": ["src/public/openapi.json"],
+      "cache": false
+    },
+    "generate:api-types": {
+      "dependsOn": ["gateway#merge:openapi"],
+      "outputs": ["src/generated/api.d.ts"]
+    },
+    "generate:zod-schemas": {
+      "dependsOn": ["gateway#merge:openapi"],
+      "outputs": ["src/generated/zod.ts"]
     }
   }
 }

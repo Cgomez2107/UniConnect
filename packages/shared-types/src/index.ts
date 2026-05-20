@@ -20,4 +20,8 @@ export * from "./types/dto.js";
 export * from "./lib/mappers.js";
 export * from "./lib/errors.js";
 
+export type { paths, components, operations } from "./generated/api.js";
+
+export * from "./generated/zod.js";
+
 export const SHARED_TYPES_VERSION = "0.2.0";
