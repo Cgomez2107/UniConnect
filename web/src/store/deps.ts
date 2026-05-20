@@ -9,6 +9,7 @@ import {
   EventsClient,
   NotificationsClient,
   AdminClient,
+  ForumClient,
 } from "@uniconnect/shared-api";
 import { WebStorageAdapter, ConsoleLogger } from "@uniconnect/shared-state";
 
@@ -92,6 +93,7 @@ const resourcesClient = new ResourcesClient(transport);
 const eventsClient = new EventsClient(transport);
 const notificationsClient = new NotificationsClient(transport);
 const adminClient = new AdminClient(transport);
+const forumClient = new ForumClient(transport);
 
 const storageAdapter = new WebStorageAdapter(window.localStorage);
 const logger = new ConsoleLogger();
@@ -107,6 +109,7 @@ export const deps = {
     events: eventsClient,
     notifications: notificationsClient,
     admin: adminClient,
+    forum: forumClient,
   },
   transport,
   storage: storageAdapter,

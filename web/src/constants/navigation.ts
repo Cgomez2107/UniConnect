@@ -3,6 +3,7 @@ import {
   Users,
   BookOpen,
   MessageSquare,
+  MessageCircle,
   Calendar,
   UserCircle,
   Bell,
@@ -18,6 +19,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Feed", route: "/solicitudes", icon: LayoutDashboard },
   { label: "Grupos", route: "/invitaciones", icon: Users },
+  { label: "Foro", route: "/forum", icon: MessageCircle },
   { label: "Recursos", route: "/recursos", icon: BookOpen },
   { label: "Mensajes", route: "/mensajes", icon: MessageSquare },
   { label: "Eventos", route: "/eventos", icon: Calendar },

@@ -27,8 +27,8 @@ export function NuevaSolicitudPage() {
         if (!cancelled) {
           setSubjects(
             (userSubjects as any[])
-              .filter((us: any) => us.subjects?.id && us.subjects?.name)
-              .map((us: any) => ({ id: us.subjects!.id, name: us.subjects!.name })) as any
+              .filter((us: any) => us.subject?.id && us.subject?.name)
+              .map((us: any) => ({ id: us.subject!.id, name: us.subject!.name })) as any
           );
         }
       } catch {

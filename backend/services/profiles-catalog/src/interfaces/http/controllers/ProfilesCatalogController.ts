@@ -311,7 +311,7 @@ export class ProfilesCatalogController {
       const subjects = await this.studentRepository.getSubjectsByUserId(userId);
       const mapped = subjects.map((s) => ({
         subject_id: s.subjectId,
-        subjects: {
+        subject: {
           id: s.subjectId,
           name: s.name,
         },

@@ -407,3 +407,48 @@ export interface AdminEvent {
   created_at: string;
   creator_name: string;
 }
+
+
+// FORO
+
+export interface ForumQuestion {
+  id: string;
+  subject_id: string;
+  author_id: string;
+  title: string;
+  body: string;
+  status: "active" | "solved";
+  answer_count: number;
+  vote_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForumQuestionSummary {
+  id: string;
+  subject_id: string;
+  author_id: string;
+  title: string;
+  status: "active" | "solved";
+  answer_count: number;
+  vote_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForumAnswer {
+  id: string;
+  question_id: string;
+  author_id: string;
+  body: string;
+  vote_count: number;
+  is_solution: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForumVotePayload {
+  target_type: "question" | "answer";
+  target_id: string;
+  vote_type: "upvote" | "downvote";
+}
