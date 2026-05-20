@@ -124,7 +124,7 @@ export class ResourcesController {
 
       const body = await readJsonBody<CreateResourceDto>(req);
 
-      const resourceType = body.resourceType;
+      const resourceType = body.resourceType || (body.url ? "link" : "file");
 
       if (resourceType !== "file" && resourceType !== "link") {
         sendError(res, 400, "resourceType debe ser 'file' o 'link'.");
