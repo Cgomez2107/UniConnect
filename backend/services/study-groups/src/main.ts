@@ -349,6 +349,7 @@ function bootstrap(): void {
     listMyApplicationsUC,
     cancelStudyRequestUC,
     toggleStudyGroupMessageReaction,
+    preferenceService,
   );
   const server = createStudyGroupsServer(controller);
 

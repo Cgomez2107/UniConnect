@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
+import { useMessageValidation, useFileValidation } from "@/hooks/useMessageValidation";
+import { useMessageAutocomplete, useFilePicker } from "@/hooks/useMessageAutocomplete";
+import { ValidationErrorCode } from "@uniconnect/shared-types";
 
 interface MemberLike {
   userId: string;
@@ -69,6 +72,27 @@ export function MentionInput({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mentionMapRef = useRef<Map<string, string>>(new Map());
 
+  // Hooks de validación
+  const { validationState, validateMessage, clearValidation } = useMessageValidation({
+    maxLength: 5000,
+    debounceMs: 300,
+  });
+
+  const { validateFile } = useFileValidation({ maxSizeMb: 50 });
+
+  // Mapa de usuarios para autocomplete
+  const autocompleteUsers = members.map((m) => ({
+    id: m.userId,
+    name: getMemberName(m),
+    email: undefined,
+  }));
+
+  const { autocompleteState, handleInput: updateAutocomplete } = useMessageAutocomplete({
+    users: autocompleteUsers,
+    minChars: 0,
+    maxSuggestions: 5,
+  });
+
   const otherMembers = members.filter((m) => m.userId !== currentUserId);
 
   const filteredMembers = mentionQuery
@@ -91,6 +115,18 @@ export function MentionInput({
     const value = e.target.value;
     setText(value);
 
+    // Validar mensaje en tiempo real
+    validateMessage(value).catch(() => {
+      // Ignorar errores de validación async
+    });
+
+    // Obtener posición del cursor
+    const cursorPosition = e.target.selectionStart || value.length;
+
+    // Actualizar autocomplete
+    updateAutocomplete(value, cursorPosition);
+
+    // Lógica original de menciones
     const lastAtIndex = value.lastIndexOf("@");
     if (lastAtIndex !== -1) {
       const beforeAt = value.slice(0, lastAtIndex);
@@ -107,7 +143,7 @@ export function MentionInput({
     }
     setShowDropdown(false);
     setMentionQuery(null);
-  }, []);
+  }, [validateMessage, updateAutocomplete]);
 
   const insertMention = useCallback(
     (member: MemberLike) => {
@@ -147,6 +183,19 @@ export function MentionInput({
   const handleSubmit = useCallback(async () => {
     if (sending || uploadingFile) return;
 
+    // Validar contenido antes de enviar
+    if (text.trim()) {
+      const validation = await validateMessage(text);
+      if (!validation.isValid) {
+        // Mostrar error al usuario
+        alert(
+          validation.error?.message ||
+            "Hay un error en tu mensaje. Revísalo e intenta de nuevo."
+        );
+        return;
+      }
+    }
+
     if (pendingFile && onUploadFile) {
       setUploadingFile(true);
       try {
@@ -157,6 +206,7 @@ export function MentionInput({
         await onSend(fullContent, mentions, { mediaUrl: url, mediaType: type });
         setPendingFile(null);
         setText("");
+        clearValidation();
       } catch (err) {
         console.error("Error al enviar archivo:", err);
       } finally {
@@ -171,10 +221,11 @@ export function MentionInput({
     try {
       await onSend(fullContent, mentions);
       setText("");
+      clearValidation();
     } catch (err) {
       console.error("Error al enviar mensaje:", err);
     }
-  }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions]);
+  }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions, validateMessage, clearValidation]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -202,11 +253,19 @@ export function MentionInput({
     [showDropdown, filteredMembers, selectedIndex, mentionQuery, insertMention, handleSubmit]
   );
 
-  const handleFileSelect = useCallback((file: File | null) => {
+  const handleFileSelect = useCallback(async (file: File | null) => {
     if (!file) return;
+
+    // Validar archivo
+    const validation = await validateFile(file);
+    if (!validation.isValid) {
+      alert(validation.error || "Error al validar archivo");
+      return;
+    }
+
     const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
     setPendingFile({ file, previewUrl });
-  }, []);
+  }, [validateFile]);
 
   const clearPendingFile = useCallback(() => {
     if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl);
@@ -288,6 +347,53 @@ export function MentionInput({
       )}
 
       <div className="bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 p-3">
+        {/* Validation error display */}
+        {validationState.error && (
+          <div className="mb-2 p-2 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg flex items-start gap-2">
+            <span className="text-error-600 dark:text-error-400 mt-0.5">⚠️</span>
+            <div className="flex-1">
+              <p className="text-xs font-medium text-error-700 dark:text-error-300">
+                {validationState.error.message}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Validation warnings display */}
+        {validationState.warnings && validationState.warnings.length > 0 && (
+          <div className="mb-2 space-y-1">
+            {validationState.warnings.map((warning, idx) => (
+              <div
+                key={idx}
+                className={`p-2 rounded-lg flex items-start gap-2 ${
+                  warning.severity === "warning"
+                    ? "bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800"
+                    : "bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-800"
+                }`}
+              >
+                <span
+                  className={`mt-0.5 ${
+                    warning.severity === "warning"
+                      ? "text-warning-600 dark:text-warning-400"
+                      : "text-info-600 dark:text-info-400"
+                  }`}
+                >
+                  ℹ️
+                </span>
+                <p
+                  className={`text-xs ${
+                    warning.severity === "warning"
+                      ? "text-warning-700 dark:text-warning-300"
+                      : "text-info-700 dark:text-info-300"
+                  }`}
+                >
+                  {warning.message}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-2 items-end">
           {/* Hidden file input for images */}
           <input
@@ -351,16 +457,34 @@ export function MentionInput({
             onKeyDown={handleKeyDown}
             placeholder={pendingFile ? "Añade un mensaje..." : placeholder}
             disabled={disabled || uploadingFile}
-            className="flex-1 px-4 py-2 border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
+            className={`flex-1 px-4 py-2 border bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+              validationState.error
+                ? "border-error-500 dark:border-error-500 focus:ring-error-200 dark:focus:ring-error-800"
+                : validationState.warnings && validationState.warnings.length > 0
+                  ? "border-warning-500 dark:border-warning-500 focus:ring-warning-200 dark:focus:ring-warning-800"
+                  : "border-neutral-300 dark:border-neutral-600 focus:ring-primary-500"
+            }`}
           />
-          <Button
-            type="button"
-            loading={sending || uploadingFile}
-            disabled={!canSubmit}
-            onClick={handleSubmit}
-          >
-            {(uploadingFile) ? "Subiendo..." : "Enviar"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Character counter */}
+            <div className="text-[10px] text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+              <span className={text.length > 4500 ? "text-warning-600" : ""}>
+                {text.length}
+              </span>
+              /{" "}
+              <span className={text.length > 4500 ? "text-warning-600" : ""}>
+                5000
+              </span>
+            </div>
+            <Button
+              type="button"
+              loading={sending || uploadingFile}
+              disabled={!canSubmit || validationState.error !== undefined}
+              onClick={handleSubmit}
+            >
+              {uploadingFile ? "Subiendo..." : "Enviar"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

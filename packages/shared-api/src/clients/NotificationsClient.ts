@@ -4,6 +4,8 @@ import { mapNotificationDtoToDomain } from "../mappers/index.js";
 import type {
   NotificationDTO,
   Notification,
+  NotificationPreference,
+  UpdatePreferenceBody,
 } from "@uniconnect/shared-types";
 
 export class NotificationsClient extends BaseClient {
@@ -30,6 +32,22 @@ export class NotificationsClient extends BaseClient {
     await this.transport.request({
       method: "PUT",
       url: "/notifications/read-all",
+    });
+  }
+
+  async getPreferences(): Promise<NotificationPreference[]> {
+    const response = await this.transport.request<{ preferences: NotificationPreference[] }>({
+      method: "GET",
+      url: "/notifications/preferences",
+    });
+    return response.data?.preferences ?? [];
+  }
+
+  async updatePreference(body: UpdatePreferenceBody): Promise<void> {
+    await this.transport.request({
+      method: "PUT",
+      url: "/notifications/preferences",
+      body,
     });
   }
 }

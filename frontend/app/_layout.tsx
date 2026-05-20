@@ -61,6 +61,7 @@ export default function RootLayout() {
           <Stack.Screen name="nueva-solicitud"  options={{ presentation: "modal" }} />
           <Stack.Screen name="subir-recurso"    options={{ presentation: "modal" }} />
           <Stack.Screen name="editar-perfil"    options={{ presentation: "modal" }} />
+          <Stack.Screen name="ajustes/notificaciones" options={{ presentation: "modal" }} />
           <Stack.Screen name="solicitud/[id]" />
           <Stack.Screen name="study-groups/[id]" />
           <Stack.Screen name="study-groups/[id]/admin" />

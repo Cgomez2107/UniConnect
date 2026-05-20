@@ -14,6 +14,8 @@ import { useMessaging } from "@/hooks/application/useMessaging";
 import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
 import { transformRawMessage } from "@/chat/utils/messageFactory";
 import { supabase } from "@/lib/supabase";
+import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
+import type { GroupState } from "@/types";
 
 interface MemberChatViewProps {
   requestId: string;
@@ -21,6 +23,7 @@ interface MemberChatViewProps {
   groupSubtitle: string;
   groupDescription?: string;
   facultyName?: string;
+  groupState?: GroupState;
   onLeaveGroup?: () => void;
 }
 
@@ -39,8 +42,10 @@ export function MemberChatView({
   groupSubtitle,
   groupDescription = "",
   facultyName = "",
+  groupState = "Activo",
   onLeaveGroup,
 }: MemberChatViewProps) {
+  const perms = getGroupPermissions(groupState);
   const {
     messages,
     members,
@@ -391,13 +396,19 @@ export function MemberChatView({
       <aside className="w-[30%] h-full overflow-y-auto p-8 flex flex-col gap-10 bg-[#1A1A1A] border-l border-[#2D2D2D] custom-scrollbar">
         {/* Leave Group Action */}
         <div className="flex-shrink-0">
-          <button
-            className="w-full py-3.5 px-6 text-sm font-bold rounded-xl border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center gap-2 group"
-            onClick={() => setShowLeaveConfirm(true)}
-          >
-            <span className="material-symbols-outlined text-lg group-hover:animate-pulse">logout</span>
-            SALIR DEL GRUPO
-          </button>
+          {!perms.isReadOnly ? (
+            <button
+              className="w-full py-3.5 px-6 text-sm font-bold rounded-xl border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center gap-2 group"
+              onClick={() => setShowLeaveConfirm(true)}
+            >
+              <span className="material-symbols-outlined text-lg group-hover:animate-pulse">logout</span>
+              SALIR DEL GRUPO
+            </button>
+          ) : (
+            <div className="w-full py-3.5 px-6 text-sm font-bold rounded-xl border-2 border-neutral-800 text-neutral-600 text-center">
+              Grupo inactivo
+            </div>
+          )}
         </div>
 
         {/* Group Metadata */}

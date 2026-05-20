@@ -51,10 +51,10 @@ export function parseBackendError(error: unknown): ErrorType {
   if (msg.includes("full") || msg.includes("capacity") || msg.includes("llena")) {
     return "GROUP_FULL";
   }
-  if (msg.includes("invalid") || msg.includes("transition") || msg.includes("no permitida")) {
+  if (msg.includes("invalid") || msg.includes("transition") || msg.includes("no permitida") || msg.includes("disuelto") || msg.includes("bloqueado")) {
     return "INVALID_TRANSITION";
   }
-  if (msg.includes("transfer") || msg.includes("transferencia")) {
+  if (msg.includes("transfer") || msg.includes("transferencia") || msg.includes("único admin") || msg.includes("unico admin")) {
     return "ADMIN_TRANSFER_PENDING";
   }
   if (msg.includes("401") || msg.includes("unauthorized") || msg.includes("no autorizado")) {
@@ -82,12 +82,12 @@ export function getErrorMessage(errorType: ErrorType, context?: string): ErrorMe
     },
     INVALID_TRANSITION: {
       title: "Acción no permitida",
-      message: "El estado del grupo no permite realizar esta acción en este momento. Intenta recargar la página.",
+      message: "El estado del grupo no permite realizar esta acción. El grupo puede estar disuelto, bloqueado o con una transferencia en curso.",
       type: "warning",
     },
     ADMIN_TRANSFER_PENDING: {
       title: "Transferencia en proceso",
-      message: "Ya existe una solicitud de transferencia de administrador pendiente. Espera a que se complete.",
+      message: "Ya existe una solicitud de transferencia de administrador pendiente o no puedes renunciar como único administrador.",
       type: "info",
     },
     UNAUTHORIZED: {

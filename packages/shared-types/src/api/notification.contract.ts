@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NotificationSchema } from "../schemas/notification.schema.js";
+import { NotificationPreferenceSchema } from "../schemas/notification-preference.schema.js";
 
 export const GetNotificationsRequestSchema = z.object({
   query: z.object({
@@ -16,5 +17,10 @@ export const GetNotificationsResponseSchema = z.object({
   limit: z.number().int().positive(),
 });
 
+export const GetPreferencesResponseSchema = z.object({
+  preferences: z.array(NotificationPreferenceSchema),
+});
+
 export type GetNotificationsRequest = z.infer<typeof GetNotificationsRequestSchema>;
 export type GetNotificationsResponse = z.infer<typeof GetNotificationsResponseSchema>;
+export type GetPreferencesResponse = z.infer<typeof GetPreferencesResponseSchema>;

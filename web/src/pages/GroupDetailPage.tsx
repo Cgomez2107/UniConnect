@@ -7,7 +7,9 @@ import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
 import { RoleBadge } from "@/components/ui/RoleBadge";
 import { MemberListItem } from "@/components/ui/MemberListItem";
-import { GroupStatusBadge } from "@/components/GroupStatusBadge";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
+import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
+import type { GroupState } from "@/types";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -220,16 +222,15 @@ export function GroupDetailPage() {
   const currentMember = members.find((m) => m.userId === user?.id);
   const isAuthor = currentMember?.role === "autor";
 
-  const groupStatus: "abierta" | "llena" | "transferenciaPendiente" | "cerrada" | "expirada" =
-    solicitud.hasPendingTransfer
-      ? "transferenciaPendiente"
-      : solicitud.status === "cerrada"
-        ? "cerrada"
-        : solicitud.status === "expirada"
-          ? "expirada"
-          : members.length >= (solicitud.maxMembers || 0)
-            ? "llena"
-            : "abierta";
+  const groupState: GroupState = solicitud.status === "cerrada"
+    ? "Disuelto"
+    : solicitud.status === "expirada"
+      ? "Bloqueado"
+      : solicitud.hasPendingTransfer
+        ? "PendienteTransferencia"
+        : "Activo";
+
+  const perms = getGroupPermissions(groupState);
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
@@ -256,7 +257,7 @@ export function GroupDetailPage() {
                 {subjectName}
               </span>
             )}
-            <GroupStatusBadge status={groupStatus} size="small" />
+            <GroupStateBadge state={groupState} size="small" />
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white">
               {members.length} miembro{members.length !== 1 ? "s" : ""}
             </span>
@@ -282,27 +283,27 @@ export function GroupDetailPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => navigate(`/grupo/${id}/chat`)}
-            >
-              Chat del grupo
-            </Button>
+            {perms.canChat && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate(`/grupo/${id}/chat`)}
+              >
+                Chat del grupo
+              </Button>
+            )}
             {(currentMember?.role === "autor" || currentMember?.role === "admin") && (
               <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => navigate(`/grupo/${id}/admin`)}
-                >
-                  Panel de administración
-                </Button>
-                {solicitud.hasPendingTransfer ? (
-                  <Button variant="secondary" size="sm" disabled>
-                    Transferencia solicitada
+                {perms.canEdit && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate(`/grupo/${id}/admin`)}
+                  >
+                    Panel de administración
                   </Button>
-                ) : (
+                )}
+                {perms.canTransfer && (
                   <Button
                     variant="secondary"
                     size="sm"
@@ -311,9 +312,14 @@ export function GroupDetailPage() {
                     Transferir admin
                   </Button>
                 )}
+                {!perms.canTransfer && solicitud.hasPendingTransfer && (
+                  <Button variant="secondary" size="sm" disabled>
+                    Transferencia solicitada
+                  </Button>
+                )}
               </>
             )}
-            {pendingTransferId && currentMember && (
+            {perms.canAcceptTransfer && pendingTransferId && currentMember && (
               <Button
                 variant="primary"
                 size="sm"
@@ -323,14 +329,16 @@ export function GroupDetailPage() {
                 Aceptar transferencia
               </Button>
             )}
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setShowLeaveConfirm(true)}
-              loading={leaveLoading}
-            >
-              Salir del grupo
-            </Button>
+            {!perms.isReadOnly && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setShowLeaveConfirm(true)}
+                loading={leaveLoading}
+              >
+                Salir del grupo
+              </Button>
+            )}
           </div>
           {acceptTransferError && (
             <p className="text-error-400 text-sm mt-2">{acceptTransferError}</p>
