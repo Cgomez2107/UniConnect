@@ -141,24 +141,27 @@ En `backend/turbo.json`:
 
 ```json
 {
-  "pipeline": {
+  "tasks": {
     "generate:openapi": { "cache": false },
     "merge:openapi": {
       "dependsOn": [
-        "auth#generate:openapi",
-        "study-groups#generate:openapi",
-        "academic-qna#generate:openapi",
-        "messaging#generate:openapi",
-        "profiles-catalog#generate:openapi",
-        "resources#generate:openapi",
-        "events#generate:openapi"
+        "@uniconnect/auth#generate:openapi",
+        "@uniconnect/study-groups#generate:openapi",
+        "@uniconnect/academic-qna#generate:openapi",
+        "@uniconnect/messaging#generate:openapi",
+        "@uniconnect/profiles-catalog#generate:openapi",
+        "@uniconnect/resources#generate:openapi",
+        "@uniconnect/events#generate:openapi"
       ]
     },
     "generate:api-types": {
-      "dependsOn": ["^merge:openapi"]
+      "dependsOn": ["@uniconnect/gateway#merge:openapi"]
+    },
+    "generate:zod-schemas": {
+      "dependsOn": ["@uniconnect/gateway#merge:openapi"]
     },
     "build": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "generate:api-types", "generate:zod-schemas"]
     }
   }
 }

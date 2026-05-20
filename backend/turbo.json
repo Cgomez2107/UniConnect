@@ -29,23 +29,23 @@
     },
     "merge:openapi": {
       "dependsOn": [
-        "auth#generate:openapi",
-        "study-groups#generate:openapi",
-        "messaging#generate:openapi",
-        "resources#generate:openapi",
-        "profiles-catalog#generate:openapi",
-        "events#generate:openapi",
-        "academic-qna#generate:openapi"
+        "@uniconnect/auth#generate:openapi",
+        "@uniconnect/study-groups#generate:openapi",
+        "@uniconnect/messaging#generate:openapi",
+        "@uniconnect/resources#generate:openapi",
+        "@uniconnect/profiles-catalog#generate:openapi",
+        "@uniconnect/events#generate:openapi",
+        "@uniconnect/academic-qna#generate:openapi"
       ],
       "outputs": ["src/public/openapi.json"],
       "cache": false
     },
     "generate:api-types": {
-      "dependsOn": ["gateway#merge:openapi"],
+      "dependsOn": ["@uniconnect/gateway#merge:openapi"],
       "outputs": ["src/generated/api.d.ts"]
     },
     "generate:zod-schemas": {
-      "dependsOn": ["gateway#merge:openapi"],
+      "dependsOn": ["@uniconnect/gateway#merge:openapi"],
       "outputs": ["src/generated/zod.ts"]
     }
   }
