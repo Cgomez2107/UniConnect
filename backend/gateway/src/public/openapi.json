@@ -1641,7 +1641,14 @@
         },
         "responses": {
           "200": {
-            "description": "Avatar actualizado exitosamente"
+            "description": "Avatar actualizado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_students_me_avatar_200Response"
+                }
+              }
+            }
           },
           "400": {
             "description": "Error de validación"
@@ -5596,10 +5603,6 @@
               "fullName": {
                 "type": "string"
               },
-              "email": {
-                "type": "string",
-                "format": "email"
-              },
               "avatarUrl": {
                 "type": "string",
                 "nullable": true
@@ -5611,6 +5614,9 @@
               "phoneNumber": {
                 "type": "string",
                 "nullable": true
+              },
+              "role": {
+                "type": "string"
               },
               "semester": {
                 "type": "integer",
@@ -5631,6 +5637,9 @@
                 "type": "string",
                 "nullable": true
               },
+              "isActive": {
+                "type": "boolean"
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -5638,6 +5647,18 @@
               "updatedAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
               }
             },
             "required": [
@@ -5692,10 +5713,6 @@
               "fullName": {
                 "type": "string"
               },
-              "email": {
-                "type": "string",
-                "format": "email"
-              },
               "avatarUrl": {
                 "type": "string",
                 "nullable": true
@@ -5707,6 +5724,9 @@
               "phoneNumber": {
                 "type": "string",
                 "nullable": true
+              },
+              "role": {
+                "type": "string"
               },
               "semester": {
                 "type": "integer",
@@ -5727,6 +5747,9 @@
                 "type": "string",
                 "nullable": true
               },
+              "isActive": {
+                "type": "boolean"
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -5734,6 +5757,18 @@
               "updatedAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
               }
             },
             "required": [
@@ -5775,10 +5810,6 @@
               "fullName": {
                 "type": "string"
               },
-              "email": {
-                "type": "string",
-                "format": "email"
-              },
               "avatarUrl": {
                 "type": "string",
                 "nullable": true
@@ -5790,6 +5821,9 @@
               "phoneNumber": {
                 "type": "string",
                 "nullable": true
+              },
+              "role": {
+                "type": "string"
               },
               "semester": {
                 "type": "integer",
@@ -5810,6 +5844,9 @@
                 "type": "string",
                 "nullable": true
               },
+              "isActive": {
+                "type": "boolean"
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -5817,6 +5854,18 @@
               "updatedAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
               }
             },
             "required": [
@@ -5857,10 +5906,6 @@
               "fullName": {
                 "type": "string"
               },
-              "email": {
-                "type": "string",
-                "format": "email"
-              },
               "avatarUrl": {
                 "type": "string",
                 "nullable": true
@@ -5872,6 +5917,9 @@
               "phoneNumber": {
                 "type": "string",
                 "nullable": true
+              },
+              "role": {
+                "type": "string"
               },
               "semester": {
                 "type": "integer",
@@ -5892,6 +5940,9 @@
                 "type": "string",
                 "nullable": true
               },
+              "isActive": {
+                "type": "boolean"
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -5899,6 +5950,18 @@
               "updatedAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
               }
             },
             "required": [
@@ -5930,12 +5993,27 @@
                   "minLength": 1,
                   "maxLength": 200
                 },
+                "code": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "facultyId": {
                   "type": "string",
                   "format": "uuid"
                 },
                 "facultyName": {
-                  "type": "string"
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "isPrimary": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -5984,12 +6062,22 @@
                 },
                 "code": {
                   "type": "string",
-                  "minLength": 1,
-                  "maxLength": 20
+                  "nullable": true
                 },
-                "programId": {
+                "isActive": {
+                  "type": "boolean"
+                },
+                "credits": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "semester": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "createdAt": {
                   "type": "string",
-                  "format": "uuid"
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -6049,6 +6137,28 @@
         ],
         "additionalProperties": false
       },
+      "Post_students_me_avatar_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
       "Get_students_200Response": {
         "type": "object",
         "properties": {
@@ -6064,10 +6174,6 @@
                 "fullName": {
                   "type": "string"
                 },
-                "email": {
-                  "type": "string",
-                  "format": "email"
-                },
                 "avatarUrl": {
                   "type": "string",
                   "nullable": true
@@ -6079,6 +6185,9 @@
                 "phoneNumber": {
                   "type": "string",
                   "nullable": true
+                },
+                "role": {
+                  "type": "string"
                 },
                 "semester": {
                   "type": "integer",
@@ -6099,6 +6208,9 @@
                   "type": "string",
                   "nullable": true
                 },
+                "isActive": {
+                  "type": "boolean"
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time"
@@ -6106,6 +6218,18 @@
                 "updatedAt": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "carrera": {
+                  "nullable": true
+                },
+                "asignaturasActivas": {
+                  "type": "array"
+                },
+                "indicadores": {
+                  "nullable": true
+                },
+                "insignias": {
+                  "type": "array"
                 }
               },
               "required": [
@@ -6148,10 +6272,6 @@
               "fullName": {
                 "type": "string"
               },
-              "email": {
-                "type": "string",
-                "format": "email"
-              },
               "avatarUrl": {
                 "type": "string",
                 "nullable": true
@@ -6163,6 +6283,9 @@
               "phoneNumber": {
                 "type": "string",
                 "nullable": true
+              },
+              "role": {
+                "type": "string"
               },
               "semester": {
                 "type": "integer",
@@ -6183,6 +6306,9 @@
                 "type": "string",
                 "nullable": true
               },
+              "isActive": {
+                "type": "boolean"
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -6190,6 +6316,18 @@
               "updatedAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
               }
             },
             "required": [
@@ -6223,12 +6361,22 @@
                 },
                 "code": {
                   "type": "string",
-                  "minLength": 1,
-                  "maxLength": 20
+                  "nullable": true
                 },
-                "programId": {
+                "isActive": {
+                  "type": "boolean"
+                },
+                "credits": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "semester": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "createdAt": {
                   "type": "string",
-                  "format": "uuid"
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -6275,12 +6423,27 @@
                   "minLength": 1,
                   "maxLength": 200
                 },
+                "code": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "facultyId": {
                   "type": "string",
                   "format": "uuid"
                 },
                 "facultyName": {
-                  "type": "string"
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "isPrimary": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -6329,12 +6492,22 @@
                 },
                 "code": {
                   "type": "string",
-                  "minLength": 1,
-                  "maxLength": 20
+                  "nullable": true
                 },
-                "programId": {
+                "isActive": {
+                  "type": "boolean"
+                },
+                "credits": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "semester": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "createdAt": {
                   "type": "string",
-                  "format": "uuid"
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -6377,10 +6550,6 @@
               "fullName": {
                 "type": "string"
               },
-              "email": {
-                "type": "string",
-                "format": "email"
-              },
               "avatarUrl": {
                 "type": "string",
                 "nullable": true
@@ -6392,6 +6561,9 @@
               "phoneNumber": {
                 "type": "string",
                 "nullable": true
+              },
+              "role": {
+                "type": "string"
               },
               "semester": {
                 "type": "integer",
@@ -6412,6 +6584,9 @@
                 "type": "string",
                 "nullable": true
               },
+              "isActive": {
+                "type": "boolean"
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -6419,6 +6594,18 @@
               "updatedAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
               }
             },
             "required": [

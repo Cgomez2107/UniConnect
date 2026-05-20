@@ -2097,7 +2097,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Post_students_me_avatar_200Response"];
+                    };
                 };
                 /** @description Error de validación */
                 400: {
@@ -4474,20 +4476,24 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 fullName: string;
-                /** Format: email */
-                email?: string;
                 avatarUrl?: string | null;
                 bio?: string | null;
                 phoneNumber?: string | null;
+                role?: string;
                 semester?: number | null;
                 /** Format: uuid */
                 programId?: string | null;
                 programName?: string | null;
                 facultyName?: string | null;
+                isActive?: boolean;
                 /** Format: date-time */
                 createdAt?: string;
                 /** Format: date-time */
                 updatedAt?: string;
+                carrera?: unknown;
+                asignaturasActivas?: unknown[];
+                indicadores?: unknown;
+                insignias?: unknown[];
             };
         };
         Patch_students_me_RequestBody: {
@@ -4502,20 +4508,24 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 fullName: string;
-                /** Format: email */
-                email?: string;
                 avatarUrl?: string | null;
                 bio?: string | null;
                 phoneNumber?: string | null;
+                role?: string;
                 semester?: number | null;
                 /** Format: uuid */
                 programId?: string | null;
                 programName?: string | null;
                 facultyName?: string | null;
+                isActive?: boolean;
                 /** Format: date-time */
                 createdAt?: string;
                 /** Format: date-time */
                 updatedAt?: string;
+                carrera?: unknown;
+                asignaturasActivas?: unknown[];
+                indicadores?: unknown;
+                insignias?: unknown[];
             };
         };
         Post_students_profile_RequestBody: {
@@ -4526,20 +4536,24 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 fullName: string;
-                /** Format: email */
-                email?: string;
                 avatarUrl?: string | null;
                 bio?: string | null;
                 phoneNumber?: string | null;
+                role?: string;
                 semester?: number | null;
                 /** Format: uuid */
                 programId?: string | null;
                 programName?: string | null;
                 facultyName?: string | null;
+                isActive?: boolean;
                 /** Format: date-time */
                 createdAt?: string;
                 /** Format: date-time */
                 updatedAt?: string;
+                carrera?: unknown;
+                asignaturasActivas?: unknown[];
+                indicadores?: unknown;
+                insignias?: unknown[];
             };
         };
         Patch_students_me_primary_program_RequestBody: {
@@ -4551,20 +4565,24 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 fullName: string;
-                /** Format: email */
-                email?: string;
                 avatarUrl?: string | null;
                 bio?: string | null;
                 phoneNumber?: string | null;
+                role?: string;
                 semester?: number | null;
                 /** Format: uuid */
                 programId?: string | null;
                 programName?: string | null;
                 facultyName?: string | null;
+                isActive?: boolean;
                 /** Format: date-time */
                 createdAt?: string;
                 /** Format: date-time */
                 updatedAt?: string;
+                carrera?: unknown;
+                asignaturasActivas?: unknown[];
+                indicadores?: unknown;
+                insignias?: unknown[];
             };
         };
         Get_students_me_programs_200Response: {
@@ -4572,9 +4590,14 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 name: string;
+                code?: string | null;
                 /** Format: uuid */
                 facultyId?: string;
-                facultyName?: string;
+                facultyName?: string | null;
+                isActive?: boolean;
+                /** Format: date-time */
+                createdAt?: string;
+                isPrimary?: boolean;
             }[];
             meta: {
                 total: number;
@@ -4585,9 +4608,12 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 name: string;
-                code?: string;
-                /** Format: uuid */
-                programId?: string;
+                code?: string | null;
+                isActive?: boolean;
+                credits?: number | null;
+                semester?: number | null;
+                /** Format: date-time */
+                createdAt?: string;
             }[];
             meta: {
                 total: number;
@@ -4602,25 +4628,35 @@ export interface components {
             /** Format: uuid */
             user_id?: string;
         };
+        Post_students_me_avatar_200Response: {
+            data: {
+                /** Format: uri */
+                url: string;
+            };
+        };
         Get_students_200Response: {
             data: {
                 /** Format: uuid */
                 id: string;
                 fullName: string;
-                /** Format: email */
-                email?: string;
                 avatarUrl?: string | null;
                 bio?: string | null;
                 phoneNumber?: string | null;
+                role?: string;
                 semester?: number | null;
                 /** Format: uuid */
                 programId?: string | null;
                 programName?: string | null;
                 facultyName?: string | null;
+                isActive?: boolean;
                 /** Format: date-time */
                 createdAt?: string;
                 /** Format: date-time */
                 updatedAt?: string;
+                carrera?: unknown;
+                asignaturasActivas?: unknown[];
+                indicadores?: unknown;
+                insignias?: unknown[];
             }[];
             meta: {
                 total: number;
@@ -4631,20 +4667,24 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 fullName: string;
-                /** Format: email */
-                email?: string;
                 avatarUrl?: string | null;
                 bio?: string | null;
                 phoneNumber?: string | null;
+                role?: string;
                 semester?: number | null;
                 /** Format: uuid */
                 programId?: string | null;
                 programName?: string | null;
                 facultyName?: string | null;
+                isActive?: boolean;
                 /** Format: date-time */
                 createdAt?: string;
                 /** Format: date-time */
                 updatedAt?: string;
+                carrera?: unknown;
+                asignaturasActivas?: unknown[];
+                indicadores?: unknown;
+                insignias?: unknown[];
             };
         };
         Get_catalog_subjects_200Response: {
@@ -4652,9 +4692,12 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 name: string;
-                code?: string;
-                /** Format: uuid */
-                programId?: string;
+                code?: string | null;
+                isActive?: boolean;
+                credits?: number | null;
+                semester?: number | null;
+                /** Format: date-time */
+                createdAt?: string;
             }[];
             meta: {
                 total: number;
@@ -4665,9 +4708,14 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 name: string;
+                code?: string | null;
                 /** Format: uuid */
                 facultyId?: string;
-                facultyName?: string;
+                facultyName?: string | null;
+                isActive?: boolean;
+                /** Format: date-time */
+                createdAt?: string;
+                isPrimary?: boolean;
             }[];
             meta: {
                 total: number;
@@ -4678,9 +4726,12 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 name: string;
-                code?: string;
-                /** Format: uuid */
-                programId?: string;
+                code?: string | null;
+                isActive?: boolean;
+                credits?: number | null;
+                semester?: number | null;
+                /** Format: date-time */
+                createdAt?: string;
             }[];
             meta: {
                 total: number;
@@ -4691,20 +4742,24 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 fullName: string;
-                /** Format: email */
-                email?: string;
                 avatarUrl?: string | null;
                 bio?: string | null;
                 phoneNumber?: string | null;
+                role?: string;
                 semester?: number | null;
                 /** Format: uuid */
                 programId?: string | null;
                 programName?: string | null;
                 facultyName?: string | null;
+                isActive?: boolean;
                 /** Format: date-time */
                 createdAt?: string;
                 /** Format: date-time */
                 updatedAt?: string;
+                carrera?: unknown;
+                asignaturasActivas?: unknown[];
+                indicadores?: unknown;
+                insignias?: unknown[];
             };
         };
         Get_resources_200Response: {

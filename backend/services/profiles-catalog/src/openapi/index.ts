@@ -6,16 +6,21 @@ const UuidSchema = z.string().uuid();
 const StudentProfileSchema = z.object({
   id: UuidSchema,
   fullName: z.string(),
-  email: z.string().email().optional(),
   avatarUrl: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
   phoneNumber: z.string().nullable().optional(),
+  role: z.string().optional(),
   semester: z.number().int().positive().nullable().optional(),
   programId: UuidSchema.nullable().optional(),
   programName: z.string().nullable().optional(),
   facultyName: z.string().nullable().optional(),
+  isActive: z.boolean().optional(),
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
+  carrera: z.any().nullable().optional(),
+  asignaturasActivas: z.array(z.any()).optional(),
+  indicadores: z.any().nullable().optional(),
+  insignias: z.array(z.any()).optional(),
 });
 
 const CreateProfileBodySchema = z.object({
@@ -34,6 +39,10 @@ const SetPrimaryProgramBodySchema = z.object({
   program_id: UuidSchema,
 });
 
+const AvatarResponseSchema = z.object({
+  url: z.string().url(),
+});
+
 const AddSubjectBodySchema = z.object({
   subject_id: UuidSchema,
 });
@@ -41,15 +50,22 @@ const AddSubjectBodySchema = z.object({
 const SubjectSchema = z.object({
   id: UuidSchema,
   name: z.string().min(1).max(200),
-  code: z.string().min(1).max(20).optional(),
-  programId: UuidSchema.optional(),
+  code: z.string().nullable().optional(),
+  isActive: z.boolean().optional(),
+  credits: z.number().int().nullable().optional(),
+  semester: z.number().int().nullable().optional(),
+  createdAt: z.string().datetime().optional(),
 });
 
 const ProgramSchema = z.object({
   id: UuidSchema,
   name: z.string().min(1).max(200),
+  code: z.string().nullable().optional(),
   facultyId: UuidSchema.optional(),
-  facultyName: z.string().optional(),
+  facultyName: z.string().nullable().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.string().datetime().optional(),
+  isPrimary: z.boolean().optional(),
 });
 
 const builder = new OpenAPIBuilder({
@@ -152,7 +168,7 @@ builder.addEndpoint("/students/me/avatar", "post", {
     user_id: UuidSchema.optional(),
   }),
   responses: {
-    200: { description: "Avatar actualizado exitosamente" },
+     200: { description: "Avatar actualizado exitosamente", schema: dataResponse(AvatarResponseSchema) },
     400: { description: "Error de validación" },
   },
 });
