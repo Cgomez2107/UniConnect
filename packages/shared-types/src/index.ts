@@ -7,6 +7,7 @@ export * from "./schemas/resource.schema.js";
 export * from "./schemas/event.schema.js";
 export * from "./schemas/notification.schema.js";
 export * from "./schemas/notification-preference.schema.js";
+export * from "./schemas/forum.schema.js";
 
 export * from "./api/_base.contract.js";
 export * from "./api/auth.contract.js";
@@ -15,9 +16,11 @@ export * from "./api/resource.contract.js";
 export * from "./api/messaging.contract.js";
 export * from "./api/event.contract.js";
 export * from "./api/notification.contract.js";
+export * from "./api/forum.contract.js";
 
 export * from "./types/domain.js";
 export * from "./types/dto.js";
+export type { LoginResponseDTO, OAuthSignInUrlResponseDTO, OAuthCallbackResponseDTO } from "./dto.js";
 export * from "./lib/mappers.js";
 export * from "./lib/errors.js";
 export * from "./validation/MessageValidationErrors.js";

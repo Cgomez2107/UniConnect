@@ -25,6 +25,8 @@ import type {
   EventDTO,
   LoginResponseDTO,
   OAuthCallbackResponseDTO,
+  ForumQuestionDTO,
+  ForumAnswerDTO,
   // Domain Types
   User,
   AuthProfile,
@@ -44,6 +46,8 @@ import type {
   Event,
   LoginResponse,
   OAuthCallbackResponse,
+  ForumQuestion,
+  ForumAnswer,
 } from "@uniconnect/shared-types";
 
 /**
@@ -90,12 +94,18 @@ export function mapMessageDtoToDomain(dto: MessageDTO): Message {
   return parseStringDatesToObjects<Message>(camelCased);
 }
 
-/**
- * Map Message domain type to MessageDTO
- */
-export function mapMessageDomainToDto(domain: Message): MessageDTO {
-  const withStrings = formatDateObjectsToStrings<Record<string, any>>(domain);
-  return camelToSnake<MessageDTO>(withStrings);
+// ============================================================================
+// Forum Mappers
+// ============================================================================
+
+export function mapForumQuestionDtoToDomain(dto: ForumQuestionDTO): ForumQuestion {
+  const camelCased = snakeToCamel<ForumQuestion>(dto);
+  return parseStringDatesToObjects<ForumQuestion>(camelCased);
+}
+
+export function mapForumAnswerDtoToDomain(dto: ForumAnswerDTO): ForumAnswer {
+  const camelCased = snakeToCamel<ForumAnswer>(dto);
+  return parseStringDatesToObjects<ForumAnswer>(camelCased);
 }
 
 /**
