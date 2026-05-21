@@ -18,6 +18,9 @@ export interface CreateStudyResourcePayload {
   fileType?: string;
   fileSizeKb?: number;
   programId?: string;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
 }
 
 export interface UpdateStudyResourcePayload {
@@ -32,6 +35,12 @@ export interface ListResourcesFilters {
   search?: string;
   page?: number;
   perPage?: number;
+}
+
+export interface OpenGraphMetadata {
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
 }
 
 export class ResourcesClient extends BaseClient {
@@ -84,6 +93,9 @@ export class ResourcesClient extends BaseClient {
         fileType: payload.fileType,
         fileSizeKb: payload.fileSizeKb,
         programId: payload.programId,
+        ogTitle: payload.ogTitle,
+        ogDescription: payload.ogDescription,
+        ogImage: payload.ogImage,
       },
     });
     return mapStudyResourceDtoToDomain(response.data);
@@ -106,5 +118,14 @@ export class ResourcesClient extends BaseClient {
       method: "DELETE",
       url: `/resources/${id}`,
     });
+  }
+
+  async parseUrl(url: string): Promise<OpenGraphMetadata> {
+    const response = await this.transport.request<OpenGraphMetadata>({
+      method: "POST",
+      url: "/resources/parse-url",
+      body: { url },
+    });
+    return response.data;
   }
 }

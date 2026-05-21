@@ -243,6 +243,9 @@ export interface StudyResource {
   file_name: string;
   file_type: string | null;
   file_size_kb: number | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
   created_at: string;
   updated_at: string;
   // joins opcionales para enriquecimiento

@@ -10,6 +10,9 @@ export const CreateResourceRequestSchema = z.object({
     subjectId: z.string().uuid(),
     tags: z.array(z.string().max(50)).optional(),
     isPublic: z.boolean().default(true),
+    ogTitle: z.string().nullable().optional(),
+    ogDescription: z.string().nullable().optional(),
+    ogImage: z.string().nullable().optional(),
   }),
 });
 
@@ -26,3 +29,27 @@ export const CreateResourceContract: ApiContract<typeof CreateResourceRequestSch
 
 export type CreateResourceRequest = z.infer<typeof CreateResourceRequestSchema>;
 export type CreateResourceResponse = z.infer<typeof CreateResourceResponseSchema>;
+
+// ── Open Graph parse contract ─────────────────────────────────────────────
+
+export const ParseUrlRequestSchema = z.object({
+  body: z.object({
+    url: z.string().url(),
+  }),
+});
+
+export const ParseUrlResponseSchema = z.object({
+  ogTitle: z.string().nullable(),
+  ogDescription: z.string().nullable(),
+  ogImage: z.string().nullable(),
+});
+
+export const ParseUrlContract: ApiContract<typeof ParseUrlRequestSchema, typeof ParseUrlResponseSchema> = {
+  method: "POST",
+  path: "/api/v1/resources/parse-url",
+  request: ParseUrlRequestSchema,
+  response: ParseUrlResponseSchema,
+};
+
+export type ParseUrlRequest = z.infer<typeof ParseUrlRequestSchema>;
+export type ParseUrlResponse = z.infer<typeof ParseUrlResponseSchema>;

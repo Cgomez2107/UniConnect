@@ -5,6 +5,12 @@ import { SubjectSchema, SubjectDTOSchema } from "./user.schema.js";
 
 export const ResourceTypeEnum = z.enum(["pdf", "document", "video", "link", "image", "other"]);
 
+export const OpenGraphMetadataSchema = z.object({
+  ogTitle: z.string().nullable().optional(),
+  ogDescription: z.string().nullable().optional(),
+  ogImage: z.string().nullable().optional(),
+});
+
 export const StudyResourceSchema = z.object({
   id: UuidSchema,
   title: z.string().min(1).max(200),
@@ -19,6 +25,9 @@ export const StudyResourceSchema = z.object({
   viewCount: z.number().int().nonnegative(),
   downloadCount: z.number().int().nonnegative(),
   isPublic: z.boolean(),
+  ogTitle: z.string().nullable().optional(),
+  ogDescription: z.string().nullable().optional(),
+  ogImage: z.string().nullable().optional(),
   createdAt: DateStringSchema,
   updatedAt: DateStringSchema,
 });
@@ -37,6 +46,9 @@ export const StudyResourceDTOSchema = z.object({
   view_count: z.number().int().nonnegative(),
   download_count: z.number().int().nonnegative(),
   is_public: z.boolean(),
+  og_title: z.string().nullable().optional(),
+  og_description: z.string().nullable().optional(),
+  og_image: z.string().nullable().optional(),
   created_at: DateStringSchema,
   updated_at: DateStringSchema,
 });
