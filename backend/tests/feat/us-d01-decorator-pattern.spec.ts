@@ -202,19 +202,19 @@ describe("US-D01 - Decorator Pattern para Mensajes del Chat Grupal", () => {
       );
     });
 
-    it("debe validar que el tamaño esté en rango válido (>0 y <100MB)", () => {
+    it("debe validar que el tamaño esté en rango válido (>0 y <50MB)", () => {
       const baseMessage = createTestMessage();
 
       const tooLarge: FileMetadata = {
         filename: "huge.bin",
-        size: 101 * 1024 * 1024, // 101MB
+        size: 51 * 1024 * 1024, // 51MB
         mimeType: "application/octet-stream",
         url: "https://example.com/huge.bin",
       };
 
       assert.throws(
         () => new FileDecorator(baseMessage, tooLarge),
-        /size debe estar entre 0 y 100MB/,
+        /size debe estar entre 0 y 50MB/,
       );
     });
 
