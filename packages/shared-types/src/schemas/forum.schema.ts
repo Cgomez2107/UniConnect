@@ -81,3 +81,48 @@ export type CreateQuestionInput = z.infer<typeof CreateQuestionInputSchema>;
 export type CreateAnswerInput = z.infer<typeof CreateAnswerInputSchema>;
 export type CastVoteInput = z.infer<typeof CastVoteInputSchema>;
 export type ForumQuestionDetail = z.infer<typeof ForumQuestionDetailSchema>;
+
+export const ForumQuestionDTOSchema = z.object({
+  id: UuidSchema,
+  subject_id: UuidSchema,
+  author_id: UuidSchema,
+  title: z.string().min(5).max(300),
+  body: z.string().min(10).max(10000),
+  status: ForumQuestionStatusEnum,
+  answer_count: z.number().int().nonnegative(),
+  vote_count: z.number().int(),
+  created_at: DateStringSchema,
+  updated_at: DateStringSchema,
+});
+
+export const ForumQuestionSummaryDTOSchema = z.object({
+  id: UuidSchema,
+  subject_id: UuidSchema,
+  author_id: UuidSchema,
+  title: z.string().min(5).max(300),
+  status: ForumQuestionStatusEnum,
+  answer_count: z.number().int().nonnegative(),
+  vote_count: z.number().int(),
+  created_at: DateStringSchema,
+  updated_at: DateStringSchema,
+});
+
+export const ForumAnswerDTOSchema = z.object({
+  id: UuidSchema,
+  question_id: UuidSchema,
+  author_id: UuidSchema,
+  body: z.string().min(1).max(5000),
+  vote_count: z.number().int(),
+  is_solution: z.boolean(),
+  created_at: DateStringSchema,
+  updated_at: DateStringSchema,
+});
+
+export const ForumVoteDTOSchema = z.object({
+  id: UuidSchema,
+  target_type: ForumVoteTargetTypeEnum,
+  target_id: UuidSchema,
+  voter_id: UuidSchema,
+  vote_type: ForumVoteTypeEnum,
+  created_at: DateStringSchema,
+});

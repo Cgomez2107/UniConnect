@@ -10,7 +10,7 @@
     "generate:openapi": "tsx src/openapi/index.ts",
     "lint": "echo \"study-groups lint config scaffold\"",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest test/sendgrid-gateway.spec.ts test/supabase-push-gateway.spec.ts",
     "test:integration": "vitest run tests/integration/study-group.integration.spec.ts --coverage"
   },
   "dependencies": {

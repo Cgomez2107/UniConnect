@@ -1,0 +1,50 @@
+{
+  "name": "@uniconnect/shared-types",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./schemas/*": {
+      "types": "./src/schemas/*.schema.ts",
+      "import": "./src/schemas/*.schema.ts",
+      "default": "./src/schemas/*.schema.ts"
+    },
+    "./contracts/*": {
+      "types": "./src/api/*.contract.ts",
+      "import": "./src/api/*.contract.ts",
+      "default": "./src/api/*.contract.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src/generated"
+  ],
+  "scripts": {
+    "prebuild": "tsx scripts/prebuild.ts && tsx scripts/generate-api-types.ts && tsx scripts/generate-zod-schemas.ts",
+    "build": "tsc -p tsconfig.json",
+    "postbuild": "tsx scripts/postbuild.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:contracts": "vitest run tests/contracts/",
+    "generate:api-types": "tsx scripts/generate-api-types.ts",
+    "generate:zod-schemas": "tsx scripts/generate-zod-schemas.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "openapi-typescript": "^7.6.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4"
+  }
+}

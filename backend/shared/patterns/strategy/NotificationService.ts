@@ -43,8 +43,12 @@ export class NotificationService {
         }
 
         try {
-          await s.enviar(notificacion);
-          return { canal: s.canal, status: "success" as const };
+          const result = await s.enviar(notificacion);
+          return {
+            canal: result.canal,
+            status: result.exitoso ? ("success" as const) : ("failed" as const),
+            error: result.error,
+          };
         } catch (err) {
           const errorMsg = sanitizeError(err);
           console.error(`[Strategy Error] Canal "${s.canal}" fallido: ${errorMsg}`);

@@ -43,6 +43,7 @@ export class CreateAnswer {
       authorId: input.userId,
       body: input.body,
       voteCount: 0,
+      isSolution: false,
     });
 
     await this.questionRepo.incrementAnswerCount(input.questionId);

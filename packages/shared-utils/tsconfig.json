@@ -14,7 +14,6 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "composite": true,
     "isolatedModules": true
   },
   "include": ["src"],

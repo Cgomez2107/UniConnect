@@ -410,6 +410,29 @@ function onMessagingResponse(
   }
 }
 
+function setCorsHeaders(
+  res: NodeServerResponse,
+  origin: string,
+): boolean {
+  const allowedOrigins = [
+    "http://localhost:8081",
+    "http://localhost:8082",
+    "http://127.0.0.1:8081",
+    "http://127.0.0.1:8082",
+    "http://192.168.140.38:8081",
+    "http://192.168.140.38:8082",
+    "https://uniconnect-dashboard-web.fly.dev",
+  ];
+
+  if (origin && allowedOrigins.includes(origin)) {
+    setHeader(res, "Access-Control-Allow-Origin", origin);
+    setHeader(res, "Access-Control-Allow-Credentials", "true");
+    setHeader(res, "Vary", "Origin");
+    return true;
+  }
+  return false;
+}
+
 async function handleRequest(
   req: IncomingMessage,
   res: NodeServerResponse,
@@ -420,26 +443,14 @@ async function handleRequest(
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
   const appVersion = getAppVersion();
 
-  if (PUBLIC_PATHS.has(requestUrl.pathname) || requestUrl.pathname === "/docs" || requestUrl.pathname.startsWith("/docs/")) {
-    handleDocsRequest(requestUrl, res);
-    return;
-  }
+  // ──────────────────────────────────────────────────────────────────────────
+  // 1. CORS headers on every response (including errors, health, docs)
+  // ──────────────────────────────────────────────────────────────────────────
+  setCorsHeaders(res, origin);
 
-  const allowedOrigins = [
-    "http://localhost:8081",
-    "http://localhost:8082",
-    "http://127.0.0.1:8081",
-    "http://127.0.0.1:8082",
-    "http://192.168.140.38:8081",
-    "http://192.168.140.38:8082",
-  ];
-
-  if (origin && allowedOrigins.includes(origin)) {
-    setHeader(res, "Access-Control-Allow-Origin", origin);
-    setHeader(res, "Access-Control-Allow-Credentials", "true");
-    setHeader(res, "Vary", "Origin");
-  }
-
+  // ──────────────────────────────────────────────────────────────────────────
+  // 2. Preflight (always returns 204, no auth required)
+  // ──────────────────────────────────────────────────────────────────────────
   if (req.method === "OPTIONS") {
     setHeader(res, "Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     setHeader(
@@ -452,13 +463,17 @@ async function handleRequest(
     return;
   }
 
-  if (!req.headers.authorization) {
-    const token = jwtMiddleware.getToken(req);
-    if (token) {
-      req.headers.authorization = `Bearer ${token}`;
-    }
+  // ──────────────────────────────────────────────────────────────────────────
+  // 3. Public paths (docs, OpenAPI spec)
+  // ──────────────────────────────────────────────────────────────────────────
+  if (PUBLIC_PATHS.has(requestUrl.pathname) || requestUrl.pathname === "/docs" || requestUrl.pathname.startsWith("/docs/")) {
+    handleDocsRequest(requestUrl, res);
+    return;
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // 4. Health endpoint (no auth)
+  // ──────────────────────────────────────────────────────────────────────────
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
       status: "ok",
@@ -467,11 +482,27 @@ async function handleRequest(
     return;
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // 5. Token extraction from cookie (fallback if no Authorization header)
+  // ──────────────────────────────────────────────────────────────────────────
+  if (!req.headers.authorization) {
+    const token = jwtMiddleware.getToken(req);
+    if (token) {
+      req.headers.authorization = `Bearer ${token}`;
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 6. Auth routes (proxied without JWT validation)
+  // ──────────────────────────────────────────────────────────────────────────
   if (isAuthRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.authBaseUrl, "/api/v1/auth");
     return;
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // 7. JWT authentication for all other API routes
+  // ──────────────────────────────────────────────────────────────────────────
   const payload = jwtMiddleware.authenticate(req, res);
   if (!payload) {
     return;

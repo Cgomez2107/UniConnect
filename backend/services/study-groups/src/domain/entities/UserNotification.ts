@@ -6,5 +6,5 @@ export interface UserNotification {
   readonly body: string;
   readonly payload: Record<string, unknown> | null;
   readonly createdAt: string;
-  readonly readAt: string | null;
+  readAt: string | null;
 }

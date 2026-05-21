@@ -12,6 +12,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
 import { isForbiddenContent } from "@/hooks/useMessageValidation";
 import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
+import { getWsUrl } from "@/lib/wsUrl";
 
 function transformMentions(mentions?: any[]): MentionData[] | undefined {
   if (!mentions || mentions.length === 0) return undefined;
@@ -105,8 +106,7 @@ export function GroupChatPage() {
 
     console.log("[GroupChat] WS effect starting for group", id, "user", user?.id);
 
-    const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
-    const wsUrl = `${WS_URL}/ws?token=${token}`;
+    const wsUrl = `${getWsUrl()}/ws?token=${token}`;
     let reconnectAttempts = 0;
     const MAX_RECONNECT = 3;
 

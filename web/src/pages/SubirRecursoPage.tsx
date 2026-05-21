@@ -45,7 +45,7 @@ export function SubirRecursoPage() {
         if (cancelled) return;
         setSubjects(subjectsData);
         const primary = programsData[0];
-        if (primary) setProgramId(primary.programId ?? primary.program_id);
+        if (primary) setProgramId(primary.programId ?? primary.program_id ?? primary.id);
       } catch (err: any) {
         if (!cancelled) setFetchError(err?.response?.data?.message || "Error al cargar datos.");
       } finally {

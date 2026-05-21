@@ -5,7 +5,7 @@ node_modules/
 
 # Expo
 .expo/
-dist/
+/dist/
 web-build/
 expo-env.d.ts
 
@@ -53,3 +53,7 @@ skills-lock.json
 test-results/
 playwright-report/
 .turbo/
+
+# Windows reserved device names
+nul
+backend/nul

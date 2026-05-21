@@ -1,13 +1,4 @@
 
-> @uniconnect/shared-api@0.1.0 typecheck C:\Users\carli\Documents\U. Caldas\Software III\UniConnect\UniConnect\packages\shared-api
+> @uniconnect/shared-api@0.1.0 typecheck C:\uniconnect_g\uniconnet\packages\shared-api
 > tsc --noEmit
 
-src/clients/AuthClient.ts(14,3): error TS2724: '"@uniconnect/shared-types"' has no exported member named 'LoginResponseDTO'. Did you mean 'LoginResponse'?
-src/clients/AuthClient.ts(15,3): error TS2724: '"@uniconnect/shared-types"' has no exported member named 'OAuthSignInUrlResponseDTO'. Did you mean 'OAuthSignInUrlResponse'?
-src/clients/AuthClient.ts(16,3): error TS2724: '"@uniconnect/shared-types"' has no exported member named 'OAuthCallbackResponseDTO'. Did you mean 'OAuthCallbackResponse'?
-src/clients/BaseClient.ts(1,15): error TS2305: Module '"@uniconnect/shared-types"' has no exported member 'DomainError'.
-src/clients/BaseClient.ts(1,28): error TS2305: Module '"@uniconnect/shared-types"' has no exported member 'ErrorCode'.
-src/errors/errorHandler.ts(1,15): error TS2305: Module '"@uniconnect/shared-types"' has no exported member 'DomainError'.
-src/mappers/entityMappers.ts(26,3): error TS2724: '"@uniconnect/shared-types"' has no exported member named 'LoginResponseDTO'. Did you mean 'LoginResponse'?
-src/mappers/entityMappers.ts(27,3): error TS2724: '"@uniconnect/shared-types"' has no exported member named 'OAuthCallbackResponseDTO'. Did you mean 'OAuthCallbackResponse'?
- ELIFECYCLE  Command failed with exit code 2.

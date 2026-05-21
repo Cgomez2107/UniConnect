@@ -1,0 +1,1556 @@
+import { z } from "zod";
+export declare const ConversationTypeEnum: z.ZodEnum<["direct", "group"]>;
+export declare const MessageTypeEnum: z.ZodEnum<["text", "file", "mention", "reaction"]>;
+export declare const MessageDecorationSchema: z.ZodObject<{
+    type: z.ZodEnum<["mention", "file", "reaction"]>;
+    data: z.ZodRecord<z.ZodString, z.ZodAny>;
+}, "strip", z.ZodTypeAny, {
+    type: "file" | "mention" | "reaction";
+    data: Record<string, any>;
+}, {
+    type: "file" | "mention" | "reaction";
+    data: Record<string, any>;
+}>;
+export declare const MessageDecorationDTOSchema: z.ZodObject<{
+    type: z.ZodEnum<["mention", "file", "reaction"]>;
+    data: z.ZodRecord<z.ZodString, z.ZodAny>;
+}, "strip", z.ZodTypeAny, {
+    type: "file" | "mention" | "reaction";
+    data: Record<string, any>;
+}, {
+    type: "file" | "mention" | "reaction";
+    data: Record<string, any>;
+}>;
+export declare const MessageAttachmentSchema: z.ZodObject<{
+    id: z.ZodString;
+    type: z.ZodString;
+    url: z.ZodString;
+    name: z.ZodString;
+    size: z.ZodNumber;
+    mimeType: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    type: string;
+    id: string;
+    url: string;
+    name: string;
+    size: number;
+    mimeType: string;
+}, {
+    type: string;
+    id: string;
+    url: string;
+    name: string;
+    size: number;
+    mimeType: string;
+}>;
+export declare const MessageAttachmentDTOSchema: z.ZodObject<{
+    id: z.ZodString;
+    type: z.ZodString;
+    url: z.ZodString;
+    name: z.ZodString;
+    size: z.ZodNumber;
+    mime_type: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    type: string;
+    id: string;
+    url: string;
+    name: string;
+    size: number;
+    mime_type: string;
+}, {
+    type: string;
+    id: string;
+    url: string;
+    name: string;
+    size: number;
+    mime_type: string;
+}>;
+export declare const MessageReactionSchema: z.ZodObject<{
+    id: z.ZodString;
+    emoji: z.ZodString;
+    userId: z.ZodString;
+    user: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        firstName: z.ZodString;
+        lastName: z.ZodString;
+        role: z.ZodEnum<["estudiante", "admin"]>;
+        profileImageUrl: z.ZodOptional<z.ZodString>;
+        isVerified: z.ZodBoolean;
+        createdAt: z.ZodString;
+        updatedAt: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    }, {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    }>>;
+    createdAt: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    id: string;
+    createdAt: string;
+    emoji: string;
+    userId: string;
+    user?: {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    } | undefined;
+}, {
+    id: string;
+    createdAt: string;
+    emoji: string;
+    userId: string;
+    user?: {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    } | undefined;
+}>;
+export declare const MessageReactionDTOSchema: z.ZodObject<{
+    id: z.ZodString;
+    emoji: z.ZodString;
+    user_id: z.ZodString;
+    user: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        first_name: z.ZodString;
+        last_name: z.ZodString;
+        role: z.ZodEnum<["estudiante", "admin"]>;
+        profile_image_url: z.ZodOptional<z.ZodString>;
+        is_verified: z.ZodBoolean;
+        created_at: z.ZodString;
+        updated_at: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    }, {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    }>>;
+    created_at: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    id: string;
+    emoji: string;
+    user_id: string;
+    created_at: string;
+    user?: {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    } | undefined;
+}, {
+    id: string;
+    emoji: string;
+    user_id: string;
+    created_at: string;
+    user?: {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    } | undefined;
+}>;
+export declare const MessageSchema: z.ZodObject<{
+    id: z.ZodString;
+    conversationId: z.ZodString;
+    senderId: z.ZodString;
+    sender: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        firstName: z.ZodString;
+        lastName: z.ZodString;
+        role: z.ZodEnum<["estudiante", "admin"]>;
+        profileImageUrl: z.ZodOptional<z.ZodString>;
+        isVerified: z.ZodBoolean;
+        createdAt: z.ZodString;
+        updatedAt: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    }, {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    }>>;
+    content: z.ZodString;
+    type: z.ZodEnum<["text", "file", "mention", "reaction"]>;
+    decorations: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        type: z.ZodEnum<["mention", "file", "reaction"]>;
+        data: z.ZodRecord<z.ZodString, z.ZodAny>;
+    }, "strip", z.ZodTypeAny, {
+        type: "file" | "mention" | "reaction";
+        data: Record<string, any>;
+    }, {
+        type: "file" | "mention" | "reaction";
+        data: Record<string, any>;
+    }>, "many">>;
+    attachments: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        type: z.ZodString;
+        url: z.ZodString;
+        name: z.ZodString;
+        size: z.ZodNumber;
+        mimeType: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        type: string;
+        id: string;
+        url: string;
+        name: string;
+        size: number;
+        mimeType: string;
+    }, {
+        type: string;
+        id: string;
+        url: string;
+        name: string;
+        size: number;
+        mimeType: string;
+    }>, "many">>;
+    reactions: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        emoji: z.ZodString;
+        userId: z.ZodString;
+        user: z.ZodOptional<z.ZodObject<{
+            id: z.ZodString;
+            email: z.ZodString;
+            firstName: z.ZodString;
+            lastName: z.ZodString;
+            role: z.ZodEnum<["estudiante", "admin"]>;
+            profileImageUrl: z.ZodOptional<z.ZodString>;
+            isVerified: z.ZodBoolean;
+            createdAt: z.ZodString;
+            updatedAt: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        }, {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        }>>;
+        createdAt: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        id: string;
+        createdAt: string;
+        emoji: string;
+        userId: string;
+        user?: {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        } | undefined;
+    }, {
+        id: string;
+        createdAt: string;
+        emoji: string;
+        userId: string;
+        user?: {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        } | undefined;
+    }>, "many">>;
+    isEdited: z.ZodBoolean;
+    editedAt: z.ZodOptional<z.ZodString>;
+    createdAt: z.ZodString;
+    updatedAt: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    type: "text" | "file" | "mention" | "reaction";
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    conversationId: string;
+    senderId: string;
+    content: string;
+    isEdited: boolean;
+    sender?: {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    } | undefined;
+    decorations?: {
+        type: "file" | "mention" | "reaction";
+        data: Record<string, any>;
+    }[] | undefined;
+    attachments?: {
+        type: string;
+        id: string;
+        url: string;
+        name: string;
+        size: number;
+        mimeType: string;
+    }[] | undefined;
+    reactions?: {
+        id: string;
+        createdAt: string;
+        emoji: string;
+        userId: string;
+        user?: {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        } | undefined;
+    }[] | undefined;
+    editedAt?: string | undefined;
+}, {
+    type: "text" | "file" | "mention" | "reaction";
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    conversationId: string;
+    senderId: string;
+    content: string;
+    isEdited: boolean;
+    sender?: {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    } | undefined;
+    decorations?: {
+        type: "file" | "mention" | "reaction";
+        data: Record<string, any>;
+    }[] | undefined;
+    attachments?: {
+        type: string;
+        id: string;
+        url: string;
+        name: string;
+        size: number;
+        mimeType: string;
+    }[] | undefined;
+    reactions?: {
+        id: string;
+        createdAt: string;
+        emoji: string;
+        userId: string;
+        user?: {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        } | undefined;
+    }[] | undefined;
+    editedAt?: string | undefined;
+}>;
+export declare const MessageDTOSchema: z.ZodObject<{
+    id: z.ZodString;
+    conversation_id: z.ZodString;
+    sender_id: z.ZodString;
+    sender: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        first_name: z.ZodString;
+        last_name: z.ZodString;
+        role: z.ZodEnum<["estudiante", "admin"]>;
+        profile_image_url: z.ZodOptional<z.ZodString>;
+        is_verified: z.ZodBoolean;
+        created_at: z.ZodString;
+        updated_at: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    }, {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    }>>;
+    content: z.ZodString;
+    type: z.ZodEnum<["text", "file", "mention", "reaction"]>;
+    decorations: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        type: z.ZodEnum<["mention", "file", "reaction"]>;
+        data: z.ZodRecord<z.ZodString, z.ZodAny>;
+    }, "strip", z.ZodTypeAny, {
+        type: "file" | "mention" | "reaction";
+        data: Record<string, any>;
+    }, {
+        type: "file" | "mention" | "reaction";
+        data: Record<string, any>;
+    }>, "many">>;
+    attachments: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        type: z.ZodString;
+        url: z.ZodString;
+        name: z.ZodString;
+        size: z.ZodNumber;
+        mime_type: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        type: string;
+        id: string;
+        url: string;
+        name: string;
+        size: number;
+        mime_type: string;
+    }, {
+        type: string;
+        id: string;
+        url: string;
+        name: string;
+        size: number;
+        mime_type: string;
+    }>, "many">>;
+    reactions: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        emoji: z.ZodString;
+        user_id: z.ZodString;
+        user: z.ZodOptional<z.ZodObject<{
+            id: z.ZodString;
+            email: z.ZodString;
+            first_name: z.ZodString;
+            last_name: z.ZodString;
+            role: z.ZodEnum<["estudiante", "admin"]>;
+            profile_image_url: z.ZodOptional<z.ZodString>;
+            is_verified: z.ZodBoolean;
+            created_at: z.ZodString;
+            updated_at: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        }, {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        }>>;
+        created_at: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        id: string;
+        emoji: string;
+        user_id: string;
+        created_at: string;
+        user?: {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        } | undefined;
+    }, {
+        id: string;
+        emoji: string;
+        user_id: string;
+        created_at: string;
+        user?: {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        } | undefined;
+    }>, "many">>;
+    is_edited: z.ZodBoolean;
+    edited_at: z.ZodOptional<z.ZodString>;
+    created_at: z.ZodString;
+    updated_at: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    type: "text" | "file" | "mention" | "reaction";
+    id: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+    conversation_id: string;
+    sender_id: string;
+    is_edited: boolean;
+    sender?: {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    } | undefined;
+    decorations?: {
+        type: "file" | "mention" | "reaction";
+        data: Record<string, any>;
+    }[] | undefined;
+    attachments?: {
+        type: string;
+        id: string;
+        url: string;
+        name: string;
+        size: number;
+        mime_type: string;
+    }[] | undefined;
+    reactions?: {
+        id: string;
+        emoji: string;
+        user_id: string;
+        created_at: string;
+        user?: {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        } | undefined;
+    }[] | undefined;
+    edited_at?: string | undefined;
+}, {
+    type: "text" | "file" | "mention" | "reaction";
+    id: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+    conversation_id: string;
+    sender_id: string;
+    is_edited: boolean;
+    sender?: {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    } | undefined;
+    decorations?: {
+        type: "file" | "mention" | "reaction";
+        data: Record<string, any>;
+    }[] | undefined;
+    attachments?: {
+        type: string;
+        id: string;
+        url: string;
+        name: string;
+        size: number;
+        mime_type: string;
+    }[] | undefined;
+    reactions?: {
+        id: string;
+        emoji: string;
+        user_id: string;
+        created_at: string;
+        user?: {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        } | undefined;
+    }[] | undefined;
+    edited_at?: string | undefined;
+}>;
+export declare const ConversationSchema: z.ZodObject<{
+    id: z.ZodString;
+    type: z.ZodEnum<["direct", "group"]>;
+    name: z.ZodOptional<z.ZodString>;
+    description: z.ZodOptional<z.ZodString>;
+    avatarUrl: z.ZodOptional<z.ZodString>;
+    participants: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        firstName: z.ZodString;
+        lastName: z.ZodString;
+        role: z.ZodEnum<["estudiante", "admin"]>;
+        profileImageUrl: z.ZodOptional<z.ZodString>;
+        isVerified: z.ZodBoolean;
+        createdAt: z.ZodString;
+        updatedAt: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    }, {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    }>, "many">;
+    lastMessage: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        conversationId: z.ZodString;
+        senderId: z.ZodString;
+        sender: z.ZodOptional<z.ZodObject<{
+            id: z.ZodString;
+            email: z.ZodString;
+            firstName: z.ZodString;
+            lastName: z.ZodString;
+            role: z.ZodEnum<["estudiante", "admin"]>;
+            profileImageUrl: z.ZodOptional<z.ZodString>;
+            isVerified: z.ZodBoolean;
+            createdAt: z.ZodString;
+            updatedAt: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        }, {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        }>>;
+        content: z.ZodString;
+        type: z.ZodEnum<["text", "file", "mention", "reaction"]>;
+        decorations: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            type: z.ZodEnum<["mention", "file", "reaction"]>;
+            data: z.ZodRecord<z.ZodString, z.ZodAny>;
+        }, "strip", z.ZodTypeAny, {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }, {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }>, "many">>;
+        attachments: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            id: z.ZodString;
+            type: z.ZodString;
+            url: z.ZodString;
+            name: z.ZodString;
+            size: z.ZodNumber;
+            mimeType: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mimeType: string;
+        }, {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mimeType: string;
+        }>, "many">>;
+        reactions: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            id: z.ZodString;
+            emoji: z.ZodString;
+            userId: z.ZodString;
+            user: z.ZodOptional<z.ZodObject<{
+                id: z.ZodString;
+                email: z.ZodString;
+                firstName: z.ZodString;
+                lastName: z.ZodString;
+                role: z.ZodEnum<["estudiante", "admin"]>;
+                profileImageUrl: z.ZodOptional<z.ZodString>;
+                isVerified: z.ZodBoolean;
+                createdAt: z.ZodString;
+                updatedAt: z.ZodString;
+            }, "strip", z.ZodTypeAny, {
+                email: string;
+                id: string;
+                firstName: string;
+                lastName: string;
+                role: "estudiante" | "admin";
+                isVerified: boolean;
+                createdAt: string;
+                updatedAt: string;
+                profileImageUrl?: string | undefined;
+            }, {
+                email: string;
+                id: string;
+                firstName: string;
+                lastName: string;
+                role: "estudiante" | "admin";
+                isVerified: boolean;
+                createdAt: string;
+                updatedAt: string;
+                profileImageUrl?: string | undefined;
+            }>>;
+            createdAt: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            id: string;
+            createdAt: string;
+            emoji: string;
+            userId: string;
+            user?: {
+                email: string;
+                id: string;
+                firstName: string;
+                lastName: string;
+                role: "estudiante" | "admin";
+                isVerified: boolean;
+                createdAt: string;
+                updatedAt: string;
+                profileImageUrl?: string | undefined;
+            } | undefined;
+        }, {
+            id: string;
+            createdAt: string;
+            emoji: string;
+            userId: string;
+            user?: {
+                email: string;
+                id: string;
+                firstName: string;
+                lastName: string;
+                role: "estudiante" | "admin";
+                isVerified: boolean;
+                createdAt: string;
+                updatedAt: string;
+                profileImageUrl?: string | undefined;
+            } | undefined;
+        }>, "many">>;
+        isEdited: z.ZodBoolean;
+        editedAt: z.ZodOptional<z.ZodString>;
+        createdAt: z.ZodString;
+        updatedAt: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        type: "text" | "file" | "mention" | "reaction";
+        id: string;
+        createdAt: string;
+        updatedAt: string;
+        conversationId: string;
+        senderId: string;
+        content: string;
+        isEdited: boolean;
+        sender?: {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        } | undefined;
+        decorations?: {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }[] | undefined;
+        attachments?: {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mimeType: string;
+        }[] | undefined;
+        reactions?: {
+            id: string;
+            createdAt: string;
+            emoji: string;
+            userId: string;
+            user?: {
+                email: string;
+                id: string;
+                firstName: string;
+                lastName: string;
+                role: "estudiante" | "admin";
+                isVerified: boolean;
+                createdAt: string;
+                updatedAt: string;
+                profileImageUrl?: string | undefined;
+            } | undefined;
+        }[] | undefined;
+        editedAt?: string | undefined;
+    }, {
+        type: "text" | "file" | "mention" | "reaction";
+        id: string;
+        createdAt: string;
+        updatedAt: string;
+        conversationId: string;
+        senderId: string;
+        content: string;
+        isEdited: boolean;
+        sender?: {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        } | undefined;
+        decorations?: {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }[] | undefined;
+        attachments?: {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mimeType: string;
+        }[] | undefined;
+        reactions?: {
+            id: string;
+            createdAt: string;
+            emoji: string;
+            userId: string;
+            user?: {
+                email: string;
+                id: string;
+                firstName: string;
+                lastName: string;
+                role: "estudiante" | "admin";
+                isVerified: boolean;
+                createdAt: string;
+                updatedAt: string;
+                profileImageUrl?: string | undefined;
+            } | undefined;
+        }[] | undefined;
+        editedAt?: string | undefined;
+    }>>;
+    lastMessageAt: z.ZodOptional<z.ZodString>;
+    messageCount: z.ZodNumber;
+    unreadCount: z.ZodNumber;
+    createdAt: z.ZodString;
+    updatedAt: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    type: "direct" | "group";
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    participants: {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    }[];
+    messageCount: number;
+    unreadCount: number;
+    description?: string | undefined;
+    name?: string | undefined;
+    avatarUrl?: string | undefined;
+    lastMessage?: {
+        type: "text" | "file" | "mention" | "reaction";
+        id: string;
+        createdAt: string;
+        updatedAt: string;
+        conversationId: string;
+        senderId: string;
+        content: string;
+        isEdited: boolean;
+        sender?: {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        } | undefined;
+        decorations?: {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }[] | undefined;
+        attachments?: {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mimeType: string;
+        }[] | undefined;
+        reactions?: {
+            id: string;
+            createdAt: string;
+            emoji: string;
+            userId: string;
+            user?: {
+                email: string;
+                id: string;
+                firstName: string;
+                lastName: string;
+                role: "estudiante" | "admin";
+                isVerified: boolean;
+                createdAt: string;
+                updatedAt: string;
+                profileImageUrl?: string | undefined;
+            } | undefined;
+        }[] | undefined;
+        editedAt?: string | undefined;
+    } | undefined;
+    lastMessageAt?: string | undefined;
+}, {
+    type: "direct" | "group";
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    participants: {
+        email: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        createdAt: string;
+        updatedAt: string;
+        profileImageUrl?: string | undefined;
+    }[];
+    messageCount: number;
+    unreadCount: number;
+    description?: string | undefined;
+    name?: string | undefined;
+    avatarUrl?: string | undefined;
+    lastMessage?: {
+        type: "text" | "file" | "mention" | "reaction";
+        id: string;
+        createdAt: string;
+        updatedAt: string;
+        conversationId: string;
+        senderId: string;
+        content: string;
+        isEdited: boolean;
+        sender?: {
+            email: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            createdAt: string;
+            updatedAt: string;
+            profileImageUrl?: string | undefined;
+        } | undefined;
+        decorations?: {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }[] | undefined;
+        attachments?: {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mimeType: string;
+        }[] | undefined;
+        reactions?: {
+            id: string;
+            createdAt: string;
+            emoji: string;
+            userId: string;
+            user?: {
+                email: string;
+                id: string;
+                firstName: string;
+                lastName: string;
+                role: "estudiante" | "admin";
+                isVerified: boolean;
+                createdAt: string;
+                updatedAt: string;
+                profileImageUrl?: string | undefined;
+            } | undefined;
+        }[] | undefined;
+        editedAt?: string | undefined;
+    } | undefined;
+    lastMessageAt?: string | undefined;
+}>;
+export declare const ConversationDTOSchema: z.ZodObject<{
+    id: z.ZodString;
+    type: z.ZodEnum<["direct", "group"]>;
+    name: z.ZodOptional<z.ZodString>;
+    description: z.ZodOptional<z.ZodString>;
+    avatar_url: z.ZodOptional<z.ZodString>;
+    participants: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        first_name: z.ZodString;
+        last_name: z.ZodString;
+        role: z.ZodEnum<["estudiante", "admin"]>;
+        profile_image_url: z.ZodOptional<z.ZodString>;
+        is_verified: z.ZodBoolean;
+        created_at: z.ZodString;
+        updated_at: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    }, {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    }>, "many">;
+    last_message: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        conversation_id: z.ZodString;
+        sender_id: z.ZodString;
+        sender: z.ZodOptional<z.ZodObject<{
+            id: z.ZodString;
+            email: z.ZodString;
+            first_name: z.ZodString;
+            last_name: z.ZodString;
+            role: z.ZodEnum<["estudiante", "admin"]>;
+            profile_image_url: z.ZodOptional<z.ZodString>;
+            is_verified: z.ZodBoolean;
+            created_at: z.ZodString;
+            updated_at: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        }, {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        }>>;
+        content: z.ZodString;
+        type: z.ZodEnum<["text", "file", "mention", "reaction"]>;
+        decorations: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            type: z.ZodEnum<["mention", "file", "reaction"]>;
+            data: z.ZodRecord<z.ZodString, z.ZodAny>;
+        }, "strip", z.ZodTypeAny, {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }, {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }>, "many">>;
+        attachments: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            id: z.ZodString;
+            type: z.ZodString;
+            url: z.ZodString;
+            name: z.ZodString;
+            size: z.ZodNumber;
+            mime_type: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mime_type: string;
+        }, {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mime_type: string;
+        }>, "many">>;
+        reactions: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            id: z.ZodString;
+            emoji: z.ZodString;
+            user_id: z.ZodString;
+            user: z.ZodOptional<z.ZodObject<{
+                id: z.ZodString;
+                email: z.ZodString;
+                first_name: z.ZodString;
+                last_name: z.ZodString;
+                role: z.ZodEnum<["estudiante", "admin"]>;
+                profile_image_url: z.ZodOptional<z.ZodString>;
+                is_verified: z.ZodBoolean;
+                created_at: z.ZodString;
+                updated_at: z.ZodString;
+            }, "strip", z.ZodTypeAny, {
+                email: string;
+                id: string;
+                role: "estudiante" | "admin";
+                first_name: string;
+                last_name: string;
+                is_verified: boolean;
+                created_at: string;
+                updated_at: string;
+                profile_image_url?: string | undefined;
+            }, {
+                email: string;
+                id: string;
+                role: "estudiante" | "admin";
+                first_name: string;
+                last_name: string;
+                is_verified: boolean;
+                created_at: string;
+                updated_at: string;
+                profile_image_url?: string | undefined;
+            }>>;
+            created_at: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            id: string;
+            emoji: string;
+            user_id: string;
+            created_at: string;
+            user?: {
+                email: string;
+                id: string;
+                role: "estudiante" | "admin";
+                first_name: string;
+                last_name: string;
+                is_verified: boolean;
+                created_at: string;
+                updated_at: string;
+                profile_image_url?: string | undefined;
+            } | undefined;
+        }, {
+            id: string;
+            emoji: string;
+            user_id: string;
+            created_at: string;
+            user?: {
+                email: string;
+                id: string;
+                role: "estudiante" | "admin";
+                first_name: string;
+                last_name: string;
+                is_verified: boolean;
+                created_at: string;
+                updated_at: string;
+                profile_image_url?: string | undefined;
+            } | undefined;
+        }>, "many">>;
+        is_edited: z.ZodBoolean;
+        edited_at: z.ZodOptional<z.ZodString>;
+        created_at: z.ZodString;
+        updated_at: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        type: "text" | "file" | "mention" | "reaction";
+        id: string;
+        content: string;
+        created_at: string;
+        updated_at: string;
+        conversation_id: string;
+        sender_id: string;
+        is_edited: boolean;
+        sender?: {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        } | undefined;
+        decorations?: {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }[] | undefined;
+        attachments?: {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mime_type: string;
+        }[] | undefined;
+        reactions?: {
+            id: string;
+            emoji: string;
+            user_id: string;
+            created_at: string;
+            user?: {
+                email: string;
+                id: string;
+                role: "estudiante" | "admin";
+                first_name: string;
+                last_name: string;
+                is_verified: boolean;
+                created_at: string;
+                updated_at: string;
+                profile_image_url?: string | undefined;
+            } | undefined;
+        }[] | undefined;
+        edited_at?: string | undefined;
+    }, {
+        type: "text" | "file" | "mention" | "reaction";
+        id: string;
+        content: string;
+        created_at: string;
+        updated_at: string;
+        conversation_id: string;
+        sender_id: string;
+        is_edited: boolean;
+        sender?: {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        } | undefined;
+        decorations?: {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }[] | undefined;
+        attachments?: {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mime_type: string;
+        }[] | undefined;
+        reactions?: {
+            id: string;
+            emoji: string;
+            user_id: string;
+            created_at: string;
+            user?: {
+                email: string;
+                id: string;
+                role: "estudiante" | "admin";
+                first_name: string;
+                last_name: string;
+                is_verified: boolean;
+                created_at: string;
+                updated_at: string;
+                profile_image_url?: string | undefined;
+            } | undefined;
+        }[] | undefined;
+        edited_at?: string | undefined;
+    }>>;
+    last_message_at: z.ZodOptional<z.ZodString>;
+    message_count: z.ZodNumber;
+    unread_count: z.ZodNumber;
+    created_at: z.ZodString;
+    updated_at: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    type: "direct" | "group";
+    id: string;
+    participants: {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    }[];
+    created_at: string;
+    updated_at: string;
+    message_count: number;
+    unread_count: number;
+    description?: string | undefined;
+    name?: string | undefined;
+    avatar_url?: string | undefined;
+    last_message?: {
+        type: "text" | "file" | "mention" | "reaction";
+        id: string;
+        content: string;
+        created_at: string;
+        updated_at: string;
+        conversation_id: string;
+        sender_id: string;
+        is_edited: boolean;
+        sender?: {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        } | undefined;
+        decorations?: {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }[] | undefined;
+        attachments?: {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mime_type: string;
+        }[] | undefined;
+        reactions?: {
+            id: string;
+            emoji: string;
+            user_id: string;
+            created_at: string;
+            user?: {
+                email: string;
+                id: string;
+                role: "estudiante" | "admin";
+                first_name: string;
+                last_name: string;
+                is_verified: boolean;
+                created_at: string;
+                updated_at: string;
+                profile_image_url?: string | undefined;
+            } | undefined;
+        }[] | undefined;
+        edited_at?: string | undefined;
+    } | undefined;
+    last_message_at?: string | undefined;
+}, {
+    type: "direct" | "group";
+    id: string;
+    participants: {
+        email: string;
+        id: string;
+        role: "estudiante" | "admin";
+        first_name: string;
+        last_name: string;
+        is_verified: boolean;
+        created_at: string;
+        updated_at: string;
+        profile_image_url?: string | undefined;
+    }[];
+    created_at: string;
+    updated_at: string;
+    message_count: number;
+    unread_count: number;
+    description?: string | undefined;
+    name?: string | undefined;
+    avatar_url?: string | undefined;
+    last_message?: {
+        type: "text" | "file" | "mention" | "reaction";
+        id: string;
+        content: string;
+        created_at: string;
+        updated_at: string;
+        conversation_id: string;
+        sender_id: string;
+        is_edited: boolean;
+        sender?: {
+            email: string;
+            id: string;
+            role: "estudiante" | "admin";
+            first_name: string;
+            last_name: string;
+            is_verified: boolean;
+            created_at: string;
+            updated_at: string;
+            profile_image_url?: string | undefined;
+        } | undefined;
+        decorations?: {
+            type: "file" | "mention" | "reaction";
+            data: Record<string, any>;
+        }[] | undefined;
+        attachments?: {
+            type: string;
+            id: string;
+            url: string;
+            name: string;
+            size: number;
+            mime_type: string;
+        }[] | undefined;
+        reactions?: {
+            id: string;
+            emoji: string;
+            user_id: string;
+            created_at: string;
+            user?: {
+                email: string;
+                id: string;
+                role: "estudiante" | "admin";
+                first_name: string;
+                last_name: string;
+                is_verified: boolean;
+                created_at: string;
+                updated_at: string;
+                profile_image_url?: string | undefined;
+            } | undefined;
+        }[] | undefined;
+        edited_at?: string | undefined;
+    } | undefined;
+    last_message_at?: string | undefined;
+}>;
+//# sourceMappingURL=messaging.schema.d.ts.map

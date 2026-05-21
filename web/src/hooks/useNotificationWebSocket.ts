@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { getWsUrl } from "@/lib/wsUrl";
 
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
+const WS_URL = getWsUrl();
 
 export function useNotificationWebSocket() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);

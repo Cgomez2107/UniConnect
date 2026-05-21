@@ -15,8 +15,5 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../shared-types" }
-  ]
+  "include": ["src"]
 }

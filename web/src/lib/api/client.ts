@@ -171,13 +171,45 @@ apiClient.interceptors.response.use(
       error.response?.data || error.message
     );
 
-    // 401 Unauthorized - Token expirado/inválido
+    // 401 Unauthorized — debug: cookie faltante vs token expirado
     if (status === 401) {
-      const hadSession = !!localStorage.getItem(AUTH_SESSION_KEY) || !!localStorage.getItem("accessToken");
+      const body = error.response?.data as Record<string, unknown> | string | undefined;
+      const message =
+        (typeof body === "object" && body !== null
+          ? (body as Record<string, unknown>).error ?? (body as Record<string, unknown>).message
+          : body) ?? "";
+      const messageStr = typeof message === "string" ? message : "";
+
+      const hasCookie = typeof navigator !== "undefined" && Boolean(document?.cookie);
+      const hadToken = !!localStorage.getItem(AUTH_SESSION_KEY) || !!localStorage.getItem("accessToken");
+
+      const isExpired = /expir|venci|invalid.*token|token.*invalid/i.test(messageStr);
+      const isMissingCookie = !hasCookie || /no.auth|unauthorized|missing.*credential/i.test(messageStr);
+
+      console.groupCollapsed(
+        "%c[Axios 401]",
+        "color: #ef4444; font-weight: bold",
+        url,
+      );
+      if (isMissingCookie && !hadToken) {
+        console.warn("No hay sesión — usuario no autenticado");
+      } else if (isMissingCookie) {
+        console.warn("Cookie no enviada — revisar withCredentials y CORS");
+      } else if (isExpired) {
+        console.warn("Token/cookie expirada — sesión terminada");
+      } else {
+        console.warn("401 sin clasificar — revisar backend");
+      }
+      console.info("Respuesta:", messageStr);
+      console.info("URL:", `${error.config?.baseURL ?? ""}${url ?? ""}`);
+      console.info("Tenía token:", hadToken);
+      console.info("Cookie presente:", hasCookie);
+      console.groupEnd();
+
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
       localStorage.removeItem(AUTH_SESSION_KEY);
-      if (hadSession) {
+      if (hadToken) {
         window.location.href = "/login";
       }
     }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, X, AlertTriangle, AlertCircle, Loader2 } from "lucide-react";
 import type { Prioridad, Accion } from "@/types";
+import { GATEWAY_BASE_URL, API_PREFIX } from "@/lib/api/client";
 
 interface NotificacionData {
   id: string;
@@ -85,7 +86,7 @@ export function NotificationItem({ notificacion: n }: Props) {
     setResult(null);
     try {
       const token = getToken();
-      const res = await fetch(`http://localhost:3000/api/v1${endpoint}`, {
+      const res = await fetch(`${GATEWAY_BASE_URL}${API_PREFIX}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

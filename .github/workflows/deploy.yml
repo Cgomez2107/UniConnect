@@ -1,3 +1,5 @@
+# INF06: CI/CD Pipeline — Backend + Frontend en Fly.io
+# Trigger: push a main → ejecuta tests completos → despliega si todo pasa
 name: Deploy to Fly.io
 
 on:
@@ -10,7 +12,10 @@ env:
   PNPM_VERSION: "9.12.0"
 
 jobs:
-  test-and-validate:
+  # ── Job 1: Test ──────────────────────────────────────────────────────
+  # CA2: Instala dependencias → corre tests → (build Docker en deploy)
+  # CA3: Si falla algún test, el job reporta error y se cancela el deploy
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,33 +30,58 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: backend/pnpm-lock.yaml
 
+      # ── shared-types: build previo para que backend lo hoistee ─────
       - name: Install shared-types dependencies
         run: pnpm install --frozen-lockfile
         working-directory: packages/shared-types
 
-      - name: Build shared-types (first, so dist/ exists before backend hoists it)
+      - name: Build shared-types (pre-requisito para hoisting)
         run: pnpm build
         working-directory: packages/shared-types
 
-      - name: Install backend dependencies (hoists shared-types with dist/ included)
+      # ── Backend: instalar con shared-types ya resuelto ──────────────
+      - name: Install backend dependencies
         run: pnpm install --frozen-lockfile
         working-directory: backend
 
+      # ── Paso 1: Typecheck (estático) ────────────────────────────────
       - name: Typecheck backend
         run: pnpm typecheck
         working-directory: backend
 
+      # ── Paso 2: Tests de workspace via Turbo (study-groups jest,
+      #    academic-qna jest, shared-types vitest, etc.) ──────────────
+      - name: Run Turbo workspace tests
+        run: pnpm test
+        working-directory: backend
+
+      # ── Paso 3: Tests unitarios/feature con node:test ───────────────
+      #    (decorator pattern, observer, strategy, resources, study-groups)
+      - name: Run backend unit & feature tests (node:test)
+        run: |
+          node --import tsx --test tests/unit/decorators/*.spec.ts tests/feat/*.spec.ts
+          node --import tsx --test services/study-groups/test/*.spec.ts
+        working-directory: backend
+
+      # ── Paso 4: Tests de integración (contratos Zod, mocks) ────────
+      - name: Run integration tests (vitest)
+        run: |
+          npx vitest run tests/integration/sprint4/ --reporter=verbose
+          npx vitest run tests/unit/notification.service.spec.ts --reporter=verbose
+          npx vitest run tests/integration/profiles-catalog/ --reporter=verbose
+        working-directory: backend
+
+      # ── Paso 5: Contract tests de shared-types ─────────────────────
       - name: Run shared-types contract tests
         run: pnpm test:contracts
         working-directory: packages/shared-types
 
-      - name: Run Sprint 4 contract integration tests
-        run: npx vitest run tests/integration/sprint4/ --reporter=verbose
-        working-directory: backend
-
-
-  build-and-deploy:
-    needs: [test-and-validate]
+  # ── Job 2: Deploy ────────────────────────────────────────────────────
+  # CA1: Se ejecuta SOLO en push a main
+  # CA3: Depende de test — si tests fallan, este job se cancela
+  # CA4: FLY_API_TOKEN leído desde GitHub Secrets
+  deploy:
+    needs: [test]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -86,6 +116,8 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      # Build Docker + Deploy a Fly.io (--remote-only usa los builders
+      # de Fly, no necesita Docker local)
       - name: Deploy ${{ matrix.service.name }} to Fly.io
         run: flyctl deploy --remote-only -c ${{ matrix.service.config }}
         working-directory: ${{ matrix.service.cwd }}

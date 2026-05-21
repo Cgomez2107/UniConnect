@@ -62,6 +62,7 @@ import { Database } from "./infrastructure/database/Database.js";
 import type { Pool } from "pg";
 
 import { NotificationService } from "../../../shared/patterns/strategy/NotificationService.js";
+import type { INotificationPreferenceRepository } from "../../../shared/patterns/strategy/INotificationPreferenceRepository.js";
 import { InAppWebSocketStrategy } from "../../../shared/patterns/strategy/InAppWebSocketStrategy.js";
 import { EmailInstitucionalStrategy } from "../../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
 import { PushMovilStrategy } from "../../../shared/patterns/strategy/PushMovilStrategy.js";
@@ -239,7 +240,11 @@ function bootstrap(): void {
       : null,
   ].filter((s): s is NonNullable<typeof s> => s !== null);
 
-  const notificationService = new NotificationService(strategies, preferenceService);
+  const notificationPrefRepo: INotificationPreferenceRepository = {
+    isChannelEnabled: async (_userId: string, _canal: string): Promise<boolean> => true,
+  };
+
+  const notificationService = new NotificationService(strategies, preferenceService, notificationPrefRepo);
   const mapper = new NotificationMapper();
   const notificationObserver = new NotificationObserver(notificationRepository, notificationService, mapper);
 

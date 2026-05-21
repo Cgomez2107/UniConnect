@@ -13,6 +13,7 @@ import { groupReactions } from "@/lib/services/messaging.service";
 import { useConversationsStore } from "@/store/useConversationsStore";
 import { isForbiddenContent } from "@/hooks/useMessageValidation";
 import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
+import { getWsUrl } from "@/lib/wsUrl";
 
 interface Message {
   id: string;
@@ -119,9 +120,8 @@ export const ChatPage: React.FC = () => {
 
     fetchConversation();
 
-    const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
     const token = localStorage.getItem("accessToken");
-    const ws = new WebSocket(`${WS_URL}/ws?token=${token}`);
+    const ws = new WebSocket(`${getWsUrl()}/ws?token=${token}`);
     wsRef.current = ws;
 
     ws.onopen = () => {

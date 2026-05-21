@@ -29,6 +29,7 @@ import { PollSchedulerService } from "./infrastructure/scheduler/PollSchedulerSe
 import { NotificationService } from "../../../shared/patterns/strategy/NotificationService.js";
 import { InAppWebSocketStrategy } from "../../../shared/patterns/strategy/InAppWebSocketStrategy.js";
 import type { IPreferenceService } from "../../../shared/patterns/strategy/IPreferenceService.js";
+import type { INotificationPreferenceRepository } from "../../../shared/patterns/strategy/INotificationPreferenceRepository.js";
 import type { IUserRepository, ContactInfo } from "../../../shared/patterns/strategy/IUserRepository.js";
 import { SupabaseRealtimeGateway } from "./infrastructure/realtime/SupabaseRealtimeGateway.js";
 
@@ -138,7 +139,13 @@ function bootstrap(): void {
 		async setCanalActivo(_userId: string, _eventType: string, _canal: string, _activo: boolean): Promise<void> {},
 	};
 
-	const notificationService = new NotificationService(strategies, preferenceService);
+	const preferenceRepository: INotificationPreferenceRepository = {
+		async isChannelEnabled(_userId: string, _canal: string): Promise<boolean> {
+			return true;
+		},
+	};
+
+	const notificationService = new NotificationService(strategies, preferenceService, preferenceRepository);
 
 	// ✅ ChatNotificationObserver — cierra el circuito: CH01 → ChatSubject → NotificationObserver
 	const chatNotificationObserver = new ChatNotificationObserver(notificationService, userRepository);
