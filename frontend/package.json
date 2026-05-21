@@ -12,6 +12,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test:e2e": "playwright test",
+    "test:maestro": "maestro test maestro/flows/",
+    "test:maestro:ci": "maestro --device android test maestro/flows/ --format junit --output maestro-report/",
     "draft": "npx eas-cli@latest workflow:run create-draft.yml",
     "development-builds": "npx eas-cli@latest workflow:run create-development-builds.yml",
     "deploy": "npx eas-cli@latest workflow:run deploy-to-production.yml"

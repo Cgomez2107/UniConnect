@@ -1,0 +1,90 @@
+appId: com.uniconnect.app
+name: Onboarding → Login — flujo de autenticación completo
+---
+# =============================================================================
+# FLUJO: Onboarding + Inicio de Sesión con credenciales
+# =============================================================================
+# Prerrequisitos:
+#   - App instalada en emulador Android / iOS
+#   - Usuario de prueba creado: e2e@ucaldas.edu.co / TestPass123
+# =============================================================================
+
+# ── 1. ONBOARDING ────────────────────────────────────────────────────────────
+# La app inicia en la pantalla de bienvenida (3 slides)
+
+- assertVisible:
+    text: "UniConnect"
+    timeout: 15000
+
+- assertVisible:
+    text: "Saltar"
+    timeout: 5000
+
+# Opción A: Saltar directamente al Login
+- tapOn:
+    text: "Saltar"
+
+# ── 2. PANTALLA DE LOGIN ──────────────────────────────────────────────────────
+- assertVisible:
+    text: "Inicia sesión"
+    timeout: 10000
+
+- assertVisible:
+    text: "Correo institucional"
+
+# Ingresar correo — Maestro busca por label de accesibilidad
+- tapOn:
+    text: "Correo institucional"
+
+- inputText:
+    text: "e2e@ucaldas.edu.co"
+
+# Tap en "Contraseña" para enfocar el campo y luego ingresar texto
+- tapOn:
+    text: "Contraseña"
+
+- inputText:
+    text: "TestPass123"
+
+# Pulsar botón "Ingresar"
+- tapOn:
+    text: "Ingresar"
+
+# ── 3. VERIFICAR ACCESO AL TAB FEED ──────────────────────────────────────────
+# Tras login exitoso, redirige a (tabs) con el Feed visible
+
+- assertVisible:
+    text: "Feed"
+    timeout: 20000
+
+- assertVisible:
+    id: "tab-bar"
+    timeout: 5000
+
+# Verificar que los tabs principales están presentes
+- assertVisible:
+    text: "Feed"
+
+- assertVisible:
+    text: "Eventos"
+
+- assertVisible:
+    text: "Perfil"
+
+# ── 4. VERIFICAR SESIÓN PERSISTENTE ──────────────────────────────────────────
+# Matar y reabrir la app para validar que la sesión se mantiene
+# (depende de AsyncStorage / SecureStore)
+
+- stopApp:
+    appId: com.uniconnect.app
+
+- openApp:
+    appId: com.uniconnect.app
+
+# Debe redirigir directamente al Feed sin pasar por Login
+- assertVisible:
+    text: "Feed"
+    timeout: 20000
+
+- assertNotVisible:
+    text: "Inicia sesión"

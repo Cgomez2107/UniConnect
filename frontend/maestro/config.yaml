@@ -1,0 +1,20 @@
+# Configuración base de Maestro para UniConnect E2E
+# Más información: https://maestro.mobile.dev
+
+appId: com.uniconnect.app
+name: UniConnect E2E Suite
+env:
+  APP_ENV: test
+  API_BASE_URL: http://localhost:3000
+
+onFlowStart:
+  - openApp:
+      appId: com.uniconnect.app
+
+onFlowComplete:
+  - takeScreenshot: "flow_complete"
+  - stopApp:
+      appId: com.uniconnect.app
+
+onFlowError:
+  - takeScreenshot: "flow_error"
