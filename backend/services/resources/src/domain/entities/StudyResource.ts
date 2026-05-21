@@ -9,6 +9,9 @@ export interface StudyResource {
   readonly fileName: string;
   readonly fileType: string | null;
   readonly fileSizeKb: number | null;
+  readonly ogTitle?: string | null;
+  readonly ogDescription?: string | null;
+  readonly ogImage?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly profiles?: {
@@ -30,4 +33,7 @@ export interface CreateStudyResourceInput {
   readonly fileName: string;
   readonly fileType?: string;
   readonly fileSizeKb?: number;
+  readonly ogTitle?: string | null;
+  readonly ogDescription?: string | null;
+  readonly ogImage?: string | null;
 }

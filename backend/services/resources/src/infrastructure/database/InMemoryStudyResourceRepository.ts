@@ -56,6 +56,9 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
       fileName: input.fileName,
       fileType: input.fileType ?? null,
       fileSizeKb: input.fileSizeKb ?? null,
+      ogTitle: input.ogTitle ?? null,
+      ogDescription: input.ogDescription ?? null,
+      ogImage: input.ogImage ?? null,
       createdAt: now,
       updatedAt: now,
     };

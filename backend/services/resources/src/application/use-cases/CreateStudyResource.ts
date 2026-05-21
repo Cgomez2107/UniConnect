@@ -11,6 +11,9 @@ export interface CreateStudyResourceCommand {
   readonly fileName: string;
   readonly fileType?: string;
   readonly fileSizeKb?: number;
+  readonly ogTitle?: string | null;
+  readonly ogDescription?: string | null;
+  readonly ogImage?: string | null;
 }
 
 export class CreateStudyResource {
@@ -51,6 +54,9 @@ export class CreateStudyResource {
       fileName: command.fileName.trim(),
       fileType: command.fileType?.trim(),
       fileSizeKb: command.fileSizeKb,
+      ogTitle: command.ogTitle,
+      ogDescription: command.ogDescription,
+      ogImage: command.ogImage,
     });
   }
 }

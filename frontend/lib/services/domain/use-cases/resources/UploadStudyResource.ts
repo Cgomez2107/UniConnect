@@ -11,6 +11,9 @@ export interface UploadResourcePayload {
   file_name: string
   file_type?: string
   file_size_kb?: number
+  og_title?: string | null
+  og_description?: string | null
+  og_image?: string | null
 }
 
 export class UploadStudyResource {
@@ -27,6 +30,9 @@ export class UploadStudyResource {
       file_name: payload.file_name,
       file_type: payload.file_type,
       file_size_kb: payload.file_size_kb,
+      og_title: payload.og_title,
+      og_description: payload.og_description,
+      og_image: payload.og_image,
     })
   }
 

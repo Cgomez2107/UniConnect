@@ -6,6 +6,7 @@ import { DeleteStudyResource } from "../../../application/use-cases/DeleteStudyR
 import { GetStudyResourceById } from "../../../application/use-cases/GetStudyResourceById.js";
 import { ListStudyResources } from "../../../application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "../../../application/use-cases/UpdateStudyResource.js";
+import { ParseUrlMetadata } from "../../../application/use-cases/ParseUrlMetadata.js";
 import type { UpdateResourceDto } from "../dto/UpdateResourceDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
@@ -21,6 +22,13 @@ const CreateResourceBodySchema = z.object({
   fileName: z.string().min(1),
   fileType: z.string().optional(),
   fileSizeKb: z.number().positive().optional(),
+  ogTitle: z.string().nullable().optional(),
+  ogDescription: z.string().nullable().optional(),
+  ogImage: z.string().nullable().optional(),
+});
+
+const ParseUrlBodySchema = z.object({
+  url: z.string().url(),
 });
 
 export class ResourcesController {
@@ -30,6 +38,7 @@ export class ResourcesController {
     private readonly createStudyResource: CreateStudyResource,
     private readonly updateStudyResource: UpdateStudyResource,
     private readonly deleteStudyResource: DeleteStudyResource,
+    private readonly parseUrlMetadata: ParseUrlMetadata,
   ) {}
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -94,6 +103,9 @@ export class ResourcesController {
         fileName: parsed.fileName,
         fileType: parsed.fileType,
         fileSizeKb: parsed.fileSizeKb,
+        ogTitle: parsed.ogTitle,
+        ogDescription: parsed.ogDescription,
+        ogImage: parsed.ogImage,
       });
 
       sendData(res, 201, created);
@@ -163,6 +175,25 @@ export class ResourcesController {
 
       sendData(res, 200, updated);
     } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async parseUrl(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const body = await readJsonBody(req);
+      const parsed = ParseUrlBodySchema.parse(body);
+
+      const metadata = await this.parseUrlMetadata.execute({ url: parsed.url });
+
+      sendData(res, 200, metadata);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        sendError(res, 400, "URL inválida. Debe ser una URL completa (incluye https://).");
+        return;
+      }
+
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

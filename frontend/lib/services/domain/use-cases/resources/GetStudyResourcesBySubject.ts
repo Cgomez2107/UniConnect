@@ -6,9 +6,8 @@ export class GetStudyResourcesBySubject {
 
   async execute(subjectId: string): Promise<StudyResource[]> {
     if (!subjectId || subjectId.trim().length === 0) {
-      throw new Error("Subject ID is required")
+      return this.repository.getAll()
     }
-
     return this.repository.getBySubject(subjectId)
   }
 }

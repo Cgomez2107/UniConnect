@@ -44,8 +44,16 @@ const resourcesService = {
     fileType?: string;
     fileSizeKb?: number;
     programId?: string;
+    ogTitle?: string | null;
+    ogDescription?: string | null;
+    ogImage?: string | null;
   }) {
     const resource = await deps.apiClients.resources.create(payload);
+    return mapResource(resource);
+  },
+
+  async updateResource(id: string, payload: { title?: string; description?: string | null }) {
+    const resource = await deps.apiClients.resources.update(id, payload);
     return mapResource(resource);
   },
 

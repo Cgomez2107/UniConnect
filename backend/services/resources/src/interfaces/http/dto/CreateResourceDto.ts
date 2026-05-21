@@ -7,4 +7,7 @@ export interface CreateResourceDto {
   readonly fileName?: string;
   readonly fileType?: string;
   readonly fileSizeKb?: number;
+  readonly ogTitle?: string | null;
+  readonly ogDescription?: string | null;
+  readonly ogImage?: string | null;
 }

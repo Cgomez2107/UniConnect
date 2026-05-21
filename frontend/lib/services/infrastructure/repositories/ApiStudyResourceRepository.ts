@@ -20,6 +20,12 @@ interface ApiResource {
   file_type?: string | null;
   fileSizeKb?: number | null;
   file_size_kb?: number | null;
+  ogTitle?: string | null;
+  og_title?: string | null;
+  ogDescription?: string | null;
+  og_description?: string | null;
+  ogImage?: string | null;
+  og_image?: string | null;
   createdAt?: string;
   created_at?: string;
   updatedAt?: string;
@@ -47,6 +53,9 @@ function mapResource(raw: ApiResource): StudyResource {
     file_name: raw.fileName ?? raw.file_name ?? "",
     file_type: raw.fileType ?? raw.file_type ?? null,
     file_size_kb: raw.fileSizeKb ?? raw.file_size_kb ?? null,
+    og_title: raw.ogTitle ?? raw.og_title ?? null,
+    og_description: raw.ogDescription ?? raw.og_description ?? null,
+    og_image: raw.ogImage ?? raw.og_image ?? null,
     created_at: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
     updated_at: raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
     profiles: raw.profiles
@@ -60,6 +69,10 @@ function mapResource(raw: ApiResource): StudyResource {
 }
 
 export class ApiStudyResourceRepository implements IStudyResourceRepository {
+  async getAll(): Promise<StudyResource[]> {
+    const data = await fetchApi<ApiResource[]>("/resources");
+    return (data ?? []).map(mapResource);
+  }
   async getById(id: string): Promise<StudyResource | null> {
     try {
       const data = await fetchApi<ApiResource>(`/resources/${id}`);
@@ -95,6 +108,9 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
       file_name: string;
       file_type?: string;
       file_size_kb?: number;
+      og_title?: string | null;
+      og_description?: string | null;
+      og_image?: string | null;
     },
   ): Promise<StudyResource> {
     void userId;
@@ -110,6 +126,9 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
         fileName: payload.file_name,
         fileType: payload.file_type,
         fileSizeKb: payload.file_size_kb,
+        ogTitle: payload.og_title,
+        ogDescription: payload.og_description,
+        ogImage: payload.og_image,
       }),
     });
 

@@ -34,6 +34,11 @@ export async function handleResourcesRoutes(
     return true;
   }
 
+  if (req.method === "POST" && requestUrl.pathname === "/api/v1/resources/parse-url") {
+    await controller.parseUrl(req, res);
+    return true;
+  }
+
   if (req.method === "POST" && requestUrl.pathname === "/api/v1/resources") {
     await controller.create(req, res);
     return true;

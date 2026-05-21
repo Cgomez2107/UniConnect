@@ -16,6 +16,9 @@ interface StudyResourceRow {
   file_name: string;
   file_type: string | null;
   file_size_kb: number | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image: string | null;
   created_at: string | Date;
   updated_at: string | Date;
   author_full_name: string | null;
@@ -35,6 +38,9 @@ function mapStudyResource(row: StudyResourceRow): StudyResource {
     fileName: row.file_name,
     fileType: row.file_type,
     fileSizeKb: row.file_size_kb,
+    ogTitle: row.og_title,
+    ogDescription: row.og_description,
+    ogImage: row.og_image,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
     profiles: row.author_full_name
@@ -95,6 +101,9 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           sr.file_name,
           sr.file_type,
           sr.file_size_kb,
+          sr.og_title,
+          sr.og_description,
+          sr.og_image,
           sr.created_at,
           sr.updated_at,
           p.full_name AS author_full_name,
@@ -128,6 +137,9 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           sr.file_name,
           sr.file_type,
           sr.file_size_kb,
+          sr.og_title,
+          sr.og_description,
+          sr.og_image,
           sr.created_at,
           sr.updated_at,
           p.full_name AS author_full_name,
@@ -157,8 +169,11 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           file_url,
           file_name,
           file_type,
-          file_size_kb
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          file_size_kb,
+          og_title,
+          og_description,
+          og_image
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING id
       `,
       [
@@ -171,6 +186,9 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
         input.fileName,
         input.fileType ?? null,
         input.fileSizeKb ?? null,
+        input.ogTitle ?? null,
+        input.ogDescription ?? null,
+        input.ogImage ?? null,
       ],
     );
 
