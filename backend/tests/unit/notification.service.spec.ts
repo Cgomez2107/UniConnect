@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NotificationService } from "../../shared/patterns/strategy/NotificationService.js";
 import type { INotificationStrategy, NotificacionDTO } from "../../shared/patterns/strategy/INotificationStrategy.js";
 import type { IPreferenceService } from "../../shared/patterns/strategy/IPreferenceService.js";
+import type { INotificationPreferenceRepository } from "../../shared/patterns/strategy/INotificationPreferenceRepository.js";
 import type { IEmailGateway } from "../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
 import type { IStudyGroupSocketGateway } from "../../shared/patterns/strategy/InAppWebSocketStrategy.js";
 import type { IPushGateway } from "../../shared/patterns/strategy/PushMovilStrategy.js";
@@ -63,6 +64,7 @@ describe("NotificationService — Channel Delivery", () => {
   let ws: ReturnType<typeof createMockWSClient>;
   let expo: ReturnType<typeof createMockExpoClient>;
   let preferenceService: IPreferenceService;
+  let preferenceRepository: INotificationPreferenceRepository;
 
   beforeEach(() => {
     smtp = createMockSMTPClient();
@@ -74,6 +76,10 @@ describe("NotificationService — Channel Delivery", () => {
         .fn()
         .mockResolvedValue(["smtp", "websocket", "expo"]),
       setCanalActivo: vi.fn(),
+    };
+
+    preferenceRepository = {
+      isChannelEnabled: vi.fn().mockResolvedValue(true),
     };
   });
 
@@ -108,12 +114,13 @@ describe("NotificationService — Channel Delivery", () => {
       ),
     ];
 
-    const service = new NotificationService(strategies, preferenceService);
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
     const resumen = await service.notificar(dummyNotification);
 
     expect(resumen.total).toBe(3);
     expect(resumen.exitosos).toBe(3);
     expect(resumen.fallidos).toBe(0);
+    expect(resumen.omitidos).toBe(0);
     expect(smtp.enviarEmail).toHaveBeenCalledTimes(1);
     expect(ws.emitToUser).toHaveBeenCalledTimes(1);
     expect(expo.enviarPush).toHaveBeenCalledTimes(1);
@@ -153,12 +160,13 @@ describe("NotificationService — Channel Delivery", () => {
       ),
     ];
 
-    const service = new NotificationService(strategies, preferenceService);
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
     const resumen = await service.notificar(dummyNotification);
 
     expect(resumen.total).toBe(3);
     expect(resumen.exitosos).toBe(2);
     expect(resumen.fallidos).toBe(1);
+    expect(resumen.omitidos).toBe(0);
     expect(smtp.enviarEmail).toHaveBeenCalledTimes(1);
     expect(ws.emitToUser).toHaveBeenCalledTimes(1);
     expect(expo.enviarPush).toHaveBeenCalledTimes(1);
@@ -195,12 +203,13 @@ describe("NotificationService — Channel Delivery", () => {
       ),
     ];
 
-    const service = new NotificationService(strategies, preferenceService);
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
     const resumen = await service.notificar(dummyNotification);
 
     expect(resumen.total).toBe(3);
     expect(resumen.exitosos).toBe(1);
     expect(resumen.fallidos).toBe(2);
+    expect(resumen.omitidos).toBe(0);
 
     const smtpResult = resumen.resultados.find((r) => r.canal === "smtp")!;
     expect(smtpResult.status).toBe("failed");
@@ -213,5 +222,57 @@ describe("NotificationService — Channel Delivery", () => {
     const expoResult = resumen.resultados.find((r) => r.canal === "expo")!;
     expect(expoResult.status).toBe("failed");
     expect(expoResult.error).toContain("EXPO_TIMEOUT");
+  });
+
+  // ─── Test 4: Cortocircuito por Preferencias ─
+  it("debe saltar (skip) el canal smtp si el usuario lo tiene desactivado", async () => {
+    preferenceRepository.isChannelEnabled = vi
+      .fn()
+      .mockImplementation(async (_userId: string, canal: string) => canal !== "smtp");
+
+    smtp.enviarEmail.mockRejectedValue(new Error("no debe llamarse"));
+    ws.emitToUser.mockResolvedValue(undefined);
+    expo.enviarPush.mockResolvedValue(undefined);
+
+    const strategies = [
+      createStrategy("smtp", () =>
+        smtp.enviarEmail(
+          dummyNotification.userId,
+          dummyNotification.title,
+          dummyNotification.body,
+        ),
+      ),
+      createStrategy("websocket", () =>
+        ws.emitToUser(
+          dummyNotification.userId,
+          dummyNotification.type,
+          {},
+        ),
+      ),
+      createStrategy("expo", () =>
+        expo.enviarPush(
+          "expo-token-abc",
+          dummyNotification.title,
+          dummyNotification.body,
+          {},
+        ),
+      ),
+    ];
+
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
+    const resumen = await service.notificar(dummyNotification);
+
+    expect(resumen.total).toBe(3);
+    expect(resumen.exitosos).toBe(2);
+    expect(resumen.fallidos).toBe(0);
+    expect(resumen.omitidos).toBe(1);
+
+    const smtpResult = resumen.resultados.find((r) => r.canal === "smtp")!;
+    expect(smtpResult.status).toBe("skipped");
+    expect(smtpResult.error).toBeUndefined();
+
+    expect(smtp.enviarEmail).not.toHaveBeenCalled();
+    expect(ws.emitToUser).toHaveBeenCalledTimes(1);
+    expect(expo.enviarPush).toHaveBeenCalledTimes(1);
   });
 });

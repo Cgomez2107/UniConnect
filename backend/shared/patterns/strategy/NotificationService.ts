@@ -1,10 +1,11 @@
 import type { INotificationStrategy, NotificacionDTO } from "./INotificationStrategy.js";
 import type { IPreferenceService } from "./IPreferenceService.js";
+import type { INotificationPreferenceRepository } from "./INotificationPreferenceRepository.js";
 import { sanitizeError } from "../../libs/errors/sanitizeError.js";
 
 export interface NotificationResult {
   readonly canal: string;
-  readonly status: "success" | "failed";
+  readonly status: "success" | "failed" | "skipped";
   readonly error?: string;
 }
 
@@ -12,6 +13,7 @@ export interface ResumenNotificacion {
   readonly total: number;
   readonly exitosos: number;
   readonly fallidos: number;
+  readonly omitidos: number;
   readonly resultados: NotificationResult[];
 }
 
@@ -19,6 +21,7 @@ export class NotificationService {
   constructor(
     private readonly strategies: INotificationStrategy[],
     private readonly preferenceService: IPreferenceService,
+    private readonly preferenceRepository: INotificationPreferenceRepository,
   ) {}
 
   async notificar(notificacion: NotificacionDTO): Promise<ResumenNotificacion> {
@@ -31,6 +34,14 @@ export class NotificationService {
 
     const resultados = await Promise.allSettled(
       estrategiasActivas.map(async s => {
+        const enabled = await this.preferenceRepository.isChannelEnabled(
+          notificacion.userId,
+          s.canal,
+        );
+        if (!enabled) {
+          return { canal: s.canal, status: "skipped" as const };
+        }
+
         try {
           await s.enviar(notificacion);
           return { canal: s.canal, status: "success" as const };
@@ -56,6 +67,7 @@ export class NotificationService {
       total: envios.length,
       exitosos: envios.filter(e => e.status === "success").length,
       fallidos: envios.filter(e => e.status === "failed").length,
+      omitidos: envios.filter(e => e.status === "skipped").length,
       resultados: envios,
     };
   }
