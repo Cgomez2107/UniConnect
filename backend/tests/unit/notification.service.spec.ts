@@ -3,6 +3,8 @@ import { NotificationService } from "../../shared/patterns/strategy/Notification
 import type { INotificationStrategy, NotificacionDTO } from "../../shared/patterns/strategy/INotificationStrategy.js";
 import type { IPreferenceService } from "../../shared/patterns/strategy/IPreferenceService.js";
 import type { INotificationPreferenceRepository } from "../../shared/patterns/strategy/INotificationPreferenceRepository.js";
+import { SlackStrategy } from "../../shared/patterns/strategy/SlackStrategy.js";
+import type { ISlackGateway } from "../../shared/patterns/strategy/SlackStrategy.js";
 import type { IEmailGateway } from "../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
 import type { IStudyGroupSocketGateway } from "../../shared/patterns/strategy/InAppWebSocketStrategy.js";
 import type { IPushGateway } from "../../shared/patterns/strategy/PushMovilStrategy.js";
@@ -274,5 +276,65 @@ describe("NotificationService — Channel Delivery", () => {
     expect(smtp.enviarEmail).not.toHaveBeenCalled();
     expect(ws.emitToUser).toHaveBeenCalledTimes(1);
     expect(expo.enviarPush).toHaveBeenCalledTimes(1);
+  });
+
+  // ─── Test 5: Extensibilidad — Slack ─────────
+  it("debe permitir añadir Slack dinámicamente sin modificar NotificationService", async () => {
+    const slackGateway: ISlackGateway = {
+      enviarMensaje: vi.fn().mockResolvedValue(undefined),
+    };
+    const slackStrategy = new SlackStrategy(slackGateway);
+
+    preferenceService.getCanalesActivos = vi
+      .fn()
+      .mockResolvedValue(["smtp", "websocket", "expo", "slack"]);
+
+    smtp.enviarEmail.mockResolvedValue(undefined);
+    ws.emitToUser.mockResolvedValue(undefined);
+    expo.enviarPush.mockResolvedValue(undefined);
+
+    const strategies = [
+      createStrategy("smtp", () =>
+        smtp.enviarEmail(
+          dummyNotification.userId,
+          dummyNotification.title,
+          dummyNotification.body,
+        ),
+      ),
+      createStrategy("websocket", () =>
+        ws.emitToUser(
+          dummyNotification.userId,
+          dummyNotification.type,
+          {},
+        ),
+      ),
+      createStrategy("expo", () =>
+        expo.enviarPush(
+          "expo-token-abc",
+          dummyNotification.title,
+          dummyNotification.body,
+          {},
+        ),
+      ),
+      slackStrategy,
+    ];
+
+    // NotificationService no se modificó para incluir Slack;
+    // solo se pasó la instancia por el constructor
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
+    const resumen = await service.notificar(dummyNotification);
+
+    expect(resumen.total).toBe(4);
+    expect(resumen.exitosos).toBe(4);
+    expect(resumen.fallidos).toBe(0);
+    expect(resumen.omitidos).toBe(0);
+
+    const slackResult = resumen.resultados.find((r) => r.canal === "slack")!;
+    expect(slackResult.status).toBe("success");
+    expect(slackGateway.enviarMensaje).toHaveBeenCalledTimes(1);
+    expect(slackGateway.enviarMensaje).toHaveBeenCalledWith(
+      dummyNotification.userId,
+      expect.stringContaining(dummyNotification.title),
+    );
   });
 });

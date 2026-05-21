@@ -21,7 +21,7 @@
     "resources:dev": "pnpm --filter @uniconnect/resources dev",
     "messaging:dev": "pnpm --filter @uniconnect/messaging dev",
     "openapi:pipeline": "turbo run generate:openapi merge:openapi generate:api-types",
-    "test:coverage": "npx c8 --reporter=lcov --reporter=html --reporter=json-summary --include=\"shared/patterns/decorator/**/*.ts\" --include=\"shared/patterns/observer/**/*.ts\" --check-coverage --lines=70 --branches=70 --functions=70 --statements=70 node --import tsx --test tests/unit/decorators/*.spec.ts tests/feat/us-d01-decorator-pattern.spec.ts tests/feat/us-d03-notification-decorators.spec.ts tests/feat/us-o03-event-observer.spec.ts && bash scripts/check-patterns-coverage.sh"
+    "test:coverage": "npx c8 --reporter=lcov --reporter=html --reporter=json-summary --exclude=\"node_modules/**\" --exclude=\"**/*.spec.ts\" --exclude=\"**/*.test.ts\" node --import tsx --test tests/unit/decorators/*.spec.ts tests/feat/us-d01-decorator-pattern.spec.ts tests/feat/us-d03-notification-decorators.spec.ts tests/feat/us-o03-event-observer.spec.ts && bash scripts/check-coverage.sh"
   },
   "devDependencies": {
     "@jest/globals": "^30.4.1",

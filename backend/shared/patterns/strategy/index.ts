@@ -16,3 +16,7 @@ export {
   PushMovilStrategy,
   type IPushGateway,
 } from "./PushMovilStrategy.js";
+export {
+  SlackStrategy,
+  type ISlackGateway,
+} from "./SlackStrategy.js";
