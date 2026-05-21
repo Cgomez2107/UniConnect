@@ -17,6 +17,7 @@ import { useNotificationStore } from "@/store/useNotificationStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+import { getWsUrl } from "@/lib/wsUrl";
 import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
 import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
 import type { GroupState } from "@/types";
@@ -259,7 +260,7 @@ export function GroupDashboardPage() {
     const connect = (token: string) => {
       if (!mounted) return;
       attempt++;
-      const url = `ws://localhost:3000/ws?token=${token}`;
+      const url = `${getWsUrl()}/ws?token=${token}`;
       console.log(`[GroupDashboardPage WS] Connecting (attempt ${attempt})...`);
       ws = new WebSocket(url);
 
