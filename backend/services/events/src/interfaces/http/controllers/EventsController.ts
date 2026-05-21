@@ -64,7 +64,7 @@ export class EventsController {
     }
 
     try {
-      const body = await readJsonBody<any>(req);
+      const body = (req as any).__validatedBody ?? await readJsonBody<any>(req);
 
       const eventDate = body.event_date || body.eventDate || body.startAt || "";
 
@@ -100,7 +100,7 @@ export class EventsController {
     }
 
     try {
-      const body = await readJsonBody<any>(req);
+      const body = (req as any).__validatedBody ?? await readJsonBody<any>(req);
 
       const result = await this.updateEvent.execute({
         actorUserId,

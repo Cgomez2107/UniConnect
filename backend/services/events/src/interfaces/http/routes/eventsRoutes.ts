@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { EventsController } from "../controllers/EventsController.js";
 import type { SubscriptionController } from "../controllers/SubscriptionController.js";
+import type { ZodSchema } from "zod";
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   const body = JSON.stringify(payload);
@@ -9,6 +10,44 @@ function sendJson(res: ServerResponse, statusCode: number, payload: unknown): vo
     "Content-Length": new TextEncoder().encode(body).byteLength.toString(),
   });
   res.end(body);
+}
+
+async function readRawBody(req: IncomingMessage): Promise<string> {
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks).toString("utf-8").trim();
+}
+
+async function validateBody<T extends ZodSchema>(
+  req: IncomingMessage,
+  res: ServerResponse,
+  schema: T,
+): Promise<boolean> {
+  const raw = await readRawBody(req);
+  let parsed: unknown;
+  try {
+    parsed = raw ? JSON.parse(raw) : {};
+  } catch {
+    sendJson(res, 400, { error: "VALIDATION_ERROR", message: "JSON body inválido." });
+    return false;
+  }
+  const result = (schema as ZodSchema).safeParse(parsed);
+  if (!result.success) {
+    sendJson(res, 400, {
+      error: "VALIDATION_ERROR",
+      message: "El cuerpo de la solicitud no cumple el contrato",
+      details: {
+        source: "body",
+        fieldErrors: result.error.flatten().fieldErrors,
+        formErrors: result.error.flatten().formErrors,
+      },
+    });
+    return false;
+  }
+  (req as any).__validatedBody = result.data;
+  return true;
 }
 
 export async function handleEventsRoutes(
@@ -35,6 +74,9 @@ export async function handleEventsRoutes(
   }
 
   if (req.method === "POST" && requestUrl.pathname === "/api/v1/events") {
+    const { CreateEventRequestSchema } = await import("@uniconnect/shared-types/contracts/event");
+    const valid = await validateBody(req, res, CreateEventRequestSchema.shape.body);
+    if (!valid) return true;
     await controller.create(req, res);
     return true;
   }
