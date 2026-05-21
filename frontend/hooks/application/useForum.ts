@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { DIContainer } from "@/lib/services/di/container";
 import type { ForumQuestion, ForumQuestionSummary, ForumAnswer } from "@/types";
 
@@ -82,11 +82,13 @@ export function useForumQuestion(questionId?: string) {
     await loadDetail();
   };
 
-  const orderedAnswers = [...answers].sort((a, b) => {
-    if (a.is_solution && !b.is_solution) return -1;
-    if (!a.is_solution && b.is_solution) return 1;
-    return b.vote_count - a.vote_count;
-  });
+  const orderedAnswers = useMemo(() => {
+    return [...answers].sort((a, b) => {
+      if (a.is_solution && !b.is_solution) return -1;
+      if (!a.is_solution && b.is_solution) return 1;
+      return b.vote_count - a.vote_count;
+    });
+  }, [answers]);
 
   return {
     question,

@@ -27,10 +27,22 @@ export default function ForumScreen() {
       try {
         const mySubjects = await DIContainer.getInstance().getProfileRepository().getMySubjects(userId);
         const mapped = mySubjects.map((s: any) => ({
-          subjectId: s.subject_id ?? s.subjectId ?? s.id,
-          subject_name: s.subject?.name ?? s.subject_name ?? "Desconocida",
+          subjectId:
+            s.subjectId ??
+            s.subject_id ??
+            s.subjects?.id ??
+            s.subject?.id ??
+            s.id ??
+            "",
+          subject_name:
+            s.subjects?.name ??
+            s.subject?.name ??
+            s.subject_name ??
+            s.subjectName ??
+            s.name ??
+            "Materia",
         }));
-        setSubjects(mapped);
+        setSubjects(mapped.filter((item) => item.subjectId));
       } catch {
         setSubjects([]);
       } finally {

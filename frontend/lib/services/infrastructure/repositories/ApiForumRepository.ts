@@ -50,15 +50,21 @@ export class ApiForumRepository implements IForumRepository {
       method: "POST",
       body: JSON.stringify({ subjectId, title, body }),
     });
-    return mapQuestionFromApi(data);
+    return mapQuestionFromApi(data.question ?? data);
   }
 
   async listQuestions(subjectId: string, page = 1, limit = 20): Promise<ForumQuestionSummary[]> {
-    const data: any = await fetchApi("/forum/questions", {
+    const query = new URLSearchParams({
+      subjectId,
+      page: String(page),
+      limit: String(limit),
+    });
+
+    const data: any = await fetchApi(`/forum/questions?${query.toString()}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
-    const raw = Array.isArray(data) ? (data as any[]) : ((data?.questions as any[]) ?? []);
+    const raw = Array.isArray(data) ? (data as any[]) : ((data?.questions ?? data?.data) as any[]) ?? [];
     return raw.map(mapSummaryFromApi);
   }
 
@@ -66,7 +72,7 @@ export class ApiForumRepository implements IForumRepository {
     const data = await fetchApi<any>(`/forum/questions/${id}`);
     return {
       question: mapQuestionFromApi(data.question ?? data),
-      answers: (data.answers ?? []).map(mapAnswerFromApi),
+      answers: (data.answers ?? data.data?.answers ?? []).map(mapAnswerFromApi),
     };
   }
 
