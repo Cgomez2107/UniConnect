@@ -58,6 +58,7 @@ export const Get_forum_questions_questionId_200ResponseSchema = z.object({
   "authorId": z.string(),
   "body": z.string(),
   "voteCount": z.number().int(),
+  "isSolution": z.boolean(),
   "createdAt": z.string().datetime(),
   "updatedAt": z.string().datetime()
 }))
@@ -70,6 +71,7 @@ export const Get_forum_questions_questionId_answers_200ResponseSchema = z.object
   "authorId": z.string(),
   "body": z.string(),
   "voteCount": z.number().int(),
+  "isSolution": z.boolean(),
   "createdAt": z.string().datetime(),
   "updatedAt": z.string().datetime()
 })),
@@ -87,6 +89,7 @@ export const Post_forum_questions_questionId_answers_201ResponseSchema = z.objec
   "authorId": z.string(),
   "body": z.string(),
   "voteCount": z.number().int(),
+  "isSolution": z.boolean(),
   "createdAt": z.string().datetime(),
   "updatedAt": z.string().datetime()
 })

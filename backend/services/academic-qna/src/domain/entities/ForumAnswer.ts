@@ -4,6 +4,7 @@ export interface ForumAnswer {
   authorId: string;
   body: string;
   voteCount: number;
+  isSolution: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -231,7 +231,7 @@ export interface paths {
         put?: never;
         /**
          * Marcar respuesta como solución
-         * @description Marca una respuesta como la solución aceptada de una pregunta. Solo el autor de la pregunta puede marcar la solución.
+         * @description Marca una respuesta como la solución aceptada de una pregunta. La respuesta marcada se fija al tope de la lista. Solo el docente/admin del grupo puede marcar la solución.
          */
         post: {
             parameters: {
@@ -3867,6 +3867,7 @@ export interface components {
                     authorId: string;
                     body: string;
                     voteCount: number;
+                    isSolution: boolean;
                     /** Format: date-time */
                     createdAt: string;
                     /** Format: date-time */
@@ -3884,6 +3885,7 @@ export interface components {
                 authorId: string;
                 body: string;
                 voteCount: number;
+                isSolution: boolean;
                 /** Format: date-time */
                 createdAt: string;
                 /** Format: date-time */
@@ -3906,6 +3908,7 @@ export interface components {
                 authorId: string;
                 body: string;
                 voteCount: number;
+                isSolution: boolean;
                 /** Format: date-time */
                 createdAt: string;
                 /** Format: date-time */

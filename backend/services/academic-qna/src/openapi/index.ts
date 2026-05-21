@@ -34,6 +34,7 @@ const AnswerSchema = z.object({
   authorId: UuidSchema,
   body: z.string(),
   voteCount: z.number().int(),
+  isSolution: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -134,7 +135,7 @@ builder.addEndpoint("/forum/questions/:questionId/answers", "post", {
 
 builder.addEndpoint("/forum/questions/:questionId/solution", "post", {
   summary: "Marcar respuesta como solución",
-  description: "Marca una respuesta como la solución aceptada de una pregunta. Solo el autor de la pregunta puede marcar la solución.",
+  description: "Marca una respuesta como la solución aceptada de una pregunta. La respuesta marcada se fija al tope de la lista. Solo el docente/admin del grupo puede marcar la solución.",
   tags: ["Academic Q&A"],
   paramsSchema: z.object({ questionId: UuidSchema }),
   bodySchema: MarkSolutionBodySchema,
