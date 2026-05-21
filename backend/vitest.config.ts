@@ -4,7 +4,10 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["tests/integration/sprint4/**/*.spec.ts"],
+    include: [
+      "tests/integration/sprint4/**/*.spec.ts",
+      "tests/unit/notification.service.spec.ts",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "lcov", "html"],
