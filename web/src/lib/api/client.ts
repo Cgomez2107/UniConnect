@@ -1,4 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
+import { parseGroupError } from "./groupErrorInterceptor";
+import { useNotificationStore } from "../../store/useNotificationStore";
+import type { Notification } from "@uniconnect/shared-types";
 
 /**
  * ============================================================================
@@ -168,12 +171,47 @@ apiClient.interceptors.response.use(
       error.response?.data || error.message
     );
 
-    // 401 Unauthorized - Token expirado/inválido
+    // 401 Unauthorized — debug: cookie faltante vs token expirado
     if (status === 401) {
+      const body = error.response?.data as Record<string, unknown> | string | undefined;
+      const message =
+        (typeof body === "object" && body !== null
+          ? (body as Record<string, unknown>).error ?? (body as Record<string, unknown>).message
+          : body) ?? "";
+      const messageStr = typeof message === "string" ? message : "";
+
+      const hasCookie = typeof navigator !== "undefined" && Boolean(document?.cookie);
+      const hadToken = !!localStorage.getItem(AUTH_SESSION_KEY) || !!localStorage.getItem("accessToken");
+
+      const isExpired = /expir|venci|invalid.*token|token.*invalid/i.test(messageStr);
+      const isMissingCookie = !hasCookie || /no.auth|unauthorized|missing.*credential/i.test(messageStr);
+
+      console.groupCollapsed(
+        "%c[Axios 401]",
+        "color: #ef4444; font-weight: bold",
+        url,
+      );
+      if (isMissingCookie && !hadToken) {
+        console.warn("No hay sesión — usuario no autenticado");
+      } else if (isMissingCookie) {
+        console.warn("Cookie no enviada — revisar withCredentials y CORS");
+      } else if (isExpired) {
+        console.warn("Token/cookie expirada — sesión terminada");
+      } else {
+        console.warn("401 sin clasificar — revisar backend");
+      }
+      console.info("Respuesta:", messageStr);
+      console.info("URL:", `${error.config?.baseURL ?? ""}${url ?? ""}`);
+      console.info("Tenía token:", hadToken);
+      console.info("Cookie presente:", hasCookie);
+      console.groupEnd();
+
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
       localStorage.removeItem(AUTH_SESSION_KEY);
-      window.location.href = "/login";
+      if (hadToken) {
+        window.location.href = "/login";
+      }
     }
 
     // 403 Forbidden - Acceso prohibido
@@ -189,6 +227,27 @@ apiClient.interceptors.response.use(
     // 500+ Server Error
     if (status && status >= 500) {
       console.error("[API] Error del servidor:", error.response?.data);
+    }
+
+    // Estado inválido / error de dominio: mostrar toast al usuario
+    if (status && [400, 403, 409, 422].includes(status)) {
+      const friendly = parseGroupError(error);
+      try {
+        const store = useNotificationStore.getState();
+        if (typeof store.addNotification === "function") {
+          const toastNotif: Notification = {
+            id: `toast-${Date.now()}`,
+            userId: "",
+            type: "system",
+            title: friendly,
+            read: false,
+            createdAt: new Date(),
+          };
+          store.addNotification(toastNotif);
+        }
+      } catch (e) {
+        console.warn("[API] No se pudo mostrar toast de error:", e);
+      }
     }
 
     return Promise.reject(error);

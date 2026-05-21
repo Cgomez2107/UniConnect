@@ -8,6 +8,7 @@ interface AnswerRow {
   author_id: string;
   body: string;
   vote_count: number;
+  is_solution: boolean;
   created_at: string | Date;
   updated_at: string | Date;
 }
@@ -19,6 +20,7 @@ function mapAnswer(row: AnswerRow): ForumAnswer {
     authorId: row.author_id,
     body: row.body,
     voteCount: Number(row.vote_count),
+    isSolution: row.is_solution,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -54,11 +56,18 @@ export class PostgresForumAnswerRepository implements IForumAnswerRepository {
       `
         SELECT * FROM forum_answers
         WHERE question_id = $1
-        ORDER BY vote_count DESC, created_at ASC
+        ORDER BY is_solution DESC, vote_count DESC, created_at ASC
       `,
       [questionId],
     );
 
     return result.rows.map(mapAnswer);
+  }
+
+  async markAsSolution(answerId: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE forum_answers SET is_solution = true, updated_at = NOW() WHERE id = $1`,
+      [answerId],
+    );
   }
 }

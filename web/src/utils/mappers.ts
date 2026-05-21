@@ -169,7 +169,7 @@ export function mapStudyRequestApiToUI(r: StudyRequestApi): StudyRequestUI {
     facultyName: r.facultyName,
     subjectName: r.subjectName ?? "",
     creatorName: r.author?.fullName ?? "",
-    memberCount: r.applicationsCount ?? 0,
+    memberCount: (r as any).memberCount ?? r.applicationsCount ?? 0,
   };
 }
 

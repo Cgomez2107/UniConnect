@@ -4,40 +4,52 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "android": {
+        "image": "latest"
+      },
+      "ios": {
+        "image": "latest"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
-      "android": {
-        "image": "latest"
-      },
-      "ios": {
-        "image": "latest"
-      }
-    },
-    "development-simulator": {
-      "extends": "development",
       "ios": {
         "simulator": true
-      }
+      },
+      "channel": "development",
+      "node": "20.18.0"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
-      "channel": "main",
+      "credentialsSource": "remote",
       "android": {
-        "image": "latest"
+        "buildType": "apk"
       },
-      "ios": {
-        "image": "latest"
+      "channel": "preview",
+      "node": "20.18.0",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "{{ env.API_BASE_URL }}",
+        "EXPO_PUBLIC_SUPABASE_URL": "{{ env.SUPABASE_URL }}",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "{{ env.SUPABASE_ANON_KEY }}",
+        "EXPO_PUBLIC_OAUTH_CLIENT_ID": "{{ env.OAUTH_CLIENT_ID }}"
       }
     },
     "production": {
-      "channel": "production",
+      "extends": "base",
+      "distribution": "store",
+      "credentialsSource": "remote",
       "autoIncrement": true,
-      "android": {
-        "image": "latest"
-      },
-      "ios": {
-        "image": "latest"
+      "channel": "production",
+      "node": "20.18.0",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "{{ env.API_BASE_URL }}",
+        "EXPO_PUBLIC_SUPABASE_URL": "{{ env.SUPABASE_URL }}",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "{{ env.SUPABASE_ANON_KEY }}",
+        "EXPO_PUBLIC_OAUTH_CLIENT_ID": "{{ env.OAUTH_CLIENT_ID }}"
       }
     }
   },

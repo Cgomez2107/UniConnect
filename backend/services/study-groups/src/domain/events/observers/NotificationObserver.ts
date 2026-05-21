@@ -16,9 +16,7 @@ export class NotificationObserver implements IObserver {
   async handle(event: StudyGroupEvent): Promise<void> {
     const results = this.mapper.map(event);
 
-    for (const { persistence, dto } of results) {
-      await this.notificationRepository.create(persistence);
-
+    for (const { dto } of results) {
       const resumen: ResumenNotificacion = await this.notificationService.notificar(dto);
 
       console.log(

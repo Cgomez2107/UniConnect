@@ -4,4 +4,5 @@ export interface IForumAnswerRepository {
   create(data: Omit<ForumAnswer, 'id' | 'createdAt' | 'updatedAt'>): Promise<ForumAnswer>;
   findById(id: string): Promise<ForumAnswer | null>;
   findByQuestion(questionId: string): Promise<ForumAnswer[]>;
+  markAsSolution(answerId: string): Promise<void>;
 }

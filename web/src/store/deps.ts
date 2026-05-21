@@ -9,11 +9,13 @@ import {
   EventsClient,
   NotificationsClient,
   AdminClient,
+  ForumClient,
 } from "@uniconnect/shared-api";
 import { WebStorageAdapter, ConsoleLogger } from "@uniconnect/shared-state";
+import { getWsUrl } from "@/lib/wsUrl";
 
 const GATEWAY_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
+const WS_URL = getWsUrl();
 const AUTH_SESSION_KEY = "uniconnect-auth-session";
 
 const transport = new FetchTransport(GATEWAY_URL);
@@ -71,10 +73,13 @@ transport.setTokenRefreshProvider(async () => {
 
 transport.setOnSessionExpired(() => {
   try {
+    const hadSession = !!window.localStorage.getItem(AUTH_SESSION_KEY);
     window.localStorage.removeItem(AUTH_SESSION_KEY);
     window.localStorage.removeItem("accessToken");
     window.localStorage.removeItem("user");
-    window.location.href = "/login";
+    if (hadSession) {
+      window.location.href = "/login";
+    }
   } catch {
     // ignore
   }
@@ -89,6 +94,7 @@ const resourcesClient = new ResourcesClient(transport);
 const eventsClient = new EventsClient(transport);
 const notificationsClient = new NotificationsClient(transport);
 const adminClient = new AdminClient(transport);
+const forumClient = new ForumClient(transport);
 
 const storageAdapter = new WebStorageAdapter(window.localStorage);
 const logger = new ConsoleLogger();
@@ -104,6 +110,7 @@ export const deps = {
     events: eventsClient,
     notifications: notificationsClient,
     admin: adminClient,
+    forum: forumClient,
   },
   transport,
   storage: storageAdapter,

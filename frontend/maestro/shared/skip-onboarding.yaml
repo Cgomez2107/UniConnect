@@ -1,0 +1,9 @@
+appId: com.uniconnect.app
+name: Saltar onboarding y llegar al Login
+---
+# Salta los 3 slides de onboarding y llega a la pantalla de Login
+
+- tapOn:
+    text: "Saltar"
+    timeout: 5000
+    optional: true

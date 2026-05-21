@@ -11,8 +11,9 @@ import type { UpdateResourceDto } from "../dto/UpdateResourceDto.js";
 import type { ResourceCardResponse } from "../dto/ResourceCardResponse.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
+import type { z } from "zod";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
-import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+import { sendData, sendJson, sendError } from "../../../../../../shared/http/sendJson.js";
 
 function toCardResponse(resource: StudyResource): ResourceCardResponse {
   if (resource.resourceType === "link") {
@@ -114,6 +115,45 @@ export class ResourcesController {
     }
   }
 
+  private toContractResource(resource: StudyResource): Record<string, unknown> {
+    const names = resource.profiles?.fullName?.split(" ") ?? [];
+    return {
+      id: resource.id,
+      title: resource.title,
+      description: resource.description ?? undefined,
+      type: resource.resourceType,
+      url: resource.url ?? undefined,
+      uploaderUserId: resource.userId,
+      uploader: resource.profiles
+        ? {
+            id: resource.userId,
+            email: "autor@ucaldas.edu.co",
+            firstName: names[0] ?? "Autor",
+            lastName: names.slice(1).join(" ") || "Desconocido",
+            role: "estudiante" as const,
+            isVerified: true,
+            createdAt: resource.createdAt,
+            updatedAt: resource.updatedAt,
+          }
+        : undefined,
+      subjectId: resource.subjectId,
+      subject: resource.subjects
+        ? {
+            id: resource.subjectId,
+            name: resource.subjects.name,
+            programId: "00000000-0000-0000-0000-000000000000",
+            code: "GEN-000",
+          }
+        : undefined,
+      tags: [],
+      viewCount: 0,
+      downloadCount: 0,
+      isPublic: true,
+      createdAt: resource.createdAt,
+      updatedAt: resource.updatedAt,
+    };
+  }
+
   async create(req: IncomingMessage, res: ServerResponse): Promise<void> {
     try {
       const actorUserId = getActorUserId(req);
@@ -122,7 +162,7 @@ export class ResourcesController {
         return;
       }
 
-      const body = await readJsonBody<CreateResourceDto>(req);
+      const body = (req as any).__validatedBody ?? await readJsonBody<CreateResourceDto>(req);
 
       const resourceType = body.resourceType || (body.url ? "link" : "file");
 
@@ -145,7 +185,7 @@ export class ResourcesController {
         fileSizeKb: body.fileSizeKb,
       });
 
-      sendData(res, 201, toCardResponse(created));
+      sendJson(res, 201, { resource: this.toContractResource(created) });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

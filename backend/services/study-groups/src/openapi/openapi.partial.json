@@ -1,0 +1,2124 @@
+{
+  "title": "UniConnect Study Groups Service",
+  "version": "0.1.0",
+  "serverUrl": "http://localhost:3101",
+  "basePath": "/api/v1",
+  "paths": {
+    "/api/v1/study-groups": {
+      "get": {
+        "summary": "Listar grupos de estudio",
+        "description": "Obtiene una lista paginada de grupos de estudio disponibles. Puede filtrarse por materia.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "default": 1
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 20
+                }
+              ]
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de grupos obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear un grupo de estudio",
+        "description": "Crea un nuevo grupo de estudio. El usuario autenticado se convierte en administrador del grupo.",
+        "tags": [
+          "Study Groups"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_study_groups_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Grupo creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_study_groups_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación — datos de entrada inválidos"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/me": {
+      "get": {
+        "summary": "Obtener grupos del usuario",
+        "description": "Retorna los grupos de estudio a los que pertenece el usuario autenticado.",
+        "tags": [
+          "Study Groups"
+        ],
+        "responses": {
+          "200": {
+            "description": "Grupos del usuario obtenidos exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_me_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/applications": {
+      "get": {
+        "summary": "Obtener solicitudes del usuario",
+        "description": "Retorna las solicitudes de membresía realizadas por el usuario autenticado.",
+        "tags": [
+          "Study Groups"
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitudes obtenidas exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_applications_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}": {
+      "get": {
+        "summary": "Obtener detalle de un grupo",
+        "description": "Retorna la información detallada de un grupo de estudio específico.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Grupo encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_id_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Grupo no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/members": {
+      "get": {
+        "summary": "Listar miembros del grupo",
+        "description": "Obtiene la lista de miembros de un grupo de estudio.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Miembros obtenidos exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_id_members_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Grupo no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/applications": {
+      "get": {
+        "summary": "Listar solicitudes del grupo",
+        "description": "Obtiene las solicitudes de membresía pendientes para un grupo. Solo el administrador puede verlas.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitudes obtenidas exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_id_applications_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "403": {
+            "description": "No autorizado — solo el administrador puede ver solicitudes"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/messages": {
+      "get": {
+        "summary": "Listar mensajes del grupo",
+        "description": "Obtiene los mensajes del chat de un grupo de estudio.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mensajes obtenidos exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_id_messages_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      },
+      "post": {
+        "summary": "Enviar mensaje al grupo",
+        "description": "Envía un mensaje al chat del grupo de estudio.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_study_groups_id_messages_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mensaje enviado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_study_groups_id_messages_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/apply": {
+      "post": {
+        "summary": "Solicitar membresía",
+        "description": "Envía una solicitud para unirse a un grupo de estudio.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_study_groups_id_apply_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Solicitud enviada exitosamente"
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "409": {
+            "description": "Ya existe una solicitud pendiente o el usuario ya es miembro"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/leave": {
+      "post": {
+        "summary": "Abandonar grupo",
+        "description": "Elimina al usuario autenticado del grupo de estudio.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Has abandonado el grupo exitosamente"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Grupo no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/cancel": {
+      "post": {
+        "summary": "Cancelar solicitud",
+        "description": "Cancela una solicitud de membresía pendiente.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud cancelada exitosamente"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Solicitud no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/transfer": {
+      "post": {
+        "summary": "Transferir administración",
+        "description": "Transfiere el rol de administrador del grupo a otro miembro.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_study_groups_id_transfer_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Administración transferida exitosamente"
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "403": {
+            "description": "No autorizado — solo el administrador puede transferir"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/applications/{applicationId}/review": {
+      "put": {
+        "summary": "Revisar solicitud de membresía",
+        "description": "Aprueba o rechaza una solicitud de membresía. Solo el administrador del grupo puede hacer esto.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Put_study_groups_applications_applicationId_review_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud revisada exitosamente"
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "403": {
+            "description": "No autorizado"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/transfers/{transferId}/accept": {
+      "post": {
+        "summary": "Aceptar transferencia",
+        "description": "Acepta la transferencia de administración de un grupo.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "transferId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transferencia aceptada exitosamente"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Transferencia no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/transfers/{transferId}/reject": {
+      "post": {
+        "summary": "Rechazar transferencia",
+        "description": "Rechaza la transferencia de administración de un grupo.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "transferId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transferencia rechazada"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Transferencia no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/messages/{messageId}/reactions": {
+      "post": {
+        "summary": "Reaccionar a un mensaje",
+        "description": "Agrega o elimina una reacción con emoji en un mensaje del grupo.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_study_groups_id_messages_messageId_reactions_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reacción actualizada exitosamente"
+          },
+          "400": {
+            "description": "El campo emoji es requerido"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/sessions": {
+      "get": {
+        "summary": "Listar sesiones del grupo",
+        "description": "Obtiene las sesiones de estudio programadas para un grupo.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sesiones obtenidas exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_id_sessions_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear sesión de estudio",
+        "description": "Programa una nueva sesión de estudio para el grupo.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_study_groups_id_sessions_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sesión creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_study_groups_id_sessions_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/sessions/{sessionId}": {
+      "delete": {
+        "summary": "Eliminar sesión",
+        "description": "Elimina una sesión de estudio programada. Solo el creador o administrador puede hacerlo.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sesión eliminada exitosamente"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "404": {
+            "description": "Sesión no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/sessions/{sessionId}/availability": {
+      "post": {
+        "summary": "Confirmar disponibilidad",
+        "description": "Confirma o cancela la disponibilidad del usuario autenticado para una sesión.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_study_groups_id_sessions_sessionId_availability_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Disponibilidad actualizada"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{id}/sessions/{sessionId}/attendees": {
+      "get": {
+        "summary": "Listar asistentes de sesión",
+        "description": "Obtiene la lista de asistentes confirmados para una sesión de estudio.",
+        "tags": [
+          "Study Groups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asistentes obtenidos exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_study_groups_id_sessions_sessionId_attendees_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "summary": "Listar notificaciones",
+        "description": "Obtiene las notificaciones del usuario autenticado relacionadas con grupos de estudio.",
+        "tags": [
+          "Study Groups"
+        ],
+        "responses": {
+          "200": {
+            "description": "Notificaciones obtenidas exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_notifications_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Get_study_groups_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "subject": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "programId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "code": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 20
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "credits": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "programId",
+                    "code"
+                  ],
+                  "additionalProperties": false
+                },
+                "subjectId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "activa",
+                    "inactiva",
+                    "finalizada"
+                  ]
+                },
+                "maxMembers": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                },
+                "createdBy": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "memberCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "description",
+                "subject",
+                "subjectId",
+                "status",
+                "maxMembers",
+                "createdBy",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_RequestBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxMembers": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "subjectId",
+          "maxMembers"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "subject": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "programId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "credits": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "programId",
+                  "code"
+                ],
+                "additionalProperties": false
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "activa",
+                  "inactiva",
+                  "finalizada"
+                ]
+              },
+              "maxMembers": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              },
+              "createdBy": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "memberCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "description",
+              "subject",
+              "subjectId",
+              "status",
+              "maxMembers",
+              "createdBy",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_study_groups_me_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "subject": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "programId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "code": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 20
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "credits": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "programId",
+                    "code"
+                  ],
+                  "additionalProperties": false
+                },
+                "subjectId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "activa",
+                    "inactiva",
+                    "finalizada"
+                  ]
+                },
+                "maxMembers": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                },
+                "createdBy": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "memberCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "description",
+                "subject",
+                "subjectId",
+                "status",
+                "maxMembers",
+                "createdBy",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_study_groups_applications_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "groupId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "approved",
+                    "rejected"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "groupId",
+                "userId",
+                "status",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_study_groups_id_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "subject": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "programId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "credits": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "programId",
+                  "code"
+                ],
+                "additionalProperties": false
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "activa",
+                  "inactiva",
+                  "finalizada"
+                ]
+              },
+              "maxMembers": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              },
+              "createdBy": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "memberCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "description",
+              "subject",
+              "subjectId",
+              "status",
+              "maxMembers",
+              "createdBy",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_study_groups_id_members_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "groupId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "admin",
+                    "member"
+                  ]
+                },
+                "joinedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "profile": {
+                  "type": "object",
+                  "properties": {
+                    "fullName": {
+                      "type": "string"
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "fullName",
+                    "avatarUrl"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "userId",
+                "groupId",
+                "role",
+                "joinedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_study_groups_id_applications_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "groupId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "approved",
+                    "rejected"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "groupId",
+                "userId",
+                "status",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_study_groups_id_messages_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "groupId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "senderId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "groupId",
+                "senderId",
+                "content",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_id_messages_RequestBody": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "mediaUrl": {
+            "type": "string"
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "mediaFilename": {
+            "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_id_messages_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "groupId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "content": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "groupId",
+              "senderId",
+              "content",
+              "createdAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_id_apply_RequestBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "additionalProperties": false
+      },
+      "Post_study_groups_id_transfer_RequestBody": {
+        "type": "object",
+        "properties": {
+          "targetUserId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "targetUserId"
+        ],
+        "additionalProperties": false
+      },
+      "Put_study_groups_applications_applicationId_review_RequestBody": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "aceptada",
+              "rechazada"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_id_messages_messageId_reactions_RequestBody": {
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "emoji"
+        ],
+        "additionalProperties": false
+      },
+      "Get_study_groups_id_sessions_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "groupId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "dateTime": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "durationMinutes": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                },
+                "location": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "groupId",
+                "title",
+                "dateTime",
+                "durationMinutes",
+                "createdBy",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_id_sessions_RequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "dateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "title",
+          "dateTime",
+          "durationMinutes"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_id_sessions_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "groupId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "dateTime": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "durationMinutes": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              },
+              "location": {
+                "type": "string"
+              },
+              "createdBy": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "groupId",
+              "title",
+              "dateTime",
+              "durationMinutes",
+              "createdBy",
+              "createdAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_study_groups_id_sessions_sessionId_availability_RequestBody": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "declined"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "Get_study_groups_id_sessions_sessionId_attendees_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userName": {
+                  "type": "string"
+                },
+                "available": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "userId",
+                "userName",
+                "available"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_notifications_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "read": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "userId",
+                "type",
+                "title",
+                "body",
+                "read",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Study Groups",
+      "description": "Gestión de grupos de estudio"
+    }
+  ]
+}

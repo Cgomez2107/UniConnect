@@ -17,6 +17,9 @@ import { useNotificationStore } from "@/store/useNotificationStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
+import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
+import type { GroupState } from "@/types";
 
 // Backend: [{ userId, name }] → UI: [{ userId, displayName, position }]
 function transformMentions(mentions?: any[]): MentionData[] | undefined {
@@ -77,10 +80,12 @@ export function GroupDashboardPage() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaveLoading, setLeaveLoading] = useState(false);
 
-  // --- Accept transfer ---
+  // --- Accept / Reject transfer ---
   const [acceptTransferLoading, setAcceptTransferLoading] = useState(false);
   const [acceptTransferError, setAcceptTransferError] = useState<string | null>(null);
   const [acceptTransferSuccess, setAcceptTransferSuccess] = useState(false);
+  const [rejectTransferLoading, setRejectTransferLoading] = useState(false);
+  const [rejectTransferError, setRejectTransferError] = useState<string | null>(null);
   const pendingTransferId = searchParams.get("acceptTransfer");
 
   // --- Role detection (set after data loads) ---
@@ -139,6 +144,20 @@ export function GroupDashboardPage() {
   const isAuthor = solicitud?.createdBy === user?.id || solicitud?.authorId === user?.id;
   const isAdmin = isAuthor || members.some((m: any) => m.userId === user?.id && (m.role === "admin" || m.role === "autor"));
 
+  const groupState: GroupState | null = solicitud
+    ? solicitud.status === "cerrada"
+      ? "Disuelto"
+      : solicitud.status === "expirada"
+        ? "Bloqueado"
+        : solicitud.hasPendingTransfer
+          ? solicitud.pendingTransferStatus === "aceptada"
+            ? "TransferenciaAceptada"
+            : "PendienteTransferencia"
+          : "Activo"
+    : null;
+
+  const perms = groupState ? getGroupPermissions(groupState) : null;
+
   // --- Conditional applications fetch (admin only) ---
   useEffect(() => {
     if (!id || !isAdmin) {
@@ -195,6 +214,27 @@ export function GroupDashboardPage() {
       setAcceptTransferError(err?.response?.data?.message || "Error al aceptar la transferencia.");
     } finally {
       setAcceptTransferLoading(false);
+    }
+  }, [pendingTransferId, id, navigate]);
+
+  // --- Reject transfer handler ---
+  const handleRejectTransfer = useCallback(async () => {
+    if (!pendingTransferId) return;
+    setRejectTransferLoading(true);
+    setRejectTransferError(null);
+    try {
+      await studyGroupsService.rejectAdminTransfer(pendingTransferId);
+      const [data, membersData] = await Promise.all([
+        studyGroupsService.getStudyGroupById(id!),
+        studyGroupsService.getStudyGroupMembers(id!),
+      ]);
+      setSolicitud(data);
+      setMembers(membersData);
+      navigate(`/grupo/${id}`, { replace: true });
+    } catch (err: any) {
+      setRejectTransferError(err?.response?.data?.message || "Error al rechazar la transferencia.");
+    } finally {
+      setRejectTransferLoading(false);
     }
   }, [pendingTransferId, id, navigate]);
 
@@ -272,8 +312,8 @@ export function GroupDashboardPage() {
         }, 3000);
       };
 
-      ws.onerror = (err) => {
-        console.error("[GroupDashboardPage WS] Error:", err);
+      ws.onerror = (event: Event) => {
+        console.error("[GroupDashboardPage WS] Error:", (event as any).message || event);
       };
     };
 
@@ -799,24 +839,28 @@ export function GroupDashboardPage() {
           <Avatar name={solicitud.title || solicitud.name || "Grupo"} size="sm" className="!bg-secondary-500 !text-primary-900" />
           <div className="min-w-0">
             <h1 className="text-base font-bold leading-tight truncate">{solicitud.title || solicitud.name || "Grupo de estudio"}</h1>
-            <p className="text-xs text-white/60">{members.length} miembros</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-white/60">{members.length} miembros</p>
+              {groupState && <GroupStateBadge state={groupState} size="small" />}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isAuthor && (
-            solicitud.hasPendingTransfer ? (
-              <Button variant="secondary" size="sm" disabled>
-                Transferencia solicitada
-              </Button>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
-                Transferir admin
-              </Button>
-            )
+          {isAuthor && perms?.canTransfer && (
+            <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
+              Transferir admin
+            </Button>
           )}
-          <Button variant="danger" size="sm" onClick={() => setShowLeaveConfirm(true)} loading={leaveLoading}>
-            Salir
-          </Button>
+          {isAuthor && solicitud.hasPendingTransfer && !perms?.canTransfer && (
+            <Button variant="secondary" size="sm" disabled>
+              Transferencia solicitada
+            </Button>
+          )}
+          {!perms?.isReadOnly && (
+            <Button variant="danger" size="sm" onClick={() => setShowLeaveConfirm(true)} loading={leaveLoading}>
+              Salir
+            </Button>
+          )}
         </div>
       </header>
 
@@ -831,6 +875,11 @@ export function GroupDashboardPage() {
           <p className="text-error-600 dark:text-error-400 text-sm">{acceptTransferError}</p>
         </div>
       )}
+      {rejectTransferError && (
+        <div className="bg-error-50 dark:bg-error-900/20 border-b border-error-200 dark:border-error-800 px-4 sm:px-6 py-2">
+          <p className="text-error-600 dark:text-error-400 text-sm">{rejectTransferError}</p>
+        </div>
+      )}
       {acceptTransferSuccess && (
         <div className="bg-success-50 dark:bg-success-900/20 border-b border-success-200 dark:border-success-800 px-4 sm:px-6 py-2">
           <p className="text-success-600 dark:text-success-400 text-sm">Transferencia aceptada correctamente.</p>
@@ -839,9 +888,14 @@ export function GroupDashboardPage() {
       {pendingTransferId && (
         <div className="bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800 px-4 sm:px-6 py-2 flex items-center justify-between">
           <p className="text-primary-700 dark:text-primary-300 text-sm">Tienes una transferencia de administración pendiente.</p>
-          <Button variant="primary" size="sm" onClick={handleAcceptTransfer} loading={acceptTransferLoading}>
-            Aceptar transferencia
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="danger" size="sm" onClick={handleRejectTransfer} loading={rejectTransferLoading}>
+              Rechazar
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleAcceptTransfer} loading={acceptTransferLoading}>
+              Aceptar transferencia
+            </Button>
+          </div>
         </div>
       )}
 

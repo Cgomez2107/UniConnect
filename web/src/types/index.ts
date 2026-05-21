@@ -125,6 +125,14 @@ export type RequestStatus = "abierta" | "cerrada" | "expirada";
 export type ApplicationStatus = "pendiente" | "aceptada" | "rechazada";
 export type GroupStatus = "abierta" | "llena" | "transferenciaPendiente" | "cerrada" | "expirada";
 
+/** Estados del ciclo de vida de administración (State pattern del backend) */
+export type GroupState =
+  | "Activo"
+  | "PendienteTransferencia"
+  | "TransferenciaAceptada"
+  | "Disuelto"
+  | "Bloqueado";
+
 export interface StudyRequest {
   id: string;
   authorId: string;
@@ -421,6 +429,13 @@ export interface AdminEvent {
 // NOTIFICACIONES
 // ============================================================================
 
+export type Prioridad = 'normal' | 'urgente' | 'critica';
+
+export interface Accion {
+  label: string;
+  endpoint: string;
+}
+
 export interface AppNotification {
   id: string;
   userId: string;
@@ -430,6 +445,8 @@ export interface AppNotification {
   payload: Record<string, unknown> | null;
   createdAt: string;
   readAt: string | null;
+  priority?: Prioridad;
+  action?: Accion;
 }
 
 // ============================================================================

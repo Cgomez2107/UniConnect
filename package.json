@@ -17,6 +17,7 @@
     "format": "pnpm -w -r -s run format"
   },
   "devDependencies": {
+    "json-schema-to-zod": "^2.8.1",
     "typescript": "^5.7.2"
   }
 }

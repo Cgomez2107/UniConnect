@@ -6,6 +6,7 @@ import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById
 import { ListApplicationsByRequest } from "./application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "./application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "./application/use-cases/ListUserNotifications.js";
+import { MarkAllNotificationsAsRead } from "./application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "./application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "./application/use-cases/ListMyStudyRequests.js";
@@ -53,6 +54,7 @@ import { PostgresStudySessionRepository } from "./infrastructure/database/Postgr
 import { PostgresSessionSeriesRepository } from "./infrastructure/database/PostgresSessionSeriesRepository.js";
 import { PostgresSessionAttendeeRepository } from "./infrastructure/database/PostgresSessionAttendeeRepository.js";
 import { PostgresPreferenceRepository } from "./infrastructure/database/PostgresPreferenceRepository.js";
+import { ChatSystemMessageObserver } from "./domain/events/observers/ChatSystemMessageObserver.js";
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
 import type { IStudyRequestRepository } from "./domain/repositories/IStudyRequestRepository.js";
@@ -60,6 +62,7 @@ import { Database } from "./infrastructure/database/Database.js";
 import type { Pool } from "pg";
 
 import { NotificationService } from "../../../shared/patterns/strategy/NotificationService.js";
+import type { INotificationPreferenceRepository } from "../../../shared/patterns/strategy/INotificationPreferenceRepository.js";
 import { InAppWebSocketStrategy } from "../../../shared/patterns/strategy/InAppWebSocketStrategy.js";
 import { EmailInstitucionalStrategy } from "../../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
 import { PushMovilStrategy } from "../../../shared/patterns/strategy/PushMovilStrategy.js";
@@ -227,7 +230,7 @@ function bootstrap(): void {
 
   const strategies = [
     realtimeGateway
-      ? new InAppWebSocketStrategy(realtimeGateway)
+      ? new InAppWebSocketStrategy(realtimeGateway, notificationRepository)
       : null,
     emailGateway && userRepository
       ? new EmailInstitucionalStrategy(emailGateway, userRepository)
@@ -237,7 +240,11 @@ function bootstrap(): void {
       : null,
   ].filter((s): s is NonNullable<typeof s> => s !== null);
 
-  const notificationService = new NotificationService(strategies, preferenceService);
+  const notificationPrefRepo: INotificationPreferenceRepository = {
+    isChannelEnabled: async (_userId: string, _canal: string): Promise<boolean> => true,
+  };
+
+  const notificationService = new NotificationService(strategies, preferenceService, notificationPrefRepo);
   const mapper = new NotificationMapper();
   const notificationObserver = new NotificationObserver(notificationRepository, notificationService, mapper);
 
@@ -246,6 +253,11 @@ function bootstrap(): void {
 
   const persistenceObserver = new PersistenceObserver(adminTransferRepository);
   subject.subscribe(persistenceObserver);
+
+  if (pool) {
+    const chatSystemMessageObserver = new ChatSystemMessageObserver(pool);
+    subject.subscribe(chatSystemMessageObserver);
+  }
 
   const membershipService = new StudyGroupMembershipService(subject);
 
@@ -363,6 +375,7 @@ function bootstrap(): void {
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
   const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
+  const markAllNotificationsAsRead = new MarkAllNotificationsAsRead(notificationRepository);
   const createStudySessionUC = new CreateStudySession(
     sessionRepos.session,
     sessionRepos.series,
@@ -405,6 +418,8 @@ function bootstrap(): void {
     listMyApplicationsUC,
     cancelStudyRequestUC,
     toggleStudyGroupMessageReaction,
+    markAllNotificationsAsRead,
+    preferenceService,
     createStudySessionUC,
     cancelStudySessionUC,
     updateAvailabilityUC,

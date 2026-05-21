@@ -1,5 +1,12 @@
 import type { ConversationSummary, CreateConversationInput } from "../entities/Conversation.js";
 import type { CreateMessageInput, Message, Reaction } from "../entities/Message.js";
+import type {
+  CreatePollConfigInput,
+  PollConfigDTO,
+  VoteInputDTO,
+  VoteResultDTO,
+  PollResultsDTO,
+} from "../../interfaces/http/dto/PollDTOs.js";
 
 export interface IMessagingRepository {
   getConversationById(id: string, currentUserId: string): Promise<ConversationSummary | null>;
@@ -19,4 +26,10 @@ export interface IMessagingRepository {
   markConversationAsRead(conversationId: string, currentUserId: string): Promise<number>;
   getUnreadCountForUser(currentUserId: string): Promise<number>;
   toggleReaction(messageId: string, currentUserId: string, emoji: string): Promise<{ conversationId: string; reactions: Reaction[] }>;
+
+  createPollConfig(input: CreatePollConfigInput): Promise<PollConfigDTO>;
+  castVote(pollId: string, userId: string, selectedOption: number): Promise<VoteResultDTO>;
+  getPollResults(pollId: string): Promise<PollResultsDTO>;
+  closeExpiredPolls(): Promise<string[]>;
+  getPollGroupId(pollId: string): Promise<string>;
 }

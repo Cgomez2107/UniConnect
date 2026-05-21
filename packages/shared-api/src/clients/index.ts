@@ -33,6 +33,17 @@ export type {
 
 export { NotificationsClient } from "./NotificationsClient.js";
 
+export { ForumClient } from "./ForumClient.js";
+export type {
+  ForumQuestion,
+  ForumQuestionSummary,
+  ForumAnswer,
+  CreateQuestionPayload,
+  CreateAnswerPayload,
+  CastVotePayload,
+  MarkSolutionPayload,
+} from "./ForumClient.js";
+
 export { AdminClient } from "./AdminClient.js";
 export type {
   AdminUser,

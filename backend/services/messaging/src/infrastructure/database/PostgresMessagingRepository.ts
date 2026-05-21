@@ -6,6 +6,15 @@ import type {
 } from "../../domain/entities/Conversation.js";
 import type { CreateMessageInput, Message, Reaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
+import type {
+  CreatePollConfigInput,
+  PollConfigDTO,
+  PollOptionResult,
+  PollResultsDTO,
+  VoteResultDTO,
+} from "../../interfaces/http/dto/PollDTOs.js";
+import { DuplicateVoteError } from "../../domain/errors/DuplicateVoteError.js";
+import { PollClosedError } from "../../domain/errors/PollClosedError.js";
 
 interface ConversationRow {
   id: string;
@@ -36,6 +45,19 @@ interface MessageRow {
   reactions: string | null;
   sender_full_name: string | null;
   sender_avatar_url: string | null;
+}
+
+interface PollConfigRow {
+  id: string;
+  message_id: string;
+  group_id: string;
+  created_by: string;
+  question: string;
+  options: string;
+  expires_at: string | Date;
+  status: string;
+  created_at: string | Date;
+  updated_at: string | Date;
 }
 
 const LEGACY_IMAGE_PREFIX = "__img__:";
@@ -126,6 +148,13 @@ function mapMessage(row: MessageRow): Message {
       avatarUrl: row.sender_avatar_url,
     },
   };
+}
+
+function parseJsonColumn<T>(raw: unknown): T {
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw) as T; } catch { return raw as unknown as T; }
+  }
+  return raw as T;
 }
 
 export class PostgresMessagingRepository implements IMessagingRepository {
@@ -483,7 +512,6 @@ export class PostgresMessagingRepository implements IMessagingRepository {
   }
 
   async markConversationAsRead(conversationId: string, currentUserId: string): Promise<number> {
-    // First, verify the user is a participant in this conversation
     const conversationCheck = await this.pool.query<{ id: string }>(
       `
         SELECT c.id
@@ -499,7 +527,6 @@ export class PostgresMessagingRepository implements IMessagingRepository {
       throw new Error("No tienes permisos para acceder a esta conversacion.");
     }
 
-    // Update all unread messages in this conversation where sender_id != currentUserId
     const updated = await this.pool.query(
       `
         UPDATE messages m
@@ -565,5 +592,115 @@ export class PostgresMessagingRepository implements IMessagingRepository {
     );
 
     return { conversationId: msg.rows[0].conversation_id, reactions: updated };
+  }
+
+  async createPollConfig(input: CreatePollConfigInput): Promise<PollConfigDTO> {
+    const result = await this.pool.query<PollConfigRow>(
+      `
+        INSERT INTO poll_configs (message_id, group_id, created_by, question, options, expires_at)
+        VALUES ($1, $2, $3, $4, $5::jsonb, $6::timestamptz)
+        RETURNING id, message_id, group_id, created_by, question, options, expires_at, status, created_at, updated_at
+      `,
+      [
+        input.messageId,
+        input.groupId,
+        input.createdBy,
+        input.question,
+        JSON.stringify(input.options),
+        input.expiresAt,
+      ],
+    );
+
+    const row = result.rows[0];
+    const options: string[] = parseJsonColumn<string[]>(row.options);
+    const results = await this.getPollResults(row.id);
+
+    return {
+      pollId: row.id,
+      messageId: row.message_id,
+      groupId: row.group_id,
+      createdBy: row.created_by,
+      question: row.question,
+      options,
+      expiresAt: new Date(row.expires_at).toISOString(),
+      status: row.status as 'active' | 'closed',
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+      results: results.results,
+      totalVotes: results.totalVotes,
+    };
+  }
+
+  async castVote(pollId: string, userId: string, selectedOption: number): Promise<VoteResultDTO> {
+    try {
+      const result = await this.pool.query<{ cast_vote: string }>(
+        `SELECT cast_vote($1::uuid, $2::uuid, $3::int) AS cast_vote`,
+        [pollId, userId, selectedOption],
+      );
+
+      const raw = result.rows[0].cast_vote;
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+      return {
+        success: parsed.success as boolean,
+        pollId: parsed.pollId as string,
+        userId: parsed.userId as string,
+        selectedOption: parsed.selectedOption as number,
+        results: parsed.results as PollOptionResult[],
+        totalVotes: parsed.totalVotes as number,
+      };
+    } catch (error: unknown) {
+      const pgError = error as { code?: string; message?: string };
+      if (pgError.code === '23505') {
+        throw new DuplicateVoteError();
+      }
+      if (pgError.code === 'P0001' && pgError.message
+        ?.match(/cerrada|expirado|expir/i)) {
+        throw new PollClosedError();
+      }
+      throw error;
+    }
+  }
+
+  async getPollResults(pollId: string): Promise<PollResultsDTO> {
+    const result = await this.pool.query<{ get_poll_results: string }>(
+      `SELECT get_poll_results($1::uuid) AS get_poll_results`,
+      [pollId],
+    );
+
+    const raw = result.rows[0].get_poll_results;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    return {
+      pollId: parsed.pollId as string,
+      question: parsed.question as string,
+      status: parsed.status as 'active' | 'closed',
+      results: parsed.results as PollOptionResult[],
+      totalVotes: parsed.totalVotes as number,
+    };
+  }
+
+  async closeExpiredPolls(): Promise<string[]> {
+    const result = await this.pool.query<{ close_expired_polls: string }>(
+      `SELECT close_expired_polls() AS close_expired_polls`,
+    );
+
+    const raw = result.rows[0].close_expired_polls;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    return parsed.closedPollIds as string[];
+  }
+
+  async getPollGroupId(pollId: string): Promise<string> {
+    const result = await this.pool.query<{ group_id: string }>(
+      `SELECT group_id FROM poll_configs WHERE id = $1 LIMIT 1`,
+      [pollId],
+    );
+
+    if (!result.rows[0]) {
+      throw new Error(`Encuesta no encontrada: ${pollId}`);
+    }
+
+    return result.rows[0].group_id;
   }
 }

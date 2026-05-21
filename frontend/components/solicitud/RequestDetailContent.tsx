@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import type { Application } from "@/types";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
 
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -112,19 +113,15 @@ export function RequestDetailContent({
       </View>
 
       <View style={styles.metaRow}>
-        <View
-          style={[
-            styles.metaChip,
-            {
-              backgroundColor: request.status === "abierta" ? C.success + "15" : C.border,
-              borderColor: request.status === "abierta" ? C.success + "40" : C.border,
-            },
-          ]}
-        >
-          <Text style={[styles.metaChipText, { color: request.status === "abierta" ? C.success : C.textSecondary }]}> 
-            👥 {remainingSlots} cupos disponibles · {request.status}
+        <View style={[styles.metaChip, { backgroundColor: C.surface, borderColor: C.border }]}>
+          <Text style={[styles.metaChipText, { color: C.textSecondary }]}>
+            👥 {remainingSlots} cupos disponibles
           </Text>
         </View>
+        <GroupStateBadge
+          state={request.status === "cerrada" ? "Disuelto" : request.status === "expirada" ? "Bloqueado" : "Activo"}
+          size="small"
+        />
       </View>
 
       <View style={[styles.section, { borderColor: C.border }]}>

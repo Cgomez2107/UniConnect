@@ -51,7 +51,7 @@ export class ForumController {
         return;
       }
 
-      const body = await readJsonBody<CreateQuestionBody>(req);
+      const body = (req as any).__validatedBody ?? await readJsonBody<CreateQuestionBody>(req);
       const question = await this.createQuestionUseCase.execute({
         userId: actorUserId,
         subjectId: body.subjectId ?? "",
@@ -115,7 +115,7 @@ export class ForumController {
         return;
       }
 
-      const body = await readJsonBody<CreateAnswerBody>(req);
+      const body = (req as any).__validatedBody ?? await readJsonBody<CreateAnswerBody>(req);
       const answer = await this.createAnswerUseCase.execute({
         questionId,
         userId: actorUserId,
@@ -157,7 +157,7 @@ export class ForumController {
         return;
       }
 
-      const body = await readJsonBody<CastVoteBody>(req);
+      const body = (req as any).__validatedBody ?? await readJsonBody<CastVoteBody>(req);
       const voteCount = await this.castVoteUseCase.execute({
         targetType: body.targetType as 'question' | 'answer',
         targetId: body.targetId ?? "",
@@ -180,7 +180,7 @@ export class ForumController {
         return;
       }
 
-      const body = await readJsonBody<MarcarSolucionBody>(req);
+      const body = (req as any).__validatedBody ?? await readJsonBody<MarcarSolucionBody>(req);
       await this.marcarComoSolucionUseCase.execute({
         questionId,
         answerId: body.answerId ?? "",

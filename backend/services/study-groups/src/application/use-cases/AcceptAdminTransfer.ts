@@ -37,6 +37,8 @@ export class AcceptAdminTransfer {
 
     await group.acceptAdminTransfer(transferId);
 
+    await this.repository.acceptTransferAtomically(transferId, actorUserId);
+
     await group.transferAdmin();
   }
 }

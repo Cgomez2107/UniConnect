@@ -30,12 +30,8 @@ export class PostgresApplicationRepository implements IApplicationRepository {
   constructor(private readonly pool: Pool) {}
 
   async getByRequest(requestId: string, actorUserId: string): Promise<Application[]> {
-    const adminCheck = await this.pool.query<{ is_request_admin: boolean }>(
-      "SELECT is_request_admin($1, $2) AS is_request_admin",
-      [requestId, actorUserId],
-    );
-
-    if (!adminCheck.rows[0]?.is_request_admin) {
+    const isAuthorized = await this.isAuthorizedForRequest(requestId, actorUserId);
+    if (!isAuthorized) {
       throw new AuthorizationError("No tienes permisos para ver las postulaciones de esta solicitud.");
     }
 
@@ -50,6 +46,25 @@ export class PostgresApplicationRepository implements IApplicationRepository {
     );
 
     return result.rows.map(mapApplication);
+  }
+
+  private async isAuthorizedForRequest(requestId: string, userId: string): Promise<boolean> {
+    const existsCheck = await this.pool.query<{ authorized: boolean }>(
+      `
+        SELECT (
+          is_request_admin($1, $2)
+          OR EXISTS (
+            SELECT 1
+            FROM study_request_admin_transfers
+            WHERE request_id = $1
+              AND to_user_id = $2
+              AND status = 'pendiente'
+          )
+        ) AS authorized
+      `,
+      [requestId, userId],
+    );
+    return existsCheck.rows[0]?.authorized ?? false;
   }
 
   async getById(applicationId: string): Promise<Application | null> {

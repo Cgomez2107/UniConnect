@@ -37,6 +37,7 @@ function makeAnswer(overrides?: Partial<ForumAnswer>): ForumAnswer {
     authorId: USER_C,
     body: "La respuesta es 42.",
     voteCount: 1,
+    isSolution: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -64,6 +65,7 @@ describe("V05 — MarcarComoSolucion", () => {
       create: jest.fn<any>(),
       findById: jest.fn<any>(),
       findByQuestion: jest.fn<any>(),
+      markAsSolution: jest.fn<any>(),
     };
 
     forumSubject = new ForumSubject();
@@ -107,6 +109,7 @@ describe("V05 — MarcarComoSolucion", () => {
     await useCase.execute({ questionId: QUESTION_ID, answerId: ANSWER_ID, userId: USER_A });
 
     expect(questionRepo.markAsSolved).toHaveBeenCalledWith(QUESTION_ID);
+    expect(answerRepo.markAsSolution).toHaveBeenCalledWith(ANSWER_ID);
     expect(forumSubject.emitSolucionEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "SOLUCION_MARCADA",
@@ -126,6 +129,7 @@ describe("V05 — MarcarComoSolucion", () => {
     await useCase.execute({ questionId: QUESTION_ID, answerId: ANSWER_ID, userId: USER_B });
 
     expect(questionRepo.markAsSolved).toHaveBeenCalledWith(QUESTION_ID);
+    expect(answerRepo.markAsSolution).toHaveBeenCalledWith(ANSWER_ID);
     expect(forumSubject.emitSolucionEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         marcadoPor: USER_B,
@@ -141,6 +145,7 @@ describe("V05 — MarcarComoSolucion", () => {
 
     await useCase.execute({ questionId: QUESTION_ID, answerId: ANSWER_ID, userId: USER_A });
 
+    expect(answerRepo.markAsSolution).toHaveBeenCalledWith(ANSWER_ID);
     expect(forumSubject.emitSolucionEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         answerAuthorId: USER_C,

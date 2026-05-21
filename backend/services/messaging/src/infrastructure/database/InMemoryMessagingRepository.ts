@@ -6,6 +6,15 @@ import type {
 } from "../../domain/entities/Conversation.js";
 import type { CreateMessageInput, Message, Reaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
+import type {
+  CreatePollConfigInput,
+  PollConfigDTO,
+  PollOptionResult,
+  PollResultsDTO,
+  VoteResultDTO,
+} from "../../interfaces/http/dto/PollDTOs.js";
+import { DuplicateVoteError } from "../../domain/errors/DuplicateVoteError.js";
+import { PollClosedError } from "../../domain/errors/PollClosedError.js";
 
 interface StoredConversation {
   id: string;
@@ -15,9 +24,32 @@ interface StoredConversation {
   updatedAt: string;
 }
 
+interface StoredPollConfig {
+  id: string;
+  messageId: string;
+  groupId: string;
+  createdBy: string;
+  question: string;
+  options: string[];
+  expiresAt: string;
+  status: 'active' | 'closed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface StoredPollVote {
+  id: string;
+  pollId: string;
+  userId: string;
+  selectedOption: number;
+  votedAt: string;
+}
+
 export class InMemoryMessagingRepository implements IMessagingRepository {
   private readonly conversations = new Map<string, StoredConversation>();
   private readonly messages = new Map<string, Message>();
+  private readonly pollConfigs = new Map<string, StoredPollConfig>();
+  private readonly pollVotes = new Map<string, StoredPollVote>();
 
   async getConversationById(id: string, currentUserId: string): Promise<ConversationSummary | null> {
     const conversation = this.conversations.get(id);
@@ -297,5 +329,150 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
 
     this.messages.set(messageId, { ...message, reactions: updated });
     return { conversationId: message.conversationId, reactions: updated };
+  }
+
+  private calculateResults(pollId: string, config: StoredPollConfig): {
+    results: PollOptionResult[];
+    totalVotes: number;
+  } {
+    const votes = [...this.pollVotes.values()].filter((v) => v.pollId === pollId);
+    const totalVotes = votes.length;
+
+    const results: PollOptionResult[] = config.options.map((option, idx) => {
+      const count = votes.filter((v) => v.selectedOption === idx).length;
+      const percentage = totalVotes > 0
+        ? Math.round((count / totalVotes) * 100 * 10) / 10
+        : 0;
+      return { option, count, percentage };
+    });
+
+    return { results, totalVotes };
+  }
+
+  async createPollConfig(input: CreatePollConfigInput): Promise<PollConfigDTO> {
+    const now = new Date().toISOString();
+    const config: StoredPollConfig = {
+      id: randomUUID(),
+      messageId: input.messageId,
+      groupId: input.groupId,
+      createdBy: input.createdBy,
+      question: input.question,
+      options: [...input.options],
+      expiresAt: input.expiresAt,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.pollConfigs.set(config.id, config);
+
+    const { results, totalVotes } = this.calculateResults(config.id, config);
+
+    return {
+      pollId: config.id,
+      messageId: config.messageId,
+      groupId: config.groupId,
+      createdBy: config.createdBy,
+      question: config.question,
+      options: [...config.options],
+      expiresAt: config.expiresAt,
+      status: config.status,
+      createdAt: config.createdAt,
+      updatedAt: config.updatedAt,
+      results,
+      totalVotes,
+    };
+  }
+
+  async castVote(pollId: string, userId: string, selectedOption: number): Promise<VoteResultDTO> {
+    const config = this.pollConfigs.get(pollId);
+    if (!config) {
+      throw new Error("Encuesta no encontrada");
+    }
+
+    if (config.status === 'closed') {
+      throw new PollClosedError();
+    }
+
+    if (new Date(config.expiresAt) <= new Date()) {
+      config.status = 'closed';
+      config.updatedAt = new Date().toISOString();
+      this.pollConfigs.set(pollId, config);
+      throw new PollClosedError();
+    }
+
+    if (selectedOption < 0 || selectedOption >= config.options.length) {
+      throw new Error(`Opción inválida: debe estar entre 0 y ${config.options.length - 1}`);
+    }
+
+    const existingVote = [...this.pollVotes.values()].find(
+      (v) => v.pollId === pollId && v.userId === userId,
+    );
+    if (existingVote) {
+      throw new DuplicateVoteError();
+    }
+
+    const vote: StoredPollVote = {
+      id: randomUUID(),
+      pollId,
+      userId,
+      selectedOption,
+      votedAt: new Date().toISOString(),
+    };
+
+    this.pollVotes.set(vote.id, vote);
+
+    const { results, totalVotes } = this.calculateResults(pollId, config);
+
+    return {
+      success: true,
+      pollId,
+      userId,
+      selectedOption,
+      results,
+      totalVotes,
+    };
+  }
+
+  async getPollResults(pollId: string): Promise<PollResultsDTO> {
+    const config = this.pollConfigs.get(pollId);
+    if (!config) {
+      throw new Error("Encuesta no encontrada");
+    }
+
+    const { results, totalVotes } = this.calculateResults(pollId, config);
+
+    return {
+      pollId,
+      question: config.question,
+      status: config.status,
+      results,
+      totalVotes,
+    };
+  }
+
+  async closeExpiredPolls(): Promise<string[]> {
+    const now = new Date();
+    const closedIds: string[] = [];
+
+    for (const [id, config] of this.pollConfigs) {
+      if (config.status === 'active' && new Date(config.expiresAt) <= now) {
+        config.status = 'closed';
+        config.updatedAt = now.toISOString();
+        this.pollConfigs.set(id, config);
+        closedIds.push(id);
+      }
+    }
+
+    return closedIds;
+  }
+
+  async getPollGroupId(pollId: string): Promise<string> {
+    const config = this.pollConfigs.get(pollId);
+    if (!config) {
+      throw new Error(`Encuesta no encontrada: ${pollId}`);
+    }
+
+    return config.groupId;
   }
 }

@@ -1,18 +1,27 @@
-import type { INotificationStrategy, NotificacionDTO, ResultadoEnvio } from "./INotificationStrategy.js";
+import type { INotificationStrategy, NotificacionDTO } from "./INotificationStrategy.js";
 import type { IPreferenceService } from "./IPreferenceService.js";
+import type { INotificationPreferenceRepository } from "./INotificationPreferenceRepository.js";
 import { sanitizeError } from "../../libs/errors/sanitizeError.js";
+
+export interface NotificationResult {
+  readonly canal: string;
+  readonly status: "success" | "failed" | "skipped";
+  readonly error?: string;
+}
 
 export interface ResumenNotificacion {
   readonly total: number;
   readonly exitosos: number;
   readonly fallidos: number;
-  readonly resultados: ResultadoEnvio[];
+  readonly omitidos: number;
+  readonly resultados: NotificationResult[];
 }
 
 export class NotificationService {
   constructor(
     private readonly strategies: INotificationStrategy[],
     private readonly preferenceService: IPreferenceService,
+    private readonly preferenceRepository: INotificationPreferenceRepository,
   ) {}
 
   async notificar(notificacion: NotificacionDTO): Promise<ResumenNotificacion> {
@@ -25,15 +34,25 @@ export class NotificationService {
 
     const resultados = await Promise.allSettled(
       estrategiasActivas.map(async s => {
+        const enabled = await this.preferenceRepository.isChannelEnabled(
+          notificacion.userId,
+          s.canal,
+        );
+        if (!enabled) {
+          return { canal: s.canal, status: "skipped" as const };
+        }
+
         try {
-          return await s.enviar(notificacion);
-        } catch (err) {
+          const result = await s.enviar(notificacion);
           return {
-            canal: s.canal,
-            exitoso: false,
-            error: sanitizeError(err),
-            timestamp: new Date().toISOString(),
-          } as ResultadoEnvio;
+            canal: result.canal,
+            status: result.exitoso ? ("success" as const) : ("failed" as const),
+            error: result.error,
+          };
+        } catch (err) {
+          const errorMsg = sanitizeError(err);
+          console.error(`[Strategy Error] Canal "${s.canal}" fallido: ${errorMsg}`);
+          return { canal: s.canal, status: "failed" as const, error: errorMsg };
         }
       }),
     );
@@ -41,17 +60,18 @@ export class NotificationService {
     return this.compilarResumen(resultados);
   }
 
-  private compilarResumen(resultados: PromiseSettledResult<ResultadoEnvio>[]): ResumenNotificacion {
-    const envios: ResultadoEnvio[] = resultados.map(r =>
+  private compilarResumen(resultados: PromiseSettledResult<NotificationResult>[]): ResumenNotificacion {
+    const envios: NotificationResult[] = resultados.map(r =>
       r.status === "fulfilled"
         ? r.value
-        : { canal: "unknown", exitoso: false, error: sanitizeError(r.reason), timestamp: new Date().toISOString() },
+        : { canal: "unknown", status: "failed", error: sanitizeError(r.reason) },
     );
 
     return {
       total: envios.length,
-      exitosos: envios.filter(e => e.exitoso).length,
-      fallidos: envios.filter(e => !e.exitoso).length,
+      exitosos: envios.filter(e => e.status === "success").length,
+      fallidos: envios.filter(e => e.status === "failed").length,
+      omitidos: envios.filter(e => e.status === "skipped").length,
       resultados: envios,
     };
   }

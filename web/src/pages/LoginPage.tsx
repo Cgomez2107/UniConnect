@@ -29,7 +29,11 @@ export const LoginPage: React.FC = () => {
       const destination = user?.role === "admin" ? "/admin" : "/solicitudes";
       navigate(destination);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error de autenticaci\u00f3n");
+      if (err?.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Credenciales incorrectas");
+      }
     }
   };
 

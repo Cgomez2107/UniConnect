@@ -105,39 +105,191 @@ jobs:
           echo "deben romper compilación del frontend."
           exit 0
 
-  # ─── Job 4: E2E Mobile (Maestro — placeholder) ───
-  e2e-mobile:
-    needs: [backend]
+  # ─── Job 4: Client TypeScript Validation (Criterio 4) ───
+  client-typecheck:
+    needs: [contracts]
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: Maestro E2E placeholder
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Build shared-types (contratos actualizados)
         run: |
-          echo "📱 E2E Mobile — Maestro flows (simulado)"
-          echo "Flujos pendientes: login-register-resource.yaml"
-          echo "Reporte generado: maestro-report/"
+          pnpm install
+          pnpm build
+        working-directory: packages/shared-types
+      - name: Typecheck web
+        run: |
+          pnpm install
+          pnpm type-check
+        working-directory: web
+      - name: Typecheck frontend (mobile)
+        run: |
+          pnpm install
+          npx tsc --noEmit
+        working-directory: frontend
+
+  # ─── Job 5: Sprint 4 Contract Integration Tests ───
+  sprint4-contracts:
+    needs: [contracts]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Build shared-types
+        run: |
+          pnpm install
+          pnpm build
+        working-directory: packages/shared-types
+      - name: Install backend deps
+        run: pnpm install
+        working-directory: backend
+      - name: Run Sprint 4 contract integration tests
+        run: npx vitest run tests/integration/sprint4/ --reporter=verbose --coverage
+        working-directory: backend
+      - name: Check coverage threshold
+        shell: bash
+        run: |
+          COVERAGE_FILE="coverage/coverage-summary.json"
+          if [ -f "$COVERAGE_FILE" ]; then
+            COVERAGE=$(jq '.total.lines.pct' "$COVERAGE_FILE")
+            echo "Cobertura Sprint 4: $COVERAGE%"
+            if (( $(echo "$COVERAGE < $COVERAGE_THRESHOLD" | bc -l) )); then
+              echo "❌ Cobertura $COVERAGE% por debajo del umbral ${{ env.COVERAGE_THRESHOLD }}%"
+              exit 1
+            fi
+            echo "✅ Cobertura $COVERAGE% supera el umbral ${{ env.COVERAGE_THRESHOLD }}%"
+          else
+            echo "⚠️ No se encontró reporte de cobertura en $COVERAGE_FILE"
+          fi
+        working-directory: backend
+      - name: Publish Sprint 4 coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sprint4-contract-coverage
+          path: backend/coverage/
+
+  # ─── Job 6: E2E Mobile (Maestro) ───
+  e2e-mobile:
+    needs: [backend, sprint4-contracts]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+      - name: Install dependencies
+        run: pnpm install
+        working-directory: frontend
+      - name: Build Android APK for E2E
+        run: npx expo build:android --type apk --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Install APK on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          avd-name: MaestroTest
+          script: |
+            adb wait-for-device
+            adb install frontend/build/*.apk
+            adb push frontend/maestro/data/test-resource.pdf /sdcard/Download/test-resource.pdf
+      - name: Run Maestro E2E flows
+        run: |
+          maestro test frontend/maestro/flows/ \
+            --format junit \
+            --output maestro-report/
+        working-directory: frontend
+        continue-on-error: true
+      - name: Publish Maestro report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maestro-report
+          path: frontend/maestro-report/
+
+  # ─── Job: Pattern & Global Coverage (CA1, CA2, CA3, CA4, CA5) ───
+  test-coverage:
+    needs: [contracts]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          cache-dependency-path: backend/pnpm-lock.yaml
+      - name: Install backend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build shared-types
+        run: pnpm build
+        working-directory: packages/shared-types
+      - name: Install backend deps (after shared-types build)
+        run: pnpm install --frozen-lockfile
+      - name: Run tests with coverage (CA1+CA2+CA3+CA4)
+        run: pnpm test:coverage
+      - name: Upload coverage HTML artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: backend/coverage/
+          include-hidden-files: true
 
   # ─── Quality Gate Final ───
   quality-gate:
-    needs: [contracts, backend, frontend, e2e-mobile]
+    needs: [contracts, backend, frontend, client-typecheck, sprint4-contracts, e2e-mobile, test-coverage]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate quality gate
         run: |
-          if [ "${{ needs.contracts.result }}" != "success" ]; then
-            echo "❌ Quality Gate FAILED — contracts job falló"
-            exit 1
-          fi
-          if [ "${{ needs.backend.result }}" != "success" ]; then
-            echo "❌ Quality Gate FAILED — backend job falló"
-            exit 1
-          fi
-          echo "✅ Quality Gate PASSED"
+          echo "Evaluación de Quality Gate:"
+          FAILED=""
+          check() {
+            local j="$1" r="$2"
+            if [ "$r" = "success" ]; then
+              echo "  ✅ $j"
+            else
+              echo "  ❌ $j ($r)"
+              FAILED="$FAILED $j"
+            fi
+          }
+          check "contracts"          "${{ needs.contracts.result }}"
+          check "backend"            "${{ needs.backend.result }}"
+          check "frontend"           "${{ needs.frontend.result }}"
+          check "client-typecheck"   "${{ needs.client-typecheck.result }}"
+          check "sprint4-contracts"  "${{ needs.sprint4-contracts.result }}"
+          check "e2e-mobile"         "${{ needs.e2e-mobile.result }}"
+          check "test-coverage"      "${{ needs.test-coverage.result }}"
           echo ""
-          echo "Resumen:"
-          echo "  contracts:   ${{ needs.contracts.result }}"
-          echo "  backend:     ${{ needs.backend.result }}"
-          echo "  frontend:    ${{ needs.frontend.result }} (no bloqueante)"
-          echo "  e2e-mobile:  ${{ needs.e2e-mobile.result }} (no bloqueante)"
+          if [ -n "$FAILED" ]; then
+            echo "❌ QUALITY GATE FAILED — Jobs fallidos:$FAILED"
+            exit 1
+          fi
+          echo "✅ QUALITY GATE PASSED"

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { 
   View, 
   Text, 
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Platform 
 } from "react-native";
-import { useNotificationStore } from "@/store/useNotificationStore";
+import { useNotificationStore, type Prioridad, type Accion } from "@/store/useNotificationStore";
 import { supabase } from "@/lib/supabase";
 import { fetchApi } from "@/lib/api/httpClient";
 
@@ -18,6 +18,25 @@ import { fetchApi } from "@/lib/api/httpClient";
  * Centraliza la visualización de modales basados en una cola de notificaciones.
  * Muestra las notificaciones una por una.
  */
+
+const PRIORITY_COLORS: Record<Prioridad, string> = {
+  normal: "rgba(255, 255, 255, 0.1)",
+  urgente: "#F59E0B",
+  critica: "#EF4444",
+};
+
+function getPriorityBorder(priority?: Prioridad): string {
+  return PRIORITY_COLORS[priority ?? "normal"] ?? PRIORITY_COLORS.normal;
+}
+
+function getPriorityIcon(priority?: Prioridad): string {
+  switch (priority) {
+    case "urgente": return "⚠️";
+    case "critica": return "🚨";
+    default: return "🔔";
+  }
+}
+
 export function GlobalNotificationModals() {
   const { queue, popNotification } = useNotificationStore();
   const current = queue[0]; // La notificación al frente de la cola
@@ -44,6 +63,9 @@ export function GlobalNotificationModals() {
     case "miembro_aceptado":
       return <WelcomeModal data={current} onClose={handleClose} />;
     default:
+      if (current.action) {
+        return <DefaultActionModal data={current} onClose={handleClose} />;
+      }
       console.warn("[GlobalNotificationModals] Tipo desconocido:", current.type);
       return null;
   }
@@ -52,6 +74,7 @@ export function GlobalNotificationModals() {
 // 1. Modal de Transferencia de Administración
 function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void }) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const priority = data.priority ?? "normal";
   
   // Lógica robusta para obtener el nombre del grupo
   const groupName = data.payload?.groupName || (data.title !== "transferencia_admin_solicitada" ? data.title : "un grupo");
@@ -75,12 +98,17 @@ function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void 
   return (
     <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
-        <View style={styles.container}>
-          <Text style={styles.icon}>🛡️</Text>
-          <Text style={styles.title}>Invitación de Administración</Text>
-          <Text style={styles.description}>
-            Desean delegarte el control total del grupo <Text style={styles.boldWhite}>{groupName}</Text>. ¿Aceptas la responsabilidad?
-          </Text>
+        <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+          <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
+          {/* CORE: inmutable */}
+          <View style={styles.coreContainer}>
+            <Text style={styles.title}>Invitación de Administración</Text>
+            <Text style={styles.description}>
+              Desean delegarte el control total del grupo <Text style={styles.boldWhite}>{groupName}</Text>. ¿Aceptas la responsabilidad?
+            </Text>
+          </View>
+          {/* Decoradores */}
+          <View style={styles.decoratorDivider} />
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={handleAccept} disabled={isProcessing}>
               {isProcessing ? <ActivityIndicator color="#0047AB" /> : <Text style={styles.acceptText}>ACEPTAR CARGO</Text>}
@@ -104,12 +132,17 @@ function JoinRequestModal({ data, onClose }: { data: any, onClose: () => void })
   return (
     <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
-        <View style={[styles.container, { borderColor: '#0047AB' }]}>
-          <Text style={styles.icon}>👋</Text>
-          <Text style={styles.title}>Nueva Solicitud</Text>
-          <Text style={styles.description}>
-            Tu grupo <Text style={styles.boldWhite}>{groupName}</Text> tiene una nueva solicitud de ingreso de {applicantName}.
-          </Text>
+        <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+          <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
+          {/* CORE: inmutable */}
+          <View style={styles.coreContainer}>
+            <Text style={styles.title}>Nueva Solicitud</Text>
+            <Text style={styles.description}>
+              Tu grupo <Text style={styles.boldWhite}>{groupName}</Text> tiene una nueva solicitud de ingreso de {applicantName}.
+            </Text>
+          </View>
+          {/* Decoradores */}
+          <View style={styles.decoratorDivider} />
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={onClose}>
               <Text style={styles.acceptText}>VER SOLICITUDES</Text>
@@ -131,12 +164,17 @@ function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
   return (
     <Modal transparent visible animationType="fade">
       <View style={styles.overlay}>
-        <View style={[styles.container, { borderColor: '#10B981' }]}>
-          <Text style={styles.icon}>🎉</Text>
-          <Text style={styles.title}>¡Bienvenido!</Text>
-          <Text style={styles.description}>
-            Tu solicitud para el grupo <Text style={styles.boldWhite}>{groupName}</Text> ha sido aceptada.
-          </Text>
+        <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+          <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
+          {/* CORE: inmutable */}
+          <View style={styles.coreContainer}>
+            <Text style={styles.title}>¡Bienvenido!</Text>
+            <Text style={styles.description}>
+              Tu solicitud para el grupo <Text style={styles.boldWhite}>{groupName}</Text> ha sido aceptada.
+            </Text>
+          </View>
+          {/* Decoradores */}
+          <View style={styles.decoratorDivider} />
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={[styles.button, { backgroundColor: '#10B981' }]} onPress={onClose}>
               <Text style={[styles.acceptText, { color: 'white' }]}>¡EXCELENTE!</Text>
@@ -148,17 +186,87 @@ function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
   );
 }
 
+// 4. Modal Genérico con Acción Decorada (D03)
+function DefaultActionModal({ data, onClose }: { data: any, onClose: () => void }) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [actionResult, setActionResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const handleAction = useCallback(async () => {
+    if (!data.action?.endpoint || isProcessing) return;
+    setIsProcessing(true);
+    setActionResult(null);
+    try {
+      await fetchApi(data.action.endpoint, { method: "POST" });
+      setActionResult({ ok: true, message: "Completado" });
+      setTimeout(() => onClose(), 1500);
+    } catch (error: any) {
+      setActionResult({ ok: false, message: error?.message ?? "Error de conexión" });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [data.action, isProcessing, onClose]);
+
+  return (
+    <Modal transparent visible animationType="fade">
+      <View style={styles.overlay}>
+        <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+          <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
+          {/* CORE: inmutable */}
+          <View style={styles.coreContainer}>
+            <Text style={styles.title}>{data.title ?? "Notificación"}</Text>
+            <Text style={styles.description}>{data.body ?? data.description ?? ""}</Text>
+          </View>
+          {/* Decoradores */}
+          <View style={styles.decoratorDivider} />
+
+          {actionResult && !actionResult.ok && (
+            <Text style={styles.errorText}>{actionResult.message}</Text>
+          )}
+
+          <View style={styles.buttonContainer}>
+            {actionResult?.ok ? (
+              <TouchableOpacity style={[styles.button, { backgroundColor: '#10B981' }]} onPress={onClose}>
+                <Text style={[styles.acceptText, { color: 'white' }]}>✓ {actionResult.message}</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.button, styles.acceptButton]}
+                onPress={handleAction}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <ActivityIndicator color="#0047AB" />
+                ) : (
+                  <Text style={styles.acceptText}>{data.action?.label ?? "ACCIÓN"}</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onClose} disabled={isProcessing}>
+              <Text style={styles.rejectText}>CERRAR</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "center", alignItems: "center", padding: 20 },
-  container: { backgroundColor: "#1A1A1A", borderRadius: 32, padding: 32, width: "100%", maxWidth: 400, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.1)", alignItems: "center" },
-  icon: { fontSize: 40, marginBottom: 20 },
-  title: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", textAlign: "center", marginBottom: 12 },
-  description: { color: "#A3A3A3", fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 32 },
+  container: { backgroundColor: "#1A1A1A", borderRadius: 32, padding: 32, width: "100%", maxWidth: 400, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.1)", alignItems: "stretch" },
+  icon: { fontSize: 40, marginBottom: 20, textAlign: "center" as const },
+  // CORE: estilos inmutables del mensaje base (Criterio 1)
+  coreContainer: { flexShrink: 1, marginBottom: 16 },
+  title: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", textAlign: "center" as const, marginBottom: 12 },
+  description: { color: "#A3A3A3", fontSize: 14, textAlign: "center" as const, lineHeight: 20 },
   boldWhite: { fontWeight: 'bold', color: 'white' },
+  // Decoradores: separados visualmente del core
+  decoratorDivider: { height: 1, backgroundColor: "rgba(255, 255, 255, 0.1)", marginBottom: 16 },
   buttonContainer: { width: "100%", gap: 12 },
   button: { width: "100%", paddingVertical: 16, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   acceptButton: { backgroundColor: "#FFFFFF" },
   rejectButton: { backgroundColor: "transparent", borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.1)" },
   acceptText: { color: "#0047AB", fontWeight: "900", fontSize: 12, letterSpacing: 1 },
   rejectText: { color: "#A3A3A3", fontWeight: "700", fontSize: 12, letterSpacing: 1 },
+  errorText: { color: "#EF4444", fontSize: 12, textAlign: "center" as const, marginBottom: 8 },
 });

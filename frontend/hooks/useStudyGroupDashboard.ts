@@ -397,7 +397,13 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
         );
 
         // Mapear explícitamente para asegurar consistencia entre camelCase y snake_case
-        setMessages((prev) => [...prev, mapApiMessageToDomain(created)]);
+        // PREVENCIÓN DE DUPLICADOS: Realtime puede entregar el mensaje ANTES que la respuesta HTTP
+        // (WebSocket suele ser más rápido que una respuesta REST). Si ya está en el estado, no lo duplicamos.
+        setMessages((prev) => {
+          const mapped = mapApiMessageToDomain(created);
+          if (prev.some((m) => m.id === mapped.id)) return prev;
+          return [...prev, mapped];
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : "No se pudo enviar el mensaje.";
         setToast({

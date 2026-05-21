@@ -5,10 +5,12 @@
  * - TextInput multilinea (máx 4 líneas)
  * - Botón enviar (deshabilitado si está vacío o enviando)
  * - Respeta safe area inferior (notch / home indicator)
+ * - Integrado con validación de mensajes
  */
 
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
+import { ValidationState } from "@uniconnect/shared-types";
 import {
   ActivityIndicator,
   Image,
@@ -18,6 +20,7 @@ import {
   TouchableOpacity,
   useColorScheme,
   View,
+  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -56,6 +59,11 @@ interface Props {
   media: ChatInputMediaState;
   send: ChatInputSendState;
   voice: ChatInputVoiceState;
+  validationState?: ValidationState;
+  containerStyle?: ViewStyle;
+  backgroundColorOverride?: string;
+  borderTopColorOverride?: string;
+  paddingBottomOverride?: number;
 }
 
 export function ChatInput({
@@ -64,6 +72,11 @@ export function ChatInput({
   media,
   send,
   voice,
+  validationState,
+  containerStyle,
+  backgroundColorOverride,
+  borderTopColorOverride,
+  paddingBottomOverride,
 }: Props) {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
@@ -82,8 +95,14 @@ export function ChatInput({
     elapsedSec: voiceElapsedSec,
     onPress: onVoicePress,
   } = voice;
+
   const hasMedia = !!imagePreviewUri;
-  const canSend = (value.trim().length > 0 || hasMedia) && !sending;
+  const hasValidationError = validationState?.error;
+  const hasWarning = validationState?.warnings && validationState.warnings.length > 0;
+  const charCount = value.length;
+  const isNearLimit = charCount > 4500;
+
+  const canSend = (value.trim().length > 0 || hasMedia) && !sending && !hasValidationError;
   const canQuickAction = !sending && !pickingImage;
 
   const formatRecordTime = (sec: number) => {
@@ -97,10 +116,11 @@ export function ChatInput({
       style={[
         styles.container,
         {
-          backgroundColor: C.background,
-          borderTopColor: "transparent",
-          paddingBottom: Math.max(insets.bottom, 8),
+          backgroundColor: backgroundColorOverride ?? C.background,
+          borderTopColor: borderTopColorOverride ?? "transparent",
+          paddingBottom: paddingBottomOverride ?? Math.max(insets.bottom, 8),
         },
+        containerStyle,
       ]}
     >
       {imagePreviewUri && (
@@ -140,6 +160,25 @@ export function ChatInput({
         </View>
       )}
 
+      {/* Validación */}
+      {hasValidationError && (
+        <View style={[styles.errorCard, { backgroundColor: C.error + '20', borderColor: C.error }]}>
+          <Text style={[styles.errorIcon]}>⚠️</Text>
+          <Text style={[styles.errorMessage, { color: C.error }]}>
+            {validationState?.error?.message || 'Error de validación'}
+          </Text>
+        </View>
+      )}
+
+      {hasWarning && (
+        <View style={[styles.warningCard, { backgroundColor: '#FFA500' + '20', borderColor: '#FFA500' }]}>
+          <Text style={[styles.warningIcon]}>ℹ️</Text>
+          <Text style={[styles.warningMessage, { color: '#FF9500' }]}>
+            {validationState?.warnings?.[0]?.message || 'Advertencia'}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.row}>
         <TouchableOpacity
           onPress={onPickImage}
@@ -154,7 +193,7 @@ export function ChatInput({
           )}
         </TouchableOpacity>
 
-        <View style={[styles.inputShell, { backgroundColor: C.surface, borderColor: C.border }]}> 
+        <View style={[styles.inputShell, { backgroundColor: C.surface, borderColor: hasValidationError ? C.error : isNearLimit ? '#FFA500' : C.border }]}>
           <TextInput
             value={value}
             onChangeText={(text) => {
@@ -175,6 +214,9 @@ export function ChatInput({
             onSubmitEditing={canSend ? onSend : undefined}
             blurOnSubmit={false}
           />
+          <Text style={[styles.charCounter, { color: isNearLimit || hasValidationError ? (hasValidationError ? C.error : '#FFA500') : C.textSecondary }]}>
+            {charCount}/5000
+          </Text>
         </View>
 
         <TouchableOpacity
@@ -231,6 +273,7 @@ const styles = StyleSheet.create({
   },
   inputShell: {
     flex: 1,
+    minWidth: 0,
     borderRadius: 24,
     borderWidth: 1,
     paddingHorizontal: 14,
@@ -239,11 +282,18 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    width: "100%",
+    minWidth: 0,
     paddingTop: 9,
     paddingBottom: 9,
     fontSize: 15,
     maxHeight: 120,
     lineHeight: 20,
+  },
+  charCounter: {
+    fontSize: 11,
+    marginRight: 8,
+    marginBottom: 4,
   },
   sendBtn: {
     width: 42,
@@ -342,5 +392,39 @@ const styles = StyleSheet.create({
   recordingHint: {
     marginTop: 4,
     fontSize: 11,
+  },
+  errorCard: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+    gap: 8,
+  },
+  errorIcon: {
+    fontSize: 16,
+  },
+  errorMessage: {
+    fontSize: 12,
+    fontWeight: "500",
+    flex: 1,
+  },
+  warningCard: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+    gap: 8,
+  },
+  warningIcon: {
+    fontSize: 16,
+  },
+  warningMessage: {
+    fontSize: 12,
+    fontWeight: "500",
+    flex: 1,
   },
 });

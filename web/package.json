@@ -8,14 +8,16 @@
     "build": "tsc -b && vite build",
     "type-check": "tsc -p tsconfig.app.json --noEmit",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",
     "@uniconnect/shared-api": "workspace:*",
+    "@uniconnect/shared-hooks": "workspace:*",
     "@uniconnect/shared-state": "workspace:*",
     "@uniconnect/shared-types": "workspace:*",
-    "@uniconnect/shared-hooks": "workspace:*",
     "@uniconnect/shared-ui": "workspace:*",
     "@uniconnect/shared-utils": "workspace:*",
     "autoprefixer": "^10.5.0",
@@ -30,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.49.1",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

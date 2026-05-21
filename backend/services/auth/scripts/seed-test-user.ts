@@ -29,6 +29,7 @@ interface TestUser {
 
 const TEST_USERS: TestUser[] = [
   { email: "test@ucaldas.edu.co", password: "Test1234", fullName: "Estudiante Test" },
+  { email: "estudiante.prueba@ucaldas.edu.co", password: "Test1234", fullName: "Estudiante Prueba" },
 ];
 
 async function tryUrl(url: string, user: TestUser): Promise<boolean> {

@@ -9,6 +9,7 @@ import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequ
 import { ListApplicationsByRequest } from "../../../application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "../../../application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "../../../application/use-cases/ListUserNotifications.js";
+import { MarkAllNotificationsAsRead } from "../../../application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "../../../application/use-cases/ListMyStudyRequests.js";
@@ -32,8 +33,15 @@ import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { validateBody } from "../../../middleware/validationMiddleware.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
-import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
 import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
+import type { PreferenceService } from "../../../application/services/PreferenceService.js";
+
+const UpdatePreferenceBodySchema = z.object({
+  eventType: z.string().min(1),
+  canal: z.string().min(1),
+  active: z.boolean(),
+});
 
 const ReviewApplicationBodySchema = z.object({
   status: z.enum(["aceptada", "rechazada"]),
@@ -75,6 +83,8 @@ export class StudyGroupsController {
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
     private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
+    private readonly markAllNotificationsAsRead: MarkAllNotificationsAsRead,
+    private readonly preferenceService: PreferenceService,
     private readonly createStudySessionUC: CreateStudySession,
     private readonly cancelStudySessionUC: CancelStudySession,
     private readonly updateAvailabilityUC: UpdateAvailability,
@@ -281,6 +291,93 @@ export class StudyGroupsController {
     }
   }
 
+  async markNotificationsRead(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.markAllNotificationsAsRead.execute(actorUserId);
+      sendData(res, 200, { success: true });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async getPreferences(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const eventTypes = [
+        "solicitud_ingreso",
+        "miembro_aceptado",
+        "miembro_rechazado",
+        "transferencia_admin_solicitada",
+        "transferencia_admin_aceptada",
+        "transferencia_admin_rechazada",
+        "transferencia_admin_transferida",
+        "admin_role_left",
+      ] as const;
+
+      const labels: Record<string, string> = {
+        solicitud_ingreso: "Solicitud de ingreso",
+        miembro_aceptado: "Miembro aceptado",
+        miembro_rechazado: "Miembro rechazado",
+        transferencia_admin_solicitada: "Transferencia de admin solicitada",
+        transferencia_admin_aceptada: "Transferencia de admin aceptada",
+        transferencia_admin_rechazada: "Transferencia de admin rechazada",
+        transferencia_admin_transferida: "Admin transferido",
+        admin_role_left: "Admin renunció",
+      };
+
+      const preferences = await Promise.all(
+        eventTypes.map(async (eventType) => {
+          const canales = await this.preferenceService.getCanalesActivos(actorUserId, eventType);
+          const channels: Record<string, boolean> = {
+            in_app_websocket: canales.includes("in_app_websocket"),
+            email_institucional: canales.includes("email_institucional"),
+            push_movil: canales.includes("push_movil"),
+          };
+          return { eventType, label: labels[eventType] ?? eventType, channels };
+        }),
+      );
+
+      sendJson(res, 200, { preferences: preferences ?? [] });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async updatePreference(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const body = await readJsonBody(req);
+      const parsed = UpdatePreferenceBodySchema.parse(body);
+      await this.preferenceService.setCanalActivo(actorUserId, parsed.eventType, parsed.canal, parsed.active);
+      sendJson(res, 200, { message: "Preferencia actualizada correctamente", success: true });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        sendError(res, 400, "Datos invalidos: " + error.errors.map(e => e.message).join(", "));
+        return;
+      }
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async listMembers(
     req: IncomingMessage,
     res: ServerResponse,
@@ -414,6 +511,7 @@ export class StudyGroupsController {
 
       sendData(res, 200, { message: "Transferencia aceptada correctamente." });
     } catch (error) {
+      console.error("Error en acceptAdminTransfer:", error instanceof Error ? error.message : error);
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

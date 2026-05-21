@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { BaseTransport } from "./ITransport.js";
 import type {
   RequestOptions,
@@ -6,6 +7,7 @@ import type {
   IWebSocketClient,
   WebSocketOptions,
 } from "../types/index.js";
+import { ContractViolationError } from "../types/index.js";
 
 /**
  * WebSocket client implementation using browser/node WebSocket
@@ -223,6 +225,10 @@ export class FetchTransport extends BaseTransport {
 
       const data = this.unwrapDataEnvelope<TResponse>(rawData);
 
+      if (options.responseSchema) {
+        this.validateResponse(options.method, options.url, data, options.responseSchema);
+      }
+
       return {
         status: response.status,
         statusText: response.statusText,
@@ -311,6 +317,22 @@ export class FetchTransport extends BaseTransport {
       return JSON.parse(rawText) as TResponse;
     } catch {
       return rawText;
+    }
+  }
+
+  private validateResponse(
+    method: string,
+    url: string,
+    data: unknown,
+    schema: z.ZodTypeAny,
+  ): void {
+    try {
+      schema.parse(data);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        throw new ContractViolationError(method, url, err.issues);
+      }
+      throw err;
     }
   }
 

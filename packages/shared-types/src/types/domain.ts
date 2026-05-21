@@ -6,6 +6,7 @@ import { MessageSchema, ConversationSchema } from "../schemas/messaging.schema.j
 import { StudyResourceSchema } from "../schemas/resource.schema.js";
 import { EventSchema } from "../schemas/event.schema.js";
 import { NotificationSchema } from "../schemas/notification.schema.js";
+import { ForumQuestionSummarySchema } from "../schemas/forum.schema.js";
 
 export type User = z.infer<typeof UserSchema>;
 export type AuthProfile = z.infer<typeof AuthProfileSchema>;
@@ -24,3 +25,4 @@ export type Conversation = z.infer<typeof ConversationSchema>;
 export type StudyResource = z.infer<typeof StudyResourceSchema>;
 export type Event = z.infer<typeof EventSchema>;
 export type Notification = z.infer<typeof NotificationSchema>;
+export type QuestionSummary = z.infer<typeof ForumQuestionSummarySchema>;

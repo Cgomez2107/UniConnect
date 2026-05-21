@@ -1,0 +1,113 @@
+appId: com.uniconnect.app
+name: Login → Subir recurso → Verificar en Dashboard — flujo E2E completo
+---
+# =============================================================================
+# FLUJO E2E PRINCIPAL (Criterio 2): Login → Navegar → Subir Recurso → Verificar
+# =============================================================================
+# Prerrequisitos:
+#   - Usuario de prueba: e2e@ucaldas.edu.co / TestPass123
+#   - Usuario tiene al menos una materia inscrita (para poder seleccionar en el formulario)
+#   - Dispositivo con archivo de prueba: /sdcard/Download/test-resource.pdf
+# =============================================================================
+
+# ── 1. LOGIN ──────────────────────────────────────────────────────────────────
+# Navegar desde onboarding (si aplica)
+- runFlow:
+    file: onboarding-login.yaml
+    when:
+      visible:
+        text: "Saltar"
+
+# Si ya está autenticado, verificar que estamos en Feed
+- assertVisible:
+    text: "Feed"
+    timeout: 20000
+
+# ── 2. NAVEGAR A RECURSOS EN EL FEED ────────────────────────────────────────
+# El Feed tiene 3 modos de búsqueda: solicitudes, compañeros, recursos
+# Cambiar al modo "recursos" tocando el botón SearchModeToggle
+
+- assertVisible:
+    text: "Subir recurso"
+    timeout: 10000
+
+- tapOn:
+    text: "Subir recurso"
+
+# ── 3. FORMULARIO DE SUBIR RECURSO ──────────────────────────────────────────
+- assertVisible:
+    text: "Subir recurso"
+    timeout: 10000
+
+# 3a. Ingresar título
+- tapOn:
+    text: "Título *"
+
+- inputText:
+    text: "Apuntes de Cálculo Integral — 2026"
+
+# 3b. Ingresar descripción
+- tapOn:
+    text: "Descripción (opcional)"
+
+- inputText:
+    text: "Resumen del curso de cálculo integral con ejercicios resueltos y fórmulas clave."
+
+# 3c. Seleccionar materia del carrusel horizontal
+# Se toca el primer chip de materia disponible
+- tapOn:
+    point: "50%,55%"
+    repeat: 1
+    tolerance: "10%,10%"
+
+# 3d. Seleccionar archivo usando el picker de Maestro
+# En CI, el archivo debe estar precargado en el emulador
+- tapOn:
+    text: "Seleccionar archivo"
+
+- pickFile:
+    filePath: "/sdcard/Download/test-resource.pdf"
+
+# ── 4. ENVIAR FORMULARIO ─────────────────────────────────────────────────────
+- assertVisible:
+    text: "📤 Subir recurso"
+
+- tapOn:
+    text: "Subir recurso"
+
+# ── 5. VERIFICAR SUBIDA EXITOSA ──────────────────────────────────────────────
+# Tras la subida, la app muestra un Alert con éxito y navega hacia atrás
+
+- assertVisible:
+    text: "¡Recurso subido!"
+    timeout: 30000
+
+- tapOn:
+    text: "Aceptar"
+
+# ── 6. VERIFICAR EN EL FEED ──────────────────────────────────────────────────
+# Volver al Feed y verificar que el recurso aparece en la lista
+
+- assertVisible:
+    text: "Feed"
+    timeout: 10000
+
+# Cambiar a modo recursos en el Feed
+- tapOn:
+    text: "Subir recurso"
+
+# Esperar a que cargue la lista de recursos y verificar que el nuestro aparece
+- assertVisible:
+    text: "Apuntes de Cálculo Integral — 2026"
+    timeout: 15000
+
+# ── 7. VERIFICAR EN EL TAB DE PERFIL / DASHBOARD ─────────────────────────────
+# Navegar al tab Perfil y verificar que el recurso está listado
+
+- tapOn:
+    text: "Perfil"
+    index: 0
+
+- assertVisible:
+    text: "Apuntes de Cálculo Integral — 2026"
+    timeout: 10000

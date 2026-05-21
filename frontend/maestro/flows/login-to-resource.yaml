@@ -1,0 +1,120 @@
+appId: com.uniconnect.app
+name: Login → Solicitudes → Mis Recursos → Subir Recurso — flujo E2E completo
+---
+# =============================================================================
+# FLUJO E2E: Login → Solicitudes → Mis Recursos → Subir Recurso → Verificación
+# =============================================================================
+# Prerrequisitos:
+#   - App instalada en emulador Android / iOS
+#   - Usuario mock: estudiante.prueba@ucaldas.edu.co / Test1234!
+#   - Usuario tiene al menos una materia inscrita
+#   - Dispositivo con archivo: /sdcard/Download/test.pdf
+# =============================================================================
+
+# ── 1. ONBOARDING (si aplica) ──────────────────────────────────────────────
+- runFlow:
+    file: ../shared/skip-onboarding.yaml
+    when:
+      visible:
+        text: "Saltar"
+
+# ── 2. LOGIN ───────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Inicia sesión"
+    timeout: 15000
+
+- tapOn:
+    text: "Correo institucional"
+
+- inputText:
+    text: "estudiante.prueba@ucaldas.edu.co"
+
+- tapOn:
+    text: "Contraseña"
+
+- inputText:
+    text: "Test1234!"
+
+- tapOn:
+    text: "Ingresar"
+
+# ── 3. VERIFICAR DASHBOARD ─────────────────────────────────────────────────
+- assertVisible:
+    text: "Feed"
+    timeout: 20000
+
+- assertVisible:
+    text: "Solicitudes"
+    timeout: 5000
+
+# ── 4. NAVEGAR A SOLICITUDES → MIS RECURSOS ──────────────────────────────
+- tapOn:
+    text: "Solicitudes"
+
+- assertVisible:
+    text: "Mis recursos"
+    timeout: 10000
+
+- tapOn:
+    text: "Mis recursos"
+
+# ── 5. SUBIR RECURSO ──────────────────────────────────────────────────────
+- assertVisible:
+    text: "+ Subir recurso"
+    timeout: 10000
+
+- tapOn:
+    text: "+ Subir recurso"
+
+- assertVisible:
+    text: "Subir recurso"
+    timeout: 10000
+
+# 5a. Ingresar título
+- tapOn:
+    text: "Título *"
+
+- inputText:
+    text: "Resumen Cálculo Integral — 2026"
+
+# 5b. Ingresar descripción
+- tapOn:
+    text: "Descripción (opcional)"
+
+- inputText:
+    text: "Resumen del curso con ejercicios resueltos, fórmulas clave y ejemplos prácticos."
+
+# 5c. Seleccionar materia (primer chip del carrusel)
+- tapOn:
+    point: "50%,55%"
+    repeat: 1
+    tolerance: "10%,10%"
+
+# 5d. Seleccionar archivo
+- tapOn:
+    text: "Seleccionar archivo"
+
+- pickFile:
+    filePath: "/sdcard/Download/test.pdf"
+
+# ── 6. ENVIAR FORMULARIO ─────────────────────────────────────────────────
+- assertVisible:
+    text: "📤 Subir recurso"
+    timeout: 5000
+
+- tapOn:
+    text: "Subir recurso"
+
+# ── 7. VERIFICAR SUBIDA EXITOSA ──────────────────────────────────────────
+- assertVisible:
+    text: "¡Recurso subido!"
+    timeout: 30000
+
+- tapOn:
+    text: "Aceptar"
+
+# ── 8. VERIFICAR RECURSO EN "MIS RECURSOS" ──────────────────────────────
+# Tras aceptar, volvemos a Solicitudes → Mis recursos
+- assertVisible:
+    text: "Resumen Cálculo Integral — 2026"
+    timeout: 15000

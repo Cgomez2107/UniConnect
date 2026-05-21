@@ -30,6 +30,13 @@ function mapNotification(row: NotificationRow): UserNotification {
 export class PostgresNotificationRepository implements INotificationRepository {
   constructor(private readonly pool: Pool) {}
 
+  async markAllAsRead(userId: string): Promise<void> {
+    await this.pool.query(
+      "UPDATE user_notifications SET read_at = NOW() WHERE user_id = $1 AND read_at IS NULL",
+      [userId],
+    );
+  }
+
   async create(input: {
     userId: string;
     type: string;
@@ -37,6 +44,21 @@ export class PostgresNotificationRepository implements INotificationRepository {
     body: string;
     payload: Record<string, unknown> | null;
   }): Promise<string> {
+    const existing = await this.pool.query<{ id: string }>(
+      `
+        SELECT id FROM user_notifications
+        WHERE user_id = $1
+          AND type = $2
+          AND created_at > NOW() - INTERVAL '30 seconds'
+        LIMIT 1
+      `,
+      [input.userId, input.type],
+    );
+
+    if (existing.rows[0]) {
+      return existing.rows[0].id;
+    }
+
     const result = await this.pool.query<{ id: string }>(
       `
         INSERT INTO user_notifications (user_id, type, title, body, payload)

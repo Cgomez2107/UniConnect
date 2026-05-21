@@ -51,6 +51,7 @@ export function RequestDetailActionBar({
             <Text style={[styles.ownPostText, { color: C.textSecondary }]}>✏️ Esta es tu solicitud</Text>
           </View>
           <TouchableOpacity
+            className="rounded-full border border-red-500 px-4 py-3 items-center"
             style={[styles.secondaryDangerBtn, { borderColor: C.error }]}
             onPress={onCancelRequest}
             disabled={cancelingAction}
@@ -65,6 +66,7 @@ export function RequestDetailActionBar({
             <Text style={[styles.ownPostText, { color: C.textSecondary }]}>🛠 Eres administrador de esta solicitud</Text>
           </View>
           <TouchableOpacity
+            className="rounded-full border border-red-500 px-4 py-3 items-center"
             style={[styles.secondaryDangerBtn, { borderColor: C.error }]}
             onPress={onCancelRequest}
             disabled={cancelingAction}
@@ -76,6 +78,7 @@ export function RequestDetailActionBar({
       ) : applicationStatus === "aceptada" ? (
         <View style={{ gap: 8 }}>
           <TouchableOpacity
+            className="rounded-full bg-primary px-4 py-3 items-center"
             style={[styles.postulateBtn, { backgroundColor: chatLoading ? C.border : C.primary }]}
             onPress={onOpenChat}
             disabled={chatLoading}
@@ -87,6 +90,7 @@ export function RequestDetailActionBar({
           </TouchableOpacity>
 
           <TouchableOpacity
+            className="rounded-full border border-red-500 px-4 py-3 items-center"
             style={[styles.secondaryDangerBtn, { borderColor: C.error }]}
             onPress={onCancelMyApplication}
             disabled={cancelingAction}
@@ -101,6 +105,7 @@ export function RequestDetailActionBar({
             <Text style={[styles.ownPostText, { color: C.textSecondary }]}>⏳ Tu postulación está en revisión</Text>
           </View>
           <TouchableOpacity
+            className="rounded-full border border-red-500 px-4 py-3 items-center"
             style={[styles.secondaryDangerBtn, { borderColor: C.error }]}
             onPress={onCancelMyApplication}
             disabled={cancelingAction}
@@ -115,6 +120,7 @@ export function RequestDetailActionBar({
         </View>
       ) : requestStatus === "abierta" ? (
         <TouchableOpacity
+          className="rounded-full bg-primary px-4 py-3 items-center"
           style={[styles.postulateBtn, { backgroundColor: C.primary }]}
           onPress={() => onOpenPostulate(requestId)}
           activeOpacity={0.85}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import useFeed from "@/hooks/useFeed";
@@ -28,21 +28,44 @@ export function SolicitudesPage() {
     [user],
   );
   const { subjects: userSubjects } = useSubjectOptions(fallbackSubjects);
-  const { requests = [], applications = [], isLoading = false, error = null } = useFeed({
+  const enrolledSubjectIds = useMemo(
+    () => userSubjects.map((subject) => subject.id),
+    [userSubjects],
+  );
+  const enrolledSubjectIdsKey = useMemo(
+    () => enrolledSubjectIds.join("|"),
+    [enrolledSubjectIds],
+  );
+  const feedSubjectIds = useMemo(
+    () => (filter.selectedSubjectId ? [filter.selectedSubjectId] : enrolledSubjectIds),
+    [filter.selectedSubjectId, enrolledSubjectIdsKey],
+  );
+  const {
+    requests = [],
+    applications = [],
+    isLoading = false,
+    isLoadingMore = false,
+    error = null,
+    hasMore = false,
+    loadMore,
+  } = useFeed({
     userId: user?.id,
-    subjectId: filter.selectedSubjectId ?? undefined,
-  });
+    subjectIds: feedSubjectIds,
+  }) as any;
   const { companions, isLoading: companionsLoading } = useCompanions(companionSubjectId ?? undefined);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const enrolledRequests = requests;
 
   const requestsWithMissingAuthor = useMemo(
-    () => requests.filter((r) => !r.creatorName && !r.profiles?.fullName).map((r) => r.authorId),
-    [requests],
+    () => enrolledRequests.filter((r) => !r.creatorName && !r.profiles?.fullName).map((r) => r.authorId),
+    [enrolledRequests],
   );
   const profileNames = useProfileNames(requestsWithMissingAuthor);
 
   const enrichedRequests = useMemo(
     () =>
-      requests.map((r) => {
+      enrolledRequests.map((r) => {
         if (r.creatorName || r.profiles?.fullName) return r;
         const data = profileNames.get(r.authorId);
         if (!data?.fullName) return r;
@@ -52,7 +75,7 @@ export function SolicitudesPage() {
           profiles: { fullName: data.fullName, avatarUrl: data.avatarUrl },
         };
       }),
-    [requests, profileNames],
+    [enrolledRequests, profileNames],
   );
 
   const applicationMap = useMemo(() => {
@@ -64,14 +87,13 @@ export function SolicitudesPage() {
   }, [applications]);
 
   const filteredSolicitudes = useMemo(() => {
-    const bySubject = filter.filterBySubject(enrichedRequests as StudyRequestUI[]);
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     if (!normalizedSearch) {
-      return bySubject;
+      return enrichedRequests as StudyRequestUI[];
     }
 
-    return bySubject.filter((item) => {
+    return (enrichedRequests as StudyRequestUI[]).filter((item) => {
       const title = item.title?.toLowerCase() ?? "";
       const description = item.description?.toLowerCase() ?? "";
       const subjectName = item.subjectName?.toLowerCase() ?? "";
@@ -81,18 +103,36 @@ export function SolicitudesPage() {
         subjectName.includes(normalizedSearch)
       );
     });
-  }, [enrichedRequests, filter, searchTerm]);
+  }, [enrichedRequests, searchTerm]);
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || !hasMore || isLoading || isLoadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+          void loadMore();
+        }
+      },
+      { root: null, rootMargin: "300px 0px", threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, isLoadingMore, loadMore]);
 
   const requestRoleMap = useMemo(() => {
     const map = new Map<string, { isAuthor: boolean; appStatus: string | null }>();
-    for (const r of requests) {
+    for (const r of enrolledRequests) {
       map.set(r.id, {
         isAuthor: r.authorId === user?.id,
         appStatus: applicationMap.get(r.id) ?? null,
       });
     }
     return map;
-  }, [requests, applicationMap, user?.id]);
+  }, [enrolledRequests, applicationMap, user?.id]);
 
   const handleViewDetails = (id: string) => {
     const role = requestRoleMap.get(id);
@@ -171,7 +211,7 @@ export function SolicitudesPage() {
                 subjects={userSubjects}
                 selectedId={filter.selectedSubjectId}
                 onSelect={filter.selectSubject}
-                totalCount={enrichedRequests.length}
+                totalCount={filteredSolicitudes.length}
               />
               <div className="flex justify-end">
                 <Button onClick={() => navigate("/nueva-solicitud")}>
@@ -209,12 +249,20 @@ export function SolicitudesPage() {
               </div>
             )}
 
+            {!isLoading && filteredSolicitudes.length > 0 && hasMore && (
+              <div className="py-6 flex items-center justify-center text-sm text-neutral-500">
+                {isLoadingMore ? "Cargando más solicitudes..." : "Desplázate para cargar más"}
+              </div>
+            )}
+
+            <div ref={loadMoreSentinelRef} className="h-4" />
+
             {!isLoading && filteredSolicitudes.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-neutral-500 mb-4">
                   {filter.selectedSubjectId
                     ? "No hay solicitudes para esta materia"
-                    : "No hay solicitudes disponibles"}
+                    : "No hay solicitudes disponibles en tus materias inscritas"}
                 </p>
                 <Button onClick={() => navigate("/nueva-solicitud")}>
                   Crear el primer grupo

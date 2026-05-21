@@ -5,7 +5,7 @@ node_modules/
 
 # Expo
 .expo/
-dist/
+/dist/
 web-build/
 expo-env.d.ts
 
@@ -44,6 +44,16 @@ openspec/*
 .agents/*
 .gpt/*
 .gemini/*
-.github/*
+.github/prompts/*
+.github/skills/*
+
 .opencode/*
 skills-lock.json
+
+test-results/
+playwright-report/
+.turbo/
+
+# Windows reserved device names
+nul
+backend/nul

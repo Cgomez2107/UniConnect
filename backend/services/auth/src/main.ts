@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import type { ServerResponse } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import bcryptjs from "bcryptjs";
 import { PostgreSQLAuthRepository } from "./infrastructure/repositories/PostgreSQLAuthRepository.js";
 import { PostgreSQLTokenRepository } from "./infrastructure/repositories/PostgreSQLTokenRepository.js";
 import { JWTService } from "./infrastructure/jwt/JWTService.js";
@@ -10,6 +11,7 @@ import { SignInUseCase } from "./application/use-cases/SignInUseCase.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshTokenUseCase.js";
 import { AuthController } from "./interfaces/http/AuthController.js";
 import { requireEnv } from "../../../shared/libs/config/requiredEnv.js";
+import { sendData, sendError } from "../../../shared/http/sendJson.js";
 
 function loadEnvFileFallback(): void {
   const envPath = resolve(process.cwd(), ".env");
@@ -196,8 +198,7 @@ async function main() {
           if (payload) {
             const user = await authRepository.findById(payload.sub);
             if (user) {
-              res.writeHead(200, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({
+              sendData(res, 200, {
                 session: {
                   user: {
                     id: user.id,
@@ -205,24 +206,20 @@ async function main() {
                     fullName: user.fullName,
                     role: user.role,
                   },
-                  access_token: token,
-                }
-              }));
+                  accessToken: token,
+                },
+              });
             } else {
-              res.writeHead(404);
-              res.end(JSON.stringify({ error: "User not found" }));
+              sendError(res, 404, "User not found");
             }
           } else {
-            res.writeHead(401);
-            res.end(JSON.stringify({ error: "Invalid or expired token" }));
+            sendError(res, 401, "Invalid or expired token");
           }
         } catch {
-          res.writeHead(500);
-          res.end(JSON.stringify({ error: "Internal server error" }));
+          sendError(res, 500, "Internal server error");
         }
       } else {
-        res.writeHead(401);
-        res.end(JSON.stringify({ error: "No session found" }));
+        sendError(res, 401, "No session found");
       }
     } else if (method === "GET" && path === "/me") {
       const auth = req.headers.authorization;
@@ -233,28 +230,23 @@ async function main() {
           if (payload) {
             const user = await authRepository.findById(payload.sub);
             if (user) {
-              res.writeHead(200, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({
+              sendData(res, 200, {
                 id: user.id,
                 email: user.email,
-                full_name: user.fullName,
+                fullName: user.fullName,
                 role: user.role,
-              }));
+              });
             } else {
-              res.writeHead(404);
-              res.end(JSON.stringify({ error: "User not found" }));
+              sendError(res, 404, "User not found");
             }
           } else {
-            res.writeHead(401);
-            res.end(JSON.stringify({ error: "Invalid or expired token" }));
+            sendError(res, 401, "Invalid or expired token");
           }
         } catch {
-          res.writeHead(500);
-          res.end(JSON.stringify({ error: "Internal server error" }));
+          sendError(res, 500, "Internal server error");
         }
       } else {
-        res.writeHead(401);
-        res.end(JSON.stringify({ error: "Authorization header required" }));
+        sendError(res, 401, "Authorization header required");
       }
     } else if ((method === "POST" || method === "GET") && path === "/google") {
       // Endpoint unificado para Google OAuth
@@ -380,6 +372,28 @@ async function main() {
       res.end(JSON.stringify({ error: "Not found" }));
     }
   });
+
+  if (nodeEnv === "development" && !supabaseServiceRoleKey) {
+    const devSeedPasswordHash = await bcryptjs.hash("Test1234", 10);
+    const devUsers = [
+      { id: "a41040fc-fa2b-4b44-a68b-4418a0279623", email: "test@ucaldas.edu.co", fullName: "Estudiante Test" },
+      { id: "a0f6e12e-1c9c-4c87-9c23-a129a92aafdf", email: "estudiante.prueba@ucaldas.edu.co", fullName: "Estudiante Prueba" },
+    ];
+    for (const u of devUsers) {
+      const exists = await authRepository.findByEmail(u.email);
+      if (!exists) {
+        await authRepository.create({
+          id: u.id,
+          email: u.email,
+          fullName: u.fullName,
+          passwordHash: devSeedPasswordHash,
+          role: "estudiante",
+          isActive: true,
+        });
+        console.log(JSON.stringify({ service: "auth", level: "info", message: `Dev seed: user created ${u.email} with fixed id ${u.id}` }));
+      }
+    }
+  }
 
   (server as any).listen({ port: PORT, host: "::" }, () => {
     console.log(

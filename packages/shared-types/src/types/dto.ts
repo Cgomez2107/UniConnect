@@ -6,6 +6,7 @@ import { MessageDTOSchema, ConversationDTOSchema } from "../schemas/messaging.sc
 import { StudyResourceDTOSchema } from "../schemas/resource.schema.js";
 import { EventDTOSchema } from "../schemas/event.schema.js";
 import { NotificationDTOSchema } from "../schemas/notification.schema.js";
+import { ForumQuestionDTOSchema, ForumAnswerDTOSchema, ForumVoteDTOSchema, ForumQuestionSummaryDTOSchema } from "../schemas/forum.schema.js";
 
 export type UserDTO = z.infer<typeof UserDTOSchema>;
 export type AuthProfileDTO = z.infer<typeof AuthProfileDTOSchema>;
@@ -23,3 +24,7 @@ export type ConversationDTO = z.infer<typeof ConversationDTOSchema>;
 export type StudyResourceDTO = z.infer<typeof StudyResourceDTOSchema>;
 export type EventDTO = z.infer<typeof EventDTOSchema>;
 export type NotificationDTO = z.infer<typeof NotificationDTOSchema>;
+export type ForumQuestionDTO = z.infer<typeof ForumQuestionDTOSchema>;
+export type ForumAnswerDTO = z.infer<typeof ForumAnswerDTOSchema>;
+export type ForumVoteDTO = z.infer<typeof ForumVoteDTOSchema>;
+export type QuestionSummaryDTO = z.infer<typeof ForumQuestionSummaryDTOSchema>;

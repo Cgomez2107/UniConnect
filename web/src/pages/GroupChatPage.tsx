@@ -10,6 +10,9 @@ import { snakeToCamel } from "@uniconnect/shared-api";
 import { useChatObserver } from "@/hooks/useChatObserver";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+import { isForbiddenContent } from "@/hooks/useMessageValidation";
+import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
+import { getWsUrl } from "@/lib/wsUrl";
 
 function transformMentions(mentions?: any[]): MentionData[] | undefined {
   if (!mentions || mentions.length === 0) return undefined;
@@ -103,8 +106,7 @@ export function GroupChatPage() {
 
     console.log("[GroupChat] WS effect starting for group", id, "user", user?.id);
 
-    const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
-    const wsUrl = `${WS_URL}/ws?token=${token}`;
+    const wsUrl = `${getWsUrl()}/ws?token=${token}`;
     let reconnectAttempts = 0;
     const MAX_RECONNECT = 3;
 
@@ -260,6 +262,15 @@ export function GroupChatPage() {
 
   const handleRetry = async (failedMsg: any) => {
     if (!id) return;
+    if (isForbiddenContent(failedMsg.content || "")) {
+      alert(ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m
+        )
+      );
+      return;
+    }
     setMessages((prev) =>
       prev.map((m) => (m.id === failedMsg.id ? { ...m, clientStatus: "sending" } : m))
     );

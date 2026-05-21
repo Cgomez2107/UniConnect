@@ -3,11 +3,13 @@
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
+import { useEventObserver } from "@/hooks/application/useEventObserver"
 import { useEvents, type EventFilter } from "@/hooks/application/useEvents"
 import { Ionicons } from "@expo/vector-icons"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import type { CampusEvent, EventCategory } from "@/types"
 import { router } from "expo-router"
-import { memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
   FlatList,
@@ -20,6 +22,13 @@ import {
   View,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+
+const SUBSCRIPTIONS_KEY = "uniconnect-event-subscriptions"
+
+function loadSubscriptions(): string[] {
+  // Se carga async en useEffect, arrancamos con vacío
+  return []
+}
 
 // Constantes de categoría
 
@@ -121,6 +130,39 @@ export default function EventosScreen() {
 
   const { filteredEvents, isLoading, isRefreshing, activeFilter, setActiveFilter, refresh } = useEvents()
 
+  // ── Suscripciones a categorías (persistidas localmente) ──────────
+  const [subscribedCategories, setSubscribedCategories] = useState<string[]>([])
+
+  useEffect(() => {
+    AsyncStorage.getItem(SUBSCRIPTIONS_KEY).then((raw) => {
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed)) setSubscribedCategories(parsed)
+        } catch { /* ignore */ }
+      }
+    })
+  }, [])
+
+  const persistSubscriptions = useCallback((categories: string[]) => {
+    setSubscribedCategories(categories)
+    AsyncStorage.setItem(SUBSCRIPTIONS_KEY, JSON.stringify(categories))
+  }, [])
+
+  const toggleSubscription = useCallback(
+    (category: string) => {
+      persistSubscriptions(
+        subscribedCategories.includes(category)
+          ? subscribedCategories.filter((c) => c !== category)
+          : [...subscribedCategories, category],
+      )
+    },
+    [subscribedCategories, persistSubscriptions],
+  )
+
+  // Observador de nuevos eventos en categorías suscritas
+  useEventObserver(subscribedCategories)
+
   const keyExtractor = useCallback((item: CampusEvent) => item.id, [])
 
   const openEvent = useCallback((eventId: string) => {
@@ -185,6 +227,11 @@ export default function EventosScreen() {
                   },
                 ]}
                 onPress={() => handleSetFilter(f.key)}
+                onLongPress={() => {
+                  if (f.key !== "todos" && f.key !== "pasados") {
+                    toggleSubscription(f.key)
+                  }
+                }}
                 activeOpacity={0.85}
               >
                 <View style={styles.filterInline}>
@@ -192,11 +239,22 @@ export default function EventosScreen() {
                   <Text style={[styles.filterText, { color: active ? "#fff" : C.textSecondary }]}>
                     {f.label}
                   </Text>
+                  {f.key !== "todos" && f.key !== "pasados" && (
+                    <Ionicons
+                      name={subscribedCategories.includes(f.key) ? "notifications" : "notifications-off-outline"}
+                      size={12}
+                      color={active ? "rgba(255,255,255,0.7)" : C.textSecondary}
+                      style={{ marginLeft: 4 }}
+                    />
+                  )}
                 </View>
               </TouchableOpacity>
             )
           })}
         </ScrollView>
+        <Text style={[styles.subHint, { color: C.textSecondary }]}>
+          Mantén presionada una categoría para suscribirte y recibir notificaciones
+        </Text>
       </View>
 
       {isLoading ? (
@@ -257,6 +315,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 8,
+  },
+  subHint: {
+    fontSize: 10,
+    textAlign: "center",
+    paddingBottom: 6,
+    paddingHorizontal: 16,
   },
   filterChip: {
     borderRadius: 20,

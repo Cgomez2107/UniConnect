@@ -11,9 +11,10 @@
  * - warning: ⚠️ Advertencia (naranja)
  */
 
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, useColorScheme, Animated, Platform } from "react-native";
 import { Colors } from "@/constants/Colors";
+import { setToastBridge } from "@/lib/api/toastBridge";
 
 export type ToastType = "success" | "error" | "info" | "warning";
 
@@ -69,6 +70,10 @@ export function ToastProvider({ children }: ToastProviderProps) {
     },
     []
   );
+
+  useEffect(() => {
+    setToastBridge(showToast);
+  }, [showToast]);
 
   const removeToast = useCallback((id: string) => {
     const timeout = timeoutsRef.current.get(id);

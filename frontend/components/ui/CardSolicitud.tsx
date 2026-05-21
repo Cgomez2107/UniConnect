@@ -5,6 +5,7 @@
 
 import { Colors } from "@/constants/Colors";
 import { StudyRequest } from "@/types";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
 import * as Haptics from "expo-haptics";
 import { memo, useCallback, useEffect, useRef } from "react";
 import {
@@ -86,15 +87,10 @@ export const CardSolicitud = memo(function CardSolicitud({
         </View>
 
         {/* Badge de estado */}
-        {item.status === "abierta" ? (
-          <View style={[styles.badge, { backgroundColor: C.success + "20" }]}>
-            <Text style={[styles.badgeText, { color: C.success }]}>Abierta</Text>
-          </View>
-        ) : (
-          <View style={[styles.badge, { backgroundColor: C.border }]}>
-            <Text style={[styles.badgeText, { color: C.textSecondary }]}>Cerrada</Text>
-          </View>
-        )}
+        <GroupStateBadge
+          state={item.status === "cerrada" ? "Disuelto" : item.status === "expirada" ? "Bloqueado" : "Activo"}
+          size="small"
+        />
       </View>
 
       {/* ── Materia tag ───────────────────────────────────────────────── */}

@@ -1,0 +1,676 @@
+{
+  "title": "UniConnect Resources Service",
+  "version": "0.1.0",
+  "serverUrl": "http://localhost:3103",
+  "basePath": "/api/v1",
+  "paths": {
+    "/api/v1/resources": {
+      "get": {
+        "summary": "Listar recursos académicos",
+        "description": "Obtiene una lista paginada de recursos compartidos. Puede filtrarse por materia o tipo de recurso.",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "default": 1
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "maximum": 50,
+                  "default": 20
+                }
+              ]
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
+          },
+          {
+            "name": "resourceType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "file",
+                    "link"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "maxLength": 200
+                }
+              ]
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de recursos obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_resources_200Response"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear un recurso",
+        "description": "Crea un nuevo recurso académico compartido (archivo o enlace).",
+        "tags": [
+          "Resources"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_resources_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recurso creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_resources_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación — datos de entrada inválidos"
+          }
+        }
+      }
+    },
+    "/api/v1/resources/{id}": {
+      "get": {
+        "summary": "Obtener recurso por ID",
+        "description": "Retorna un recurso académico específico por su ID.",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recurso encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_resources_id_200Response"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado"
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualizar un recurso",
+        "description": "Actualiza los campos editables de un recurso académico existente.",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Put_resources_id_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recurso actualizado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Put_resources_id_200Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "404": {
+            "description": "Recurso no encontrado"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar un recurso",
+        "description": "Elimina un recurso académico compartido.",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recurso eliminado exitosamente"
+          },
+          "404": {
+            "description": "Recurso no encontrado"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Get_resources_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "resourceType": {
+                  "type": "string",
+                  "enum": [
+                    "file",
+                    "link"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "fileUrl": {
+                  "type": "string"
+                },
+                "fileName": {
+                  "type": "string"
+                },
+                "fileType": {
+                  "type": "string"
+                },
+                "fileSizeKb": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                },
+                "subjectId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "programId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userId": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "userId",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_resources_RequestBody": {
+        "type": "object",
+        "properties": {
+          "resourceType": {
+            "type": "string",
+            "enum": [
+              "file",
+              "link"
+            ]
+          },
+          "programId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "fileUrl": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "fileType": {
+            "type": "string"
+          },
+          "fileSizeKb": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "Post_resources_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true
+              },
+              "resourceType": {
+                "type": "string",
+                "enum": [
+                  "file",
+                  "link"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "fileUrl": {
+                "type": "string"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "fileType": {
+                "type": "string"
+              },
+              "fileSizeKb": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "userId": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "userId",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_resources_id_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true
+              },
+              "resourceType": {
+                "type": "string",
+                "enum": [
+                  "file",
+                  "link"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "fileUrl": {
+                "type": "string"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "fileType": {
+                "type": "string"
+              },
+              "fileSizeKb": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "userId": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "userId",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Put_resources_id_RequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Put_resources_id_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true
+              },
+              "resourceType": {
+                "type": "string",
+                "enum": [
+                  "file",
+                  "link"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "fileUrl": {
+                "type": "string"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "fileType": {
+                "type": "string"
+              },
+              "fileSizeKb": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "userId": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "userId",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Resources",
+      "description": "Recursos académicos compartidos"
+    }
+  ]
+}

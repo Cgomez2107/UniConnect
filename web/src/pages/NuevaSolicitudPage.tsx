@@ -27,8 +27,8 @@ export function NuevaSolicitudPage() {
         if (!cancelled) {
           setSubjects(
             (userSubjects as any[])
-              .filter((us: any) => us.subjects?.id && us.subjects?.name)
-              .map((us: any) => ({ id: us.subjects!.id, name: us.subjects!.name })) as any
+              .filter((us: any) => us.subject?.id && us.subject?.name)
+              .map((us: any) => ({ id: us.subject!.id, name: us.subject!.name })) as any
           );
         }
       } catch {
@@ -58,7 +58,11 @@ export function NuevaSolicitudPage() {
         });
         navigate("/solicitudes");
       } catch (err: any) {
-        throw new Error(err?.response?.data?.message || "Error al crear el grupo.");
+        if (err?.status === 409) {
+          setError(err?.response?.data?.error || "No puedes crear más grupos para esta materia");
+          return;
+        }
+        throw new Error(err?.response?.data?.message || err?.response?.data?.error || "Error al crear el grupo.");
       }
     },
     (formValues) => {

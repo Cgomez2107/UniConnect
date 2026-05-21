@@ -1,0 +1,4 @@
+
+> @uniconnect/shared-api@0.1.0 typecheck C:\uniconnect_g\uniconnet\packages\shared-api
+> tsc --noEmit
+
