@@ -125,6 +125,15 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="foro"
+          options={{
+            title: "Foro",
+            tabBarIcon: ({ color, focused }) => (
+              <AnimatedTabIcon name={focused ? "chatbubbles" : "chatbubbles-outline"} color={color} focused={focused} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="mensajes"
           options={{
             title: "Mensajes",

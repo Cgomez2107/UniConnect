@@ -308,8 +308,11 @@ export class ProfilesCatalogController {
     try {
       const subjects = await this.studentRepository.getSubjectsByUserId(userId);
       const mapped = subjects.map((s) => ({
-        id: s.subjectId,
-        name: s.name,
+        subjectId: s.subjectId,
+        subject: {
+          id: s.subjectId,
+          name: s.name,
+        },
       }));
       sendData(res, 200, mapped, { total: mapped.length });
     } catch (error) {

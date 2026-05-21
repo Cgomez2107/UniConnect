@@ -44,7 +44,9 @@ openspec/*
 .agents/*
 .gpt/*
 .gemini/*
-.github/*
+.github/prompts/*
+.github/skills/*
+
 .opencode/*
 skills-lock.json
 

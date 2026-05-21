@@ -6,7 +6,6 @@ export const ForumQuestionStatusEnum = z.enum(["active", "solved", "closed"]);
 export const ForumVoteTargetTypeEnum = z.enum(["question", "answer"]);
 
 export const ForumVoteTypeEnum = z.enum(["upvote", "downvote"]);
-
 export const ForumQuestionSchema = z.object({
   id: UuidSchema,
   subjectId: UuidSchema,

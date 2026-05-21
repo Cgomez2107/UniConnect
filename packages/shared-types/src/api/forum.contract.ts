@@ -1,17 +1,17 @@
 import { z } from "zod";
+import { UuidSchema, PaginationSchema } from "../schemas/_common.schema.js";
 import {
   ForumQuestionSchema,
   ForumQuestionSummarySchema,
   ForumAnswerSchema,
   ForumQuestionDetailSchema,
 } from "../schemas/forum.schema.js";
-import { PaginationSchema } from "../schemas/_common.schema.js";
 import type { ApiContract } from "./_base.contract.js";
 
 // ── Create Question ─────────────────────────────────────────────────────────
 export const CreateQuestionRequestSchema = z.object({
   body: z.object({
-    subjectId: z.string().uuid(),
+    subjectId: UuidSchema,
     title: z.string().min(5).max(300),
     body: z.string().min(10).max(10000),
   }),
@@ -34,7 +34,7 @@ export const CreateQuestionContract: ApiContract<
 // ── List Questions ──────────────────────────────────────────────────────────
 export const ListQuestionsRequestSchema = z.object({
   query: z.object({
-    subjectId: z.string().uuid().optional(),
+    subjectId: UuidSchema.optional(),
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(100).default(20),
   }),
@@ -58,7 +58,7 @@ export const ListQuestionsContract: ApiContract<
 // ── Get Question Detail ─────────────────────────────────────────────────────
 export const GetQuestionDetailRequestSchema = z.object({
   params: z.object({
-    questionId: z.string().uuid(),
+    questionId: UuidSchema,
   }),
 });
 
@@ -79,7 +79,7 @@ export const GetQuestionDetailContract: ApiContract<
 // ── Create Answer ───────────────────────────────────────────────────────────
 export const CreateAnswerRequestSchema = z.object({
   params: z.object({
-    questionId: z.string().uuid(),
+    questionId: UuidSchema,
   }),
   body: z.object({
     body: z.string().min(1).max(5000),
@@ -103,7 +103,7 @@ export const CreateAnswerContract: ApiContract<
 // ── List Answers ────────────────────────────────────────────────────────────
 export const ListAnswersRequestSchema = z.object({
   params: z.object({
-    questionId: z.string().uuid(),
+    questionId: UuidSchema,
   }),
 });
 
@@ -124,10 +124,10 @@ export const ListAnswersContract: ApiContract<
 // ── Mark as Solution ────────────────────────────────────────────────────────
 export const MarkSolutionRequestSchema = z.object({
   params: z.object({
-    questionId: z.string().uuid(),
+    questionId: UuidSchema,
   }),
   body: z.object({
-    answerId: z.string().uuid(),
+    answerId: UuidSchema,
   }),
 });
 
@@ -151,7 +151,7 @@ export const MarkSolutionContract: ApiContract<
 export const CastVoteRequestSchema = z.object({
   body: z.object({
     targetType: z.enum(["question", "answer"]),
-    targetId: z.string().uuid(),
+    targetId: UuidSchema,
     voteType: z.enum(["upvote", "downvote"]),
   }),
 });

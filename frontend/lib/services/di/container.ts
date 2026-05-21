@@ -6,6 +6,7 @@ import { ApiConversationRepository } from "../infrastructure/repositories/ApiCon
 import { ApiEventRepository } from "../infrastructure/repositories/ApiEventRepository";
 import { ApiStudentRepository } from "../infrastructure/repositories/ApiStudentRepository";
 import { ApiFacultyCatalogRepository } from "../infrastructure/repositories/ApiFacultyCatalogRepository";
+import { ApiForumRepository } from "../infrastructure/repositories/ApiForumRepository";
 import { SupabaseStudyGroupRepository } from "../infrastructure/repositories/SupabaseStudyGroupRepository";
 import { SupabaseAuthRepository } from "../infrastructure/repositories/SupabaseAuthRepository";
 import { ApiAuthRepository } from "../infrastructure/repositories/ApiAuthRepository";
@@ -25,6 +26,7 @@ import type { IProfileRepository } from "../domain/repositories/IProfileReposito
 import type { IFacultyCatalogRepository } from "../domain/repositories/IFacultyCatalogRepository";
 import type { IResourceUploadRepository } from "../domain/repositories/IResourceUploadRepository";
 import type { IAdminPanelRepository } from "../domain/repositories/IAdminPanelRepository";
+import type { IForumRepository } from "../domain/repositories/IForumRepository";
 
 import { GetFeedRequests } from "../domain/use-cases/study-requests/GetFeedRequests";
 import { CreateStudyRequest } from "../domain/use-cases/study-requests/CreateStudyRequest";
@@ -76,6 +78,12 @@ import { SearchStudentsBySubject } from "../domain/use-cases/students/SearchStud
 import { GetStudentPublicProfile } from "../domain/use-cases/students/GetStudentPublicProfile";
 import { GetDecoratedStudentProfile } from "../domain/use-cases/students/GetDecoratedStudentProfile";
 import { UploadResourceFromDevice } from "../domain/use-cases/resources/UploadResourceFromDevice";
+import { CreateForumQuestion } from "../domain/use-cases/forum/CreateForumQuestion";
+import { ListForumQuestions } from "../domain/use-cases/forum/ListForumQuestions";
+import { GetForumQuestionDetail } from "../domain/use-cases/forum/GetForumQuestionDetail";
+import { CreateForumAnswer } from "../domain/use-cases/forum/CreateForumAnswer";
+import { VoteForum } from "../domain/use-cases/forum/VoteForum";
+import { MarkForumSolution } from "../domain/use-cases/forum/MarkForumSolution";
 import { GetProfileByUserId } from "../domain/use-cases/profile/GetProfileByUserId";
 import { GetMyPrograms } from "../domain/use-cases/profile/GetMyPrograms";
 import { GetMySubjects } from "../domain/use-cases/profile/GetMySubjects";
@@ -713,5 +721,64 @@ export class DIContainer {
       this.getDecoratedStudentProfile = new GetDecoratedStudentProfile(this.getStudentRepository());
     }
     return this.getDecoratedStudentProfile;
+  }
+
+  // --- FORO ---
+
+  private forumRepo?: ApiForumRepository;
+  private createForumQuestion?: CreateForumQuestion;
+  private listForumQuestions?: ListForumQuestions;
+  private getForumQuestionDetail?: GetForumQuestionDetail;
+  private createForumAnswer?: CreateForumAnswer;
+  private voteForum?: VoteForum;
+  private markForumSolution?: MarkForumSolution;
+
+  getForumRepository(): IForumRepository {
+    if (!this.forumRepo) {
+      this.forumRepo = new ApiForumRepository();
+    }
+    return this.forumRepo;
+  }
+
+  getCreateForumQuestion(): CreateForumQuestion {
+    if (!this.createForumQuestion) {
+      this.createForumQuestion = new CreateForumQuestion(this.getForumRepository());
+    }
+    return this.createForumQuestion;
+  }
+
+  getListForumQuestions(): ListForumQuestions {
+    if (!this.listForumQuestions) {
+      this.listForumQuestions = new ListForumQuestions(this.getForumRepository());
+    }
+    return this.listForumQuestions;
+  }
+
+  getGetForumQuestionDetail(): GetForumQuestionDetail {
+    if (!this.getForumQuestionDetail) {
+      this.getForumQuestionDetail = new GetForumQuestionDetail(this.getForumRepository());
+    }
+    return this.getForumQuestionDetail;
+  }
+
+  getCreateForumAnswer(): CreateForumAnswer {
+    if (!this.createForumAnswer) {
+      this.createForumAnswer = new CreateForumAnswer(this.getForumRepository());
+    }
+    return this.createForumAnswer;
+  }
+
+  getVoteForum(): VoteForum {
+    if (!this.voteForum) {
+      this.voteForum = new VoteForum(this.getForumRepository());
+    }
+    return this.voteForum;
+  }
+
+  getMarkForumSolution(): MarkForumSolution {
+    if (!this.markForumSolution) {
+      this.markForumSolution = new MarkForumSolution(this.getForumRepository());
+    }
+    return this.markForumSolution;
   }
 }
