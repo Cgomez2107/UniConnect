@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NotificationService } from "../../shared/patterns/strategy/NotificationService.js";
-import type { INotificationStrategy, NotificacionDTO, ResultadoEnvio } from "../../shared/patterns/strategy/INotificationStrategy.js";
+import type { INotificationStrategy, NotificacionDTO } from "../../shared/patterns/strategy/INotificationStrategy.js";
 import type { IPreferenceService } from "../../shared/patterns/strategy/IPreferenceService.js";
 import type { IEmailGateway } from "../../shared/patterns/strategy/EmailInstitucionalStrategy.js";
 import type { IStudyGroupSocketGateway } from "../../shared/patterns/strategy/InAppWebSocketStrategy.js";
@@ -39,7 +39,7 @@ function createStrategy(
   canal: string,
   transportFn: (n: NotificacionDTO) => Promise<void>,
 ): INotificationStrategy {
-  const enviar = vi.fn(async (notificacion: NotificacionDTO): Promise<ResultadoEnvio> => {
+  const enviar = vi.fn(async (notificacion: NotificacionDTO) => {
     await transportFn(notificacion);
     return { canal, exitoso: true, timestamp: new Date().toISOString() };
   });
@@ -118,7 +118,7 @@ describe("NotificationService — Channel Delivery", () => {
     expect(ws.emitToUser).toHaveBeenCalledTimes(1);
     expect(expo.enviarPush).toHaveBeenCalledTimes(1);
     resumen.resultados.forEach((r) => {
-      expect(r.exitoso).toBe(true);
+      expect(r.status).toBe("success");
     });
   });
 
@@ -203,15 +203,15 @@ describe("NotificationService — Channel Delivery", () => {
     expect(resumen.fallidos).toBe(2);
 
     const smtpResult = resumen.resultados.find((r) => r.canal === "smtp")!;
-    expect(smtpResult.exitoso).toBe(false);
+    expect(smtpResult.status).toBe("failed");
     expect(smtpResult.error).toContain("SMTP_CONNECTION_FAILED");
 
     const wsResult = resumen.resultados.find((r) => r.canal === "websocket")!;
-    expect(wsResult.exitoso).toBe(true);
+    expect(wsResult.status).toBe("success");
     expect(wsResult.error).toBeUndefined();
 
     const expoResult = resumen.resultados.find((r) => r.canal === "expo")!;
-    expect(expoResult.exitoso).toBe(false);
+    expect(expoResult.status).toBe("failed");
     expect(expoResult.error).toContain("EXPO_TIMEOUT");
   });
 });
