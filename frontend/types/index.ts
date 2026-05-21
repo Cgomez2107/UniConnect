@@ -180,6 +180,7 @@ export interface Message {
   created_at: string;
   read_at: string | null;
   reactions?: Reaction[];
+  mentions?: { userId: string; displayName: string }[];
   // join
   sender?: { full_name: string; avatar_url: string | null };
 }

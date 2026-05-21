@@ -1,7 +1,7 @@
 /**
  * components/chat/MessageBubble.tsx
  *
- * Burbuja de mensaje individual.
+ * Burbuja de mensaje individual usando patrón Decorator (US-D01).
  * - Burbuja propia (derecha, color primario)
  * - Burbuja ajena (izquierda, gris)
  * - Timestamp
@@ -12,10 +12,10 @@ import { Colors } from "@/constants/Colors";
 import type { Message } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio, type AVPlaybackStatus } from "expo-av";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 import { Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
-import { Image } from "expo-image";
+import { transformRawMessage } from "@/chat/utils/messageFactory";
 
 interface Props {
   message: Message;
@@ -77,8 +77,21 @@ export const MessageBubble = memo(function MessageBubble({
 }: Props) {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
+
+  // ── Decorator pattern (US-D01) ─────────────────────────────────
+  const decoratedMessage = useMemo(
+    () => transformRawMessage(message),
+    [message],
+  )
+
+  const decoratorContext = useMemo(
+    () => ({
+      currentUserId: message.sender_id,
+    }),
+    [message.sender_id],
+  )
+
   const hasAudio = isAudioMessage(message);
-  const hasImage = Boolean(message.media_url) && !hasAudio;
   const hasText = message.content.trim().length > 0;
   const hasReply = Boolean(message.reply_preview);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -91,10 +104,6 @@ export const MessageBubble = memo(function MessageBubble({
   const handleReply = useCallback(() => {
     onReply(message);
   }, [onReply, message]);
-
-  const handleOpenImage = useCallback(() => {
-    if (message.media_url) onOpenMedia(message.media_url);
-  }, [message.media_url, onOpenMedia]);
 
   const handleRetry = useCallback(() => {
     onRetry(message);
@@ -186,18 +195,6 @@ export const MessageBubble = memo(function MessageBubble({
           </View>
         )}
 
-        {hasImage && (
-          <Pressable
-            onPress={handleOpenImage}
-            style={styles.mediaWrap}
-          >
-            <Image source={{ uri: message.media_url ?? "" }} style={styles.mediaImage} contentFit="cover" />
-            <Text style={[styles.mediaHint, { color: isOwn ? "rgba(255,255,255,0.8)" : C.textSecondary }]}>
-              Toca para ampliar
-            </Text>
-          </Pressable>
-        )}
-
         {hasAudio && (
           <View
             style={[
@@ -249,16 +246,10 @@ export const MessageBubble = memo(function MessageBubble({
           </View>
         )}
 
-        {hasText && (
-          <Text
-            style={[
-              styles.content,
-              { color: isOwn ? "#fff" : C.text },
-            ]}
-          >
-            {message.content}
-          </Text>
-        )}
+        {/* Contenido del mensaje vía Decorator Pattern (US-D01) */}
+        <View style={styles.decoratorWrap}>
+          {decoratedMessage.render(decoratorContext)}
+        </View>
 
         {/* Meta: hora + estado de lectura */}
         <View style={styles.meta}>
@@ -340,18 +331,8 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginTop: 2,
   },
-  mediaWrap: {
-    marginBottom: 4,
-  },
-  mediaImage: {
-    width: 220,
-    height: 220,
-    borderRadius: 12,
-  },
-  mediaHint: {
-    marginTop: 5,
-    fontSize: 11,
-    textAlign: "right",
+  decoratorWrap: {
+    marginTop: 2,
   },
   audioCard: {
     borderWidth: 1,

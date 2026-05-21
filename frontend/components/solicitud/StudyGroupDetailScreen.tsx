@@ -8,11 +8,13 @@ import { File } from "expo-file-system";
 import { RequestDetailActionBar } from "@/components/solicitud/RequestDetailActionBar";
 import { RequestDetailContent } from "@/components/solicitud/RequestDetailContent";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { GroupContext } from "@/lib/patterns/state";
 import { Colors } from "@/constants/Colors";
 import { useRequestDetail } from "@/hooks/application/useRequestDetail";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
 import { supabase } from "@/lib/supabase";
+import type { StudyGroupMember } from "@/types/adminDashboard";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -23,6 +25,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   Text,
   TouchableOpacity,
@@ -37,6 +40,12 @@ interface StudyGroupDetailScreenProps {
 
 type DetailTab = "chat" | "admin";
 
+interface TransferMember {
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+}
+
 export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProps) {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
@@ -48,6 +57,11 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
   const [uploadingFile, setUploadingFile] = useState(false);
   const [mediaPreviewUri, setMediaPreviewUri] = useState<string | null>(null);
   const [pendingMedia, setPendingMedia] = useState<{ url: string; type: string; filename: string } | null>(null);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferringTo, setTransferringTo] = useState<string | null>(null);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedMentions, setSelectedMentions] = useState<{userId: string; displayName: string}[]>([]);
   const flatListRef = useRef<FlatList>(null);
 
   const {
@@ -81,9 +95,10 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
     onRequestCanceled: () => router.replace("/(tabs)/invitaciones" as any),
   });
 
-  const { messages, sendingMessage, handleSendMessage } = useStudyGroupDashboard({
-    requestId: request?.id ?? requestId,
-  });
+  const { members, messages, sendingMessage, handleSendMessage, requestAdminTransfer } =
+    useStudyGroupDashboard({
+      requestId: request?.id ?? requestId,
+    });
 
   const isPrimaryAdmin = Boolean(user?.id && request?.author_id === user.id);
   const adminTabLabel = isPrimaryAdmin ? "Administracion" : "Info";
@@ -103,11 +118,37 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
 
   const handleSend = useCallback(() => {
     if (!messageDraft.trim() && !pendingMedia) return;
-    handleSendMessage(messageDraft.trim(), undefined, pendingMedia || undefined);
+    const finalMentions = selectedMentions.filter(m =>
+      messageDraft.includes(`@${m.displayName}`)
+    );
+    handleSendMessage(messageDraft.trim(), finalMentions, pendingMedia || undefined);
     setMessageDraft("");
+    setSelectedMentions([]);
     setPendingMedia(null);
     setMediaPreviewUri(null);
-  }, [handleSendMessage, messageDraft, pendingMedia]);
+  }, [handleSendMessage, messageDraft, pendingMedia, selectedMentions]);
+
+  const handleInputChange = useCallback((text: string) => {
+    setMessageDraft(text);
+    const lastWord = text.split(" ").pop() || "";
+    if (lastWord.startsWith("@")) {
+      setMentionQuery(lastWord.slice(1).toLowerCase());
+      setShowMentions(true);
+    } else {
+      setShowMentions(false);
+    }
+  }, []);
+
+  const insertMention = useCallback((member: StudyGroupMember) => {
+    const words = messageDraft.split(" ");
+    words.pop();
+    const name = member.fullName || "Integrante";
+    setMessageDraft([...words, `@${name} `].join(" "));
+    setShowMentions(false);
+    if (!selectedMentions.some(m => m.userId === member.userId)) {
+      setSelectedMentions([...selectedMentions, { userId: member.userId, displayName: name }]);
+    }
+  }, [messageDraft, selectedMentions]);
 
   const handlePickMedia = useCallback(async () => {
     if (!user?.id) return;
@@ -157,12 +198,37 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
     }
   }, [user?.id]);
 
-  const handleTransferAdmin = useCallback(() => {
-    Alert.alert(
-      "Transferir admin",
-      "Selecciona un miembro desde la lista para transferir los privilegios.",
-    );
+  const handleOpenTransferModal = useCallback(() => {
+    setShowTransferModal(true);
   }, []);
+
+  const handleSelectTransferTarget = useCallback(
+    async (targetUserId: string) => {
+      setShowTransferModal(false);
+      setTransferringTo(targetUserId);
+      try {
+        const ctx = new GroupContext(
+          request?.id ?? requestId ?? "",
+          groupTitle,
+          user?.id ?? "",
+        );
+        await ctx.requestAdminTransfer(targetUserId);
+        ctx.subscribe((event) => {
+          if (event.type === "ADMIN_TRANSFER_REQUESTED") {
+            requestAdminTransfer(targetUserId);
+          }
+        });
+      } catch (err) {
+        Alert.alert(
+          "Error",
+          err instanceof Error ? err.message : "No se pudo iniciar la transferencia.",
+        );
+      } finally {
+        setTransferringTo(null);
+      }
+    },
+    [request?.id, requestId, groupTitle, user?.id, requestAdminTransfer],
+  );
 
   const openChatWith = async (targetUserId: string, targetUserName: string) => {
     if (!user?.id || !targetUserId || targetUserId === user.id) return;
@@ -487,12 +553,61 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
             keyboardShouldPersistTaps="handled"
           />
 
+          {showMentions && members.length > 0 && (
+            <View style={{
+              position: "absolute",
+              bottom: 56,
+              left: 12,
+              right: 12,
+              backgroundColor: C.surface,
+              borderRadius: 12,
+              maxHeight: 200,
+              borderWidth: 1,
+              borderColor: C.border,
+              elevation: 8,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
+              zIndex: 100,
+            }}>
+              <FlatList
+                data={members.filter(m => {
+                  if (!mentionQuery) return true;
+                  return (m.fullName || "").toLowerCase().includes(mentionQuery);
+                })}
+                keyExtractor={item => item.userId}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => insertMention(item)}
+                    style={{ flexDirection: "row", alignItems: "center", padding: 12, gap: 10 }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{
+                      width: 32, height: 32, borderRadius: 16,
+                      backgroundColor: C.primary + "30",
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Text style={{ color: C.primary, fontWeight: "700", fontSize: 12 }}>
+                        {(item.fullName || "?").slice(0, 2).toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={{ color: C.textPrimary, fontWeight: "500", fontSize: 14, flex: 1 }}>
+                      {item.fullName || "Integrante"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                scrollEnabled={false}
+              />
+            </View>
+          )}
+
           <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
             <ChatInput
               text={{
                 value: messageDraft,
-                onChangeText: setMessageDraft,
-                onTyping: () => undefined,
+                onChangeText: handleInputChange,
+                onTyping: handleInputChange,
               }}
               reply={{ preview: null, onClear: () => undefined }}
               media={{
@@ -544,12 +659,13 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
           {isPrimaryAdmin ? (
             <View className="mt-6 gap-4 px-4">
               <TouchableOpacity
-                onPress={handleTransferAdmin}
+                onPress={handleOpenTransferModal}
                 className="items-center rounded-xl border border-primary bg-blue-50 p-4"
+                disabled={transferringTo !== null}
                 activeOpacity={0.85}
               >
                 <Text className="font-semibold" style={{ color: C.primary }}>
-                  Transferir admin
+                  {transferringTo ? "Transfiriendo..." : "Transferir admin"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -582,6 +698,88 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
           ) : null}
         </View>
       )}
+
+      <Modal
+        visible={showTransferModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTransferModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: C.background,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 20,
+              maxHeight: "60%",
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: "700", color: C.textPrimary, marginBottom: 16 }}>
+              Seleccionar nuevo administrador
+            </Text>
+            <FlatList
+              data={members.filter((m) => m.userId !== request?.author_id && m.userId !== user?.id)}
+              keyExtractor={(item) => item.userId}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => handleSelectTransferTarget(item.userId)}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    backgroundColor: C.surface,
+                    marginBottom: 8,
+                    gap: 12,
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      backgroundColor: C.primary + "30",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ color: C.primary, fontWeight: "700", fontSize: 16 }}>
+                      {(item.fullName ?? "?").slice(0, 2).toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={{ color: C.textPrimary, fontWeight: "600", fontSize: 15, flex: 1 }}>
+                    {item.fullName ?? "Integrante"}
+                  </Text>
+                  <Text style={{ color: C.textSecondary, fontSize: 12, textTransform: "capitalize" }}>
+                    {item.role === "autor" ? "Creador" : item.role === "admin" ? "Admin" : "Miembro"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <Text style={{ color: C.textSecondary, textAlign: "center", paddingVertical: 20 }}>
+                  No hay otros miembros disponibles.
+                </Text>
+              }
+            />
+            <TouchableOpacity
+              onPress={() => setShowTransferModal(false)}
+              style={{
+                marginTop: 12,
+                paddingVertical: 14,
+                borderRadius: 12,
+                backgroundColor: C.surface,
+                alignItems: "center",
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: C.error, fontWeight: "600" }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -22,14 +22,27 @@ interface UseMessageValidationOptions {
 const VALIDATION_LIMITS = {
   MAX_MESSAGE_LENGTH: 5000,
   WARN_LENGTH_THRESHOLD: 4500,
-  FILENAME_MAX_LENGTH: 255,
-  FILE_MAX_SIZE_MB: 50,
+  FILENAME_MAX_LENGTH: 200,
+  FILE_MAX_SIZE_MB: 10,
 };
 
 /**
  * Palabras prohibidas (sincronizar con backend)
  */
-const FORBIDDEN_WORDS_PATTERN = /(spam|basurah|malas?palabr[a-z]*)/gi;
+const FORBIDDEN_WORDS = [
+  "spam",
+  "violencia",
+  "odio",
+  "racismo",
+  "discriminación",
+  "pornografía",
+  "drogas",
+  "armas",
+];
+
+const FORBIDDEN_WORDS_REGEX = FORBIDDEN_WORDS.map(
+  (word) => new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi")
+);
 
 /**
  * Hook para validación de mensajes en React Native
@@ -169,7 +182,7 @@ function performBasicValidation(
     });
   }
 
-  if (FORBIDDEN_WORDS_PATTERN.test(trimmed)) {
+  if (isForbiddenContent(trimmed)) {
     return {
       isValidating: false,
       isValid: false,
@@ -187,6 +200,16 @@ function performBasicValidation(
     warnings: warnings.length > 0 ? warnings : undefined,
     suggestions: [],
   };
+}
+
+export function isForbiddenContent(content: string): boolean {
+  const trimmed = content.trim()
+  if (!trimmed) return false
+  for (const pattern of FORBIDDEN_WORDS_REGEX) {
+    pattern.lastIndex = 0
+    if (pattern.test(trimmed)) return true
+  }
+  return false
 }
 
 /**
@@ -220,11 +243,15 @@ export function useFileValidation(
     "image/gif",
     "image/webp",
     "application/pdf",
+    "text/plain",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "application/zip",
+    "application/x-zip-compressed",
     "application/x-rar-compressed",
     "application/x-7z-compressed",
   ];
