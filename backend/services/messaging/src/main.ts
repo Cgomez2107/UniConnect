@@ -11,6 +11,9 @@ import { MarkConversationAsRead } from "./application/use-cases/MarkConversation
 import { SendMessage } from "./application/use-cases/SendMessage.js";
 import { ToggleReaction } from "./application/use-cases/ToggleReaction.js";
 import { TouchConversation } from "./application/use-cases/TouchConversation.js";
+import { CreatePollUseCase } from "./application/use-cases/CreatePollUseCase.js";
+import { CastVoteUseCase } from "./application/use-cases/CastVoteUseCase.js";
+import { GetPollResultsUseCase } from "./application/use-cases/GetPollResultsUseCase.js";
 import { ChatSubject, RealtimeObserver, IdempotencyObserver, ChatNotificationObserver, type IRealtimeService, type IIdempotencyStore } from "./domain/events/index.js";
 import { loadMessagingEnv } from "./config/env.js";
 import type { IMessagingRepository } from "./domain/repositories/IMessagingRepository.js";
@@ -20,6 +23,9 @@ import { Database } from "./infrastructure/database/Database.js";
 import type { Pool } from "pg";
 import { MessagingController } from "./interfaces/http/controllers/MessagingController.js";
 import { handleMessagingRoutes } from "./interfaces/http/routes/messagingRoutes.js";
+import { handlePollRoutes } from "./interfaces/http/routes/pollRoutes.js";
+import { PollController } from "./interfaces/http/controllers/PollController.js";
+import { PollSchedulerService } from "./infrastructure/scheduler/PollSchedulerService.js";
 import { NotificationService } from "../../../shared/patterns/strategy/NotificationService.js";
 import { InAppWebSocketStrategy } from "../../../shared/patterns/strategy/InAppWebSocketStrategy.js";
 import type { IPreferenceService } from "../../../shared/patterns/strategy/IPreferenceService.js";
@@ -93,6 +99,8 @@ function bootstrap(): void {
 		}
 	);
 
+	chatSubject.subscribeAll(realtimeObserver);
+
 	// ✅ Idempotency store (evita duplicados)
 	const idempotencyObserver = new IdempotencyObserver({
 		async markProcessed(_messageId) { return true; },
@@ -153,6 +161,12 @@ function bootstrap(): void {
   const markConversationAsRead = new MarkConversationAsRead(repository);
   const toggleReaction = new ToggleReaction(repository, chatSubject, realtimeObserver);
 
+  const createPollUseCase = new CreatePollUseCase(repository);
+  const castVoteUseCase = new CastVoteUseCase(repository, chatSubject);
+  const getPollResultsUseCase = new GetPollResultsUseCase(repository);
+
+  const pollController = new PollController(createPollUseCase, castVoteUseCase, getPollResultsUseCase);
+
   const controller = new MessagingController(
     getConversations,
     getConversationById,
@@ -170,17 +184,23 @@ function bootstrap(): void {
 	const server = createServer((req, res) => {
 		void (async () => {
 			const handled = await handleMessagingRoutes(req, res, controller);
-			if (!handled) {
-				res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
-				res.end(sendJsonError(404, "Route not found"));
-			}
+			if (handled) return;
+
+			const pollHandled = await handlePollRoutes(req, res, pollController);
+			if (pollHandled) return;
+
+			res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+			res.end(sendJsonError(404, "Route not found"));
 		})().catch((error: unknown) => {
 			res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
 			res.end(sendJsonError(500, error instanceof Error ? error.message : "Unexpected service error"));
 		});
 	});
 
+	const pollScheduler = new PollSchedulerService(repository, chatSubject);
+
 	(server as any).listen({ port: env.port, host: "::" }, () => {
+		pollScheduler.start();
 		console.log(
 			JSON.stringify({
 				service: "messaging",
@@ -202,6 +222,7 @@ function bootstrap(): void {
 		});
 
 		try {
+			pollScheduler.stop();
 			chatSubject.clear();
 
 			if (realtimeGateway) {

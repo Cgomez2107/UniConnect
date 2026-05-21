@@ -1,0 +1,1602 @@
+{
+  "title": "UniConnect Profiles Catalog Service",
+  "version": "0.1.0",
+  "serverUrl": "http://localhost:3105",
+  "basePath": "/api/v1",
+  "paths": {
+    "/api/v1/students/me": {
+      "get": {
+        "summary": "Obtener perfil propio",
+        "description": "Retorna el perfil completo del usuario autenticado. Si no existe, lo crea con valores por defecto.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil obtenido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_students_me_200Response"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Actualizar perfil propio",
+        "description": "Actualiza los campos del perfil del usuario autenticado.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Patch_students_me_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Patch_students_me_200Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          }
+        }
+      }
+    },
+    "/api/v1/students/profile": {
+      "post": {
+        "summary": "Crear perfil de estudiante",
+        "description": "Crea un perfil de estudiante con el nombre completo proporcionado.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_students_profile_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Perfil creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_students_profile_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          }
+        }
+      }
+    },
+    "/api/v1/students/me/primary-program": {
+      "patch": {
+        "summary": "Establecer programa principal",
+        "description": "Define el programa académico principal del usuario autenticado.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Patch_students_me_primary_program_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Programa principal actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Patch_students_me_primary_program_200Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          }
+        }
+      }
+    },
+    "/api/v1/students/me/programs": {
+      "get": {
+        "summary": "Obtener programas del usuario",
+        "description": "Lista los programas académicos en los que el usuario está inscrito.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de programas obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_students_me_programs_200Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/students/me/subjects": {
+      "get": {
+        "summary": "Obtener materias del usuario",
+        "description": "Lista las materias que el usuario tiene registradas.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de materias obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_students_me_subjects_200Response"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Agregar materia al usuario",
+        "description": "Registra una materia en el perfil del usuario autenticado.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_students_me_subjects_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Materia agregada exitosamente"
+          },
+          "400": {
+            "description": "Error de validación"
+          }
+        }
+      }
+    },
+    "/api/v1/students/me/subjects/{subjectId}": {
+      "delete": {
+        "summary": "Eliminar materia del usuario",
+        "description": "Elimina una materia del perfil del usuario autenticado.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Materia eliminada exitosamente"
+          },
+          "404": {
+            "description": "Materia no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/students/me/avatar": {
+      "post": {
+        "summary": "Subir avatar",
+        "description": "Sube o actualiza la imagen de avatar del usuario autenticado.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_students_me_avatar_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar actualizado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_students_me_avatar_200Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          }
+        }
+      }
+    },
+    "/api/v1/students": {
+      "get": {
+        "summary": "Buscar estudiantes",
+        "description": "Busca estudiantes por materia, texto libre, o lista todos.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "maxLength": 200
+                }
+              ]
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "minLength": 1
+                }
+              ]
+            }
+          },
+          {
+            "name": "currentUserId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de estudiantes obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_students_200Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/students/{id}": {
+      "get": {
+        "summary": "Obtener perfil público de estudiante",
+        "description": "Retorna la información pública del perfil de un estudiante por su ID.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "vista",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "completa"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "currentUserId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil encontrado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_students_id_200Response"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Perfil no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/subjects": {
+      "get": {
+        "summary": "Listar todas las materias",
+        "description": "Obtiene el catálogo completo de materias disponibles.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de materias obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_catalog_subjects_200Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/programs": {
+      "get": {
+        "summary": "Listar programas académicos",
+        "description": "Obtiene la lista de programas académicos. Puede filtrarse por facultad.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "facultyId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de programas obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_catalog_programs_200Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/programs/{programId}/subjects": {
+      "get": {
+        "summary": "Listar materias por programa",
+        "description": "Obtiene las materias asociadas a un programa académico específico.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "programId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de materias obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_catalog_programs_programId_subjects_200Response"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Programa no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/perfil/{id}": {
+      "get": {
+        "summary": "Obtener perfil público (alias legacy)",
+        "description": "Alias de /students/:id para compatibilidad con enlaces legacy.",
+        "tags": [
+          "Profiles Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "vista",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "completa"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "currentUserId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil encontrado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_perfil_id_200Response"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Perfil no encontrado"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Get_students_me_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "bio": {
+                "type": "string",
+                "nullable": true
+              },
+              "phoneNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "role": {
+                "type": "string"
+              },
+              "semester": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "nullable": true
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "programName": {
+                "type": "string",
+                "nullable": true
+              },
+              "facultyName": {
+                "type": "string",
+                "nullable": true
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "fullName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Patch_students_me_RequestBody": {
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "phone_number": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "avatar_url": {
+            "type": "string"
+          },
+          "semester": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "Patch_students_me_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "bio": {
+                "type": "string",
+                "nullable": true
+              },
+              "phoneNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "role": {
+                "type": "string"
+              },
+              "semester": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "nullable": true
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "programName": {
+                "type": "string",
+                "nullable": true
+              },
+              "facultyName": {
+                "type": "string",
+                "nullable": true
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "fullName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_students_profile_RequestBody": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "fullName"
+        ],
+        "additionalProperties": false
+      },
+      "Post_students_profile_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "bio": {
+                "type": "string",
+                "nullable": true
+              },
+              "phoneNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "role": {
+                "type": "string"
+              },
+              "semester": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "nullable": true
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "programName": {
+                "type": "string",
+                "nullable": true
+              },
+              "facultyName": {
+                "type": "string",
+                "nullable": true
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "fullName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Patch_students_me_primary_program_RequestBody": {
+        "type": "object",
+        "properties": {
+          "program_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "program_id"
+        ],
+        "additionalProperties": false
+      },
+      "Patch_students_me_primary_program_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "bio": {
+                "type": "string",
+                "nullable": true
+              },
+              "phoneNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "role": {
+                "type": "string"
+              },
+              "semester": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "nullable": true
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "programName": {
+                "type": "string",
+                "nullable": true
+              },
+              "facultyName": {
+                "type": "string",
+                "nullable": true
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "fullName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_students_me_programs_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "code": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "facultyId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "facultyName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "isPrimary": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_students_me_subjects_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "code": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "credits": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "semester": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_students_me_subjects_RequestBody": {
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "subject_id"
+        ],
+        "additionalProperties": false
+      },
+      "Post_students_me_avatar_RequestBody": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string",
+            "minLength": 1
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "image"
+        ],
+        "additionalProperties": false
+      },
+      "Post_students_me_avatar_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_students_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "fullName": {
+                  "type": "string"
+                },
+                "avatarUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "bio": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "phoneNumber": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "role": {
+                  "type": "string"
+                },
+                "semester": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "nullable": true
+                },
+                "programId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true
+                },
+                "programName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "facultyName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "carrera": {
+                  "nullable": true
+                },
+                "asignaturasActivas": {
+                  "type": "array"
+                },
+                "indicadores": {
+                  "nullable": true
+                },
+                "insignias": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id",
+                "fullName"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_students_id_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "bio": {
+                "type": "string",
+                "nullable": true
+              },
+              "phoneNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "role": {
+                "type": "string"
+              },
+              "semester": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "nullable": true
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "programName": {
+                "type": "string",
+                "nullable": true
+              },
+              "facultyName": {
+                "type": "string",
+                "nullable": true
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "fullName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_catalog_subjects_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "code": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "credits": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "semester": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_catalog_programs_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "code": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "facultyId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "facultyName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "isPrimary": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_catalog_programs_programId_subjects_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "code": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "credits": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "semester": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Get_perfil_id_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "bio": {
+                "type": "string",
+                "nullable": true
+              },
+              "phoneNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "role": {
+                "type": "string"
+              },
+              "semester": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "nullable": true
+              },
+              "programId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "programName": {
+                "type": "string",
+                "nullable": true
+              },
+              "facultyName": {
+                "type": "string",
+                "nullable": true
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "carrera": {
+                "nullable": true
+              },
+              "asignaturasActivas": {
+                "type": "array"
+              },
+              "indicadores": {
+                "nullable": true
+              },
+              "insignias": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "fullName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Profiles Catalog",
+      "description": "Catálogo de perfiles de usuario"
+    }
+  ]
+}

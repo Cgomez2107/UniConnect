@@ -214,12 +214,14 @@ GRANT EXECUTE ON FUNCTION rpc_vote(VARCHAR(10), UUID, UUID, VARCHAR(10)) TO auth
 ALTER TABLE forum_questions ENABLE ROW LEVEL SECURITY;
 
 -- Todos los usuarios autenticados pueden leer preguntas
+DROP POLICY IF EXISTS "forum_questions_select" ON forum_questions;
 CREATE POLICY "forum_questions_select"
   ON forum_questions FOR SELECT
   TO authenticated
   USING (true);
 
 -- Estudiantes matriculados en la asignatura pueden crear preguntas
+DROP POLICY IF EXISTS "forum_questions_insert" ON forum_questions;
 CREATE POLICY "forum_questions_insert"
   ON forum_questions FOR INSERT
   TO authenticated
@@ -232,6 +234,7 @@ CREATE POLICY "forum_questions_insert"
   );
 
 -- Solo el autor puede actualizar su pregunta
+DROP POLICY IF EXISTS "forum_questions_update" ON forum_questions;
 CREATE POLICY "forum_questions_update"
   ON forum_questions FOR UPDATE
   TO authenticated
@@ -239,6 +242,7 @@ CREATE POLICY "forum_questions_update"
   WITH CHECK (author_id = auth.uid());
 
 -- Solo el autor puede eliminar su pregunta
+DROP POLICY IF EXISTS "forum_questions_delete" ON forum_questions;
 CREATE POLICY "forum_questions_delete"
   ON forum_questions FOR DELETE
   TO authenticated
@@ -249,12 +253,14 @@ CREATE POLICY "forum_questions_delete"
 ALTER TABLE forum_answers ENABLE ROW LEVEL SECURITY;
 
 -- Todos los usuarios autenticados pueden leer respuestas
+DROP POLICY IF EXISTS "forum_answers_select" ON forum_answers;
 CREATE POLICY "forum_answers_select"
   ON forum_answers FOR SELECT
   TO authenticated
   USING (true);
 
 -- Estudiantes matriculados en la asignatura pueden responder
+DROP POLICY IF EXISTS "forum_answers_insert" ON forum_answers;
 CREATE POLICY "forum_answers_insert"
   ON forum_answers FOR INSERT
   TO authenticated
@@ -268,6 +274,7 @@ CREATE POLICY "forum_answers_insert"
   );
 
 -- Solo el autor puede actualizar su respuesta
+DROP POLICY IF EXISTS "forum_answers_update" ON forum_answers;
 CREATE POLICY "forum_answers_update"
   ON forum_answers FOR UPDATE
   TO authenticated
@@ -275,6 +282,7 @@ CREATE POLICY "forum_answers_update"
   WITH CHECK (author_id = auth.uid());
 
 -- Solo el autor puede eliminar su respuesta
+DROP POLICY IF EXISTS "forum_answers_delete" ON forum_answers;
 CREATE POLICY "forum_answers_delete"
   ON forum_answers FOR DELETE
   TO authenticated
@@ -285,6 +293,7 @@ CREATE POLICY "forum_answers_delete"
 ALTER TABLE forum_votes ENABLE ROW LEVEL SECURITY;
 
 -- Cada usuario puede ver sus propios votos
+DROP POLICY IF EXISTS "forum_votes_select" ON forum_votes;
 CREATE POLICY "forum_votes_select"
   ON forum_votes FOR SELECT
   TO authenticated
@@ -292,16 +301,19 @@ CREATE POLICY "forum_votes_select"
 
 -- La inserción de votos se maneja exclusivamente via rpc_vote (SECURITY DEFINER)
 -- No se permiten INSERT/UPDATE/DELETE directos sobre forum_votes
+DROP POLICY IF EXISTS "forum_votes_no_insert" ON forum_votes;
 CREATE POLICY "forum_votes_no_insert"
   ON forum_votes FOR INSERT
   TO authenticated
   WITH CHECK (false);
 
+DROP POLICY IF EXISTS "forum_votes_no_update" ON forum_votes;
 CREATE POLICY "forum_votes_no_update"
   ON forum_votes FOR UPDATE
   TO authenticated
   USING (false);
 
+DROP POLICY IF EXISTS "forum_votes_no_delete" ON forum_votes;
 CREATE POLICY "forum_votes_no_delete"
   ON forum_votes FOR DELETE
   TO authenticated

@@ -11,6 +11,7 @@ import { SignInUseCase } from "./application/use-cases/SignInUseCase.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshTokenUseCase.js";
 import { AuthController } from "./interfaces/http/AuthController.js";
 import { requireEnv } from "../../../shared/libs/config/requiredEnv.js";
+import { sendData, sendError } from "../../../shared/http/sendJson.js";
 
 function loadEnvFileFallback(): void {
   const envPath = resolve(process.cwd(), ".env");
@@ -197,8 +198,7 @@ async function main() {
           if (payload) {
             const user = await authRepository.findById(payload.sub);
             if (user) {
-              res.writeHead(200, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({
+              sendData(res, 200, {
                 session: {
                   user: {
                     id: user.id,
@@ -206,24 +206,20 @@ async function main() {
                     fullName: user.fullName,
                     role: user.role,
                   },
-                  access_token: token,
-                }
-              }));
+                  accessToken: token,
+                },
+              });
             } else {
-              res.writeHead(404);
-              res.end(JSON.stringify({ error: "User not found" }));
+              sendError(res, 404, "User not found");
             }
           } else {
-            res.writeHead(401);
-            res.end(JSON.stringify({ error: "Invalid or expired token" }));
+            sendError(res, 401, "Invalid or expired token");
           }
         } catch {
-          res.writeHead(500);
-          res.end(JSON.stringify({ error: "Internal server error" }));
+          sendError(res, 500, "Internal server error");
         }
       } else {
-        res.writeHead(401);
-        res.end(JSON.stringify({ error: "No session found" }));
+        sendError(res, 401, "No session found");
       }
     } else if (method === "GET" && path === "/me") {
       const auth = req.headers.authorization;
@@ -234,28 +230,23 @@ async function main() {
           if (payload) {
             const user = await authRepository.findById(payload.sub);
             if (user) {
-              res.writeHead(200, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({
+              sendData(res, 200, {
                 id: user.id,
                 email: user.email,
-                full_name: user.fullName,
+                fullName: user.fullName,
                 role: user.role,
-              }));
+              });
             } else {
-              res.writeHead(404);
-              res.end(JSON.stringify({ error: "User not found" }));
+              sendError(res, 404, "User not found");
             }
           } else {
-            res.writeHead(401);
-            res.end(JSON.stringify({ error: "Invalid or expired token" }));
+            sendError(res, 401, "Invalid or expired token");
           }
         } catch {
-          res.writeHead(500);
-          res.end(JSON.stringify({ error: "Internal server error" }));
+          sendError(res, 500, "Internal server error");
         }
       } else {
-        res.writeHead(401);
-        res.end(JSON.stringify({ error: "Authorization header required" }));
+        sendError(res, 401, "Authorization header required");
       }
     } else if ((method === "POST" || method === "GET") && path === "/google") {
       // Endpoint unificado para Google OAuth

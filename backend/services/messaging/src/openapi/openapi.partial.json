@@ -1,0 +1,1498 @@
+{
+  "title": "UniConnect Messaging Service",
+  "version": "0.1.0",
+  "serverUrl": "http://localhost:3104",
+  "basePath": "/api/v1",
+  "paths": {
+    "/api/v1/conversations": {
+      "get": {
+        "summary": "Listar conversaciones",
+        "description": "Obtiene todas las conversaciones del usuario autenticado, incluyendo el último mensaje y conteo de no leídos.",
+        "tags": [
+          "Messaging"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de conversaciones obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_conversations_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      },
+      "post": {
+        "summary": "Obtener o crear conversación",
+        "description": "Obtiene una conversación existente con el participante indicado o crea una nueva.",
+        "tags": [
+          "Messaging"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_conversations_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversación existente encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_conversations_200Response"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Conversación creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_conversations_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{id}": {
+      "get": {
+        "summary": "Obtener conversación por ID",
+        "description": "Retorna una conversación específica si el usuario autenticado es participante.",
+        "tags": [
+          "Messaging"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversación encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_conversations_id_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Conversación no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{id}/touch": {
+      "patch": {
+        "summary": "Actualizar timestamp de conversación",
+        "description": "Actualiza el timestamp updated_at de una conversación (ej. al escribir o previsualizar).",
+        "tags": [
+          "Messaging"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversación actualizada"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{id}/read": {
+      "patch": {
+        "summary": "Marcar conversación como leída",
+        "description": "Marca todos los mensajes no leídos de una conversación como leídos para el usuario autenticado.",
+        "tags": [
+          "Messaging"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversación marcada como leída",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Patch_conversations_id_read_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/messages/unread-count": {
+      "get": {
+        "summary": "Obtener conteo de no leídos",
+        "description": "Retorna el número total de mensajes no leídos en todas las conversaciones del usuario.",
+        "tags": [
+          "Messaging"
+        ],
+        "responses": {
+          "200": {
+            "description": "Conteo obtenido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_messages_unread_count_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/messages": {
+      "get": {
+        "summary": "Listar mensajes de una conversación",
+        "description": "Obtiene los mensajes de una conversación con paginación.",
+        "tags": [
+          "Messaging"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 50
+                }
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 0
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de mensajes obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_messages_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      },
+      "post": {
+        "summary": "Enviar un mensaje",
+        "description": "Envía un mensaje de texto (opcionalmente con adjuntos multimedia o respuesta a otro mensaje) en una conversación.",
+        "tags": [
+          "Messaging"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_messages_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mensaje creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_messages_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/messages/{id}": {
+      "get": {
+        "summary": "Obtener mensaje por ID",
+        "description": "Retorna un mensaje específico por su ID.",
+        "tags": [
+          "Messaging"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mensaje encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_messages_id_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Mensaje no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/messages/{id}/reactions": {
+      "post": {
+        "summary": "Agregar o quitar reacción",
+        "description": "Alterna una reacción con emoji en un mensaje. Si el usuario ya reaccionó con ese emoji, se elimina; si no, se agrega.",
+        "tags": [
+          "Messaging"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_messages_id_reactions_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reacción actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_messages_id_reactions_200Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El campo emoji es requerido"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/messages/{id}/read": {
+      "patch": {
+        "summary": "Marcar mensaje como leído",
+        "description": "Marca un mensaje individual como leído estableciendo el timestamp read_at.",
+        "tags": [
+          "Messaging"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mensaje marcado como leído"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Mensaje no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/polls": {
+      "post": {
+        "summary": "Crear una encuesta en un mensaje de grupo",
+        "description": "Crea una encuesta asociada a un mensaje existente en un grupo de estudio. El usuario autenticado debe ser miembro del grupo.",
+        "tags": [
+          "Polls"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_polls_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Encuesta creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_polls_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación — datos de entrada inválidos"
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/polls/{pollId}/votes": {
+      "post": {
+        "summary": "Emitir un voto en una encuesta activa",
+        "description": "Registra el voto de un usuario en una opción de una encuesta activa. Cada usuario solo puede votar una vez.",
+        "tags": [
+          "Polls"
+        ],
+        "parameters": [
+          {
+            "name": "pollId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_polls_pollId_votes_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Voto registrado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_polls_pollId_votes_200Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error del negocio — voto duplicado, encuesta cerrada u opción inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_polls_pollId_votes_400Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/polls/{pollId}/results": {
+      "get": {
+        "summary": "Obtener resultados actuales de una encuesta",
+        "description": "Retorna los resultados agregados de una encuesta, incluyendo el conteo de votos por opción y el total de votos.",
+        "tags": [
+          "Polls"
+        ],
+        "parameters": [
+          {
+            "name": "pollId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados de la encuesta obtenidos exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_polls_pollId_results_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          },
+          "404": {
+            "description": "Encuesta no encontrada"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Get_conversations_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "participantA": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "participantB": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastMessage": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "lastMessageAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "unreadCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "participantA",
+                "participantB",
+                "createdAt",
+                "updatedAt",
+                "lastMessage",
+                "lastMessageAt",
+                "unreadCount"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_conversations_RequestBody": {
+        "type": "object",
+        "properties": {
+          "participantB": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "participantB"
+        ],
+        "additionalProperties": false
+      },
+      "Post_conversations_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "participantA": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "participantB": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lastMessage": {
+                "type": "string",
+                "nullable": true
+              },
+              "lastMessageAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "unreadCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "participantA",
+              "participantB",
+              "createdAt",
+              "updatedAt",
+              "lastMessage",
+              "lastMessageAt",
+              "unreadCount"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_conversations_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "participantA": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "participantB": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lastMessage": {
+                "type": "string",
+                "nullable": true
+              },
+              "lastMessageAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "unreadCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "participantA",
+              "participantB",
+              "createdAt",
+              "updatedAt",
+              "lastMessage",
+              "lastMessageAt",
+              "unreadCount"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_conversations_id_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "participantA": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "participantB": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lastMessage": {
+                "type": "string",
+                "nullable": true
+              },
+              "lastMessageAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "unreadCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "participantA",
+              "participantB",
+              "createdAt",
+              "updatedAt",
+              "lastMessage",
+              "lastMessageAt",
+              "unreadCount"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Patch_conversations_id_read_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "count",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_messages_unread_count_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "count"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_messages_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "conversationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "senderId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "mediaUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "mediaType": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "mediaFilename": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "replyToMessageId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "replyPreview": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "readAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "conversationId",
+                "senderId",
+                "content",
+                "createdAt",
+                "readAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Post_messages_RequestBody": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content": {
+            "type": "string",
+            "default": ""
+          },
+          "mediaUrl": {
+            "type": "string"
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "mediaFilename": {
+            "type": "string"
+          },
+          "replyToMessageId": {
+            "type": "string"
+          },
+          "replyPreview": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversationId"
+        ],
+        "additionalProperties": false
+      },
+      "Post_messages_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "content": {
+                "type": "string"
+              },
+              "mediaUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "mediaType": {
+                "type": "string",
+                "nullable": true
+              },
+              "mediaFilename": {
+                "type": "string",
+                "nullable": true
+              },
+              "replyToMessageId": {
+                "type": "string",
+                "nullable": true
+              },
+              "replyPreview": {
+                "type": "string",
+                "nullable": true
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "readAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "conversationId",
+              "senderId",
+              "content",
+              "createdAt",
+              "readAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_messages_id_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "content": {
+                "type": "string"
+              },
+              "mediaUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "mediaType": {
+                "type": "string",
+                "nullable": true
+              },
+              "mediaFilename": {
+                "type": "string",
+                "nullable": true
+              },
+              "replyToMessageId": {
+                "type": "string",
+                "nullable": true
+              },
+              "replyPreview": {
+                "type": "string",
+                "nullable": true
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "readAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "conversationId",
+              "senderId",
+              "content",
+              "createdAt",
+              "readAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_messages_id_reactions_RequestBody": {
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "emoji"
+        ],
+        "additionalProperties": false
+      },
+      "Post_messages_id_reactions_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "messageId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "reactions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "emoji": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "emoji",
+                    "userId"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "conversationId",
+              "messageId",
+              "reactions"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_polls_RequestBody": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "question": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 2,
+            "maxItems": 10
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "messageId",
+          "groupId",
+          "question",
+          "options",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "Post_polls_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "pollId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "messageId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "groupId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "createdBy": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "question": {
+                "type": "string"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "expiresAt": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "closed"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "option": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "percentage": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  },
+                  "required": [
+                    "option",
+                    "count",
+                    "percentage"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "totalVotes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "pollId",
+              "messageId",
+              "groupId",
+              "createdBy",
+              "question",
+              "options",
+              "expiresAt",
+              "status",
+              "createdAt",
+              "updatedAt",
+              "results",
+              "totalVotes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_polls_pollId_votes_RequestBody": {
+        "type": "object",
+        "properties": {
+          "selectedOption": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "selectedOption"
+        ],
+        "additionalProperties": false
+      },
+      "Post_polls_pollId_votes_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "pollId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "userId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "selectedOption": {
+                "type": "integer"
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "option": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "percentage": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  },
+                  "required": [
+                    "option",
+                    "count",
+                    "percentage"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "totalVotes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "success",
+              "pollId",
+              "userId",
+              "selectedOption",
+              "results",
+              "totalVotes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_polls_pollId_votes_400Response": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "error",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "Get_polls_pollId_results_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "pollId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "question": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "closed"
+                ]
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "option": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "percentage": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  },
+                  "required": [
+                    "option",
+                    "count",
+                    "percentage"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "totalVotes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "pollId",
+              "question",
+              "status",
+              "results",
+              "totalVotes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Messaging",
+      "description": "Mensajería y conversaciones"
+    },
+    {
+      "name": "Polls",
+      "description": "Encuestas en mensajes de grupo"
+    }
+  ]
+}

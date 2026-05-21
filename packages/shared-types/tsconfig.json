@@ -18,7 +18,8 @@
     "composite": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/generated/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

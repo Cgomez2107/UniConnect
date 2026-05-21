@@ -102,6 +102,35 @@ export class RealtimeObserver implements IChatObserver {
         });
         break;
 
+      case "POLL_VOTE_REGISTERED":
+        await this.realtimeService.broadcast(channel, {
+          type: "POLL_VOTE_REGISTERED",
+          data: {
+            pollId: event.pollId,
+            groupId: event.groupId,
+            userId: event.userId,
+            selectedOption: event.selectedOption,
+            results: event.results,
+            totalVotes: event.totalVotes,
+            timestamp: event.timestamp.toISOString(),
+          },
+        });
+        break;
+
+      case "POLL_CLOSED":
+        await this.realtimeService.broadcast(channel, {
+          type: "POLL_CLOSED",
+          data: {
+            pollId: event.pollId,
+            groupId: event.groupId,
+            status: event.status,
+            finalResults: event.finalResults,
+            totalVotes: event.totalVotes,
+            timestamp: event.timestamp.toISOString(),
+          },
+        });
+        break;
+
       default:
         const exhaustiveCheck: never = event;
         throw new Error(`Evento no manejado: ${exhaustiveCheck}`);

@@ -23,4 +23,8 @@ export * from "./lib/errors.js";
 export * from "./validation/MessageValidationErrors.js";
 export * from "./validation/ValidationResult.js";
 
+export type { paths, components, operations } from "./generated/api.js";
+
+export * from "./generated/zod.js";
+
 export const SHARED_TYPES_VERSION = "0.2.0";

@@ -1,12 +1,18 @@
 import { createServer, type IncomingMessage, type ServerResponse as NodeServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 
 import type { GatewayEnv } from "../shared/config/env.js";
 import { proxyRequest, type ProxyResponse } from "../shared/http/proxyRequest.js";
 import { sendJson } from "../shared/http/sendJson.js";
 import { JWTMiddleware, type JWTPayload } from "../middleware/JWTMiddleware.js";
+
+const PUBLIC_PATHS = new Set([
+  "/docs",
+  "/docs/",
+  "/api/v1/openapi.json",
+]);
 
 const conversationRooms = new Map<string, Set<WebSocket>>();
 const studyGroupRooms = new Map<string, Set<WebSocket>>();
@@ -19,6 +25,81 @@ function getAppVersion(): string {
   } catch {
     return "0.0.0";
   }
+}
+
+const OPENAPI_SPEC_PATH = resolve(
+  import.meta.dirname ?? __dirname,
+  "../public/openapi.json",
+);
+
+const SWAGGER_HTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>UniConnect API Documentation</title>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5/favicon-32x32.png" sizes="32x32" />
+  <style>
+    html { box-sizing: border-box; overflow: -webkit-scrollbar; }
+    *, *:before, *:after { box-sizing: inherit; }
+    body { margin: 0; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" charset="UTF-8"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
+  <script>
+    window.onload = function() {
+      const ui = SwaggerUIBundle({
+        url: "/api/v1/openapi.json",
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout"
+      });
+      window.ui = ui;
+    };
+  </script>
+</body>
+</html>`;
+
+function handleDocsRequest(
+  requestUrl: URL,
+  res: NodeServerResponse,
+): void {
+  const pathname = requestUrl.pathname;
+
+  if (pathname === "/api/v1/openapi.json") {
+    try {
+      if (!existsSync(OPENAPI_SPEC_PATH)) {
+        sendJson(res, 404, { error: "OpenAPI spec not found. Run 'pnpm merge:openapi' first." });
+        return;
+      }
+      const spec = readFileSync(OPENAPI_SPEC_PATH, { encoding: "utf-8" }) as string;
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(spec);
+      return;
+    } catch (err) {
+      sendJson(res, 500, { error: "Failed to read OpenAPI spec", details: err instanceof Error ? err.message : "Unknown error" });
+      return;
+    }
+  }
+
+  if (pathname.startsWith("/docs")) {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(SWAGGER_HTML);
+    return;
+  }
+
+  sendJson(res, 404, { error: "Not found" });
 }
 
 function isStudyGroupsRoute(pathname: string): boolean {
@@ -66,6 +147,10 @@ function isEventsRoute(pathname: string): boolean {
 
 function isForumRoute(pathname: string): boolean {
   return pathname === "/api/v1/forum" || pathname.startsWith("/api/v1/forum/");
+}
+
+function isPollRoute(pathname: string): boolean {
+  return pathname === "/api/v1/polls" || pathname.startsWith("/api/v1/polls/");
 }
 
 function isAuthRoute(pathname: string): boolean {
@@ -335,6 +420,11 @@ async function handleRequest(
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
   const appVersion = getAppVersion();
 
+  if (PUBLIC_PATHS.has(requestUrl.pathname) || requestUrl.pathname === "/docs" || requestUrl.pathname.startsWith("/docs/")) {
+    handleDocsRequest(requestUrl, res);
+    return;
+  }
+
   const allowedOrigins = [
     "http://localhost:8081",
     "http://localhost:8082",
@@ -407,6 +497,11 @@ async function handleRequest(
     await proxyRequest(req, res, env.messagingBaseUrl, undefined, (info) => {
       onMessagingResponse(info, requestUrl, payload);
     });
+    return;
+  }
+
+  if (isPollRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.messagingBaseUrl);
     return;
   }
 
