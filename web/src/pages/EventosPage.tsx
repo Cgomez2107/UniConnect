@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useEvents from "@/hooks/useEvents";
-import { useEventSubscription } from "@/hooks/useEventSubscription";
-import { useNewEventObserver } from "@/hooks/useNewEventObserver";
+import { useEventSubscriptionStore } from "@/store/useEventSubscriptionStore";
 import { EventCard } from "@/components/shared/EventCard";
 import { Button } from "@/components/ui/Button";
 
@@ -18,9 +17,9 @@ export function EventosPage() {
   const { events = [], isLoading = false, error = null, loadEvents } = useEvents() as any;
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const { subscribedCategories, isSubscribed, toggle } = useEventSubscription();
-
-  useNewEventObserver(subscribedCategories);
+  const subscribedCategories = useEventSubscriptionStore((s) => s.subscribedCategories);
+  const toggleSubscription = useEventSubscriptionStore((s) => s.toggle);
+  const isSubscribed = (category: string) => subscribedCategories.includes(category);
 
   useEffect(() => {
     loadEvents();
@@ -78,22 +77,51 @@ export function EventosPage() {
           </Button>
         </div>
 
-        <div className="mb-6 flex gap-3 flex-wrap items-center">
+        <div className="mb-6 space-y-3">
           <input
             type="text"
             placeholder="Buscar eventos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 min-w-48 px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
+            className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow"
           />
-          {hasActiveFilter && (
+
+          <div className="flex gap-2 flex-wrap items-center">
             <button
-              onClick={() => { setActiveCategory(null); setSearchTerm(""); }}
-              className="px-3 py-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+              onClick={() => setActiveCategory(null)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeCategory === null
+                  ? "bg-primary-600 text-white shadow-sm"
+                  : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+              }`}
             >
-              Limpiar filtros
+              Todas
             </button>
-          )}
+            {CATEGORIES.map(({ value, label, icon }) => (
+              <button
+                key={value}
+                onClick={() =>
+                  setActiveCategory(activeCategory === value ? null : value)
+                }
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeCategory === value
+                    ? "bg-primary-600 text-white shadow-sm"
+                    : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                }`}
+              >
+                <span className="mr-1.5">{icon}</span>
+                {label}
+              </button>
+            ))}
+            {hasActiveFilter && (
+              <button
+                onClick={() => { setActiveCategory(null); setSearchTerm(""); }}
+                className="px-3 py-2 text-sm text-primary-600 hover:text-primary-700 font-medium ml-1"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
         </div>
 
         {isLoading && (
@@ -133,29 +161,15 @@ export function EventosPage() {
               return (
                 <section key={value}>
                   <div className="flex items-center justify-between mb-4">
-                    <button
-                      onClick={() =>
-                        setActiveCategory(activeCategory === value ? null : value)
-                      }
-                      className={`inline-flex items-center gap-2 text-lg font-bold transition-colors ${
-                        activeCategory === value
-                          ? "text-primary-600"
-                          : "text-neutral-800 hover:text-primary-600"
-                      }`}
-                    >
+                    <h2 className="inline-flex items-center gap-2 text-lg font-bold text-neutral-800">
                       <span>{icon}</span>
                       <span>{label}</span>
                       <span className="text-sm font-normal text-neutral-400 ml-1">
                         ({catEvents.length})
                       </span>
-                      {activeCategory === value && (
-                        <span className="text-xs text-primary-500 font-normal ml-2">
-                          (filtrando)
-                        </span>
-                      )}
-                    </button>
+                    </h2>
                     <button
-                      onClick={() => toggle(value)}
+                      onClick={() => toggleSubscription(value)}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                         subscribed
                           ? "bg-primary-100 text-primary-700 hover:bg-primary-200"

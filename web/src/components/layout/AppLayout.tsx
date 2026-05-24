@@ -3,9 +3,14 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MobileHeader } from "./MobileHeader";
 import BellDropdown from "../notifications/BellDropdown";
+import { useNewEventObserver } from "@/hooks/useNewEventObserver";
+import { useEventSubscriptionStore } from "@/store/useEventSubscriptionStore";
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const subscribedCategories = useEventSubscriptionStore((s) => s.subscribedCategories);
+
+  useNewEventObserver(subscribedCategories);
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 

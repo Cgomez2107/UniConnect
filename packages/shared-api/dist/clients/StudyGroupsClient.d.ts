@@ -40,6 +40,7 @@ export declare class StudyGroupsClient extends BaseClient {
     reviewApplication(applicationId: string, status: "aceptada" | "rechazada"): Promise<void>;
     leave(groupId: string): Promise<void>;
     cancel(groupId: string): Promise<void>;
+    cancelMyApplication(applicationId: string): Promise<void>;
     requestTransfer(groupId: string, targetUserId: string): Promise<{
         id: string;
     }>;
