@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 
-import { AuthorizationError, ConflictError } from "../../../../../shared/libs/errors/index.js";
+import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../../../../shared/libs/errors/index.js";
 import type { Application } from "../../domain/entities/Application.js";
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
 
@@ -138,5 +138,20 @@ export class PostgresApplicationRepository implements IApplicationRepository {
     );
 
     return result.rows.map(mapApplication);
+  }
+
+  async delete(applicationId: string, actorUserId: string): Promise<void> {
+    const app = await this.getById(applicationId);
+    if (!app) {
+      throw new NotFoundError("Postulación no encontrada.");
+    }
+    if (app.applicantId !== actorUserId) {
+      throw new AuthorizationError("No puedes cancelar una postulación que no te pertenece.");
+    }
+    if (app.status !== "pendiente") {
+      throw new ValidationError("Solo puedes cancelar postulaciones en estado pendiente.");
+    }
+
+    await this.pool.query("DELETE FROM applications WHERE id = $1", [applicationId]);
   }
 }

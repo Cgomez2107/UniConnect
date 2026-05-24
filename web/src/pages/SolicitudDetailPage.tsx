@@ -32,6 +32,7 @@ export function SolicitudDetailPage() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [applications, setApplications] = useState<any[]>([]);
+  const [myAppId, setMyAppId] = useState<string | null>(null);
   const [myAppStatus, setMyAppStatus] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +56,10 @@ export function SolicitudDetailPage() {
           const myApps: any[] = await studyGroupsService.listMyApplications();
           if (cancelled) return;
           const myApp = myApps.find((a: any) => (a.requestId || a.groupId) === id);
-          if (myApp) setMyAppStatus(myApp.status);
+          if (myApp) {
+            setMyAppId(myApp.id);
+            setMyAppStatus(myApp.status);
+          }
 
           if (user.id === data.authorId) {
             const apps = await studyGroupsService.getStudyGroupApplications(id).catch(() => []);
@@ -120,11 +124,11 @@ export function SolicitudDetailPage() {
   };
 
   const handleLeave = async () => {
-    if (!id) return;
+    if (!myAppId) return;
     setActionLoading("leave");
     setError(null);
     try {
-      await studyGroupsService.cancelMyApplication(id);
+      await studyGroupsService.cancelMyApplication(myAppId);
       navigate("/solicitudes");
     } catch (err: any) {
       setError(err?.response?.data?.message || "Error al salir del grupo.");

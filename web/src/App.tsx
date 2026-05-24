@@ -39,7 +39,7 @@ import { ForumQuestionPage } from "./pages/ForumQuestionPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import { fetchNotifications } from "./lib/services/notifications.service";
-import { useNotificationWebSocket } from "./hooks/useNotificationWebSocket";
+import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import "./App.css";
 
 function PrivateRoute({
@@ -88,7 +88,7 @@ function App() {
     })();
   }, [hydrate]);
 
-  useNotificationWebSocket();
+  useRealtimeNotifications();
 
   useEffect(() => {
     if (!isAuthenticated) return;

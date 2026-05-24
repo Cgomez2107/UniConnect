@@ -73,8 +73,8 @@ const studyGroupsService = {
     return deps.apiClients.studyGroups.rejectTransfer(transferId);
   },
 
-  async cancelMyApplication(requestId: string) {
-    return deps.apiClients.studyGroups.cancel(requestId);
+  async cancelMyApplication(applicationId: string) {
+    return deps.apiClients.studyGroups.cancelMyApplication(applicationId);
   },
 
   async getGroupMessages(groupId: string) {

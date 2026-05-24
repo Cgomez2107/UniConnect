@@ -87,7 +87,8 @@ export function GroupDashboardPage() {
   const [acceptTransferSuccess, setAcceptTransferSuccess] = useState(false);
   const [rejectTransferLoading, setRejectTransferLoading] = useState(false);
   const [rejectTransferError, setRejectTransferError] = useState<string | null>(null);
-  const pendingTransferId = searchParams.get("acceptTransfer");
+  const pendingTransferId = searchParams.get("acceptTransfer") || (solicitud?.hasPendingTransfer && solicitud?.pendingTransferId ? solicitud.pendingTransferId : null);
+  const isTransferTarget = !!pendingTransferId && (!solicitud?.pendingTransferToUserId || solicitud.pendingTransferToUserId === user?.id);
 
   // --- Role detection (set after data loads) ---
   const [isMember, setIsMember] = useState(false);
@@ -886,7 +887,7 @@ export function GroupDashboardPage() {
           <p className="text-success-600 dark:text-success-400 text-sm">Transferencia aceptada correctamente.</p>
         </div>
       )}
-      {pendingTransferId && (
+      {isTransferTarget && (
         <div className="bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800 px-4 sm:px-6 py-2 flex items-center justify-between">
           <p className="text-primary-700 dark:text-primary-300 text-sm">Tienes una transferencia de administración pendiente.</p>
           <div className="flex items-center gap-2">

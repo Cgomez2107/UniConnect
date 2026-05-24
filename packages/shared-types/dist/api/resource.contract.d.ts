@@ -1,45 +1,101 @@
 import { z } from "zod";
 import type { ApiContract } from "./_base.contract.js";
 export declare const CreateResourceRequestSchema: z.ZodObject<{
-    body: z.ZodObject<{
+    body: z.ZodEffects<z.ZodObject<{
         title: z.ZodString;
         description: z.ZodOptional<z.ZodString>;
-        url: z.ZodString;
+        url: z.ZodOptional<z.ZodString>;
         subjectId: z.ZodString;
         tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         isPublic: z.ZodDefault<z.ZodBoolean>;
+        fileUrl: z.ZodOptional<z.ZodString>;
+        fileName: z.ZodOptional<z.ZodString>;
+        fileType: z.ZodOptional<z.ZodString>;
+        fileSizeKb: z.ZodOptional<z.ZodNumber>;
+        programId: z.ZodOptional<z.ZodString>;
+        resourceType: z.ZodOptional<z.ZodEnum<["file", "link"]>>;
     }, "strip", z.ZodTypeAny, {
         subjectId: string;
-        url: string;
         title: string;
         isPublic: boolean;
         description?: string | undefined;
+        programId?: string | undefined;
+        url?: string | undefined;
         tags?: string[] | undefined;
+        fileUrl?: string | undefined;
+        fileName?: string | undefined;
+        fileType?: string | undefined;
+        fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         subjectId: string;
-        url: string;
         title: string;
         description?: string | undefined;
+        programId?: string | undefined;
+        url?: string | undefined;
         tags?: string[] | undefined;
         isPublic?: boolean | undefined;
+        fileUrl?: string | undefined;
+        fileName?: string | undefined;
+        fileType?: string | undefined;
+        fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
+    }>, {
+        subjectId: string;
+        title: string;
+        isPublic: boolean;
+        description?: string | undefined;
+        programId?: string | undefined;
+        url?: string | undefined;
+        tags?: string[] | undefined;
+        fileUrl?: string | undefined;
+        fileName?: string | undefined;
+        fileType?: string | undefined;
+        fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
+    }, {
+        subjectId: string;
+        title: string;
+        description?: string | undefined;
+        programId?: string | undefined;
+        url?: string | undefined;
+        tags?: string[] | undefined;
+        isPublic?: boolean | undefined;
+        fileUrl?: string | undefined;
+        fileName?: string | undefined;
+        fileType?: string | undefined;
+        fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
         subjectId: string;
-        url: string;
         title: string;
         isPublic: boolean;
         description?: string | undefined;
+        programId?: string | undefined;
+        url?: string | undefined;
         tags?: string[] | undefined;
+        fileUrl?: string | undefined;
+        fileName?: string | undefined;
+        fileType?: string | undefined;
+        fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }, {
     body: {
         subjectId: string;
-        url: string;
         title: string;
         description?: string | undefined;
+        programId?: string | undefined;
+        url?: string | undefined;
         tags?: string[] | undefined;
         isPublic?: boolean | undefined;
+        fileUrl?: string | undefined;
+        fileName?: string | undefined;
+        fileType?: string | undefined;
+        fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }>;
 export declare const CreateResourceResponseSchema: z.ZodObject<{

@@ -32,5 +32,5 @@ export interface IStudyRequestRepository {
   }): Promise<StudyRequest>;
   countBySubject(subjectId: string): Promise<number>;
   listByAuthorId(authorId: string): Promise<StudyRequest[]>;
-  cancel(id: string): Promise<StudyRequest>;
+  cancel(id: string, actorUserId: string): Promise<StudyRequest>;
 }

@@ -1,5 +1,6 @@
 import { ApplyToStudyRequest } from "./application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "./application/use-cases/AcceptAdminTransfer.js";
+import { CancelMyApplication } from "./application/use-cases/CancelMyApplication.js";
 import { CancelStudyRequest } from "./application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "./application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById.js";
@@ -374,6 +375,7 @@ function bootstrap(): void {
   const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
+  const cancelMyApplicationUC = new CancelMyApplication(applicationRepository);
   const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
   const markAllNotificationsAsRead = new MarkAllNotificationsAsRead(notificationRepository);
   const createStudySessionUC = new CreateStudySession(
@@ -417,6 +419,7 @@ function bootstrap(): void {
     listMyStudyRequestsUC,
     listMyApplicationsUC,
     cancelStudyRequestUC,
+    cancelMyApplicationUC,
     toggleStudyGroupMessageReaction,
     markAllNotificationsAsRead,
     preferenceService,

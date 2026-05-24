@@ -93,7 +93,7 @@ export function StudentProfilePage() {
       try {
         const data: any = await deps.apiClients.profiles.getProfileById(id, currentUser?.id);
         if (cancelled) return;
-        console.log("[StudentProfile] API response:", data);
+        
         setProfile({
           id: data.id || id,
           fullName: extractFullName(data) || id,

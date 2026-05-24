@@ -3425,11 +3425,11 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -3440,11 +3440,11 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>, "many">;
     meta: z.ZodObject<{
         total: z.ZodNumber;
@@ -3464,11 +3464,11 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }[];
     meta: {
         total: number;
@@ -3484,11 +3484,11 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }[];
     meta: {
         total: number;
@@ -3511,22 +3511,22 @@ export declare const Post_resources_RequestBodySchema: z.ZodObject<{
     programId?: string | undefined;
     subjectId?: string | undefined;
     url?: string | undefined;
-    resourceType?: "file" | "link" | undefined;
     fileUrl?: string | undefined;
     fileName?: string | undefined;
     fileType?: string | undefined;
     fileSizeKb?: number | undefined;
+    resourceType?: "file" | "link" | undefined;
 }, {
     title: string;
     description?: string | undefined;
     programId?: string | undefined;
     subjectId?: string | undefined;
     url?: string | undefined;
-    resourceType?: "file" | "link" | undefined;
     fileUrl?: string | undefined;
     fileName?: string | undefined;
     fileType?: string | undefined;
     fileSizeKb?: number | undefined;
+    resourceType?: "file" | "link" | undefined;
 }>;
 export declare const Post_resources_201ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -3554,11 +3554,11 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -3569,11 +3569,11 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -3586,11 +3586,11 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }, {
     data: {
@@ -3603,11 +3603,11 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }>;
 export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
@@ -3636,11 +3636,11 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -3651,11 +3651,11 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -3668,11 +3668,11 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }, {
     data: {
@@ -3685,11 +3685,11 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }>;
 export declare const Put_resources_id_RequestBodySchema: z.ZodObject<{
@@ -3728,11 +3728,11 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -3743,11 +3743,11 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -3760,11 +3760,11 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }, {
     data: {
@@ -3777,11 +3777,11 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }>;
 export declare const Get_study_groups_200ResponseSchema: z.ZodObject<{

@@ -27,6 +27,7 @@ export async function handleStudyGroupsRoutes(
   const leaveMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/leave$/);
   const cancelMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/cancel$/);
   const reviewMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/applications\/([^/]+)\/review$/);
+  const cancelApplicationMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/applications\/([^/]+)\/cancel$/);
   const transferMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/transfer$/);
   const transferAcceptMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/accept$/);
   const transferRejectMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/reject$/);
@@ -126,6 +127,11 @@ export async function handleStudyGroupsRoutes(
 
   if (req.method === "PUT" && reviewMatch) {
     await controller.review(req, res, reviewMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && cancelApplicationMatch) {
+    await controller.cancelMyApplication(req, res, cancelApplicationMatch[1]);
     return true;
   }
 

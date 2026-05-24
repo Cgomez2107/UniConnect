@@ -178,6 +178,14 @@ export function NotificationItem({ notificacion: n }: Props) {
                   Ver grupo →
                 </button>
               )}
+              {!isTransfer(n.type) && !isRejected(n.type) && !isAccepted(n.type) && !n.action && n.data?.groupId && !n.data?.requestId && (
+                <button
+                  onClick={() => navigate(`/grupo/${n.data?.groupId}`)}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Ver grupo →
+                </button>
+              )}
               {!isTransfer(n.type) && !isRejected(n.type) && !isAccepted(n.type) && !n.action && n.data?.requestId && (
                 <button
                   onClick={() => navigate(`/solicitud/${n.data?.requestId}`)}

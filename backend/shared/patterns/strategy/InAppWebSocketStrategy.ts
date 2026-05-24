@@ -25,8 +25,9 @@ export class InAppWebSocketStrategy implements INotificationStrategy {
 
   async enviar(notificacion: NotificacionDTO): Promise<ResultadoEnvio> {
     try {
+      let notificationId: string | undefined;
       if (this.notificationRepository) {
-        await this.notificationRepository.create({
+        notificationId = await this.notificationRepository.create({
           userId: notificacion.userId,
           type: notificacion.type,
           title: notificacion.title,
@@ -39,6 +40,7 @@ export class InAppWebSocketStrategy implements INotificationStrategy {
         notificacion.userId,
         notificacion.type,
         {
+          id: notificationId,
           title: notificacion.title,
           body: notificacion.body,
           ...(notificacion.payload ?? {}),

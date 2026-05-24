@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { apiClient } from "@/lib/api/client";
@@ -112,15 +112,17 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
+  const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const connectWs = useCallback(() => {
+    if (wsRef.current) {
+      try { wsRef.current.close(); } catch {}
+      wsRef.current = null;
     }
 
-    fetchConversation();
+    const token = useAuthStore.getState().accessToken || localStorage.getItem("accessToken");
+    if (!token) return;
 
-    const token = localStorage.getItem("accessToken");
     const ws = new WebSocket(`${getWsUrl()}/ws?token=${token}`);
     wsRef.current = ws;
 
@@ -129,10 +131,8 @@ export const ChatPage: React.FC = () => {
     };
 
     ws.onmessage = (event) => {
-      console.log("[ChatPage WS] raw event type:", typeof event.data, "len:", event.data?.length);
       try {
         const data = JSON.parse(event.data);
-        console.log("[ChatPage WS] parsed event:", data.event, Object.keys(data));
         const payload = data.payload || data;
 
         if (data.event === "new_message") {
@@ -143,14 +143,10 @@ export const ChatPage: React.FC = () => {
             return [...prev, { ...mappedMsg, clientStatus: "sent" }];
           });
         } else if (data.event === "reaction_updated") {
-          console.log("[ChatPage WS] reaction_updated ENTERED");
           const { messageId, reactions } = payload;
           setMessages((prev) => {
             const found = prev.find((m) => m.id === messageId);
-            if (!found) {
-              console.warn("[ChatPage WS] message not found", messageId);
-              return prev;
-            }
+            if (!found) return prev;
             return prev.map((m) =>
               m.id === messageId ? { ...m, reactions: reactions || [] } : m
             );
@@ -175,19 +171,36 @@ export const ChatPage: React.FC = () => {
       }
     };
 
-    return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "unsubscribe", conversationId }));
-        ws.close();
-      } else if (ws.readyState === WebSocket.CONNECTING) {
-        ws.onopen = () => ws.close();
-        ws.onerror = () => ws.close();
-      } else {
-        ws.close();
-      }
-      wsRef.current = null;
+    ws.onclose = () => {
+      reconnectRef.current = setTimeout(() => connectWs(), 3000);
     };
-  }, [conversationId, user, navigate]);
+    ws.onerror = () => {
+      ws.close();
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    fetchConversation();
+    connectWs();
+
+    return () => {
+      if (reconnectRef.current) clearTimeout(reconnectRef.current);
+      if (wsRef.current) {
+        try {
+          if (wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: "unsubscribe", conversationId }));
+          }
+        } catch {}
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [conversationId, user, navigate, connectWs]);
 
   const handleSendMessage = async (
     content: string,

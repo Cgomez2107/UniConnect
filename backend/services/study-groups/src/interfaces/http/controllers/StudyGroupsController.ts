@@ -3,6 +3,7 @@ import { z, ZodError } from "zod";
 
 import { ApplyToStudyRequest } from "../../../application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "../../../application/use-cases/AcceptAdminTransfer.js";
+import { CancelMyApplication } from "../../../application/use-cases/CancelMyApplication.js";
 import { CancelStudyRequest } from "../../../application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "../../../application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequestById.js";
@@ -82,6 +83,7 @@ export class StudyGroupsController {
     private readonly listMyStudyRequestsUC: ListMyStudyRequests,
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
+    private readonly cancelMyApplicationUC: CancelMyApplication,
     private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
     private readonly markAllNotificationsAsRead: MarkAllNotificationsAsRead,
     private readonly preferenceService: PreferenceService,
@@ -635,8 +637,28 @@ export class StudyGroupsController {
     }
 
     try {
-      const updated = await this.cancelStudyRequestUC.execute(requestId);
+      const updated = await this.cancelStudyRequestUC.execute(requestId, actorUserId);
       sendData(res, 200, updated);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async cancelMyApplication(
+    req: IncomingMessage,
+    res: ServerResponse,
+    applicationId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.cancelMyApplicationUC.execute(applicationId, actorUserId);
+      sendData(res, 200, { message: "Postulación cancelada correctamente." });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

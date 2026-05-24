@@ -151,6 +151,13 @@ export class StudyGroupsClient extends BaseClient {
     });
   }
 
+  async cancelMyApplication(applicationId: string): Promise<void> {
+    await this.transport.request({
+      method: "POST",
+      url: `/study-groups/applications/${applicationId}/cancel`,
+    });
+  }
+
   async requestTransfer(groupId: string, targetUserId: string): Promise<{ id: string }> {
     const response = await this.transport.request<{ id: string }>({
       method: "POST",

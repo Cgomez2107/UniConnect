@@ -13,7 +13,7 @@ export const CreateResourceRequestSchema = z.object({
     fileUrl: z.string().optional(),
     fileName: z.string().optional(),
     fileType: z.string().optional(),
-    fileSizeKb: z.number().positive().optional(),
+    fileSizeKb: z.number().nonnegative().optional(),
     programId: z.string().optional(),
     resourceType: z.enum(["file", "link"]).optional(),
   }).refine(
