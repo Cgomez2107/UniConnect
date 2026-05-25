@@ -35,6 +35,7 @@ import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import DirectorioPage from "./pages/DirectorioPage";
 import { ForumPage } from "./pages/ForumPage";
 import { ForumQuestionPage } from "./pages/ForumQuestionPage";
+import { StudyCalendarPage } from "./pages/StudyCalendarPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import { fetchNotifications } from "./lib/services/notifications.service";
@@ -157,6 +158,7 @@ function App() {
           <Route path="/ajustes/notificaciones" element={<NotificationSettingsPage />} />
           <Route path="/forum" element={<ForumPage />} />
           <Route path="/forum/pregunta/:id" element={<ForumQuestionPage />} />
+          <Route path="/calendario-estudio" element={<StudyCalendarPage />} />
         </Route>
         <Route
           path="/"

@@ -5,4 +5,8 @@ export class InMemoryMemberRepository implements IMemberRepository {
   async listByRequest(_input: { requestId: string; actorUserId: string }): Promise<Member[]> {
     return [];
   }
+
+  async findByGroup(_groupId: string): Promise<Member[]> {
+    return [];
+  }
 }

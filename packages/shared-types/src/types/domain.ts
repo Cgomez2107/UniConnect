@@ -5,6 +5,7 @@ import { StudyGroupSchema, StudyGroupMemberSchema, StudyRequestSchema, StudyAppl
 import { MessageSchema, ConversationSchema } from "../schemas/messaging.schema.js";
 import { StudyResourceSchema } from "../schemas/resource.schema.js";
 import { EventSchema } from "../schemas/event.schema.js";
+import { StudySessionSchema } from "../schemas/study-session.schema.js";
 import { NotificationSchema } from "../schemas/notification.schema.js";
 import { ForumQuestionSchema, ForumAnswerSchema, ForumVoteSchema, QuestionSummarySchema } from "../schemas/forum.schema.js";
 
@@ -24,6 +25,7 @@ export type Message = z.infer<typeof MessageSchema>;
 export type Conversation = z.infer<typeof ConversationSchema>;
 export type StudyResource = z.infer<typeof StudyResourceSchema>;
 export type Event = z.infer<typeof EventSchema>;
+export type StudySession = z.infer<typeof StudySessionSchema>;
 export type Notification = z.infer<typeof NotificationSchema>;
 export type ForumQuestion = z.infer<typeof ForumQuestionSchema>;
 export type ForumAnswer = z.infer<typeof ForumAnswerSchema>;

@@ -8,6 +8,7 @@ export * from "./schemas/event.schema.js";
 export * from "./schemas/notification.schema.js";
 export * from "./schemas/notification-preference.schema.js";
 export * from "./schemas/forum.schema.js";
+export * from "./schemas/study-session.schema.js";
 
 export * from "./api/_base.contract.js";
 export * from "./api/auth.contract.js";

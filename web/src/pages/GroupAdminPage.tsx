@@ -19,6 +19,7 @@ import { snakeToCamel } from "@uniconnect/shared-api";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
 import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
 import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
+import { CreateSessionModal } from "@/components/sessions/CreateSessionModal";
 import type { GroupState } from "@/types";
 
 // Backend: [{ userId, name }] → UI: [{ userId, displayName, position }]
@@ -79,6 +80,9 @@ export function GroupDashboardPage() {
   // --- Leave modal ---
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaveLoading, setLeaveLoading] = useState(false);
+
+  // --- Session modal ---
+  const [showSessionModal, setShowSessionModal] = useState(false);
 
   // --- Accept transfer ---
   const [acceptTransferLoading, setAcceptTransferLoading] = useState(false);
@@ -823,6 +827,11 @@ export function GroupDashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isMember && (
+            <Button variant="primary" size="sm" onClick={() => setShowSessionModal(true)}>
+              Programar sesiones
+            </Button>
+          )}
           {isAuthor && perms?.canTransfer && (
             <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
               Transferir admin
@@ -1281,6 +1290,13 @@ export function GroupDashboardPage() {
           </>
         )}
       </Modal>
+
+      <CreateSessionModal
+        isOpen={showSessionModal}
+        onClose={() => setShowSessionModal(false)}
+        onCreated={() => navigate(`/calendario-estudio?groupId=${id}`)}
+        preselectedGroupId={id}
+      />
     </div>
   );
 }

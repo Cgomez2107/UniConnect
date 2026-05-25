@@ -5,6 +5,7 @@ import {
   MessageSquare,
   MessageCircle,
   Calendar,
+  CalendarCheck,
   UserCircle,
   Bell,
   type LucideIcon,
@@ -23,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Recursos", route: "/recursos", icon: BookOpen },
   { label: "Mensajes", route: "/mensajes", icon: MessageSquare },
   { label: "Eventos", route: "/eventos", icon: Calendar },
+  { label: "Calendario", route: "/calendario-estudio", icon: CalendarCheck },
   { label: "Perfil", route: "/perfil", icon: UserCircle },
   { label: "Notificaciones", route: "/ajustes/notificaciones", icon: Bell },
 ];

@@ -68,6 +68,7 @@ export default function RootLayout() {
           <Stack.Screen name="postular/[id]" />
           <Stack.Screen name="perfil-estudiante/[id]" />
           <Stack.Screen name="recurso/[id]" />
+          <Stack.Screen name="estudio/sesiones" />
         </Stack>
       </React.Fragment>
     </ToastProvider>

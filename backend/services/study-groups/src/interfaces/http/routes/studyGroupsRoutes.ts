@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type { StudyGroupsController } from "../controllers/StudyGroupsController.js";
+import type { StudySessionsController } from "../controllers/StudySessionsController.js";
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   const body = JSON.stringify(payload);
@@ -16,6 +17,7 @@ export async function handleStudyGroupsRoutes(
   req: IncomingMessage,
   res: ServerResponse,
   controller: StudyGroupsController,
+  sessionsController?: StudySessionsController,
 ): Promise<boolean> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   const detailMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)$/);
@@ -138,6 +140,33 @@ export async function handleStudyGroupsRoutes(
   if (req.method === "POST" && messageReactionsMatch) {
     await controller.toggleMessageReaction(req, res, messageReactionsMatch[2]);
     return true;
+  }
+
+  if (sessionsController) {
+    const seriesMatch = requestUrl.pathname.match(
+      /^\/api\/v1\/study-groups\/([^/]+)\/sessions\/series$/,
+    );
+    const listMatch = requestUrl.pathname.match(
+      /^\/api\/v1\/study-groups\/([^/]+)\/sessions$/,
+    );
+    const cancelSessionMatch = requestUrl.pathname.match(
+      /^\/api\/v1\/study-groups\/sessions\/([^/]+)$/,
+    );
+
+    if (req.method === "POST" && seriesMatch) {
+      await sessionsController.handleCreateSeries(req, res, seriesMatch[1]);
+      return true;
+    }
+
+    if (req.method === "GET" && listMatch) {
+      await sessionsController.handleListByGroup(req, res, listMatch[1]);
+      return true;
+    }
+
+    if (req.method === "DELETE" && cancelSessionMatch) {
+      await sessionsController.handleCancel(req, res, cancelSessionMatch[1]);
+      return true;
+    }
   }
 
   return false;

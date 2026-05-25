@@ -125,6 +125,36 @@ export interface AdminRoleLeftEvent {
 }
 
 /**
+ * Evento: Sesión de estudio creada
+ */
+export interface SessionCreatedEvent {
+  readonly type: "SESSION_CREATED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly sessionId: string;
+  readonly groupId: string;
+  readonly title: string;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly createdBy: string;
+  readonly isRecurring: boolean;
+  readonly seriesId?: string | null;
+}
+
+/**
+ * Evento: Sesión de estudio cancelada
+ */
+export interface SessionCancelledEvent {
+  readonly type: "SESSION_CANCELLED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly sessionId: string;
+  readonly groupId: string;
+  readonly title: string;
+  readonly cancelledBy: string;
+}
+
+/**
  * Type Union: Representa TODOS los eventos posibles del dominio
  */
 export type StudyGroupEvent =
@@ -135,7 +165,9 @@ export type StudyGroupEvent =
   | AdminTransferAcceptedEvent
   | AdminTransferRejectedEvent
   | AdminTransferCompletedEvent
-  | AdminRoleLeftEvent;
+  | AdminRoleLeftEvent
+  | SessionCreatedEvent
+  | SessionCancelledEvent;
 
 /**
  * Extrae el tipo específico de un evento

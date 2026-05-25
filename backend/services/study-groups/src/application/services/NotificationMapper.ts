@@ -176,6 +176,33 @@ export class NotificationMapper {
           "normal",
         );
 
+      case "SESSION_CREATED":
+        return buildNotificacion(
+          event.createdBy,
+          "study_session_created",
+          event.title,
+          "Se ha creado una nueva sesión de estudio.",
+          {
+            sessionId: event.sessionId,
+            groupId: event.groupId,
+            startTime: event.startTime,
+          },
+          "normal",
+        );
+
+      case "SESSION_CANCELLED":
+        return buildNotificacion(
+          event.cancelledBy,
+          "study_session_cancelled",
+          event.title,
+          "Se ha cancelado una sesión de estudio.",
+          {
+            sessionId: event.sessionId,
+            groupId: event.groupId,
+          },
+          "normal",
+        );
+
       default: {
         const _exhaustive: never = event;
         throw new TypeError(`Tipo de evento no soportado: ${(_exhaustive as { type: string }).type}`);
