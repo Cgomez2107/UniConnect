@@ -1,15 +1,20 @@
 import { createServer, type IncomingMessage, type ServerResponse as NodeServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer, WebSocket } from "ws";
 
 import type { GatewayEnv } from "../shared/config/env.js";
 import { proxyRequest, type ProxyResponse } from "../shared/http/proxyRequest.js";
 import { sendJson } from "../shared/http/sendJson.js";
 import { JWTMiddleware, type JWTPayload } from "../middleware/JWTMiddleware.js";
+import { handleDocsRequest, handleOpenApiJson } from "../openapi/serveDocs.js";
 
 const conversationRooms = new Map<string, Set<WebSocket>>();
 const studyGroupRooms = new Map<string, Set<WebSocket>>();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 function getAppVersion(): string {
   try {
@@ -18,6 +23,15 @@ function getAppVersion(): string {
     return manifest.version ?? "0.0.0";
   } catch {
     return "0.0.0";
+  }
+}
+
+function getPackageDir(): string {
+  try {
+    const packageJsonPath = require.resolve("../../package.json", { paths: [__dirname] });
+    return dirname(packageJsonPath);
+  } catch {
+    return process.cwd();
   }
 }
 
@@ -419,6 +433,23 @@ async function handleRequest(
       status: "ok",
       version: appVersion,
     });
+    return;
+  }
+
+  if (
+    req.method === "GET" &&
+    (requestUrl.pathname === "/docs" ||
+      requestUrl.pathname === "/docs/" ||
+      requestUrl.pathname.startsWith("/docs/"))
+  ) {
+    handleDocsRequest(req, res);
+    return;
+  }
+
+  if (req.method === "GET" && requestUrl.pathname === "/openapi.json") {
+    const packageDir = getPackageDir();
+    const openApiPath = join(packageDir, "openapi.json");
+    handleOpenApiJson(res, openApiPath);
     return;
   }
 
