@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react"
 import { DIContainer } from "@/lib/services/di/container"
 import { supabase } from "@/lib/supabase"
 import { useUnreadCountStore } from "@/store/unreadCountStore"
-import type { Message, Conversation, Reaction } from "@/types"
+import type { Message, Conversation, PollData, Reaction } from "@/types"
 import type { CreateMessagePayload } from "@/lib/services/domain/repositories/IMessageRepository"
 
 interface PendingMessage {
@@ -270,6 +270,55 @@ export function useMessaging() {
     [container]
   )
 
+  const voteInPoll = useCallback(
+    async (messageId: string, optionIndex: number): Promise<PollData | null> => {
+      const gatewayUrl =
+        process.env.EXPO_PUBLIC_GATEWAY_URL ?? "http://localhost:3000";
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token ?? "";
+
+        const response = await fetch(
+          `${gatewayUrl}/api/v1/messages/${messageId}/polls/vote`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ optionIndex }),
+          },
+        );
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => null);
+          throw new Error(
+            errBody?.error ?? `Error al votar (${response.status})`,
+          );
+        }
+
+        const json = await response.json();
+        const poll = json?.data?.poll ?? json?.poll ?? null;
+
+        if (poll) {
+          setState((prev) => ({
+            ...prev,
+            messages: prev.messages.map((m) =>
+              m.id === messageId ? { ...m, poll_data: poll } : m,
+            ),
+          }));
+        }
+
+        return poll;
+      } catch (err) {
+        console.error("[useMessaging] voteInPoll error:", err);
+        throw err;
+      }
+    },
+    [],
+  );
+
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   const channelCleanup = useCallback(() => {
@@ -384,5 +433,6 @@ export function useMessaging() {
     getOrCreateConversation,
     handleMarkAsRead,
     subscribeToConversation,
+    voteInPoll,
   }
 }

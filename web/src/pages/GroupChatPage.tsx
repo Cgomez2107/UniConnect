@@ -140,6 +140,7 @@ export function GroupChatPage() {
 
           if (data.event === "new_group_message") {
             const mappedMsg = snakeToCamel(payload);
+            console.log("[DEBUG] WS new_group_message:", JSON.stringify({ id: mappedMsg.id, hasPoll: !!mappedMsg.poll, pollKeys: mappedMsg.poll ? Object.keys(mappedMsg.poll) : null, content: mappedMsg.content }));
             mappedMsg.mentions = transformMentions(mappedMsg.mentions);
             mappedMsg.reactions = transformReactions(mappedMsg.reactions);
             if (pendingTempIds.current.size > 0 && pendingTempIds.current.has(mappedMsg.id)) return;
@@ -184,6 +185,7 @@ export function GroupChatPage() {
   useChatObserver(id ?? null, (newMsg) => {
     const transformed = {
       ...newMsg,
+      poll: newMsg.pollData ?? newMsg.poll ?? null,
       mentions: transformMentions(newMsg.mentions),
       reactions: transformReactions(newMsg.reactions),
     };
@@ -206,7 +208,7 @@ export function GroupChatPage() {
     return { url: result.url, type: file.type };
   };
 
-  const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string }) => {
+  const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string; poll?: any }) => {
     if (!content.trim() || !id) return;
 
     const tempId = `temp-${Date.now()}`;
@@ -224,6 +226,7 @@ export function GroupChatPage() {
       reply_preview: replyingTo?.content || null,
       media_url: options?.mediaUrl || null,
       media_type: options?.mediaType || null,
+      poll: options?.poll || null,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -237,8 +240,10 @@ export function GroupChatPage() {
         mentions,
         mediaUrl: options?.mediaUrl,
         mediaType: options?.mediaType,
+        poll: options?.poll,
       });
       pendingTempIds.current.delete(tempId);
+      console.log("[DEBUG] sendMessage response:", JSON.stringify({ id: msg.id, hasPoll: !!msg.poll, pollKeys: msg.poll ? Object.keys(msg.poll) : null, content: msg.content }));
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) {
           return prev.filter((m) => m.id !== tempId);

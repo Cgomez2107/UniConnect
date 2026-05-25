@@ -165,6 +165,19 @@ export interface Reaction {
   user_id: string;
 }
 
+export interface PollOption {
+  text: string;
+  votes: string[];
+}
+
+export interface PollData {
+  question: string;
+  options: PollOption[];
+  is_open: boolean;
+  closes_at: string | null;
+  created_at: string;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -180,6 +193,7 @@ export interface Message {
   created_at: string;
   read_at: string | null;
   reactions?: Reaction[];
+  poll_data?: PollData | null;
   // join
   sender?: { full_name: string; avatar_url: string | null };
 }

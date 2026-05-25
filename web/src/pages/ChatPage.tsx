@@ -101,6 +101,7 @@ export const ChatPage: React.FC = () => {
         mediaUrl: m.media_url || m.mediaUrl || null,
         mediaType: m.media_type || m.mediaType || null,
         reactions: m.reactions || [],
+        poll: m.poll ?? null,
       })));
     } catch (error) {
       console.error("Error fetching conversation:", error);
@@ -140,6 +141,21 @@ export const ChatPage: React.FC = () => {
             if (prev.some((m) => m.id === mappedMsg.id)) return prev;
             return [...prev, { ...mappedMsg, clientStatus: "sent" }];
           });
+        } else if (data.event === "poll_updated") {
+          const { messageId, poll } = payload;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, poll } : m
+            )
+          );
+        } else if (data.event === "poll_closed") {
+          const { messageId } = payload;
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id !== messageId || !m.poll) return m;
+              return { ...m, poll: { ...m.poll, isOpen: false } };
+            })
+          );
         } else if (data.event === "reaction_updated") {
           console.log("[ChatPage WS] reaction_updated ENTERED");
           const { messageId, reactions } = payload;
@@ -189,9 +205,10 @@ export const ChatPage: React.FC = () => {
 
   const handleSendMessage = async (
     content: string,
-    mentions: { userId: string; name: string }[] = []
+    mentions: { userId: string; name: string }[] = [],
+    options?: { mediaUrl?: string; mediaType?: string; poll?: PollDataUI }
   ) => {
-    if (!content.trim()) return;
+    if (!content.trim() && !options?.poll) return;
 
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: Message = {
@@ -205,6 +222,7 @@ export const ChatPage: React.FC = () => {
       replyToMessageId: replyingTo?.id || null,
       replyPreview: replyingTo?.content || null,
       reactions: [],
+      poll: options?.poll || null,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -213,16 +231,26 @@ export const ChatPage: React.FC = () => {
     pendingTempIds.current.add(tempId);
     setIsSending(true);
 
+    const payload: Record<string, unknown> = {
+      conversationId,
+      content: content.trim(),
+      replyToMessageId: replyTo?.id || undefined,
+    };
+
+    if (options?.mediaUrl) {
+      payload.mediaUrl = options.mediaUrl;
+      payload.mediaType = options.mediaType;
+    }
+
+    if (options?.poll) {
+      payload.poll = options.poll;
+    }
+
     try {
-      const response = await apiClient.post("/messages", {
-        conversationId,
-        content: optimisticMsg.content,
-        replyToMessageId: replyTo?.id || undefined,
-      });
+      const response = await apiClient.post("/messages", payload);
       const msg = response.data?.data || response.data;
       pendingTempIds.current.delete(tempId);
       setMessages((prev) => {
-        // If WS already delivered this message, just remove the temp entry
         if (prev.some((m) => m.id === msg.id)) {
           return prev.filter((m) => m.id !== tempId);
         }
@@ -434,6 +462,22 @@ export const ChatPage: React.FC = () => {
               }
               onRetry={handleRetry}
               onReply={(m) => setReplyingTo(m)}
+              onVote={async (messageId, optionIndex) => {
+                try {
+                  const response = await apiClient.post(
+                    `/messages/${messageId}/polls/vote`,
+                    { optionIndex },
+                  );
+                  const data = response.data?.data || response.data;
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === messageId ? { ...m, poll: data.poll } : m
+                    )
+                  );
+                } catch (err) {
+                  console.error("Error voting:", err);
+                }
+              }}
               onToggleReaction={async (messageId, emoji) => {
                 const result = await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
                 const data = result.data?.data || result.data;
