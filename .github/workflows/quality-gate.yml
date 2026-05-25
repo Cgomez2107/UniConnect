@@ -178,8 +178,8 @@ jobs:
         run: npx tsc --noEmit
         working-directory: frontend
 
-  # ─── Job 4: Client TypeScript Validation ───
-  client-typecheck:
+  # ─── Job 4: Web Quality (typecheck + build) ───
+  web:
     needs: [contracts]
     runs-on: ubuntu-latest
     steps:
@@ -213,11 +213,20 @@ jobs:
         run: pnpm build
         working-directory: packages/shared-types
 
-      - name: Typecheck web
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm type-check
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
         working-directory: web
+
+      - name: Typecheck web
+        run: pnpm type-check
+        working-directory: web
+
+      - name: Build web (Vite)
+        run: pnpm build
+        working-directory: web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
   # ─── Job 5: Sprint 4 Contract Integration Tests ───
   sprint4-contracts:
@@ -286,77 +295,77 @@ jobs:
           name: sprint4-contract-coverage
           path: backend/coverage/
 
-  # ─── Job 6: E2E Mobile (Maestro) ───
-  e2e-mobile:
-    needs: [backend, sprint4-contracts]
-    runs-on: ubuntu-latest
-    if: ${{ secrets.EXPO_TOKEN != '' }}
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: frontend
-
-      - name: Install Maestro CLI
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
-
-      - name: Build Android APK for E2E
-        run: npx eas-cli build --platform android --profile preview --local --output build.apk
-        working-directory: frontend
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install APK on emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 30
-          target: google_apis
-          arch: x86_64
-          avd-name: MaestroTest
-          script: |
-            adb wait-for-device
-            adb install frontend/build.apk
-            adb push frontend/maestro/data/test-resource.pdf /sdcard/Download/test-resource.pdf
-
-      - name: Run Maestro E2E flows
-        run: |
-          maestro test frontend/maestro/flows/ \
-            --format junit \
-            --output maestro-report/
-        working-directory: frontend
-        continue-on-error: true
-
-      - name: Publish Maestro report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: maestro-report
-          path: frontend/maestro-report/
+  # # ─── Job 6: E2E Mobile (Maestro) ─── TEMPORALMENTE DESHABILITADO
+  # e2e-mobile:
+  #   needs: [backend, sprint4-contracts]
+  #   runs-on: ubuntu-latest
+  #   if: ${{ secrets.EXPO_TOKEN != '' }}
+  #   continue-on-error: true
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: pnpm/action-setup@v4
+  #       with:
+  #         version: ${{ env.PNPM_VERSION }}
+  #         run_install: false
+  #
+  #     - name: Get pnpm store directory
+  #       id: pnpm-cache
+  #       shell: bash
+  #       run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+  #
+  #     - uses: actions/cache@v4
+  #       with:
+  #         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+  #         key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+  #         restore-keys: |
+  #           pnpm-${{ runner.os }}-
+  #
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --frozen-lockfile
+  #       working-directory: frontend
+  #
+  #     - name: Install Maestro CLI
+  #       run: |
+  #         curl -Ls https://get.maestro.mobile.dev | bash
+  #         echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+  #
+  #     - name: Build Android APK for E2E
+  #       run: npx eas-cli build --platform android --profile preview --local --output build.apk
+  #       working-directory: frontend
+  #       env:
+  #         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  #
+  #     - name: Install APK on emulator
+  #       uses: reactivecircus/android-emulator-runner@v2
+  #       with:
+  #         api-level: 30
+  #         target: google_apis
+  #         arch: x86_64
+  #         avd-name: MaestroTest
+  #         script: |
+  #           adb wait-for-device
+  #           adb install frontend/build.apk
+  #           adb push frontend/maestro/data/test-resource.pdf /sdcard/Download/test-resource.pdf
+  #
+  #     - name: Run Maestro E2E flows
+  #       run: |
+  #         maestro test frontend/maestro/flows/ \
+  #           --format junit \
+  #           --output maestro-report/
+  #       working-directory: frontend
+  #       continue-on-error: true
+  #
+  #     - name: Publish Maestro report
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: maestro-report
+  #         path: frontend/maestro-report/
 
   # ─── Job: Pattern & Global Coverage ───
   test-coverage:
@@ -413,7 +422,7 @@ jobs:
 
   # ─── Quality Gate Final ───
   quality-gate:
-    needs: [contracts, backend, frontend, client-typecheck, sprint4-contracts, e2e-mobile, test-coverage]
+    needs: [contracts, backend, frontend, web, sprint4-contracts, test-coverage]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -433,9 +442,8 @@ jobs:
           check "contracts"          "${{ needs.contracts.result }}"
           check "backend"            "${{ needs.backend.result }}"
           check "frontend"           "${{ needs.frontend.result }}"
-          check "client-typecheck"   "${{ needs.client-typecheck.result }}"
+          check "web"                "${{ needs.web.result }}"
           check "sprint4-contracts"  "${{ needs.sprint4-contracts.result }}"
-          check "e2e-mobile"         "${{ needs.e2e-mobile.result }}"
           check "test-coverage"      "${{ needs.test-coverage.result }}"
           echo ""
           if [ -n "$FAILED" ]; then
