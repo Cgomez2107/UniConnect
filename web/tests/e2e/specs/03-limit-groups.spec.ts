@@ -33,7 +33,7 @@ test.describe("C3 - Group limit per subject", () => {
     });
     expect(token).toBeTruthy();
 
-    const gatewayUrl = "http://localhost:3000";
+    const gatewayUrl = process.env.E2E_GATEWAY_URL || "https://uniconnect-backend-grupo-2.fly.dev";
 
     for (let i = 0; i < 3; i++) {
       const response = await page.request.post(`${gatewayUrl}/api/v1/study-groups`, {

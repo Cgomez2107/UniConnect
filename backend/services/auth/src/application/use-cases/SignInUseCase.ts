@@ -2,7 +2,7 @@ import bcryptjs from "bcryptjs";
 import { IAuthRepository } from "../../domain/repositories/IAuthRepository.js";
 import { ITokenRepository } from "../../domain/repositories/ITokenRepository.js";
 import { SignInRequest, SignInResponse } from "../dtos/index.js";
-import { AuthenticationError } from "../../../../../shared/libs/errors/index.js";
+import { AuthenticationError, ValidationError } from "../../../../../shared/libs/errors/index.js";
 
 export class SignInUseCase {
   constructor(
@@ -12,6 +12,10 @@ export class SignInUseCase {
   ) {}
 
   async execute(request: SignInRequest): Promise<SignInResponse> {
+    if (!request.email.endsWith("@ucaldas.edu.co")) {
+      throw new ValidationError("Solo se permite inicio de sesión con correo institucional @ucaldas.edu.co");
+    }
+
     // Buscar usuario
     const user = await this.authRepository.findByEmail(request.email);
     if (!user) {
