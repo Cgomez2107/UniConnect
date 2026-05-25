@@ -360,7 +360,7 @@ export function GroupDashboardPage() {
         title: `Nueva solicitud de ${name}`,
         description: "",
         read: false,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         data: {},
       });
       studyGroupsService.getStudyGroupApplications(id!).then(setApplications).catch(() => {});
@@ -375,7 +375,7 @@ export function GroupDashboardPage() {
         title: `${name} fue aceptado/a`,
         description: "",
         read: false,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         data: {},
       });
       Promise.all([
@@ -396,7 +396,7 @@ export function GroupDashboardPage() {
         title: `${name} fue rechazado/a`,
         description: "",
         read: false,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         data: {},
       });
       studyGroupsService.getStudyGroupApplications(id!).then(setApplications).catch(() => {});

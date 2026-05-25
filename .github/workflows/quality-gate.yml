@@ -170,8 +170,8 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: frontend
 
-      - name: Build shared-types for frontend
-        run: pnpm build
+      - name: Generate shared-types artifacts for frontend
+        run: pnpm prebuild
         working-directory: frontend/shared-types
 
       - name: Typecheck frontend (mobile)
@@ -396,7 +396,7 @@ jobs:
 
       - name: Build shared-types
         run: pnpm build
-        working-directory: ../packages/shared-types
+        working-directory: packages/shared-types
 
       - name: Run tests with coverage
         run: pnpm test:coverage

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UuidSchema, DateStringSchema } from "./_common.schema";
+import { UuidSchema, DateStringSchema } from "./_common.schema.js";
 
 export const ForumQuestionStatusEnum = z.enum(["active", "solved", "closed"]);
 

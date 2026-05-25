@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { UuidSchema, DateStringSchema, UrlSchema } from "./_common.schema";
-import { UserSchema, UserDTOSchema } from "./auth.schema";
-import { SubjectSchema, SubjectDTOSchema } from "./user.schema";
+import { UuidSchema, DateStringSchema, UrlSchema } from "./_common.schema.js";
+import { UserSchema, UserDTOSchema } from "./auth.schema.js";
+import { SubjectSchema, SubjectDTOSchema } from "./user.schema.js";
 
 export const ResourceTypeEnum = z.enum(["pdf", "document", "video", "link", "image", "other"]);
 

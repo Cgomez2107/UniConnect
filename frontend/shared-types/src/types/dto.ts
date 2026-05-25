@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { UserDTOSchema, AuthProfileDTOSchema } from "../schemas/auth.schema";
-import { ProfileDTOSchema, FacultyDTOSchema, ProgramDTOSchema, SubjectDTOSchema, UserSubjectDTOSchema, UserProgramDTOSchema } from "../schemas/user.schema";
-import { StudyGroupDTOSchema, StudyGroupMemberDTOSchema, StudyApplicationDTOSchema } from "../schemas/study-group.schema";
-import { MessageDTOSchema, ConversationDTOSchema } from "../schemas/messaging.schema";
-import { StudyResourceDTOSchema } from "../schemas/resource.schema";
-import { EventDTOSchema } from "../schemas/event.schema";
-import { NotificationDTOSchema } from "../schemas/notification.schema";
-import { ForumQuestionDTOSchema, ForumAnswerDTOSchema, ForumVoteDTOSchema, ForumQuestionSummaryDTOSchema } from "../schemas/forum.schema";
+import { UserDTOSchema, AuthProfileDTOSchema } from "../schemas/auth.schema.js";
+import { ProfileDTOSchema, FacultyDTOSchema, ProgramDTOSchema, SubjectDTOSchema, UserSubjectDTOSchema, UserProgramDTOSchema } from "../schemas/user.schema.js";
+import { StudyGroupDTOSchema, StudyGroupMemberDTOSchema, StudyApplicationDTOSchema } from "../schemas/study-group.schema.js";
+import { MessageDTOSchema, ConversationDTOSchema } from "../schemas/messaging.schema.js";
+import { StudyResourceDTOSchema } from "../schemas/resource.schema.js";
+import { EventDTOSchema } from "../schemas/event.schema.js";
+import { NotificationDTOSchema } from "../schemas/notification.schema.js";
+import { ForumQuestionDTOSchema, ForumAnswerDTOSchema, ForumVoteDTOSchema, ForumQuestionSummaryDTOSchema } from "../schemas/forum.schema.js";
 
 export type UserDTO = z.infer<typeof UserDTOSchema>;
 export type AuthProfileDTO = z.infer<typeof AuthProfileDTOSchema>;

@@ -4,12 +4,15 @@ export declare const PrioridadEnum: z.ZodEnum<["normal", "urgente", "critica"]>;
 export declare const AccionSchema: z.ZodObject<{
     label: z.ZodString;
     endpoint: z.ZodString;
+    method: z.ZodOptional<z.ZodEnum<["GET", "POST", "PUT", "DELETE"]>>;
 }, "strip", z.ZodTypeAny, {
     label: string;
     endpoint: string;
+    method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
 }, {
     label: string;
     endpoint: string;
+    method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
 }>;
 export declare const NotificationSchema: z.ZodObject<{
     id: z.ZodString;
@@ -25,12 +28,15 @@ export declare const NotificationSchema: z.ZodObject<{
     action: z.ZodOptional<z.ZodObject<{
         label: z.ZodString;
         endpoint: z.ZodString;
+        method: z.ZodOptional<z.ZodEnum<["GET", "POST", "PUT", "DELETE"]>>;
     }, "strip", z.ZodTypeAny, {
         label: string;
         endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
     }, {
         label: string;
         endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
     }>>;
 }, "strip", z.ZodTypeAny, {
     type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
@@ -46,6 +52,7 @@ export declare const NotificationSchema: z.ZodObject<{
     action?: {
         label: string;
         endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
     } | undefined;
 }, {
     type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
@@ -61,6 +68,7 @@ export declare const NotificationSchema: z.ZodObject<{
     action?: {
         label: string;
         endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
     } | undefined;
 }>;
 export declare const NotificationDTOSchema: z.ZodObject<{
@@ -77,12 +85,15 @@ export declare const NotificationDTOSchema: z.ZodObject<{
     action: z.ZodOptional<z.ZodObject<{
         label: z.ZodString;
         endpoint: z.ZodString;
+        method: z.ZodOptional<z.ZodEnum<["GET", "POST", "PUT", "DELETE"]>>;
     }, "strip", z.ZodTypeAny, {
         label: string;
         endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
     }, {
         label: string;
         endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
     }>>;
 }, "strip", z.ZodTypeAny, {
     type: "mention" | "message" | "system" | "study_group_application" | "study_group_accepted" | "study_group_rejected" | "friend_request";
@@ -97,6 +108,7 @@ export declare const NotificationDTOSchema: z.ZodObject<{
     action?: {
         label: string;
         endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
     } | undefined;
     action_url?: string | undefined;
 }, {
@@ -112,6 +124,7 @@ export declare const NotificationDTOSchema: z.ZodObject<{
     action?: {
         label: string;
         endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
     } | undefined;
     action_url?: string | undefined;
 }>;

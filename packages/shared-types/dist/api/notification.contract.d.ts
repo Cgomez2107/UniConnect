@@ -41,12 +41,15 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
         action: z.ZodOptional<z.ZodObject<{
             label: z.ZodString;
             endpoint: z.ZodString;
+            method: z.ZodOptional<z.ZodEnum<["GET", "POST", "PUT", "DELETE"]>>;
         }, "strip", z.ZodTypeAny, {
             label: string;
             endpoint: string;
+            method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
         }, {
             label: string;
             endpoint: string;
+            method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
         }>>;
     }, "strip", z.ZodTypeAny, {
         type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
@@ -62,6 +65,7 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
         action?: {
             label: string;
             endpoint: string;
+            method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
         } | undefined;
     }, {
         type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
@@ -77,6 +81,7 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
         action?: {
             label: string;
             endpoint: string;
+            method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
         } | undefined;
     }>, "many">;
     total: z.ZodNumber;
@@ -100,6 +105,7 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
         action?: {
             label: string;
             endpoint: string;
+            method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
         } | undefined;
     }[];
 }, {
@@ -120,6 +126,7 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
         action?: {
             label: string;
             endpoint: string;
+            method?: "GET" | "POST" | "PUT" | "DELETE" | undefined;
         } | undefined;
     }[];
 }>;

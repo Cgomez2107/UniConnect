@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { UuidSchema, DateStringSchema } from "./_common.schema";
-import { UserSchema, UserDTOSchema } from "./auth.schema";
-import { SubjectSchema, SubjectDTOSchema } from "./user.schema";
+import { UuidSchema, DateStringSchema } from "./_common.schema.js";
+import { UserSchema, UserDTOSchema } from "./auth.schema.js";
+import { SubjectSchema, SubjectDTOSchema } from "./user.schema.js";
 
 export const StudyGroupStatusEnum = z.enum(["activa", "inactiva", "finalizada"]);
 export const ApplicationStatusEnum = z.enum(["pendiente", "aprobada", "rechazada"]);

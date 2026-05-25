@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "strict": true,
     "declaration": true,
     "declarationMap": true,
@@ -15,7 +15,8 @@
     "resolveJsonModule": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "composite": true
+    "composite": true,
+    "emitDeclarationOnly": true
   },
   "include": [
     "src/**/*.ts",

@@ -53,10 +53,10 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
 
-      - name: Build shared-types for frontend
+      - name: Generate shared-types artifacts for frontend
         run: |
           cd shared-types
-          pnpm build
+          pnpm prebuild
 
       - name: Run Playwright E2E
         run: pnpm test:e2e

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { UuidSchema, DateStringSchema } from "./_common.schema";
-import { UserSchema, UserDTOSchema } from "./auth.schema";
+import { UuidSchema, DateStringSchema } from "./_common.schema.js";
+import { UserSchema, UserDTOSchema } from "./auth.schema.js";
 
 export const ProfileSchema = UserSchema.extend({
   bio: z.string().max(500).optional(),

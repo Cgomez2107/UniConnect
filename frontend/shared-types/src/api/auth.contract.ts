@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { EmailSchema } from "../schemas/_common.schema";
-import { AuthProfileSchema, UserRoleEnum } from "../schemas/auth.schema";
-import type { ApiContract } from "./_base.contract";
+import { EmailSchema } from "../schemas/_common.schema.js";
+import { AuthProfileSchema, UserRoleEnum } from "../schemas/auth.schema.js";
+import type { ApiContract } from "./_base.contract.js";
 
 export const LoginRequestSchema = z.object({
   body: z.object({

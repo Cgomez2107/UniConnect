@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { StudyResourceSchema } from "../schemas/resource.schema";
-import type { ApiContract } from "./_base.contract";
+import { StudyResourceSchema } from "../schemas/resource.schema.js";
+import type { ApiContract } from "./_base.contract.js";
 
 export const CreateResourceRequestSchema = z.object({
   body: z.object({

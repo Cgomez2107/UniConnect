@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { UuidSchema, PaginationSchema } from "../schemas/_common.schema";
+import { UuidSchema, PaginationSchema } from "../schemas/_common.schema.js";
 import {
   ForumQuestionSchema,
   ForumQuestionSummarySchema,
   ForumAnswerSchema,
   ForumQuestionDetailSchema,
-} from "../schemas/forum.schema";
-import type { ApiContract } from "./_base.contract";
+} from "../schemas/forum.schema.js";
+import type { ApiContract } from "./_base.contract.js";
 
 // ── Create Question ─────────────────────────────────────────────────────────
 export const CreateQuestionRequestSchema = z.object({

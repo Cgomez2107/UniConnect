@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { UserSchema, AuthProfileSchema } from "../schemas/auth.schema";
-import { ProfileSchema, FacultySchema, ProgramSchema, SubjectSchema, UserSubjectSchema, UserProgramSchema } from "../schemas/user.schema";
-import { StudyGroupSchema, StudyGroupMemberSchema, StudyRequestSchema, StudyApplicationSchema } from "../schemas/study-group.schema";
-import { MessageSchema, ConversationSchema } from "../schemas/messaging.schema";
-import { StudyResourceSchema } from "../schemas/resource.schema";
-import { EventSchema } from "../schemas/event.schema";
-import { NotificationSchema } from "../schemas/notification.schema";
-import { ForumQuestionSummarySchema } from "../schemas/forum.schema";
+import { UserSchema, AuthProfileSchema } from "../schemas/auth.schema.js";
+import { ProfileSchema, FacultySchema, ProgramSchema, SubjectSchema, UserSubjectSchema, UserProgramSchema } from "../schemas/user.schema.js";
+import { StudyGroupSchema, StudyGroupMemberSchema, StudyRequestSchema, StudyApplicationSchema } from "../schemas/study-group.schema.js";
+import { MessageSchema, ConversationSchema } from "../schemas/messaging.schema.js";
+import { StudyResourceSchema } from "../schemas/resource.schema.js";
+import { EventSchema } from "../schemas/event.schema.js";
+import { NotificationSchema } from "../schemas/notification.schema.js";
+import { ForumQuestionSummarySchema } from "../schemas/forum.schema.js";
 
 export type User = z.infer<typeof UserSchema>;
 export type AuthProfile = z.infer<typeof AuthProfileSchema>;

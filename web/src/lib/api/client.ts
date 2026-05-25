@@ -241,7 +241,7 @@ apiClient.interceptors.response.use(
             type: "system",
             title: friendly,
             read: false,
-            createdAt: new Date(),
+            createdAt: new Date().toISOString(),
           };
           store.addNotification(toastNotif);
         }

@@ -58,14 +58,14 @@ export function SolicitudesPage() {
   const enrolledRequests = requests;
 
   const requestsWithMissingAuthor = useMemo(
-    () => enrolledRequests.filter((r) => !r.creatorName && !r.profiles?.fullName).map((r) => r.authorId),
+    () => enrolledRequests.filter((r: any) => !r.creatorName && !r.profiles?.fullName).map((r: any) => r.authorId),
     [enrolledRequests],
   );
   const profileNames = useProfileNames(requestsWithMissingAuthor);
 
   const enrichedRequests = useMemo(
     () =>
-      enrolledRequests.map((r) => {
+      enrolledRequests.map((r: any) => {
         if (r.creatorName || r.profiles?.fullName) return r;
         const data = profileNames.get(r.authorId);
         if (!data?.fullName) return r;

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { NotificationSchema } from "../schemas/notification.schema";
-import { NotificationPreferenceSchema } from "../schemas/notification-preference.schema";
+import { NotificationSchema } from "../schemas/notification.schema.js";
+import { NotificationPreferenceSchema } from "../schemas/notification-preference.schema.js";
 
 export const GetNotificationsRequestSchema = z.object({
   query: z.object({

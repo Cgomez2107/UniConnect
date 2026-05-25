@@ -83,11 +83,13 @@ export function GroupChatPage() {
         setMessages((msgs || []).reverse());
         setMembers(membersData || []);
         setGroupName(groupData?.name || "Chat del grupo");
-        const computedState: GroupState = groupData?.status === "cerrada"
+        const groupStatus = (groupData as any)?.status as string;
+        const hasPendingTransfer = !!(groupData as any)?.hasPendingTransfer;
+        const computedState: GroupState = groupStatus === "cerrada"
           ? "Disuelto"
-          : groupData?.status === "expirada"
+          : groupStatus === "expirada"
             ? "Bloqueado"
-            : groupData?.hasPendingTransfer
+            : hasPendingTransfer
               ? "PendienteTransferencia"
               : "Activo";
         setGroupState(computedState);

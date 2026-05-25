@@ -8,7 +8,14 @@ import { GATEWAY_BASE_URL, API_PREFIX } from "@/lib/api/client";
 
 type Prioridad = "normal" | "urgente" | "critica";
 
-interface NotificacionData extends Notification {
+interface NotificacionData {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  description: string;
+  read: boolean;
+  createdAt: string;
   priority?: Prioridad;
   action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
   data?: Record<string, any>;

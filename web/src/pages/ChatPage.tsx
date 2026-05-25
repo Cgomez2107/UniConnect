@@ -112,7 +112,7 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const connectWs = useCallback(() => {
     if (wsRef.current) {

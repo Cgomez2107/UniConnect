@@ -176,6 +176,12 @@ export interface Notification {
     read: boolean;
     data?: Record<string, any>;
     createdAt: Date;
+    priority?: "normal" | "urgente" | "critica";
+    action?: {
+        label: string;
+        endpoint: string;
+        method?: "GET" | "POST" | "PUT" | "DELETE";
+    };
 }
 export interface StudyResource {
     id: string;
