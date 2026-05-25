@@ -117,7 +117,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set(state => ({
               user: state.user ? {
                 ...state.user,
-                email: profile.email || state.user.email,
+                email: (profile as any)?.email || state.user.email,
                 fullName: profile.full_name || state.user.fullName,
                 avatarUrl: profile.avatar_url || state.user.avatarUrl,
                 role: normalizeRole(profile.role),
@@ -161,7 +161,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data: { subscription } } = subscribeAuthStateChanges.execute(async (event, session) => {
       console.log("[authStore] Cambio de estado detectado:", event);
       
-      if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+      if (event === "SIGNED_OUT" || (event as string) === "USER_DELETED") {
         set({ user: null, isAuthenticated: false, isHydrating: false });
         return;
       }
@@ -169,7 +169,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (session?.user) {
         await processSession(session);
       } else {
-        // Si no hay sesión inicial, marcamos como hidratado para que el usuario pueda ver el login
         if (event === "INITIAL_SESSION" || event === "SIGNED_OUT") {
           set({ user: null, isAuthenticated: false, isHydrating: false });
         }

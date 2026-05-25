@@ -209,7 +209,7 @@ export function RequestDetailContent({
           {request.author_bio !== currentUserId && (
             <TouchableOpacity
               style={[styles.chatMemberBtn, { borderColor: C.primary }]}
-              onPress={() => onOpenMemberChat(request.author_bio, request.author_name)}
+              onPress={() => onOpenMemberChat(request.author_bio ?? "", request.author_name ?? "")}
               disabled={chatLoading}
               activeOpacity={0.85}
             >
