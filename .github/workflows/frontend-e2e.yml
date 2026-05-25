@@ -50,13 +50,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
-
       - name: Generate shared-types artifacts for frontend
         run: |
           cd shared-types
           pnpm prebuild
+
+      - name: Build web for E2E
+        run: npx expo export --platform web --output-dir dist-web
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
 
       - name: Run Playwright E2E
         run: pnpm test:e2e

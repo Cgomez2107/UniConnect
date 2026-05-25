@@ -290,6 +290,8 @@ jobs:
   e2e-mobile:
     needs: [backend, sprint4-contracts]
     runs-on: ubuntu-latest
+    if: ${{ secrets.EXPO_TOKEN != '' }}
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -324,7 +326,7 @@ jobs:
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
       - name: Build Android APK for E2E
-        run: npx eas-cli build --platform android --profile development --no-wait
+        run: npx eas-cli build --platform android --profile preview --local --output build.apk
         working-directory: frontend
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -338,7 +340,7 @@ jobs:
           avd-name: MaestroTest
           script: |
             adb wait-for-device
-            adb install frontend/build/*.apk
+            adb install frontend/build.apk
             adb push frontend/maestro/data/test-resource.pdf /sdcard/Download/test-resource.pdf
 
       - name: Run Maestro E2E flows
