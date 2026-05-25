@@ -20,6 +20,20 @@ export class InMemoryStudyGroupMessageRepository implements IStudyGroupMessageRe
     requestId: string;
     actorUserId: string;
     content: string;
+    mediaUrl?: string;
+    mediaType?: string;
+    mediaFilename?: string;
+    mentions?: any[];
+    poll?: {
+      question: string;
+      options: Array<{
+        text: string;
+        votes: string[];
+      }>;
+      isOpen: boolean;
+      closesAt: string | null;
+      createdAt: string;
+    };
   }): Promise<StudyGroupMessage> {
     const created: StudyGroupMessage = {
       id: crypto.randomUUID(),
@@ -29,6 +43,12 @@ export class InMemoryStudyGroupMessageRepository implements IStudyGroupMessageRe
       createdAt: new Date().toISOString(),
       senderFullName: null,
       senderAvatarUrl: null,
+      mediaUrl: input.mediaUrl ?? null,
+      mediaType: input.mediaType ?? null,
+      mediaFilename: input.mediaFilename ?? null,
+      mentions: input.mentions ?? [],
+      reactions: [],
+      poll: input.poll ?? null,
     };
 
     this.messages.unshift(created);
@@ -53,5 +73,59 @@ export class InMemoryStudyGroupMessageRepository implements IStudyGroupMessageRe
 
     (message as any).reactions = updated;
     return updated;
+  }
+
+  async voteInPoll(messageId: string, userId: string, optionIndex: number): Promise<{ requestId: string; poll: any }> {
+    const message = this.messages.find((m) => m.id === messageId);
+    if (!message) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    if (!message.poll) {
+      throw new Error("Este mensaje no contiene una encuesta.");
+    }
+
+    if (!message.poll.isOpen) {
+      throw new Error("La encuesta ya está cerrada.");
+    }
+
+    if (optionIndex < 0 || optionIndex >= message.poll.options.length) {
+      throw new Error("Opción inválida.");
+    }
+
+    const alreadyVoted = message.poll.options.some((opt) => opt.votes.includes(userId));
+    if (alreadyVoted) {
+      throw new Error("Ya has votado en esta encuesta.");
+    }
+
+    const updatedOptions = message.poll.options.map((opt, i) => {
+      if (i === optionIndex) {
+        return { ...opt, votes: [...opt.votes, userId] };
+      }
+      return opt;
+    });
+
+    const updatedPoll = {
+      ...message.poll,
+      options: updatedOptions,
+    };
+
+    (message as any).poll = updatedPoll;
+    return { requestId: message.requestId, poll: updatedPoll };
+  }
+
+  async closePoll(messageId: string): Promise<{ requestId: string; poll: any }> {
+    const message = this.messages.find((m) => m.id === messageId);
+    if (!message) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    if (!message.poll) {
+      throw new Error("Este mensaje no contiene una encuesta.");
+    }
+
+    const updatedPoll = { ...message.poll, isOpen: false };
+    (message as any).poll = updatedPoll;
+    return { requestId: message.requestId, poll: updatedPoll };
   }
 }

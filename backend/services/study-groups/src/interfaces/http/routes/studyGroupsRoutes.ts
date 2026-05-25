@@ -25,6 +25,7 @@ export async function handleStudyGroupsRoutes(
   const applicationsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/applications$/);
   const messagesMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages$/);
   const messageReactionsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
+  const messagePollVoteMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/polls\/vote$/);
   const applyMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/apply$/);
   const leaveMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/leave$/);
   const cancelMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/cancel$/);
@@ -139,6 +140,11 @@ export async function handleStudyGroupsRoutes(
 
   if (req.method === "POST" && messageReactionsMatch) {
     await controller.toggleMessageReaction(req, res, messageReactionsMatch[2]);
+    return true;
+  }
+
+  if (req.method === "POST" && messagePollVoteMatch) {
+    await controller.voteInPollHandler(req, res, messagePollVoteMatch[2]);
     return true;
   }
 

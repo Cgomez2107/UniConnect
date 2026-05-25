@@ -16,6 +16,7 @@ import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransf
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
 import { ToggleStudyGroupMessageReaction } from "./application/use-cases/ToggleStudyGroupMessageReaction.js";
+import { VoteInPoll } from "./application/use-cases/VoteInPoll.js";
 import { CreateStudySessionSeries } from "./application/use-cases/CreateStudySessionSeries.js";
 import { CancelStudySession } from "./application/use-cases/CancelStudySession.js";
 import { ListStudySessions } from "./application/use-cases/ListStudySessions.js";
@@ -75,6 +76,9 @@ import {
   type IRealtimeService as IGroupRealtimeService,
   type IIdempotencyStore as IGroupIdempotencyStore,
 } from "../../messaging/src/domain/events/index.js";
+import { PollTimerService } from "../../messaging/src/domain/services/PollTimerService.js";
+import type { PollClosedEvent } from "../../messaging/src/domain/events/index.js";
+import { createGroupChannel } from "../../messaging/src/domain/events/index.js";
 
 interface Repositories {
   studyRequest: IStudyRequestRepository;
@@ -321,6 +325,28 @@ function bootstrap(): void {
   const listMembersByRequest = new ListMembersByRequest(memberRepository);
   const listApplicationsByRequest = new ListApplicationsByRequest(applicationRepository);
   const listStudyGroupMessages = new ListStudyGroupMessages(messageRepository);
+  const pollTimerService = new PollTimerService();
+
+  const onClosePoll = async (messageId: string) => {
+    try {
+      const result = await messageRepository.closePoll(messageId);
+      const channel = createGroupChannel(result.requestId);
+      groupChatSubject.subscribe(channel, realtimeObserver);
+
+      const event: PollClosedEvent = {
+        type: "PollClosed",
+        version: "1.0",
+        timestamp: new Date(),
+        messageId,
+        conversationId: result.requestId,
+      };
+
+      await groupChatSubject.emit(channel, event);
+    } catch (error) {
+      console.error(`[main] Error closing poll ${messageId}:`, error);
+    }
+  };
+
   const createStudyGroupMessage = new CreateStudyGroupMessage(
     messageRepository,
     groupChatSubject,
@@ -329,6 +355,8 @@ function bootstrap(): void {
     groupChatNotificationObserver,
     groupPermissionRepo,
     groupPermissionRepo,
+    pollTimerService,
+    onClosePoll,
   );
   const listUserNotifications = new ListUserNotifications(notificationRepository);
   const applyToStudyRequest = new ApplyToStudyRequest(
@@ -357,6 +385,13 @@ function bootstrap(): void {
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
   const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
+
+  const voteInPoll = new VoteInPoll(
+    messageRepository,
+    groupChatSubject,
+    realtimeObserver,
+  );
+
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -376,6 +411,7 @@ function bootstrap(): void {
     listMyApplicationsUC,
     cancelStudyRequestUC,
     toggleStudyGroupMessageReaction,
+    voteInPoll,
     preferenceService,
   );
 

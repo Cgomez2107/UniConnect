@@ -19,6 +19,7 @@ import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdmi
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
 import { ToggleStudyGroupMessageReaction } from "../../../application/use-cases/ToggleStudyGroupMessageReaction.js";
+import { VoteInPoll } from "../../../application/use-cases/VoteInPoll.js";
 import type { CreateStudyGroupMessageDto } from "../dto/CreateStudyGroupMessageDto.js";
 import { CreateGroupRequestSchema } from "@uniconnect/shared-types/contracts/study-group";
 import type { CreateGroupRequest } from "@uniconnect/shared-types/contracts/study-group";
@@ -76,6 +77,7 @@ export class StudyGroupsController {
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
     private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
+    private readonly voteInPoll: VoteInPoll,
     private readonly preferenceService: PreferenceService,
   ) { }
 
@@ -238,7 +240,8 @@ export class StudyGroupsController {
         mediaUrl: body.mediaUrl,
         mediaType: body.mediaType,
         mediaFilename: body.mediaFilename,
-        mentions: body.mentions
+        mentions: body.mentions,
+        poll: body.poll,
       });
 
       sendData(res, 201, created);
@@ -533,6 +536,60 @@ export class StudyGroupsController {
       const reactions = await this.toggleStudyGroupMessageReaction.execute(messageId, actorUserId, body.emoji);
       sendData(res, 200, { reactions });
     } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async voteInPollHandler(
+    req: IncomingMessage,
+    res: ServerResponse,
+    messageId: string,
+  ): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const body = await readJsonBody<{ optionIndex: number }>(req);
+      if (body.optionIndex === undefined || body.optionIndex < 0) {
+        sendError(res, 400, "El campo 'optionIndex' es requerido y debe ser >= 0.");
+        return;
+      }
+
+      const { requestId, poll } = await this.voteInPoll.execute(
+        messageId,
+        actorUserId,
+        body.optionIndex,
+      );
+
+      sendData(res, 200, {
+        request_id: requestId,
+        message_id: messageId,
+        poll,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes("ya has votado")) {
+          sendError(res, 409, error.message);
+          return;
+        }
+        if (msg.includes("cerrada")) {
+          sendError(res, 403, error.message);
+          return;
+        }
+        if (msg.includes("no encontrado") || msg.includes("no contiene")) {
+          sendError(res, 404, error.message);
+          return;
+        }
+        if (msg.includes("inválida") || msg.includes("opción")) {
+          sendError(res, 400, error.message);
+          return;
+        }
+      }
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
