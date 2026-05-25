@@ -1,0 +1,2347 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "UniConnect Backend API",
+    "version": "1.0.0",
+    "description": "API de UniConnect — Red académica para la Universidad de Caldas. Documentación autogenerada desde contratos Zod."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "POST /api/v1/auth/login",
+        "operationId": "POSTapi_v1_auth_login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 6
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "firstName": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "lastName": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "estudiante",
+                            "admin"
+                          ]
+                        },
+                        "profileImageUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "isVerified": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "$ref": "#/properties/user/properties/createdAt"
+                        },
+                        "isOnboarded": {
+                          "type": "boolean"
+                        },
+                        "lastLoginAt": {
+                          "$ref": "#/properties/user/properties/createdAt"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "firstName",
+                        "lastName",
+                        "role",
+                        "isVerified",
+                        "createdAt",
+                        "updatedAt",
+                        "isOnboarded"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "expiresIn": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "accessToken",
+                    "refreshToken",
+                    "expiresIn"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "POST /api/v1/auth/register",
+        "operationId": "POSTapi_v1_auth_register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 100
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "email",
+                  "password",
+                  "fullName"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "estudiante",
+                            "admin"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "fullName",
+                        "role"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "expiresIn": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "accessToken",
+                    "refreshToken",
+                    "expiresIn"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "POST /api/v1/auth/refresh",
+        "operationId": "POSTapi_v1_auth_refresh",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "refreshToken"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "estudiante",
+                            "admin"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "fullName",
+                        "role"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "expiresIn": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "accessToken",
+                    "refreshToken",
+                    "expiresIn"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups": {
+      "post": {
+        "tags": [
+          "Study Groups"
+        ],
+        "summary": "POST /api/v1/study-groups",
+        "operationId": "POSTapi_v1_study-groups",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "subjectId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "maxMembers": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "minimum": 0,
+                    "maximum": 50
+                  }
+                },
+                "required": [
+                  "name",
+                  "description",
+                  "subjectId",
+                  "maxMembers"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "group": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "subject": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/properties/group/properties/id"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "programId": {
+                              "$ref": "#/properties/group/properties/id"
+                            },
+                            "code": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 20
+                            },
+                            "description": {
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            "credits": {
+                              "type": "integer",
+                              "exclusiveMinimum": true,
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "programId",
+                            "code"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "subjectId": {
+                          "$ref": "#/properties/group/properties/id"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "activa",
+                            "inactiva",
+                            "finalizada"
+                          ]
+                        },
+                        "maxMembers": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0
+                        },
+                        "createdBy": {
+                          "$ref": "#/properties/group/properties/id"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "$ref": "#/properties/group/properties/createdAt"
+                        },
+                        "memberCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "subject",
+                        "subjectId",
+                        "status",
+                        "maxMembers",
+                        "createdBy",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "group"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/resources": {
+      "post": {
+        "tags": [
+          "Resources"
+        ],
+        "summary": "POST /api/v1/resources",
+        "operationId": "POSTapi_v1_resources",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "subjectId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 50
+                    }
+                  },
+                  "isPublic": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                },
+                "required": [
+                  "title",
+                  "url",
+                  "subjectId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resource": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "uploaderUserId": {
+                          "$ref": "#/properties/resource/properties/id"
+                        },
+                        "uploader": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/properties/resource/properties/id"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email"
+                            },
+                            "firstName": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "lastName": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "estudiante",
+                                "admin"
+                              ]
+                            },
+                            "profileImageUrl": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "isVerified": {
+                              "type": "boolean"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "$ref": "#/properties/resource/properties/uploader/properties/createdAt"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "email",
+                            "firstName",
+                            "lastName",
+                            "role",
+                            "isVerified",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "subjectId": {
+                          "$ref": "#/properties/resource/properties/id"
+                        },
+                        "subject": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/properties/resource/properties/id"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "programId": {
+                              "$ref": "#/properties/resource/properties/id"
+                            },
+                            "code": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 20
+                            },
+                            "description": {
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            "credits": {
+                              "type": "integer",
+                              "exclusiveMinimum": true,
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "programId",
+                            "code"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 50
+                          }
+                        },
+                        "viewCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "downloadCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "isPublic": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "$ref": "#/properties/resource/properties/uploader/properties/createdAt"
+                        },
+                        "updatedAt": {
+                          "$ref": "#/properties/resource/properties/uploader/properties/createdAt"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "type",
+                        "url",
+                        "uploaderUserId",
+                        "subjectId",
+                        "tags",
+                        "viewCount",
+                        "downloadCount",
+                        "isPublic",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "resource"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/conversations": {
+      "post": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "POST /api/v1/conversations",
+        "operationId": "POSTapi_v1_conversations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "direct",
+                      "group"
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "participantIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 2,
+                    "maxItems": 50
+                  }
+                },
+                "required": [
+                  "type",
+                  "participantIds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversation": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "direct",
+                            "group"
+                          ]
+                        },
+                        "name": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "avatarUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "participants": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "$ref": "#/properties/conversation/properties/id"
+                              },
+                              "email": {
+                                "type": "string",
+                                "format": "email"
+                              },
+                              "firstName": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 100
+                              },
+                              "lastName": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 100
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "estudiante",
+                                  "admin"
+                                ]
+                              },
+                              "profileImageUrl": {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              "isVerified": {
+                                "type": "boolean"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "$ref": "#/properties/conversation/properties/participants/items/properties/createdAt"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "email",
+                              "firstName",
+                              "lastName",
+                              "role",
+                              "isVerified",
+                              "createdAt",
+                              "updatedAt"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "lastMessage": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/properties/conversation/properties/id"
+                            },
+                            "conversationId": {
+                              "$ref": "#/properties/conversation/properties/id"
+                            },
+                            "senderId": {
+                              "$ref": "#/properties/conversation/properties/id"
+                            },
+                            "sender": {
+                              "$ref": "#/properties/conversation/properties/participants/items"
+                            },
+                            "content": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "text",
+                                "file",
+                                "mention",
+                                "reaction",
+                                "poll"
+                              ]
+                            },
+                            "decorations": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "mention",
+                                      "file",
+                                      "reaction",
+                                      "poll"
+                                    ]
+                                  },
+                                  "data": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "data"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "attachments": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "$ref": "#/properties/conversation/properties/id"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  },
+                                  "url": {
+                                    "$ref": "#/properties/conversation/properties/avatarUrl"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "size": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "mimeType": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "type",
+                                  "url",
+                                  "name",
+                                  "size",
+                                  "mimeType"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "reactions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "$ref": "#/properties/conversation/properties/id"
+                                  },
+                                  "emoji": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 10
+                                  },
+                                  "userId": {
+                                    "$ref": "#/properties/conversation/properties/id"
+                                  },
+                                  "user": {
+                                    "$ref": "#/properties/conversation/properties/participants/items"
+                                  },
+                                  "createdAt": {
+                                    "$ref": "#/properties/conversation/properties/participants/items/properties/createdAt"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "emoji",
+                                  "userId",
+                                  "createdAt"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "poll": {
+                              "type": "object",
+                              "properties": {
+                                "question": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 500
+                                },
+                                "options": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "text": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 500
+                                      },
+                                      "votes": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "format": "uuid"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "text",
+                                      "votes"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "minItems": 2,
+                                  "maxItems": 20
+                                },
+                                "isOpen": {
+                                  "type": "boolean"
+                                },
+                                "closesAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "nullable": true
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "required": [
+                                "question",
+                                "options",
+                                "isOpen",
+                                "closesAt",
+                                "createdAt"
+                              ],
+                              "additionalProperties": false,
+                              "nullable": true
+                            },
+                            "isEdited": {
+                              "type": "boolean"
+                            },
+                            "editedAt": {
+                              "$ref": "#/properties/conversation/properties/participants/items/properties/createdAt"
+                            },
+                            "createdAt": {
+                              "$ref": "#/properties/conversation/properties/participants/items/properties/createdAt"
+                            },
+                            "updatedAt": {
+                              "$ref": "#/properties/conversation/properties/participants/items/properties/createdAt"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "conversationId",
+                            "senderId",
+                            "content",
+                            "type",
+                            "isEdited",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lastMessageAt": {
+                          "$ref": "#/properties/conversation/properties/participants/items/properties/createdAt"
+                        },
+                        "messageCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "unreadCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "createdAt": {
+                          "$ref": "#/properties/conversation/properties/participants/items/properties/createdAt"
+                        },
+                        "updatedAt": {
+                          "$ref": "#/properties/conversation/properties/participants/items/properties/createdAt"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "participants",
+                        "messageCount",
+                        "unreadCount",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "conversation"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/events": {
+      "post": {
+        "tags": [
+          "Events"
+        ],
+        "summary": "POST /api/v1/events",
+        "operationId": "POSTapi_v1_events",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "eventDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "location": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "capacity": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "minimum": 0
+                  },
+                  "isOnline": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "eventUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 50
+                    }
+                  }
+                },
+                "required": [
+                  "title",
+                  "description",
+                  "eventDate"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "event": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        },
+                        "eventDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "location": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "creatorId": {
+                          "$ref": "#/properties/event/properties/id"
+                        },
+                        "creator": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/properties/event/properties/id"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email"
+                            },
+                            "firstName": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "lastName": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "estudiante",
+                                "admin"
+                              ]
+                            },
+                            "profileImageUrl": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "isVerified": {
+                              "type": "boolean"
+                            },
+                            "createdAt": {
+                              "$ref": "#/properties/event/properties/eventDate"
+                            },
+                            "updatedAt": {
+                              "$ref": "#/properties/event/properties/eventDate"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "email",
+                            "firstName",
+                            "lastName",
+                            "role",
+                            "isVerified",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "capacity": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0
+                        },
+                        "attendeeCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "isOnline": {
+                          "type": "boolean"
+                        },
+                        "eventUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 50
+                          }
+                        },
+                        "createdAt": {
+                          "$ref": "#/properties/event/properties/eventDate"
+                        },
+                        "updatedAt": {
+                          "$ref": "#/properties/event/properties/eventDate"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "description",
+                        "eventDate",
+                        "creatorId",
+                        "attendeeCount",
+                        "isOnline",
+                        "tags",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "event"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/questions": {
+      "post": {
+        "tags": [
+          "Forum"
+        ],
+        "summary": "POST /api/v1/forum/questions",
+        "operationId": "POSTapi_v1_forum_questions",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subjectId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  }
+                },
+                "required": [
+                  "subjectId",
+                  "title",
+                  "body"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "question": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "subjectId": {
+                          "$ref": "#/properties/question/properties/id"
+                        },
+                        "authorId": {
+                          "$ref": "#/properties/question/properties/id"
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "body": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 5000
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "solved"
+                          ]
+                        },
+                        "answerCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "voteCount": {
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "$ref": "#/properties/question/properties/createdAt"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "subjectId",
+                        "authorId",
+                        "title",
+                        "body",
+                        "status",
+                        "answerCount",
+                        "voteCount",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "question"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Forum"
+        ],
+        "summary": "GET /api/v1/forum/questions",
+        "operationId": "GETapi_v1_forum_questions",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "default": 1
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 20
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "subjectId": {
+                            "$ref": "#/properties/questions/items/properties/id"
+                          },
+                          "authorId": {
+                            "$ref": "#/properties/questions/items/properties/id"
+                          },
+                          "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "solved"
+                            ]
+                          },
+                          "answerCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "voteCount": {
+                            "type": "integer"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "$ref": "#/properties/questions/items/properties/createdAt"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "subjectId",
+                          "authorId",
+                          "title",
+                          "status",
+                          "answerCount",
+                          "voteCount",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0,
+                          "default": 1
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0,
+                          "maximum": 100,
+                          "default": 20
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "questions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/questions/{id}": {
+      "get": {
+        "tags": [
+          "Forum"
+        ],
+        "summary": "GET /api/v1/forum/questions/:id",
+        "operationId": "GETapi_v1_forum_questions_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "question": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "subjectId": {
+                          "$ref": "#/properties/question/properties/id"
+                        },
+                        "authorId": {
+                          "$ref": "#/properties/question/properties/id"
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "body": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 5000
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "solved"
+                          ]
+                        },
+                        "answerCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "voteCount": {
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "$ref": "#/properties/question/properties/createdAt"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "subjectId",
+                        "authorId",
+                        "title",
+                        "body",
+                        "status",
+                        "answerCount",
+                        "voteCount",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "answers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/properties/question/properties/id"
+                          },
+                          "questionId": {
+                            "$ref": "#/properties/question/properties/id"
+                          },
+                          "authorId": {
+                            "$ref": "#/properties/question/properties/id"
+                          },
+                          "body": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 5000
+                          },
+                          "voteCount": {
+                            "type": "integer"
+                          },
+                          "isSolution": {
+                            "type": "boolean",
+                            "default": false
+                          },
+                          "createdAt": {
+                            "$ref": "#/properties/question/properties/createdAt"
+                          },
+                          "updatedAt": {
+                            "$ref": "#/properties/question/properties/createdAt"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "questionId",
+                          "authorId",
+                          "body",
+                          "voteCount",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "question",
+                    "answers"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/questions/{questionId}/answers": {
+      "post": {
+        "tags": [
+          "Forum"
+        ],
+        "summary": "POST /api/v1/forum/questions/:questionId/answers",
+        "operationId": "POSTapi_v1_forum_questions_questionId_answers",
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  }
+                },
+                "required": [
+                  "body"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "answer": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "questionId": {
+                          "$ref": "#/properties/answer/properties/id"
+                        },
+                        "authorId": {
+                          "$ref": "#/properties/answer/properties/id"
+                        },
+                        "body": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 5000
+                        },
+                        "voteCount": {
+                          "type": "integer"
+                        },
+                        "isSolution": {
+                          "type": "boolean",
+                          "default": false
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "$ref": "#/properties/answer/properties/createdAt"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "questionId",
+                        "authorId",
+                        "body",
+                        "voteCount",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "answer"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Forum"
+        ],
+        "summary": "GET /api/v1/forum/questions/:questionId/answers",
+        "operationId": "GETapi_v1_forum_questions_questionId_answers",
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "answers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "questionId": {
+                            "$ref": "#/properties/answers/items/properties/id"
+                          },
+                          "authorId": {
+                            "$ref": "#/properties/answers/items/properties/id"
+                          },
+                          "body": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 5000
+                          },
+                          "voteCount": {
+                            "type": "integer"
+                          },
+                          "isSolution": {
+                            "type": "boolean",
+                            "default": false
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "$ref": "#/properties/answers/items/properties/createdAt"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "questionId",
+                          "authorId",
+                          "body",
+                          "voteCount",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "answers"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/votes": {
+      "post": {
+        "tags": [
+          "Forum"
+        ],
+        "summary": "POST /api/v1/forum/votes",
+        "operationId": "POSTapi_v1_forum_votes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetType": {
+                    "type": "string",
+                    "enum": [
+                      "question",
+                      "answer"
+                    ]
+                  },
+                  "targetId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "voteType": {
+                    "type": "string",
+                    "enum": [
+                      "upvote",
+                      "downvote"
+                    ]
+                  }
+                },
+                "required": [
+                  "targetType",
+                  "targetId",
+                  "voteType"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "voteCount": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "voteCount"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/forum/questions/{questionId}/solution": {
+      "post": {
+        "tags": [
+          "Forum"
+        ],
+        "summary": "POST /api/v1/forum/questions/:questionId/solution",
+        "operationId": "POSTapi_v1_forum_questions_questionId_solution",
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "answerId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "answerId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "message"
+        ]
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad Request — Error de validación",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized — Token inválido o ausente",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden — Sin permisos suficientes",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not Found — Recurso no encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}
