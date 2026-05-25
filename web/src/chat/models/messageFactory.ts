@@ -1,7 +1,8 @@
 import { BaseMessage } from "./BaseMessage.js";
 import { FileDecorator } from "./FileDecorator.js";
 import { MentionDecorator } from "./MentionDecorator.js";
-import type { IMessage, MentionData, ReactionData } from "./IMessage.js";
+import { PollDecorator } from "./PollDecorator.js";
+import type { IMessage, MentionData, PollData } from "./IMessage.js";
 
 interface RawMessageData {
   id: string;
@@ -12,7 +13,8 @@ interface RawMessageData {
   mediaType?: string | null;
   mediaFilename?: string | null;
   mentions?: MentionData[];
-  reactions?: ReactionData[];
+  reactions?: Array<{ emoji: string; count: number; users: string[] }>;
+  poll?: PollData | null;
 }
 
 function deriveFilename(raw: RawMessageData): string {
@@ -36,10 +38,14 @@ export function buildDecoratedMessage(raw: RawMessageData): IMessage {
   if (raw.mediaUrl) {
     decorated = new FileDecorator(decorated, {
       url: raw.mediaUrl,
-      mimeType: raw.mediaType || 'application/octet-stream',
+      mimeType: raw.mediaType || "application/octet-stream",
       filename: deriveFilename(raw),
       size: 0,
     });
+  }
+
+  if (raw.poll) {
+    decorated = new PollDecorator(decorated, raw.poll);
   }
 
   return decorated;
