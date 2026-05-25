@@ -324,7 +324,7 @@ jobs:
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
       - name: Build Android APK for E2E
-        run: npx expo build:android --type apk --non-interactive --no-wait
+        run: npx eas-cli build --platform android --profile development --no-wait
         working-directory: frontend
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

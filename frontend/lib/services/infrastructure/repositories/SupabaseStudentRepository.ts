@@ -128,7 +128,7 @@ export class SupabaseStudentRepository implements IStudentRepository {
       nombre: profile.full_name,
       carrera: profile.program_name ?? "",
       semestre: profile.semester ?? 1,
-      asignaturasActivas: profile.shared_subjects ?? [],
+      asignaturasActivas: (profile.shared_subjects ?? []).map((s: any) => ({ id: s.id, nombre: s.name ?? s.nombre ?? "" })),
       indicadores,
       insignias,
     };

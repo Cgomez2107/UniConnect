@@ -41,7 +41,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "clean": "rm -rf dist",
-    "test": "node --import tsx/esm --test \"src/**/*.test.ts\""
+    "test": "node --import tsx/esm --test src/**/*.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",

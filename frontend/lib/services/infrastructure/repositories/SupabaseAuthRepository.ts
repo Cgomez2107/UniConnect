@@ -161,7 +161,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
   }
 
   async validateInstitutionalAccess(): Promise<boolean> {
-    const { data: { user } } = await this.supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) return false;
     return user.email.endsWith("@ucaldas.edu.co");
   }

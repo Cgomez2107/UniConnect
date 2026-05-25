@@ -169,7 +169,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (session?.user) {
         await processSession(session);
       } else {
-        if (event === "INITIAL_SESSION" || event === "SIGNED_OUT") {
+        if (event === "INITIAL_SESSION" || (event as string) === "SIGNED_OUT") {
           set({ user: null, isAuthenticated: false, isHydrating: false });
         }
       }
