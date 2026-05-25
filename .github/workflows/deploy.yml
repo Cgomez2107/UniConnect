@@ -1,10 +1,8 @@
-# INF06: CI/CD Pipeline — Backend + Frontend en Fly.io
-# Trigger: push a main → ejecuta tests completos → despliega si todo pasa
 name: Deploy to Fly.io
 
 on:
   push:
-    branches: [main]
+    branches: [main, integration/pre-deploy]
 
 env:
   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -13,57 +11,57 @@ env:
 
 jobs:
   # ── Job 1: Test ──────────────────────────────────────────────────────
-  # CA2: Instala dependencias → corre tests → (build Docker en deploy)
-  # CA3: Si falla algún test, el job reporta error y se cancela el deploy
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-          cache-dependency-path: backend/pnpm-lock.yaml
 
-      # ── shared-types: build previo para que backend lo hoistee ─────
-      - name: Install shared-types dependencies
+      - name: Install root dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: packages/shared-types
 
-      - name: Build shared-types (pre-requisito para hoisting)
-        run: pnpm build
-        working-directory: packages/shared-types
-
-      # ── Backend: instalar con shared-types ya resuelto ──────────────
-      - name: Install backend dependencies
+      - name: Install backend workspace dependencies
         run: pnpm install --frozen-lockfile
         working-directory: backend
 
-      # ── Paso 1: Typecheck (estático) ────────────────────────────────
+      - name: Build shared-types (pre-requisite for backend)
+        run: pnpm build
+        working-directory: packages/shared-types
+
       - name: Typecheck backend
         run: pnpm typecheck
         working-directory: backend
 
-      # ── Paso 2: Tests de workspace via Turbo (study-groups jest,
-      #    academic-qna jest, shared-types vitest, etc.) ──────────────
       - name: Run Turbo workspace tests
         run: pnpm test
         working-directory: backend
 
-      # ── Paso 3: Tests unitarios/feature con node:test ───────────────
-      #    (decorator pattern, observer, strategy, resources, study-groups)
       - name: Run backend unit & feature tests (node:test)
         run: |
           node --import tsx --test tests/unit/decorators/*.spec.ts tests/feat/*.spec.ts
           node --import tsx --test services/study-groups/test/*.spec.ts
         working-directory: backend
 
-      # ── Paso 4: Tests de integración (contratos Zod, mocks) ────────
       - name: Run integration tests (vitest)
         run: |
           npx vitest run tests/integration/sprint4/ --reporter=verbose
@@ -71,17 +69,14 @@ jobs:
           npx vitest run tests/integration/profiles-catalog/ --reporter=verbose
         working-directory: backend
 
-      # ── Paso 5: Contract tests de shared-types ─────────────────────
       - name: Run shared-types contract tests
         run: pnpm test:contracts
         working-directory: packages/shared-types
 
   # ── Job 2: Deploy ────────────────────────────────────────────────────
-  # CA1: Se ejecuta SOLO en push a main
-  # CA3: Depende de test — si tests fallan, este job se cancela
-  # CA4: FLY_API_TOKEN leído desde GitHub Secrets
   deploy:
     needs: [test]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -116,8 +111,6 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
-      # Build Docker + Deploy a Fly.io (--remote-only usa los builders
-      # de Fly, no necesita Docker local)
       - name: Deploy ${{ matrix.service.name }} to Fly.io
         run: flyctl deploy --remote-only -c ${{ matrix.service.config }}
         working-directory: ${{ matrix.service.cwd }}
@@ -126,17 +119,17 @@ jobs:
 
       - name: Validate ${{ matrix.service.name }} deployment
         run: |
-          echo "🔍 Validando despliegue de ${{ matrix.service.name }}..."
+          echo "Validating deployment of ${{ matrix.service.name }}..."
           APP_NAME=$(grep '^app =' "${{ matrix.service.config }}" | head -1 | cut -d'"' -f2)
           echo "App: $APP_NAME"
           STATUS=$(flyctl status --app "$APP_NAME" --json 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 || echo '"status":"unknown"')
-          echo "Estado de $APP_NAME: $STATUS"
+          echo "State of $APP_NAME: $STATUS"
           if echo "$STATUS" | grep -qi "deployed"; then
-            echo "✅ ${{ matrix.service.name }} desplegado correctamente"
+            echo "${{ matrix.service.name }} deployed correctly"
           else
-            echo "⚠️  No se pudo verificar el estado de ${{ matrix.service.name }}"
-            echo "   Revisa manualmente: flyctl status --app $APP_NAME"
+            echo "Could not verify status of ${{ matrix.service.name }}"
+            echo "Check manually: flyctl status --app $APP_NAME"
           fi
-        working-directory: ${{ matrix.service.cwd }}
+        working-directory: ${{ steps.pnpm-cache.outputs.STORE_PATH != '' && matrix.service.cwd || matrix.service.cwd }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -6,9 +6,7 @@ on:
       - "frontend/**"
       - ".github/workflows/frontend-e2e.yml"
   push:
-    branches:
-      - main
-      - master
+    branches: [main, integration/pre-deploy]
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-e2e.yml"
@@ -27,21 +25,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Enable Corepack
-        run: corepack enable
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
+
+      - name: Build shared-types for frontend
+        run: |
+          cd shared-types
+          pnpm build
 
       - name: Run Playwright E2E
         run: pnpm test:e2e
