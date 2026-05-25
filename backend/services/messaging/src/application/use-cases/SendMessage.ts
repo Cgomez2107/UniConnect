@@ -1,4 +1,4 @@
-import type { Message } from "../../domain/entities/Message.js";
+import type { Message, PollData } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 import type {
   ChatSubject,
@@ -10,12 +10,14 @@ import {
   BaseMessage,
   FileDecorator,
   MentionDecorator,
+  PollDecorator,
   extractMentionsFromContent,
   type FileMetadata,
 } from "../../domain/decorators/index.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 import { ValidatorFactory } from "../../../../../shared/patterns/chain/message/ValidatorFactory.js";
 import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
+import { PollTimerService } from "../../domain/services/PollTimerService.js";
 
 export class SendMessage {
   private readonly validator = ValidatorFactory.createChain(5000);
@@ -26,6 +28,8 @@ export class SendMessage {
     private readonly realtimeObserver: IChatObserver,
     private readonly idempotencyObserver: IChatObserver,
     private readonly chatNotificationObserver: IChatObserver,
+    private readonly pollTimerService: PollTimerService,
+    private readonly onClosePoll: (messageId: string) => Promise<void>,
   ) {}
 
   private readonly uuidRegex =
@@ -41,6 +45,7 @@ export class SendMessage {
       mediaFilename?: string;
       replyToMessageId?: string;
       replyPreview?: string;
+      poll?: PollData;
     },
   ): Promise<Message> {
     const normalizedConversationId = requireTrimmed(conversationId, "conversationId");
@@ -64,6 +69,8 @@ export class SendMessage {
       throw new NotFoundError("Conversacion no encontrada.");
     }
 
+    const poll = media?.poll;
+
     const created = await this.repository.createMessage({
       conversationId: normalizedConversationId,
       senderId: normalizedSenderId,
@@ -76,6 +83,7 @@ export class SendMessage {
           ? media.replyToMessageId.trim()
           : undefined,
       replyPreview: media?.replyPreview?.trim() || undefined,
+      poll,
     });
 
     const channel = createDMChannel(conversation.participantA, conversation.participantB);
@@ -88,6 +96,7 @@ export class SendMessage {
       mediaType: created.mediaType,
       mediaFilename: created.mediaFilename,
       content: created.content,
+      poll: created.poll ?? undefined,
     });
 
     const event: NuevoMensajeEvent = {
@@ -107,6 +116,14 @@ export class SendMessage {
       console.error("[SendMessage] Error emitiendo evento:", error);
     });
 
+    if (poll?.closesAt) {
+      this.pollTimerService.schedule(
+        created.id,
+        new Date(poll.closesAt),
+        this.onClosePoll,
+      );
+    }
+
     return created;
   }
 }
@@ -118,6 +135,7 @@ function buildDecoratedPayload(
     mediaUrl: string | null;
     mediaType: string | null;
     mediaFilename: string | null;
+    poll?: PollData;
   },
 ): Record<string, unknown> {
   let decorated = new BaseMessage({
@@ -140,6 +158,19 @@ function buildDecoratedPayload(
   const mentions = extractMentionsFromContent(input.content);
   if (mentions.length > 0) {
     decorated = new MentionDecorator(decorated, mentions);
+  }
+
+  if (input.poll) {
+    decorated = new PollDecorator(decorated, {
+      question: input.poll.question,
+      options: input.poll.options.map((o) => ({
+        text: o.text,
+        votes: o.votes,
+      })),
+      isOpen: input.poll.isOpen,
+      closesAt: input.poll.closesAt,
+      createdAt: input.poll.createdAt,
+    });
   }
 
   const payload = decorated.toJSON();

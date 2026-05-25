@@ -62,13 +62,49 @@ export interface ReactionUpdatedEvent {
 }
 
 /**
+ * Evento: Voto en encuesta
+ */
+export interface PollVoteEvent {
+  readonly type: "PollVote";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly messageId: string;
+  readonly conversationId: string;
+  readonly optionIndex: number;
+  readonly userId: string;
+  readonly poll: {
+    readonly question: string;
+    readonly options: Array<{
+      readonly text: string;
+      readonly votes: readonly string[];
+    }>;
+    readonly isOpen: boolean;
+    readonly closesAt: string | null;
+    readonly createdAt: string;
+  };
+}
+
+/**
+ * Evento: Encuesta cerrada por temporizador
+ */
+export interface PollClosedEvent {
+  readonly type: "PollClosed";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly messageId: string;
+  readonly conversationId: string;
+}
+
+/**
  * Type Union: Todos los eventos de chat
  */
 export type ChatEvent =
   | NuevoMensajeEvent
   | MessageReadEvent
   | UserTypingEvent
-  | ReactionUpdatedEvent;
+  | ReactionUpdatedEvent
+  | PollVoteEvent
+  | PollClosedEvent;
 
 /**
  * Sistema de canales para enrutamiento de eventos

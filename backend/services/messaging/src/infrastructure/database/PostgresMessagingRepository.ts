@@ -4,7 +4,7 @@ import type {
   ConversationSummary,
   CreateConversationInput,
 } from "../../domain/entities/Conversation.js";
-import type { CreateMessageInput, Message, Reaction } from "../../domain/entities/Message.js";
+import type { CreateMessageInput, Message, PollData, Reaction } from "../../domain/entities/Message.js";
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 
 interface ConversationRow {
@@ -34,6 +34,7 @@ interface MessageRow {
   created_at: string | Date;
   read_at: string | Date | null;
   reactions: string | null;
+  poll_data: string | null;
   sender_full_name: string | null;
   sender_avatar_url: string | null;
 }
@@ -102,6 +103,24 @@ function parseReactions(raw: unknown): Reaction[] {
   return [];
 }
 
+function parsePoll(raw: unknown): PollData | null {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && Array.isArray(parsed.options)) {
+        return parsed as PollData;
+      }
+    } catch {
+      return null;
+    }
+  }
+  if (typeof raw === "object" && raw !== null && Array.isArray((raw as any).options)) {
+    return raw as PollData;
+  }
+  return null;
+}
+
 function mapMessage(row: MessageRow): Message {
   const rawContent = row.content ?? "";
   const legacy = decodeLegacyMediaContent(rawContent);
@@ -121,6 +140,7 @@ function mapMessage(row: MessageRow): Message {
     createdAt: new Date(row.created_at).toISOString(),
     readAt: row.read_at ? new Date(row.read_at).toISOString() : null,
     reactions: parseReactions(row.reactions),
+    poll: parsePoll(row.poll_data),
     sender: {
       fullName: row.sender_full_name ?? "Usuario",
       avatarUrl: row.sender_avatar_url,
@@ -300,6 +320,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           m.created_at,
           m.read_at,
           COALESCE(to_jsonb(m)->>'reactions', '[]') AS reactions,
+          to_jsonb(m)->>'poll_data' AS poll_data,
           p.full_name AS sender_full_name,
           p.avatar_url AS sender_avatar_url
         FROM messages m
@@ -351,6 +372,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           m.created_at,
           m.read_at,
           COALESCE(to_jsonb(m)->>'reactions', '[]') AS reactions,
+          to_jsonb(m)->>'poll_data' AS poll_data,
           p.full_name AS sender_full_name,
           p.avatar_url AS sender_avatar_url
         FROM messages m
@@ -397,9 +419,10 @@ export class PostgresMessagingRepository implements IMessagingRepository {
             media_type,
             media_filename,
             reply_to_message_id,
-            reply_preview
+            reply_preview,
+            poll_data
           )
-          VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''))
+          VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), $9::jsonb)
           RETURNING id
         `,
         [
@@ -411,6 +434,7 @@ export class PostgresMessagingRepository implements IMessagingRepository {
           input.mediaFilename ?? "",
           input.replyToMessageId ?? "",
           input.replyPreview ?? "",
+          input.poll ? JSON.stringify(input.poll) : null,
         ],
       );
 
@@ -565,5 +589,93 @@ export class PostgresMessagingRepository implements IMessagingRepository {
     );
 
     return { conversationId: msg.rows[0].conversation_id, reactions: updated };
+  }
+
+  async voteInPoll(messageId: string, userId: string, optionIndex: number) {
+    const msg = await this.pool.query<{
+      conversation_id: string;
+      poll_data: string | null;
+    }>(
+      `
+      SELECT m.conversation_id, to_jsonb(m)->>'poll_data' AS poll_data
+      FROM messages m
+      JOIN conversations c ON c.id = m.conversation_id
+      WHERE m.id = $1
+        AND (c.participant_a = $2 OR c.participant_b = $2)
+      LIMIT 1
+      `,
+      [messageId, userId],
+    );
+
+    if (!msg.rows[0]) {
+      throw new Error("Mensaje no encontrado o sin permisos.");
+    }
+
+    const poll = parsePoll(msg.rows[0].poll_data);
+    if (!poll) {
+      throw new Error("Este mensaje no contiene una encuesta.");
+    }
+
+    if (!poll.isOpen) {
+      throw new Error("La encuesta ya está cerrada.");
+    }
+
+    if (optionIndex < 0 || optionIndex >= poll.options.length) {
+      throw new Error("Opción inválida.");
+    }
+
+    const alreadyVoted = poll.options.some((opt) => opt.votes.includes(userId));
+    if (alreadyVoted) {
+      throw new Error("Ya has votado en esta encuesta.");
+    }
+
+    const updatedOptions = poll.options.map((opt, i) => {
+      if (i === optionIndex) {
+        return { ...opt, votes: [...opt.votes, userId] };
+      }
+      return opt;
+    });
+
+    const updatedPoll = { ...poll, options: updatedOptions };
+
+    await this.pool.query(
+      `UPDATE messages SET poll_data = $1::jsonb WHERE id = $2`,
+      [JSON.stringify(updatedPoll), messageId],
+    );
+
+    return { conversationId: msg.rows[0].conversation_id, poll: updatedPoll };
+  }
+
+  async closePoll(messageId: string) {
+    const msg = await this.pool.query<{
+      conversation_id: string;
+      poll_data: string | null;
+    }>(
+      `
+      SELECT m.conversation_id, to_jsonb(m)->>'poll_data' AS poll_data
+      FROM messages m
+      WHERE m.id = $1
+      LIMIT 1
+      `,
+      [messageId],
+    );
+
+    if (!msg.rows[0]) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    const poll = parsePoll(msg.rows[0].poll_data);
+    if (!poll) {
+      throw new Error("Este mensaje no contiene una encuesta.");
+    }
+
+    const updatedPoll = { ...poll, isOpen: false };
+
+    await this.pool.query(
+      `UPDATE messages SET poll_data = $1::jsonb WHERE id = $2`,
+      [JSON.stringify(updatedPoll), messageId],
+    );
+
+    return { conversationId: msg.rows[0].conversation_id, poll: updatedPoll };
   }
 }
