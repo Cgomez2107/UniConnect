@@ -62,10 +62,21 @@ jobs:
 
       - name: Create test user in staging
         run: |
-          curl -X POST "${{ env.E2E_GATEWAY_URL }}/api/v1/auth/signup" \
+          echo "Creating test user in staging..."
+          SIGNUP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ env.E2E_GATEWAY_URL }}/api/v1/auth/signup" \
             -H "Content-Type: application/json" \
-            -d "{\"email\":\"${{ secrets.TEST_USER_EMAIL || 'estudiante.prueba@ucaldas.edu.co' }}\",\"password\":\"${{ secrets.TEST_USER_PASSWORD || 'Test1234' }}\",\"fullName\":\"Usuario Test\"}" \
-            || echo "User may already exist"
+            -d "{\"email\":\"${{ secrets.TEST_USER_EMAIL || 'estudiante.prueba@ucaldas.edu.co' }}\",\"password\":\"${{ secrets.TEST_USER_PASSWORD || 'Test1234' }}\",\"fullName\":\"Usuario Test E2E\"}")
+          
+          HTTP_CODE=$(echo "$SIGNUP_RESPONSE" | tail -n1)
+          BODY=$(echo "$SIGNUP_RESPONSE" | sed '$d')
+          
+          echo "Signup response: $BODY"
+          echo "HTTP code: $HTTP_CODE"
+          
+          # 201 = created, 409 = already exists (both OK)
+          if [ "$HTTP_CODE" != "201" ] && [ "$HTTP_CODE" != "409" ]; then
+            echo "Warning: Signup returned $HTTP_CODE, but continuing with tests..."
+          fi
         working-directory: web
 
       - name: Run E2E tests against staging

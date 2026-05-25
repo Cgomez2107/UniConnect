@@ -104,9 +104,14 @@ function decodeSupabaseToken(token: string): { sub: string; email: string } | nu
 }
 
 async function main() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+
   // Inyección de dependencias
-  const authRepository = new PostgreSQLAuthRepository();
-  const tokenRepository = new PostgreSQLTokenRepository();
+  const authRepository = new PostgreSQLAuthRepository(databaseUrl);
+  const tokenRepository = new PostgreSQLTokenRepository(databaseUrl);
   const jwtService = new JWTService();
 
   const profilesCatalogBaseUrl = process.env.PROFILES_CATALOG_BASE_URL ?? "http://localhost:3105";
@@ -407,6 +412,16 @@ async function main() {
       }),
     );
   });
+
+  const cleanup = async () => {
+    console.log(JSON.stringify({ service: "auth", level: "info", message: "Shutting down" }));
+    await authRepository.close();
+    await tokenRepository.close();
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", cleanup);
+  process.on("SIGINT", cleanup);
 }
 
 main().catch(console.error);

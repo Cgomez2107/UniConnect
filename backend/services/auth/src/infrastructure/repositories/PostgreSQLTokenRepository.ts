@@ -1,45 +1,75 @@
+import { Pool } from "pg";
 import { RefreshToken } from "../../domain/entities/RefreshToken.js";
 import { ITokenRepository } from "../../domain/repositories/ITokenRepository.js";
 
-// TODO: Reemplazar con PostgreSQL cuando esté disponible
 export class PostgreSQLTokenRepository implements ITokenRepository {
-  private tokens: Map<string, RefreshToken> = new Map();
+  private pool: Pool;
+
+  constructor(connectionString?: string) {
+    if (!connectionString) {
+      throw new Error("DATABASE_URL environment variable is required");
+    }
+    this.pool = new Pool({
+      connectionString,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    });
+  }
 
   async create(token: Omit<RefreshToken, "id" | "createdAt">): Promise<RefreshToken> {
-    // TODO: INSERT INTO refresh_tokens (...) VALUES (...)
     const id = crypto.randomUUID();
-    const newToken: RefreshToken = {
-      ...token,
-      id,
-      createdAt: new Date(),
-    };
-    this.tokens.set(id, newToken);
-    return newToken;
+    const createdAt = new Date();
+
+    const result = await this.pool.query(
+      `INSERT INTO public.refresh_tokens (id, user_id, token, expires_at, created_at, revoked_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [id, token.userId, token.token, token.expiresAt, createdAt, token.revokedAt || null]
+    );
+
+    return this.mapRowToToken(result.rows[0]);
   }
 
   async findByToken(token: string): Promise<RefreshToken | null> {
-    // TODO: SELECT * FROM refresh_tokens WHERE token = $1
-    return Array.from(this.tokens.values()).find((t) => t.token === token) || null;
+    const result = await this.pool.query(
+      `SELECT * FROM public.refresh_tokens WHERE token = $1`,
+      [token]
+    );
+    const row = result.rows[0];
+    if (!row) return null;
+    return this.mapRowToToken(row);
   }
 
   async revoke(token: string): Promise<void> {
-    // TODO: UPDATE refresh_tokens SET revoked_at = NOW() WHERE token = $1
-    const stored = Array.from(this.tokens.values()).find((t) => t.token === token);
-    if (stored) {
-      stored.revokedAt = new Date();
-    }
+    await this.pool.query(
+      `UPDATE public.refresh_tokens SET revoked_at = NOW() WHERE token = $1`,
+      [token]
+    );
   }
 
   async deleteExpired(): Promise<number> {
-    // TODO: DELETE FROM refresh_tokens WHERE expires_at < NOW()
-    let count = 0;
-    const now = new Date();
-    for (const [key, token] of this.tokens.entries()) {
-      if (token.expiresAt < now) {
-        this.tokens.delete(key);
-        count++;
-      }
-    }
-    return count;
+    const result = await this.pool.query(
+      `DELETE FROM public.refresh_tokens WHERE expires_at < NOW()`
+    );
+    return parseInt(result.rowCount?.toString() || "0", 10);
+  }
+
+  async close(): Promise<void> {
+    await this.pool.end();
+  }
+
+  private mapRowToToken(row: any): RefreshToken {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      token: row.token,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+      revokedAt: row.revoked_at,
+    };
   }
 }
