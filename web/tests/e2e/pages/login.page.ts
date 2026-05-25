@@ -24,4 +24,17 @@ export class LoginPage {
     await this.passwordInput.fill(password);
     await this.submitButton.click();
   }
+
+  async getError(): Promise<string | null> {
+    try {
+      await this.errorBanner.waitFor({ state: "visible", timeout: 5000 });
+      return this.errorBanner.textContent();
+    } catch {
+      return null;
+    }
+  }
+
+  async waitForNavigation(): Promise<void> {
+    await this.page.waitForURL(/.*\/solicitudes/, { timeout: 10000 });
+  }
 }

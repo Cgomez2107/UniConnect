@@ -59,13 +59,14 @@ jobs:
         working-directory: web
 
       - name: Run E2E tests against staging
-        run: pnpm test:e2e
+        run: pnpm test:e2e --reporter=list
         working-directory: web
         env:
           E2E_BASE_URL: ${{ env.E2E_BASE_URL }}
           E2E_GATEWAY_URL: ${{ env.E2E_GATEWAY_URL }}
-          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL || 'estudiante.prueba@ucaldas.edu.co' }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD || 'Test1234' }}
+          DEBUG: pw:api
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

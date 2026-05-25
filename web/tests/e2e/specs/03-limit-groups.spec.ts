@@ -8,6 +8,7 @@ test.describe("C3 - Group limit per subject", () => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+    await loginPage.waitForNavigation();
     await expect(page).toHaveURL(/.*\/solicitudes/);
   });
 
