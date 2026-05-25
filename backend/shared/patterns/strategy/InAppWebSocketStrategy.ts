@@ -12,6 +12,8 @@ export interface INotificationPersistenceRepository {
     title: string;
     body: string;
     payload: Record<string, unknown> | null;
+    priority?: "normal" | "urgente" | "critica";
+    action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
   }): Promise<string>;
 }
 
@@ -33,6 +35,8 @@ export class InAppWebSocketStrategy implements INotificationStrategy {
           title: notificacion.title,
           body: notificacion.body,
           payload: notificacion.payload,
+          priority: notificacion.priority,
+          action: notificacion.action,
         });
       }
 
@@ -43,6 +47,8 @@ export class InAppWebSocketStrategy implements INotificationStrategy {
           id: notificationId,
           title: notificacion.title,
           body: notificacion.body,
+          priority: notificacion.priority,
+          action: notificacion.action,
           ...(notificacion.payload ?? {}),
         },
       );

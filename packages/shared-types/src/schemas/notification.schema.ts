@@ -16,6 +16,7 @@ export const PrioridadEnum = z.enum(["normal", "urgente", "critica"]);
 export const AccionSchema = z.object({
   label: z.string().min(1).max(100),
   endpoint: z.string().min(1),
+  method: z.enum(["GET", "POST", "PUT", "DELETE"]).optional(),
 });
 
 export const NotificationSchema = z.object({

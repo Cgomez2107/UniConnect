@@ -134,6 +134,7 @@ export interface StudyRequest {
   // campos derivados (feed)
   faculty_name?: string;
   subject_name?: string;
+  hasPendingTransfer?: boolean;
 }
 
 export interface CreateStudyRequestPayload {

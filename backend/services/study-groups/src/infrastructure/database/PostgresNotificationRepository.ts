@@ -15,15 +15,19 @@ interface NotificationRow {
 }
 
 function mapNotification(row: NotificationRow): UserNotification {
+  const payload = row.payload ?? {};
+  const { _priority, _action, ...restPayload } = payload as Record<string, unknown> & { _priority?: string; _action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" } };
   return {
     id: row.id,
     userId: row.user_id,
     type: row.type,
     title: row.title,
     body: row.body,
-    payload: row.payload,
+    payload: Object.keys(restPayload).length > 0 ? restPayload : null,
     createdAt: new Date(row.created_at).toISOString(),
     readAt: row.read_at ? new Date(row.read_at).toISOString() : null,
+    priority: _priority as UserNotification["priority"],
+    action: _action,
   };
 }
 
@@ -43,7 +47,15 @@ export class PostgresNotificationRepository implements INotificationRepository {
     title: string;
     body: string;
     payload: Record<string, unknown> | null;
+    priority?: "normal" | "urgente" | "critica";
+    action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
   }): Promise<string> {
+    const enrichedPayload = {
+      ...(input.payload ?? {}),
+      ...(input.priority ? { _priority: input.priority } : {}),
+      ...(input.action ? { _action: input.action } : {}),
+    };
+
     const existing = await this.pool.query<{ id: string }>(
       `
         SELECT id FROM user_notifications
@@ -65,7 +77,7 @@ export class PostgresNotificationRepository implements INotificationRepository {
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
       `,
-      [input.userId, input.type, input.title, input.body, input.payload],
+      [input.userId, input.type, input.title, input.body, enrichedPayload],
     );
 
     return result.rows[0].id;

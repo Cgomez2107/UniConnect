@@ -4,6 +4,8 @@ import useAuth from "@/hooks/useAuth";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MentionInput } from "@/components/chat/MentionInput";
 import { Avatar } from "@/components/ui/Avatar";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
+import type { GroupState } from "@/types";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { snakeToCamel } from "@uniconnect/shared-api";
@@ -48,6 +50,7 @@ export function GroupChatPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [groupName, setGroupName] = useState("");
+  const [groupState, setGroupState] = useState<GroupState>("Activo");
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -80,6 +83,14 @@ export function GroupChatPage() {
         setMessages((msgs || []).reverse());
         setMembers(membersData || []);
         setGroupName(groupData?.name || "Chat del grupo");
+        const computedState: GroupState = groupData?.status === "cerrada"
+          ? "Disuelto"
+          : groupData?.status === "expirada"
+            ? "Bloqueado"
+            : groupData?.hasPendingTransfer
+              ? "PendienteTransferencia"
+              : "Activo";
+        setGroupState(computedState);
       } catch (err) {
         console.error("Error loading group chat:", err);
       } finally {
@@ -425,10 +436,11 @@ export function GroupChatPage() {
           </svg>
         </button>
         <Avatar name={groupName} size="sm" />
-        <div className="flex-1">
-          <h1 className="text-base font-bold text-neutral-900">{groupName}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-bold text-neutral-900 truncate">{groupName}</h1>
           <p className="text-xs text-neutral-500">{members.length} miembros</p>
         </div>
+        <GroupStateBadge state={groupState} size="small" />
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">

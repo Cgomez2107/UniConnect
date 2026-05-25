@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { getWsUrl } from "@/lib/wsUrl";
+import { mapNotificationDtoToDomain } from "@uniconnect/shared-api";
 
 const WS_URL = getWsUrl();
 
@@ -37,8 +38,9 @@ export function useNotificationWebSocket() {
             data.event === "new_notification"
           ) {
             const notif = data.payload || data;
+            const mapped = mapNotificationDtoToDomain(notif);
             const store = useNotificationStore.getState();
-            store.addNotification(notif);
+            store.addNotification(mapped);
           }
         } catch {
           // ignore parse errors

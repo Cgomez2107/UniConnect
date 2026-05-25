@@ -33,6 +33,7 @@ interface RequestDetailViewModel {
   subject_name: string;
   faculty_name: string;
   max_members: number;
+  hasPendingTransfer?: boolean;
 }
 
 interface Props {
@@ -119,7 +120,12 @@ export function RequestDetailContent({
           </Text>
         </View>
         <GroupStateBadge
-          state={request.status === "cerrada" ? "Disuelto" : request.status === "expirada" ? "Bloqueado" : "Activo"}
+          state={
+            request.status === "cerrada" ? "Disuelto" :
+            request.status === "expirada" ? "Bloqueado" :
+            request.hasPendingTransfer ? "PendienteTransferencia" :
+            "Activo"
+          }
           size="small"
         />
       </View>
@@ -200,10 +206,10 @@ export function RequestDetailContent({
             <Text style={[styles.memberRole, { color: C.primary }]}>Creador · Administrador</Text>
           </View>
 
-          {request.author_id !== currentUserId && (
+          {request.author_bio !== currentUserId && (
             <TouchableOpacity
               style={[styles.chatMemberBtn, { borderColor: C.primary }]}
-              onPress={() => onOpenMemberChat(request.author_id, request.author_name)}
+              onPress={() => onOpenMemberChat(request.author_bio, request.author_name)}
               disabled={chatLoading}
               activeOpacity={0.85}
             >

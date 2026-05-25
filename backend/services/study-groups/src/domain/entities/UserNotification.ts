@@ -7,4 +7,6 @@ export interface UserNotification {
   readonly payload: Record<string, unknown> | null;
   readonly createdAt: string;
   readAt: string | null;
+  readonly priority?: "normal" | "urgente" | "critica";
+  readonly action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
 }

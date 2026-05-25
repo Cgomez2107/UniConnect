@@ -15,23 +15,7 @@ export async function fetchNotifications() {
       }
     }
 
-    const apiIds = new Set(deduped.map((n) => n.id));
-
-    const currentSnapshot = store.notifications;
-    const removedFromServer = currentSnapshot.filter(
-      (n) => !n.id.startsWith("event-") && !apiIds.has(n.id),
-    );
-    for (const n of removedFromServer) {
-      store.removeNotification(n.id);
-    }
-
-    const existingIds = new Set(store.notifications.map((n) => n.id));
-    for (const n of deduped) {
-      if (!existingIds.has(n.id)) {
-        store.addNotification(n);
-        existingIds.add(n.id);
-      }
-    }
+    store.setNotifications(deduped);
   } catch (err) {
     console.error("Error fetching notifications:", err);
   }

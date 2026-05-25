@@ -19,6 +19,7 @@ export interface RequestDetail {
   author_bio?: string;
   subject_name: string;
   faculty_name: string;
+  hasPendingTransfer?: boolean;
 }
 
 interface UseRequestDetailParams {
@@ -106,7 +107,7 @@ export function useRequestDetail({ requestId, onRequestCanceled }: UseRequestDet
       setLoading(true);
       setError(null);
       try {
-        const baseRequest = await getRequestById(requestId);
+        const baseRequest = await getRequestById(requestId!);
         if (!baseRequest) throw new Error("Solicitud no encontrada.");
 
         setRequest({
@@ -122,6 +123,7 @@ export function useRequestDetail({ requestId, onRequestCanceled }: UseRequestDet
           author_bio: baseRequest.profiles?.bio ?? undefined,
           subject_name: baseRequest.subjects?.name ?? "Sin materia",
           faculty_name: baseRequest.faculty_name ?? "Sin facultad",
+          hasPendingTransfer: baseRequest.hasPendingTransfer ?? false,
         });
         setDescriptionDraft(baseRequest.description ?? "");
 
