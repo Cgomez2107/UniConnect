@@ -12,6 +12,7 @@ import { MarkConversationAsRead } from "../../../application/use-cases/MarkConve
 import { SendMessage } from "../../../application/use-cases/SendMessage.js";
 import { TouchConversation } from "../../../application/use-cases/TouchConversation.js";
 import { ToggleReaction } from "../../../application/use-cases/ToggleReaction.js";
+import { VoteInPoll } from "../../../application/use-cases/VoteInPoll.js";
 import type { ConversationSummary } from "../../../domain/entities/Conversation.js";
 import type { Message } from "../../../domain/entities/Message.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
@@ -26,6 +27,19 @@ const CreateConversationBodySchema = z.object({
   participantB: z.string().min(1, "participantB es requerido"),
 });
 
+const PollOptionSchema = z.object({
+  text: z.string().min(1).max(500),
+  votes: z.array(z.string()).optional().default([]),
+});
+
+const PollDataSchema = z.object({
+  question: z.string().min(1).max(500),
+  options: z.array(PollOptionSchema).min(2).max(20),
+  isOpen: z.boolean(),
+  closesAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+
 const CreateMessageBodySchema = z.object({
   conversationId: z.string().min(1),
   content: z.string().optional().default(""),
@@ -34,6 +48,7 @@ const CreateMessageBodySchema = z.object({
   mediaFilename: z.string().optional(),
   replyToMessageId: z.string().optional(),
   replyPreview: z.string().optional(),
+  poll: PollDataSchema.optional(),
 });
 
 function toApiConversation(conversation: ConversationSummary) {
@@ -66,6 +81,7 @@ function toApiMessage(message: Message) {
     created_at: message.createdAt,
     read_at: message.readAt,
     reactions: message.reactions ?? [],
+    poll: message.poll ?? null,
     sender: message.sender
       ? {
           full_name: message.sender.fullName,
@@ -88,6 +104,7 @@ export class MessagingController {
     private readonly markMessageAsReadUseCase: MarkMessageAsRead,
     private readonly markConversationAsReadUseCase: MarkConversationAsRead,
     private readonly toggleReactionUseCase: ToggleReaction,
+    private readonly voteInPollUseCase: VoteInPoll,
   ) {}
 
   async listConversations(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -248,6 +265,7 @@ export class MessagingController {
           mediaFilename: parsed.mediaFilename,
           replyToMessageId: parsed.replyToMessageId,
           replyPreview: parsed.replyPreview,
+          poll: parsed.poll,
         },
       );
 
@@ -260,6 +278,56 @@ export class MessagingController {
       if (error instanceof ContentError || error instanceof SizeError || error instanceof MediaError) {
         sendJson(res, error.statusCode, { error: error.message, reason: error.reason, name: error.name });
         return;
+      }
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async voteInPoll(req: IncomingMessage, res: ServerResponse, messageId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const body = await readJsonBody<{ optionIndex: number }>(req);
+      if (body.optionIndex === undefined || body.optionIndex < 0) {
+        sendError(res, 400, "El campo 'optionIndex' es requerido y debe ser >= 0.");
+        return;
+      }
+
+      const { conversationId, poll } = await this.voteInPollUseCase.execute(
+        messageId,
+        actorUserId,
+        body.optionIndex,
+      );
+
+      sendData(res, 200, {
+        conversation_id: conversationId,
+        message_id: messageId,
+        poll,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes("ya has votado")) {
+          sendError(res, 409, error.message);
+          return;
+        }
+        if (msg.includes("cerrada")) {
+          sendError(res, 403, error.message);
+          return;
+        }
+        if (msg.includes("no encontrado") || msg.includes("no contiene")) {
+          sendError(res, 404, error.message);
+          return;
+        }
+        if (msg.includes("inválida") || msg.includes("opción")) {
+          sendError(res, 400, error.message);
+          return;
+        }
       }
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

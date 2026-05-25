@@ -25,6 +25,7 @@ export async function handleMessagingRoutes(
   const conversationReadMatch = requestUrl.pathname.match(/^\/api\/v1\/conversations\/([^/]+)\/read$/);
   const messageDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)$/);
   const messageReactionsMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/reactions$/);
+  const messagePollVoteMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/polls\/vote$/);
   const messageReadMatch = requestUrl.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/read$/);
   const unreadCountMatch = requestUrl.pathname === "/api/v1/messages/unread-count";
 
@@ -79,6 +80,11 @@ export async function handleMessagingRoutes(
 
   if (req.method === "POST" && messageReactionsMatch) {
     await controller.toggleReaction(req, res, messageReactionsMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && messagePollVoteMatch) {
+    await controller.voteInPoll(req, res, messagePollVoteMatch[1]);
     return true;
   }
 

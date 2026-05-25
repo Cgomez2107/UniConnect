@@ -268,6 +268,27 @@ function onStudygroupsResponse(
       reactions,
     });
   }
+
+  const pollVoteMatch = info.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/polls\/vote$/);
+  if (info.method === "POST" && pollVoteMatch && info.status === 200) {
+    const groupId = pollVoteMatch[1];
+    const messageId = pollVoteMatch[2];
+    const rawBody = (() => {
+      try {
+        const parsed = JSON.parse(info.body);
+        return parsed?.data || parsed;
+      } catch {
+        return info.body;
+      }
+    })();
+    const poll = (rawBody as any)?.poll ?? rawBody;
+    broadcastToStudyGroup(groupId, "poll_updated", {
+      messageId,
+      userId: jwtPayload.sub,
+      optionIndex: (rawBody as any)?.optionIndex,
+      poll,
+    });
+  }
 }
 
 function onMessagingResponse(
@@ -321,6 +342,30 @@ function onMessagingResponse(
         reactions,
       });
       console.log(JSON.stringify({ service: "gateway", level: "info", message: "reaction_updated broadcasted", conversationId, messageId }));
+    }
+  }
+
+  const pollVoteMatch = info.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/polls\/vote$/);
+  if (info.method === "POST" && pollVoteMatch && info.status === 200) {
+    const messageId = pollVoteMatch[1];
+    const rawBody = (() => {
+      try {
+        const parsed = JSON.parse(info.body);
+        return parsed?.data || parsed;
+      } catch {
+        return info.body;
+      }
+    })();
+    const conversationId = (rawBody as any)?.conversation_id;
+    const poll = (rawBody as any)?.poll ?? rawBody;
+    if (conversationId) {
+      broadcastToConversation(conversationId, "poll_updated", {
+        messageId,
+        userId: jwtPayload.sub,
+        optionIndex: (rawBody as any)?.optionIndex,
+        poll,
+      });
+      console.log(JSON.stringify({ service: "gateway", level: "info", message: "poll_updated broadcasted", conversationId, messageId }));
     }
   }
 }

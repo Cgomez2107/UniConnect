@@ -58,6 +58,7 @@ function mapMessage(raw: ApiMessage): Message {
     created_at: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
     read_at: raw.readAt ?? raw.read_at ?? null,
     reactions: parseReactions(raw.reactions),
+    poll_data: raw.poll ?? raw.poll_data ?? null,
     sender: raw.sender
       ? {
           full_name: raw.sender.fullName ?? raw.sender.full_name ?? "Usuario",
