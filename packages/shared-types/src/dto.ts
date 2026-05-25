@@ -127,18 +127,32 @@ export interface MessageDTO {
   sender_id: string;
   sender?: UserDTO;
   content: string;
-  type: "text" | "file" | "mention" | "reaction";
+  type: "text" | "file" | "mention" | "reaction" | "poll";
   decorations?: MessageDecorationDTO[];
   attachments?: MessageAttachmentDTO[];
   reactions?: MessageReactionDTO[];
+  poll?: PollDataDTO | null;
   is_edited: boolean;
   edited_at?: string;
   created_at: string;
   updated_at: string;
 }
 
+export interface PollOptionDTO {
+  text: string;
+  votes: string[];
+}
+
+export interface PollDataDTO {
+  question: string;
+  options: PollOptionDTO[];
+  is_open: boolean;
+  closes_at: string | null;
+  created_at: string;
+}
+
 export interface MessageDecorationDTO {
-  type: "mention" | "file" | "reaction";
+  type: "mention" | "file" | "reaction" | "poll";
   data: Record<string, any>;
 }
 

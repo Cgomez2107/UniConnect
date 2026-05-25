@@ -138,7 +138,7 @@ export interface StudyApplication {
 // ============================================================================
 
 export type ConversationType = "direct" | "group";
-export type MessageType = "text" | "file" | "mention" | "reaction";
+export type MessageType = "text" | "file" | "mention" | "reaction" | "poll";
 
 export interface Message {
   id: string;
@@ -150,14 +150,28 @@ export interface Message {
   decorations?: MessageDecoration[];
   attachments?: MessageAttachment[];
   reactions?: MessageReaction[];
+  poll?: PollData | null;
   isEdited: boolean;
   editedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
+export interface PollOption {
+  text: string;
+  votes: string[];
+}
+
+export interface PollData {
+  question: string;
+  options: PollOption[];
+  isOpen: boolean;
+  closesAt: string | null;
+  createdAt: string;
+}
+
 export interface MessageDecoration {
-  type: "mention" | "file" | "reaction";
+  type: "mention" | "file" | "reaction" | "poll";
   data: Record<string, any>;
 }
 

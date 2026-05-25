@@ -18,7 +18,17 @@ export const SendMessageRequestSchema = z.object({
   body: z.object({
     conversationId: z.string().uuid(),
     content: z.string().min(1).max(5000),
-    type: z.enum(["text", "file", "mention", "reaction"]).default("text"),
+    type: z.enum(["text", "file", "mention", "reaction", "poll"]).default("text"),
+    poll: z.object({
+      question: z.string().min(1).max(500),
+      options: z.array(z.object({
+        text: z.string().min(1).max(500),
+        votes: z.array(z.string()).optional().default([]),
+      })).min(2).max(20),
+      isOpen: z.boolean(),
+      closesAt: z.string().nullable(),
+      createdAt: z.string(),
+    }).optional(),
   }),
 });
 

@@ -90,8 +90,12 @@ export function mapAuthProfileDomainToDto(domain: AuthProfile): AuthProfileDTO {
  * Map MessageDTO to Message domain type
  */
 export function mapMessageDtoToDomain(dto: MessageDTO): Message {
-  const camelCased = snakeToCamel<Message>(dto);
-  return parseStringDatesToObjects<Message>(camelCased);
+  const camelCased = snakeToCamel<Message>(dto) as Record<string, unknown>;
+  if (camelCased['pollData'] !== undefined) {
+    camelCased['poll'] = camelCased['pollData'];
+    delete camelCased['pollData'];
+  }
+  return parseStringDatesToObjects<Message>(camelCased as Message);
 }
 
 // ============================================================================
