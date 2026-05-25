@@ -44,7 +44,7 @@ export class CreateStudyGroupMessage {
 
     const content = input.content ?? "";
 
-    await this.validator.validate(content, {
+    const validationResult = await this.validator.manejar(content, {
       mediaUrl: input.mediaUrl?.trim() || undefined,
       mediaType: input.mediaType?.trim() || undefined,
       mediaFilename: input.mediaFilename?.trim() || undefined,
@@ -53,6 +53,12 @@ export class CreateStudyGroupMessage {
       isGroup: true,
     });
 
+    if (!validationResult.valido) {
+      throw new Error(validationResult.mensajeError ?? "Error de validación");
+    }
+
+    const finalContent = validationResult.contenidoModificado ?? content;
+
     const finalMentions = (input.mentions && input.mentions.length > 0)
       ? input.mentions
       : extractMentionsFromContent(content);
@@ -60,7 +66,7 @@ export class CreateStudyGroupMessage {
     const created = await this.repository.create({
       requestId,
       actorUserId: input.actorUserId,
-      content,
+      content: finalContent,
       mentions: finalMentions,
       mediaUrl: input.mediaUrl,
       mediaType: input.mediaType,

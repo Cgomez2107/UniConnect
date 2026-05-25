@@ -15,21 +15,21 @@ export class ValidatorFactory {
     const resolvedMaxLength = resolveMaxLength(maxLength);
     const resolvedForbiddenWords = resolveForbiddenWords(forbiddenWords);
 
-    let head: MessageValidator = new SizeValidator(resolvedMaxLength);
-    let current = head;
+    const chain = new SizeValidator(resolvedMaxLength);
 
-    current = current.setNext(new ContentValidator(resolvedForbiddenWords));
-    current = current.setNext(new MediaValidator());
+    chain
+      .setSiguiente(new ContentValidator(resolvedForbiddenWords))
+      .setSiguiente(new MediaValidator());
 
     if (permissionRepo) {
-      current = current.setNext(new PermissionValidator(permissionRepo));
+      chain.setSiguiente(new PermissionValidator(permissionRepo));
     }
 
     if (adminResolver) {
-      current = current.setNext(new MentionResolver(adminResolver));
+      chain.setSiguiente(new MentionResolver(adminResolver));
     }
 
-    return head;
+    return chain;
   }
 }
 
