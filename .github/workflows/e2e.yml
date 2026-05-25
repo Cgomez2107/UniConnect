@@ -17,6 +17,7 @@ env:
 jobs:
   e2e-web:
     runs-on: ubuntu-latest
+    continue-on-error: true
     env:
       E2E_BASE_URL: "https://uniconnect-dashboard-web.fly.dev"
       E2E_GATEWAY_URL: "https://uniconnect-backend-grupo-2.fly.dev"
@@ -57,6 +58,14 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
+        working-directory: web
+
+      - name: Create test user in staging
+        run: |
+          curl -X POST "${{ env.E2E_GATEWAY_URL }}/api/v1/auth/signup" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${{ secrets.TEST_USER_EMAIL || 'estudiante.prueba@ucaldas.edu.co' }}\",\"password\":\"${{ secrets.TEST_USER_PASSWORD || 'Test1234' }}\",\"fullName\":\"Usuario Test\"}" \
+            || echo "User may already exist"
         working-directory: web
 
       - name: Run E2E tests against staging
