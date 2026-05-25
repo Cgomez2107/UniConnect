@@ -13,12 +13,13 @@ on:
 env:
   NODE_VERSION: "20"
   PNPM_VERSION: "9.12.0"
-  E2E_BASE_URL: "https://uniconnect-dashboard-web.fly.dev"
-  E2E_GATEWAY_URL: "https://uniconnect-backend-grupo-2.fly.dev"
 
 jobs:
   e2e-web:
     runs-on: ubuntu-latest
+    env:
+      E2E_BASE_URL: "https://uniconnect-dashboard-web.fly.dev"
+      E2E_GATEWAY_URL: "https://uniconnect-backend-grupo-2.fly.dev"
     steps:
       - uses: actions/checkout@v4
 

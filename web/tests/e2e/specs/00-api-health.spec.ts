@@ -4,7 +4,7 @@ test.describe("API Health Check", () => {
   test("should be able to login via API", async ({ request }) => {
     const email = process.env.TEST_USER_EMAIL || "estudiante.prueba@ucaldas.edu.co";
     const password = process.env.TEST_USER_PASSWORD || "Test1234";
-    const gatewayUrl = process.env.E2E_GATEWAY_URL || "https://uniconnect-backend-grupo-2.fly.dev";
+    const gatewayUrl = process.env.E2E_GATEWAY_URL || "http://localhost:3000";
 
     console.log(`Testing login for: ${email}`);
     console.log(`Gateway URL: ${gatewayUrl}`);
@@ -22,13 +22,15 @@ test.describe("API Health Check", () => {
     }
 
     expect(response.status()).toBe(200);
-    expect(body.accessToken).toBeTruthy();
-    expect(body.user).toBeTruthy();
-    expect(body.user.email).toBe(email);
+    
+    const data = body.data || body;
+    expect(data.accessToken).toBeTruthy();
+    expect(data.user).toBeTruthy();
+    expect(data.user.email).toBe(email);
   });
 
   test("backend health check", async ({ request }) => {
-    const gatewayUrl = process.env.E2E_GATEWAY_URL || "https://uniconnect-backend-grupo-2.fly.dev";
+    const gatewayUrl = process.env.E2E_GATEWAY_URL || "http://localhost:3000";
     
     const response = await request.get(`${gatewayUrl}/health`);
     expect(response.status()).toBe(200);
