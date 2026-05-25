@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UuidSchema, DateStringSchema, UrlSchema } from "./_common.schema.js";
+import { UuidSchema, DateStringSchema, UrlSchema } from "./_common.schema";
 
 export const NotificationTypeEnum = z.enum([
   "message",

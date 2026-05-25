@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { UuidSchema, DateStringSchema, UrlSchema } from "./_common.schema.js";
-import { UserSchema, UserDTOSchema } from "./auth.schema.js";
+import { UuidSchema, DateStringSchema, UrlSchema } from "./_common.schema";
+import { UserSchema, UserDTOSchema } from "./auth.schema";
 
 export const ConversationTypeEnum = z.enum(["direct", "group"]);
 export const MessageTypeEnum = z.enum(["text", "file", "mention", "reaction"]);

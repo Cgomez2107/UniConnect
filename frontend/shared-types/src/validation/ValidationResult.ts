@@ -1,4 +1,4 @@
-import { ValidationErrorCode } from "./MessageValidationErrors.js";
+import { ValidationErrorCode } from "./MessageValidationErrors";
 
 /**
  * Resultado de la validación de un mensaje

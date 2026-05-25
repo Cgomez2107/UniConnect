@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { EventSchema } from "../schemas/event.schema.js";
-import type { ApiContract } from "./_base.contract.js";
+import { EventSchema } from "../schemas/event.schema";
+import type { ApiContract } from "./_base.contract";
 
 export const CreateEventRequestSchema = z.object({
   body: z.object({

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UuidSchema, EmailSchema, DateStringSchema } from "./_common.schema.js";
+import { UuidSchema, EmailSchema, DateStringSchema } from "./_common.schema";
 
 export const UserRoleEnum = z.enum(["estudiante", "admin"]);
 export const AuthProviderEnum = z.enum(["email", "google", "github"]);

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { StudyGroupSchema } from "../schemas/study-group.schema.js";
-import type { ApiContract } from "./_base.contract.js";
+import { StudyGroupSchema } from "../schemas/study-group.schema";
+import type { ApiContract } from "./_base.contract";
 
 export const CreateGroupRequestSchema = z.object({
   body: z.object({

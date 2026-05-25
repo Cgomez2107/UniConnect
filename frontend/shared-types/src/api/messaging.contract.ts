@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ConversationSchema } from "../schemas/messaging.schema.js";
-import type { ApiContract } from "./_base.contract.js";
+import { ConversationSchema } from "../schemas/messaging.schema";
+import type { ApiContract } from "./_base.contract";
 
 export const CreateConversationRequestSchema = z.object({
   body: z.object({
