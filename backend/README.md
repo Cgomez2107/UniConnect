@@ -274,6 +274,194 @@ Regla de migracion:
 - Cambiar frontend por dominio cuando el endpoint backend este listo.
 - Evitar migracion big-bang.
 
+## Documentación interactiva de la API (OpenAPI + Swagger)
+
+El gateway expone documentación interactiva generada automáticamente desde los contratos Zod en `@uniconnect/shared-types`.
+
+| Recurso | URL |
+|---|---|
+| Swagger UI | `http://localhost:3000/docs` |
+| OpenAPI JSON | `http://localhost:3000/openapi.json` |
+
+La generación del archivo `openapi.json` ocurre automáticamente en cada `build` del gateway. También puede ejecutarse manualmente:
+
+```bash
+cd backend/gateway
+pnpm generate:openapi
+```
+
+### Versionado histórico
+
+Cada release respaldado automáticamente genera un snapshot del contrato:
+
+```bash
+cd backend/gateway
+pnpm archive:openapi
+```
+
+Esto crea una copia en `backend/docs/openapi/v{version}.json` que queda trackeada en Git, permitiendo recuperar contratos de versiones anteriores.
+
+---
+
+## Guía para desarrolladores: Agregar un nuevo endpoint
+
+Este flujo garantiza que cada nuevo endpoint quede documentado en Swagger y con tipado estricto en toda la aplicación.
+
+### Paso 1: Definir el esquema Zod (o reutilizar uno existente)
+
+Los esquemas de dominio viven en `packages/shared-types/src/schemas/`:
+
+```ts
+// packages/shared-types/src/schemas/study-group.schema.ts
+export const StudyGroupSchema = z.object({
+  id: UuidSchema,
+  name: z.string().min(1).max(200),
+  description: z.string().min(1).max(1000),
+  // ...
+});
+```
+
+Si el endpoint necesita un DTO con snake_case para la API, también se define aquí.
+
+### Paso 2: Crear el contrato del endpoint
+
+Cada endpoint se declara como un contrato Zod en `packages/shared-types/src/api/`:
+
+```ts
+// packages/shared-types/src/api/study-group.contract.ts
+import { z } from "zod";
+import type { ApiContract } from "./_base.contract.js";
+
+export const UpdateGroupRequestSchema = z.object({
+  params: z.object({ id: UuidSchema }),
+  body: z.object({
+    name: z.string().min(1).max(200).optional(),
+    description: z.string().min(1).max(1000).optional(),
+  }),
+});
+
+export const UpdateGroupResponseSchema = z.object({
+  group: StudyGroupSchema,
+});
+
+export const UpdateGroupContract: ApiContract<
+  typeof UpdateGroupRequestSchema,
+  typeof UpdateGroupResponseSchema
+> = {
+  method: "PATCH",
+  path: "/api/v1/study-groups/:id",
+  request: UpdateGroupRequestSchema,
+  response: UpdateGroupResponseSchema,
+};
+```
+
+**Convenciones del `request`:**
+- `body` → schema del cuerpo de la petición (POST, PUT, PATCH)
+- `query` → schema de query parameters (GET, DELETE)
+- `params` → schema de path parameters (`:id`, `:questionId`, etc.)
+
+### Paso 3: Exportar el contrato desde el barrel
+
+```ts
+// packages/shared-types/src/index.ts
+export * from "./api/study-group.contract.js";
+```
+
+### Paso 4: Regenerar tipos compartidos
+
+```bash
+cd packages/shared-types
+pnpm build
+```
+
+Esto compila los esquemas Zod y genera los tipos inferidos disponibles para frontend y backend.
+
+### Paso 5: Implementar el handler en el microservicio
+
+En el microservicio correspondiente (ej. `backend/services/study-groups/`):
+
+```ts
+// routes: agregar match de ruta
+if (req.method === "PATCH" && detailMatch) {
+  await controller.update(req, res, detailMatch[1]);
+  return true;
+}
+```
+
+La validación ya está disponible vía el middleware en `backend/shared/middleware/validationMiddleware.ts`:
+
+```ts
+import { validateBody, validateParams } from "../../shared/middleware/validationMiddleware.js";
+import { UpdateGroupRequestSchema } from "@uniconnect/shared-types";
+
+const params = validateParams(UpdateGroupRequestSchema.shape.params, { id }, res);
+if (!params) return;
+const body = validateBody(UpdateGroupRequestSchema.shape.body, parsedBody, res);
+if (!body) return;
+```
+
+### Paso 6: Agregar el contrato al generador OpenAPI
+
+En `backend/gateway/scripts/generate-openapi.ts`, importar el nuevo contrato y agregarlo al array:
+
+```ts
+import { ..., UpdateGroupContract } from "@uniconnect/shared-types";
+
+const contracts: Contract[] = [
+  // ... contratos existentes
+  UpdateGroupContract,
+];
+```
+
+### Paso 7: Regenerar OpenAPI y verificar
+
+```bash
+cd backend/gateway
+pnpm generate:openapi
+# o simplemente:
+pnpm build
+```
+
+Esto genera `backend/gateway/openapi.json` con el nuevo endpoint documentado automáticamente.
+
+Visitar `http://localhost:3000/docs` para ver el endpoint en Swagger UI.
+
+### Consumo desde frontend con tipado estricto
+
+**Frontend Web (`web/`) y Móvil (`frontend/`):**
+
+Ambos proyectos ya tienen `@uniconnect/shared-types` como dependencia. Después de `pnpm build` en shared-types:
+
+```ts
+import { UpdateGroupRequestSchema } from "@uniconnect/shared-types";
+import type { z } from "zod";
+
+// Tipo inferido automáticamente desde el esquema Zod
+type UpdateGroupRequest = z.infer<typeof UpdateGroupRequestSchema>;
+
+// Uso en un hook o servicio
+async function updateGroup(id: string, data: UpdateGroupRequest["body"]) {
+  return api.patch(`/api/v1/study-groups/${id}`, data);
+}
+```
+
+### Resumen del pipeline de generación
+
+```
+Zod schemas (packages/shared-types)
+    │
+    ▼
+ApiContract (method + path + request/response Zod schemas)
+    │
+    ▼
+generate-openapi.ts ────► openapi.json ────► Swagger UI (/docs)
+    │
+    ▼
+archive-openapi.ts ────► docs/openapi/v{version}.json (Git)
+```
+
+---
+
 ## Siguientes pasos recomendados
 
 1. Integrar middleware JWT real en gateway y study-groups.
