@@ -812,40 +812,114 @@ export declare const SendMessageResponseSchema: z.ZodObject<{
         conversationId: z.ZodString;
         senderId: z.ZodString;
         content: z.ZodString;
-        type: z.ZodEnum<["text", "file", "mention", "reaction"]>;
+        type: z.ZodEnum<["text", "file", "mention", "reaction", "poll"]>;
+        poll: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            question: z.ZodString;
+            options: z.ZodArray<z.ZodObject<{
+                text: z.ZodString;
+                votes: z.ZodArray<z.ZodString, "many">;
+            }, "strip", z.ZodTypeAny, {
+                text: string;
+                votes: string[];
+            }, {
+                text: string;
+                votes: string[];
+            }>, "many">;
+            isOpen: z.ZodBoolean;
+            closesAt: z.ZodNullable<z.ZodString>;
+            createdAt: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        }, {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        }>>>;
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         createdAt: string;
         id: string;
         conversationId: string;
         senderId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | null | undefined;
     }, {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         createdAt: string;
         id: string;
         conversationId: string;
         senderId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | null | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     message: {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         createdAt: string;
         id: string;
         conversationId: string;
         senderId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | null | undefined;
     };
 }, {
     message: {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         createdAt: string;
         id: string;
         conversationId: string;
         senderId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | null | undefined;
     };
 }>;
 export declare const CreateConversationContract: ApiContract<typeof CreateConversationRequestSchema, typeof CreateConversationResponseSchema>;
