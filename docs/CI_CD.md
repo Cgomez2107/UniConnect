@@ -87,6 +87,7 @@ graph TB
 | `web` | Typecheck + `pnpm lint` + build Vite del dashboard |
 | `sprint4-contracts` | Tests de integracion Sprint 4 con Vitest + umbral de cobertura (≥80% lines) |
 | `test-coverage` | Tests de patrones con c8 + `check-coverage.sh` (global ≥70%, Decorator+Observer ≥85%) |
+| `coverage-comment` | Solo en PRs: descarga el artifact de cobertura y publica un comentario con las métricas (global + patrones) en el PR |
 | `quality-gate` | Agrega los 6 jobs anteriores. Si alguno falla → `exit 1` |
 
 ### 2. `deploy.yml` — Despliegue a Fly.io

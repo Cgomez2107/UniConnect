@@ -434,6 +434,109 @@ jobs:
           path: backend/coverage/
           include-hidden-files: true
 
+  # ─── Job: Post Coverage Comment on PR ───
+  coverage-comment:
+    needs: [test-coverage]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+        continue-on-error: true
+
+      - name: Check if report exists
+        id: check
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No coverage report found — skipping comment"
+          fi
+
+      - name: Build coverage comment
+        id: build
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          FILE="coverage/coverage-summary.json"
+
+          LINES=$(jq -r '.total.lines.pct' "$FILE")
+          BRANCHES=$(jq -r '.total.branches.pct' "$FILE")
+          FUNCTIONS=$(jq -r '.total.functions.pct' "$FILE")
+          STATEMENTS=$(jq -r '.total.statements.pct' "$FILE")
+
+          PATTERNS_PREFIXES=("services/messaging/src/domain/decorators" "shared/patterns/decorator" "services/events/src/domain/events" "shared/patterns/observer")
+          TOTAL=0
+          COVERED=0
+          for prefix in "${PATTERNS_PREFIXES[@]}"; do
+            while IFS=$'\t' read -r t c; do
+              TOTAL=$((TOTAL + t))
+              COVERED=$((COVERED + c))
+            done < <(jq -r --arg prefix "$prefix" '
+              to_entries[]
+              | select(.key | gsub("\\\\"; "/") | contains($prefix))
+              | "\(.value.lines.total)\t\(.value.lines.covered)"
+            ' "$FILE")
+          done
+
+          if [ "$TOTAL" -gt 0 ]; then
+            PATTERNS_PCT=$(echo "scale=2; $COVERED * 100 / $TOTAL" | bc)
+          else
+            PATTERNS_PCT="N/A"
+          fi
+
+          GLOBAL_PASS=true
+          PATTERNS_PASS=true
+          for metric in "$LINES" "$BRANCHES" "$FUNCTIONS" "$STATEMENTS"; do
+            if (( $(echo "$metric < 70" | bc -l) )); then
+              GLOBAL_PASS=false
+              break
+            fi
+          done
+          if [ "$PATTERNS_PCT" != "N/A" ] && (( $(echo "$PATTERNS_PCT < 85" | bc -l) )); then
+            PATTERNS_PASS=false
+          fi
+
+          if [ "$GLOBAL_PASS" = true ]; then GLOBAL_ICON="✅"; else GLOBAL_ICON="❌"; fi
+          if [ "$PATTERNS_PASS" = true ]; then PATTERNS_ICON="✅"; else PATTERNS_ICON="❌"; fi
+
+          {
+            echo "## 📊 Coverage Report"
+            echo ""
+            echo "### Global Coverage ${GLOBAL_ICON} (threshold 70%)"
+            echo ""
+            echo "| Metric | Coverage |"
+            echo "|--------|----------|"
+            echo "| Lines | ${LINES}% |"
+            echo "| Branches | ${BRANCHES}% |"
+            echo "| Functions | ${FUNCTIONS}% |"
+            echo "| Statements | ${STATEMENTS}% |"
+            echo ""
+            echo "### Pattern Coverage ${PATTERNS_ICON} (threshold 85%)"
+            echo ""
+            echo "| Module | Coverage |"
+            echo "|--------|----------|"
+            echo "| Decorator + Observer | ${PATTERNS_PCT}% |"
+            echo ""
+            if [ "$GLOBAL_PASS" = false ] || [ "$PATTERNS_PASS" = false ]; then
+              echo "> ⚠️ **Quality gate will fail** — one or more coverage thresholds not met."
+            else
+              echo "> ✅ **All coverage thresholds met.**"
+            fi
+          } > /tmp/coverage-comment.md
+
+          cat /tmp/coverage-comment.md
+
+      - name: Post comment on PR
+        if: steps.build.outcome == 'success'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-report
+          path: /tmp/coverage-comment.md
+
   # ─── Quality Gate Final ───
   quality-gate:
     needs: [contracts, backend, frontend, web, sprint4-contracts, test-coverage]
