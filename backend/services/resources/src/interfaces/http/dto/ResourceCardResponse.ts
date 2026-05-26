@@ -29,8 +29,8 @@ interface BaseResourceCardFields {
   readonly description: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
-  readonly author: ResourceAuthor | null;
-  readonly subject: ResourceSubject | null;
+  readonly profiles: ResourceAuthor | undefined;
+  readonly subjects: ResourceSubject | undefined;
 }
 
 export type ResourceCardResponse = BaseResourceCardFields & (FileResourceFields | LinkResourceFields);

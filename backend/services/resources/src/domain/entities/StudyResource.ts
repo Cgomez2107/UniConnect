@@ -9,7 +9,7 @@ export interface StudyResource {
   readonly userId: string;
   readonly programId: string;
   readonly subjectId: string;
-  readonly resourceType: "file" | "link";
+  readonly resourceType: string;
   readonly title: string;
   readonly description: string | null;
   readonly url: string | null;
@@ -36,7 +36,7 @@ export interface CreateStudyResourceInput {
   readonly userId: string;
   readonly programId: string;
   readonly subjectId: string;
-  readonly resourceType: "file" | "link";
+  readonly resourceType: string;
   readonly title: string;
   readonly description?: string;
   readonly url?: string;

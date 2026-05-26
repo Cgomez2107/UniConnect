@@ -7,7 +7,7 @@ export interface CreateStudyResourceCommand {
   readonly actorUserId: string;
   readonly programId: string;
   readonly subjectId: string;
-  readonly resourceType: 'file' | 'link';
+  readonly resourceType: string;
   readonly title: string;
   readonly description?: string;
   readonly url?: string;
@@ -63,11 +63,11 @@ export class CreateStudyResource {
         }
       }
 
-      return this.repository.create({
+      return     this.repository.create({
         userId: command.actorUserId,
         programId: command.programId.trim(),
         subjectId: command.subjectId.trim(),
-        resourceType: 'link',
+        resourceType: command.resourceType,
         title: command.title.trim(),
         description: command.description?.trim(),
         url: command.url.trim(),
@@ -90,7 +90,7 @@ export class CreateStudyResource {
       userId: command.actorUserId,
       programId: command.programId.trim(),
       subjectId: command.subjectId.trim(),
-      resourceType: "file",
+      resourceType: command.resourceType,
       title: command.title.trim(),
       description: command.description?.trim(),
       fileUrl: command.fileUrl.trim(),

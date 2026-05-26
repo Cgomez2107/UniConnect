@@ -148,7 +148,7 @@ export function SubirRecursoPage() {
         fileName = pickedFile.name;
         fileType = pickedFile.name.split(".").pop()?.toLowerCase() || undefined;
         fileSizeKb = Math.round(pickedFile.size / 1024);
-        resourceType = "file";
+        resourceType = detectResourceType(pickedFile.name);
       } else {
         fileUrl = linkUrl.trim();
         fileName = linkUrl.trim();

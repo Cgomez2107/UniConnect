@@ -1,5 +1,5 @@
 export interface CreateResourceDto {
-  readonly resourceType?: 'file' | 'link';
+  readonly resourceType?: string;
   readonly programId?: string;
   readonly subjectId?: string;
   readonly title?: string;

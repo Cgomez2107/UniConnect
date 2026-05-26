@@ -30,9 +30,8 @@ interface StudyResourceRow {
   full_count?: string | number;
 }
 
-function parseResourceType(value: string | null): "file" | "link" {
-  if (value === "file" || value === "link") return value;
-  return "file";
+function parseResourceType(value: string | null): string {
+  return value ?? "file";
 }
 
 function mapStudyResource(row: StudyResourceRow): StudyResource {
@@ -88,7 +87,8 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
 
     if (filters.resourceType) {
       values.push(filters.resourceType);
-      conditions.push(`sr.resource_type = $${values.length}`);
+      values.push(filters.resourceType);
+      conditions.push(`(sr.resource_type = $${values.length - 1} OR (sr.resource_type = 'file' AND LOWER(sr.file_type) = $${values.length}))`);
     }
 
     if (filters.search) {
