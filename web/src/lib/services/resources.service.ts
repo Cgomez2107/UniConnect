@@ -43,8 +43,9 @@ const resourcesService = {
     subjectId: string;
     title: string;
     description?: string;
-    fileUrl: string;
-    fileName: string;
+    url?: string;
+    fileUrl?: string;
+    fileName?: string;
     fileType?: string;
     fileSizeKb?: number;
     programId?: string;

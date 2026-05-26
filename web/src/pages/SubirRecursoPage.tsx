@@ -134,8 +134,9 @@ export function SubirRecursoPage() {
     setUploadError(null);
 
     try {
-      let fileUrl: string;
-      let fileName: string;
+      let fileUrl: string | undefined;
+      let fileName: string | undefined;
+      let url: string | undefined;
       let fileType: string | undefined;
       let fileSizeKb: number | undefined;
       let resourceType: string;
@@ -150,8 +151,7 @@ export function SubirRecursoPage() {
         fileSizeKb = Math.round(pickedFile.size / 1024);
         resourceType = detectResourceType(pickedFile.name);
       } else {
-        fileUrl = linkUrl.trim();
-        fileName = linkUrl.trim();
+        url = linkUrl.trim();
         resourceType = "link";
       }
 
@@ -159,12 +159,13 @@ export function SubirRecursoPage() {
         subjectId: selectedSubjectId,
         title: title.trim(),
         description: description.trim() || undefined,
+        url,
         fileUrl,
         fileName,
         fileType,
         fileSizeKb,
         programId,
-        resourceType,
+        resourceType: uploadMode === "file" ? "file" : resourceType,
       });
 
       navigate("/recursos");

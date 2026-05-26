@@ -13,8 +13,9 @@ export interface CreateStudyResourcePayload {
   subjectId: string;
   title: string;
   description?: string;
-  fileUrl: string;
-  fileName: string;
+  url?: string;
+  fileUrl?: string;
+  fileName?: string;
   fileType?: string;
   fileSizeKb?: number;
   programId?: string;
@@ -85,6 +86,7 @@ export class ResourcesClient extends BaseClient {
         subjectId: payload.subjectId,
         title: payload.title,
         description: payload.description,
+        url: payload.url,
         fileUrl: payload.fileUrl,
         fileName: payload.fileName,
         fileType: payload.fileType,
