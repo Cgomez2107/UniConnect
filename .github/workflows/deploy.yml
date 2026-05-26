@@ -85,12 +85,25 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Capture current stable image
+        id: stable
+        run: |
+          APP=$(grep '^app =' fly.toml | head -1 | sed 's/.*= *//' | tr -d "'" | tr -d '"')
+          STABLE_IMAGE=$(flyctl releases --app "$APP" --json 2>/dev/null | jq -r '.[0].imageRef // empty')
+          echo "app=$APP" >> $GITHUB_OUTPUT
+          echo "image=$STABLE_IMAGE" >> $GITHUB_OUTPUT
+          echo "App: $APP  |  Stable image: ${STABLE_IMAGE:-none (first deploy)}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Deploy backend to Fly.io
+        id: deploy
         run: flyctl deploy --remote-only --build-arg COMMIT_SHA=${{ github.sha }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Validate backend deployment
+        id: validate
         run: |
           HEALTH_URL="https://uniconnect-backend-grupo-2.fly.dev/health"
           EXPECTED_SHA="${{ github.sha }}"
@@ -118,6 +131,76 @@ jobs:
             exit 1
           fi
 
+      - name: Rollback to previous stable image
+        id: rollback
+        if: failure() && steps.stable.outputs.image != ''
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          APP="${{ steps.stable.outputs.app }}"
+          IMAGE="${{ steps.stable.outputs.image }}"
+          echo "Rolling back $APP to image $IMAGE"
+          flyctl deploy --app "$APP" --image "$IMAGE" --strategy immediate
+
+      - name: Notify deployment status
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL not set — skipping notification"
+            exit 0
+          fi
+
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          COMMIT_MSG=$(git log -1 --pretty=%B "${{ github.sha }}" | head -c 500)
+          WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BRANCH=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
+
+          ROLLBACK_OUTCOME="${{ steps.rollback.outcome }}"
+          VALIDATE_OUTCOME="${{ steps.validate.outcome }}"
+
+          if [ "$ROLLBACK_OUTCOME" = "success" ]; then
+            STATUS_EMOJI="⚠️"
+            STATUS_TEXT="ROLLBACK EXECUTED — failed deploy reverted to previous stable image"
+            COLOR=16776960
+          elif [ "$VALIDATE_OUTCOME" = "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_TEXT="DEPLOY SUCCESS — all health checks passed"
+            COLOR=3066993
+          else
+            STATUS_EMOJI="🔴"
+            STATUS_TEXT="DEPLOY FAILED — check the workflow log for details"
+            COLOR=15158332
+          fi
+
+          jq -n \
+            --arg title "${STATUS_EMOJI} Backend · ${BRANCH}" \
+            --arg desc "$STATUS_TEXT" \
+            --arg sha "$SHORT_SHA" \
+            --arg msg "$COMMIT_MSG" \
+            --arg url "$WORKFLOW_URL" \
+            --argjson color "$COLOR" \
+            '{
+              embeds: [{
+                title: $title,
+                color: $color,
+                fields: [
+                  { name: "Commit", value: "`\($sha)`", inline: true },
+                  { name: "Branch", value: $ENV.BRANCH, inline: true }
+                ],
+                description: "**\($desc)**\n\n\($msg)\n\n[View Workflow Log](\($url))",
+                timestamp: now
+              }]
+            }' \
+            --arg BRANCH "$BRANCH" \
+            > /tmp/discord-payload.json
+
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/discord-payload.json
+          echo "Notification sent"
+
   # ── Job 3: Deploy Web ────────────────────────────────────────────────
   deploy-web:
     needs: [test]
@@ -128,12 +211,25 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Capture current stable image
+        id: stable
+        run: |
+          APP=$(grep '^app =' fly-web.toml | head -1 | sed 's/.*= *//' | tr -d "'" | tr -d '"')
+          STABLE_IMAGE=$(flyctl releases --app "$APP" --json 2>/dev/null | jq -r '.[0].imageRef // empty')
+          echo "app=$APP" >> $GITHUB_OUTPUT
+          echo "image=$STABLE_IMAGE" >> $GITHUB_OUTPUT
+          echo "App: $APP  |  Stable image: ${STABLE_IMAGE:-none (first deploy)}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Deploy web to Fly.io
+        id: deploy
         run: flyctl deploy --remote-only --config fly-web.toml --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Validate web deployment
+        id: validate
         run: |
           WEB_URL="https://uniconnect-dashboard-web.fly.dev"
           MAX_RETRIES=12
@@ -153,3 +249,73 @@ jobs:
             echo "Web deployment validation failed after $MAX_RETRIES attempts"
             exit 1
           fi
+
+      - name: Rollback to previous stable image
+        id: rollback
+        if: failure() && steps.stable.outputs.image != ''
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          APP="${{ steps.stable.outputs.app }}"
+          IMAGE="${{ steps.stable.outputs.image }}"
+          echo "Rolling back $APP to image $IMAGE"
+          flyctl deploy --app "$APP" --image "$IMAGE" --strategy immediate
+
+      - name: Notify deployment status
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL not set — skipping notification"
+            exit 0
+          fi
+
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          COMMIT_MSG=$(git log -1 --pretty=%B "${{ github.sha }}" | head -c 500)
+          WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BRANCH=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
+
+          ROLLBACK_OUTCOME="${{ steps.rollback.outcome }}"
+          VALIDATE_OUTCOME="${{ steps.validate.outcome }}"
+
+          if [ "$ROLLBACK_OUTCOME" = "success" ]; then
+            STATUS_EMOJI="⚠️"
+            STATUS_TEXT="ROLLBACK EXECUTED — failed deploy reverted to previous stable image"
+            COLOR=16776960
+          elif [ "$VALIDATE_OUTCOME" = "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_TEXT="DEPLOY SUCCESS — Vite build served behind Nginx"
+            COLOR=3066993
+          else
+            STATUS_EMOJI="🔴"
+            STATUS_TEXT="DEPLOY FAILED — check the workflow log for details"
+            COLOR=15158332
+          fi
+
+          jq -n \
+            --arg title "${STATUS_EMOJI} Dashboard Web · ${BRANCH}" \
+            --arg desc "$STATUS_TEXT" \
+            --arg sha "$SHORT_SHA" \
+            --arg msg "$COMMIT_MSG" \
+            --arg url "$WORKFLOW_URL" \
+            --argjson color "$COLOR" \
+            '{
+              embeds: [{
+                title: $title,
+                color: $color,
+                fields: [
+                  { name: "Commit", value: "`\($sha)`", inline: true },
+                  { name: "Branch", value: $ENV.BRANCH, inline: true }
+                ],
+                description: "**\($desc)**\n\n\($msg)\n\n[View Workflow Log](\($url))",
+                timestamp: now
+              }]
+            }' \
+            --arg BRANCH "$BRANCH" \
+            > /tmp/discord-payload.json
+
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/discord-payload.json
+          echo "Notification sent"
