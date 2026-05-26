@@ -4,12 +4,17 @@ import useAuth from "@/hooks/useAuth";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MentionInput } from "@/components/chat/MentionInput";
 import { Avatar } from "@/components/ui/Avatar";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
+import type { GroupState } from "@/types";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import { useChatObserver } from "@/hooks/useChatObserver";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+import { isForbiddenContent } from "@/hooks/useMessageValidation";
+import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
+import { getWsUrl } from "@/lib/wsUrl";
 
 function transformMentions(mentions?: any[]): MentionData[] | undefined {
   if (!mentions || mentions.length === 0) return undefined;
@@ -45,6 +50,7 @@ export function GroupChatPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [groupName, setGroupName] = useState("");
+  const [groupState, setGroupState] = useState<GroupState>("Activo");
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -77,6 +83,16 @@ export function GroupChatPage() {
         setMessages((msgs || []).reverse());
         setMembers(membersData || []);
         setGroupName(groupData?.name || "Chat del grupo");
+        const groupStatus = (groupData as any)?.status as string;
+        const hasPendingTransfer = !!(groupData as any)?.hasPendingTransfer;
+        const computedState: GroupState = groupStatus === "cerrada"
+          ? "Disuelto"
+          : groupStatus === "expirada"
+            ? "Bloqueado"
+            : hasPendingTransfer
+              ? "PendienteTransferencia"
+              : "Activo";
+        setGroupState(computedState);
       } catch (err) {
         console.error("Error loading group chat:", err);
       } finally {
@@ -103,8 +119,7 @@ export function GroupChatPage() {
 
     console.log("[GroupChat] WS effect starting for group", id, "user", user?.id);
 
-    const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
-    const wsUrl = `${WS_URL}/ws?token=${token}`;
+    const wsUrl = `${getWsUrl()}/ws?token=${token}`;
     let reconnectAttempts = 0;
     const MAX_RECONNECT = 3;
 
@@ -265,6 +280,15 @@ export function GroupChatPage() {
 
   const handleRetry = async (failedMsg: any) => {
     if (!id) return;
+    if (isForbiddenContent(failedMsg.content || "")) {
+      alert(ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m
+        )
+      );
+      return;
+    }
     setMessages((prev) =>
       prev.map((m) => (m.id === failedMsg.id ? { ...m, clientStatus: "sending" } : m))
     );
@@ -419,10 +443,11 @@ export function GroupChatPage() {
           </svg>
         </button>
         <Avatar name={groupName} size="sm" />
-        <div className="flex-1">
-          <h1 className="text-base font-bold text-neutral-900">{groupName}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-bold text-neutral-900 truncate">{groupName}</h1>
           <p className="text-xs text-neutral-500">{members.length} miembros</p>
         </div>
+        <GroupStateBadge state={groupState} size="small" />
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">

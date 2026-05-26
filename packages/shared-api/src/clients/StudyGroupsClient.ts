@@ -48,6 +48,9 @@ export interface ListApplicationsParams {
 
 export interface ListStudyGroupsParams {
   subjectId?: string;
+  subjectIds?: string[];
+  page?: number;
+  limit?: number;
 }
 
 export class StudyGroupsClient extends BaseClient {
@@ -59,7 +62,12 @@ export class StudyGroupsClient extends BaseClient {
     const response = await this.transport.request<StudyGroupDTO[]>({
       method: "GET",
       url: "/study-groups",
-      params: params?.subjectId ? { subjectIds: params.subjectId } : undefined,
+      params: {
+        ...(params?.subjectIds !== undefined && params.subjectIds.length > 0 && { subjectIds: params.subjectIds.join(",") }),
+        ...(params?.subjectId !== undefined && { subjectIds: params.subjectId }),
+        ...(params?.page !== undefined && { page: params.page }),
+        ...(params?.limit !== undefined && { limit: params.limit }),
+      },
     });
     return this.ensureArray(response.data).map((dto) => mapStudyGroupDtoToDomain(dto));
   }
@@ -147,6 +155,13 @@ export class StudyGroupsClient extends BaseClient {
     await this.transport.request({
       method: "POST",
       url: `/study-groups/${groupId}/cancel`,
+    });
+  }
+
+  async cancelMyApplication(applicationId: string): Promise<void> {
+    await this.transport.request({
+      method: "POST",
+      url: `/study-groups/applications/${applicationId}/cancel`,
     });
   }
 

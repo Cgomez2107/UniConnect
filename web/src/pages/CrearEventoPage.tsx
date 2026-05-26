@@ -32,11 +32,13 @@ export function CrearEventoPage() {
 
     setSaving(true);
     try {
+      const isoDate = new Date(form.eventDate).toISOString();
       await eventsService.createEvent({
         title: form.title.trim(),
-        description: form.description.trim(),
-        eventDate: new Date(form.eventDate).toISOString(),
-        location: form.location.trim() || undefined,
+        description: form.description.trim() || "Sin descripción",
+        startAt: isoDate,
+        endAt: isoDate,
+        location: form.location.trim() || "Por definir",
         category: form.category,
       });
       success("Evento creado exitosamente");

@@ -5,7 +5,7 @@ import type { IMemberRepository } from "../../domain/repositories/IMemberReposit
 
 export interface CreateSeriesInput {
   readonly actorUserId: string;
-  readonly groupId: string;
+  readonly requestId: string;
   readonly title: string;
   readonly description: string;
   readonly startTime: string;
@@ -24,7 +24,7 @@ export class CreateStudySessionSeries {
   async execute(input: CreateSeriesInput): Promise<StudySession[]> {
     const title = input.title.trim();
     if (!title) throw new Error("Title is required");
-    if (!input.groupId) throw new Error("Group ID is required");
+    if (!input.requestId) throw new Error("Request ID is required");
 
     const startDate = new Date(input.startTime);
     if (isNaN(startDate.getTime())) throw new Error("Invalid startTime date");
@@ -41,13 +41,14 @@ export class CreateStudySessionSeries {
     const weekCount = Math.min(input.weekCount || 8, 52);
 
     const series = await this.repository.create({
-      groupId: input.groupId,
+      seriesId: null,
+      requestId: input.requestId,
       title,
       description: input.description,
       startTime: input.startTime,
       endTime: input.endTime,
-      rrule: input.rrule,
-      parentSeriesId: undefined,
+      location: null,
+      remindAt: null,
       createdBy: input.actorUserId,
     });
     sessions.push(series);
@@ -58,13 +59,14 @@ export class CreateStudySessionSeries {
         const weekStart = new Date(startDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
         const weekEnd = new Date(weekStart.getTime() + durationMs);
         const child = await this.repository.create({
-          groupId: input.groupId,
+          seriesId: series.id,
+          requestId: input.requestId,
           title,
           description: input.description,
           startTime: weekStart.toISOString(),
           endTime: weekEnd.toISOString(),
-          rrule: undefined,
-          parentSeriesId: series.id,
+          location: null,
+          remindAt: null,
           createdBy: input.actorUserId,
         });
         sessions.push(child);
@@ -72,21 +74,23 @@ export class CreateStudySessionSeries {
     }
 
     if (this.subject) {
-      for (const session of sessions) {
-        await this.subject.emit({
-          type: "SESSION_CREATED",
-          version: "1.0",
-          timestamp: new Date(),
-          sessionId: session.id,
-          groupId: session.groupId,
-          title: session.title,
-          startTime: session.startTime,
-          endTime: session.endTime,
-          createdBy: session.createdBy,
-          isRecurring: !!input.rrule,
-          seriesId: session.parentSeriesId,
-        });
-      }
+      await Promise.all(
+        sessions.map(session =>
+          this.subject!.emit({
+            type: "SESSION_CREATED",
+            version: "1.0",
+            timestamp: new Date(),
+            sessionId: session.id,
+            groupId: session.requestId,
+            title: session.title,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            createdBy: session.createdBy,
+            isRecurring: !!input.rrule,
+            seriesId: session.seriesId,
+          }),
+        ),
+      );
     }
 
     return sessions;

@@ -44,6 +44,7 @@ export class CreateAnswer {
       authorName: '',
       body: input.body,
       voteCount: 0,
+      isSolution: false,
       isPinned: false,
     });
 

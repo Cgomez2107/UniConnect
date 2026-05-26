@@ -14,7 +14,7 @@ const authService = {
     if (response.user) {
       localStorage.setItem("user", JSON.stringify(response.user));
     }
-    return response.user as AuthProfile;
+    return response.user as unknown as AuthProfile;
   },
 
   async logout(): Promise<void> {
@@ -39,7 +39,7 @@ const authService = {
     if (response.user) {
       localStorage.setItem("user", JSON.stringify(response.user));
     }
-    return response.user as AuthProfile;
+    return response.user as unknown as AuthProfile;
   },
 
   getStoredUser(): AuthProfile | null {

@@ -24,6 +24,7 @@ export class SessionAvailabilityObserver implements IObserver {
         break;
 
       case "SESSION_CANCELLED":
+        if (!event.groupId) break;
         await this.broadcastToGroupMembers(event.groupId, "study-session:cancelled", {
           sessionId: event.sessionId,
           groupId: event.groupId,

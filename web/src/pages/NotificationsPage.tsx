@@ -1,16 +1,34 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Bell } from "lucide-react";
 import { useNotificationStore } from "@/store/useNotificationStore";
-import { fetchNotifications } from "@/lib/services/notifications.service";
+import { fetchNotifications, markAllAsRead } from "@/lib/services/notifications.service";
 import NotificationItem from "@/components/notifications/NotificationItem";
 
 export function NotificationsPage() {
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const storeMarkAllAsRead = useNotificationStore((s) => s.markAllAsRead);
 
   useEffect(() => {
     fetchNotifications();
+    (async () => {
+      try {
+        await markAllAsRead();
+        storeMarkAllAsRead();
+      } catch {
+        console.error("Error marking all as read from NotificationsPage");
+      }
+    })();
   }, []);
+
+  const uniqueNotifications = useMemo(() => {
+    const seen = new Set<string>();
+    return notifications.filter((n) => {
+      if (seen.has(n.id)) return false;
+      seen.add(n.id);
+      return true;
+    });
+  }, [notifications]);
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 animate-fade-in">
@@ -26,14 +44,14 @@ export function NotificationsPage() {
           </div>
         </div>
 
-        {notifications.length === 0 ? (
+        {uniqueNotifications.length === 0 ? (
           <div className="text-center py-12">
             <Bell className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
             <p className="text-neutral-500 dark:text-neutral-400">Sin notificaciones</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {notifications.map((n) => (
+            {uniqueNotifications.map((n) => (
               <NotificationItem key={n.id} notificacion={n} />
             ))}
           </div>

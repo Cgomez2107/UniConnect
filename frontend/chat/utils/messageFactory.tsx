@@ -1,3 +1,4 @@
+import type { Reaction } from "@/types"
 import { 
   BaseMessage, 
   FileMessageDecorator, 
@@ -6,41 +7,42 @@ import {
   IMessage 
 } from '@/chat/models/MessageDecorator';
 
+function groupReactions(reactions: Reaction[]): { emoji: string; count: number }[] {
+  const map = new Map<string, number>()
+  for (const r of reactions) {
+    map.set(r.emoji, (map.get(r.emoji) || 0) + 1)
+  }
+  return Array.from(map.entries()).map(([emoji, count]) => ({ emoji, count }))
+}
+
 /**
- * Factory para transformar mensajes crudos de Supabase en objetos decorados.
- * US-D01: Asegura que el patrón Decorator se aplique según los datos disponibles.
- * 
- * @param raw - El objeto JSON crudo proveniente del backend/Supabase.
- * @returns Una instancia de IMessage con todos los decoradores necesarios aplicados.
+ * Factory para transformar mensajes crudos en objetos decorados (US-D01).
  */
 export function transformRawMessage(raw: any): IMessage {
-  // Paso 1: Instancia Base
   let message: IMessage = new BaseMessage(
     raw.id,
     raw.content || '',
     raw.sender_id || raw.senderId,
-    new Date(raw.created_at || raw.createdAt)
-  );
+    new Date(raw.created_at || raw.createdAt),
+  )
 
-  // Paso 2: Decorador de Archivo (Media)
-  const mediaUrl = raw.media_url || raw.mediaUrl;
+  const mediaUrl = raw.media_url || raw.mediaUrl
   if (mediaUrl) {
     message = new FileMessageDecorator(message, {
       url: mediaUrl,
-      mimeType: raw.mime_type || raw.media_type || raw.mediaType || 'application/octet-stream',
-      filename: raw.file_name || raw.media_filename || raw.mediaFilename || 'archivo'
-    });
+      mimeType: raw.media_type || raw.mediaType || 'application/octet-stream',
+      filename: raw.media_filename || raw.mediaFilename || 'archivo',
+    })
   }
 
-  // Paso 3: Decorador de Menciones
   if (Array.isArray(raw.mentions) && raw.mentions.length > 0) {
-    message = new MentionMessageDecorator(message, raw.mentions);
+    message = new MentionMessageDecorator(message, raw.mentions)
   }
 
-  // Paso 4: Decorador de Reacciones
   if (Array.isArray(raw.reactions) && raw.reactions.length > 0) {
-    message = new ReactionMessageDecorator(message, raw.reactions);
+    const grouped = groupReactions(raw.reactions)
+    message = new ReactionMessageDecorator(message, grouped)
   }
 
-  return message;
+  return message
 }

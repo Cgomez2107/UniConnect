@@ -9,6 +9,7 @@ interface AnswerRow {
   author_name: string;
   body: string;
   vote_count: number;
+  is_solution: boolean;
   is_pinned: boolean;
   created_at: string | Date;
   updated_at: string | Date;
@@ -22,6 +23,7 @@ function mapAnswer(row: AnswerRow): ForumAnswer {
     authorName: row.author_name,
     body: row.body,
     voteCount: Number(row.vote_count),
+    isSolution: row.is_solution,
     isPinned: row.is_pinned,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -68,7 +70,7 @@ export class PostgresForumAnswerRepository implements IForumAnswerRepository {
         FROM forum_answers fa
         LEFT JOIN profiles p ON p.id = fa.author_id
         WHERE fa.question_id = $1
-        ORDER BY fa.is_pinned DESC, fa.vote_count DESC, fa.created_at ASC
+    ORDER BY fa.is_pinned DESC, fa.is_solution DESC, fa.vote_count DESC, fa.created_at ASC
       `,
       [questionId],
     );
@@ -83,6 +85,13 @@ export class PostgresForumAnswerRepository implements IForumAnswerRepository {
         SET is_pinned = true, updated_at = NOW()
         WHERE id = $1
       `,
+      [answerId],
+    );
+  }
+
+  async markAsSolution(answerId: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE forum_answers SET is_solution = true, updated_at = NOW() WHERE id = $1`,
       [answerId],
     );
   }

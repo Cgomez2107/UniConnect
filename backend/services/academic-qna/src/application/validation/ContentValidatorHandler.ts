@@ -1,7 +1,7 @@
 import { ContentError } from '../../../../../shared/libs/errors/ContentError.js';
 import { BaseForumQuestionHandler, type ValidationContext } from './ForumQuestionHandler.js';
 
-const FORBIDDEN_WORDS = ['spam', 'ofensa'];
+const FORBIDDEN_WORDS = ['spam', 'violencia', 'odio', 'racismo', 'discriminación', 'pornografía', 'drogas', 'armas'];
 
 export class ContentValidatorHandler extends BaseForumQuestionHandler {
   async validate(context: ValidationContext): Promise<void> {

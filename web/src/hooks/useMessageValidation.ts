@@ -30,14 +30,27 @@ const VALIDATION_LIMITS = {
   MAX_MESSAGE_LENGTH: 5000,
   WARN_LENGTH_THRESHOLD: 4500, // Advertir cuando falta 500 caracteres
   FILENAME_MAX_LENGTH: 255,
-  FILE_MAX_SIZE_MB: 50,
+  FILE_MAX_SIZE_MB: 10,
 };
 
 /**
  * Palabras prohibidas (sincronizar con backend)
  * En producción, esto vendría del backend
  */
-const FORBIDDEN_WORDS_PATTERN = /(spam|basurah|malas?palabr[a-z]*)/gi;
+const FORBIDDEN_WORDS = [
+  "spam",
+  "violencia",
+  "odio",
+  "racismo",
+  "discriminación",
+  "pornografía",
+  "drogas",
+  "armas",
+];
+
+const FORBIDDEN_WORDS_REGEX = FORBIDDEN_WORDS.map(
+  (word) => new RegExp(escapeRegex(word), "gi")
+);
 
 /**
  * Hook para validación de mensajes con debounce
@@ -202,7 +215,7 @@ function performBasicValidation(
   }
 
   // Detección de palabras prohibidas
-  if (FORBIDDEN_WORDS_PATTERN.test(trimmed)) {
+  if (isForbiddenContent(trimmed)) {
     return {
       isValidating: false,
       isValid: false,
@@ -220,6 +233,24 @@ function performBasicValidation(
     warnings: warnings.length > 0 ? warnings : undefined,
     suggestions: [],
   };
+}
+
+export function isForbiddenContent(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed) return false;
+
+  for (const pattern of FORBIDDEN_WORDS_REGEX) {
+    pattern.lastIndex = 0;
+    if (pattern.test(trimmed)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**

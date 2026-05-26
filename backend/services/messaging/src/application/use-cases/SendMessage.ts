@@ -54,11 +54,17 @@ export class SendMessage {
     const normalizedContent = content.trim();
     const normalizedMediaUrl = media?.mediaUrl?.trim() ?? "";
 
-    await this.validator.validate(normalizedContent, {
+    const validationResult = await this.validator.manejar(normalizedContent, {
       mediaUrl: normalizedMediaUrl || undefined,
       mediaType: media?.mediaType?.trim() || undefined,
       mediaFilename: media?.mediaFilename?.trim() || undefined,
     });
+
+    if (!validationResult.valido) {
+      throw new Error(validationResult.mensajeError ?? "Error de validación");
+    }
+
+    const finalContent = validationResult.contenidoModificado ?? normalizedContent;
 
     const conversation = await this.repository.getConversationById(
       normalizedConversationId,
@@ -74,7 +80,7 @@ export class SendMessage {
     const created = await this.repository.createMessage({
       conversationId: normalizedConversationId,
       senderId: normalizedSenderId,
-      content: normalizedContent,
+      content: finalContent,
       mediaUrl: normalizedMediaUrl || undefined,
       mediaType: media?.mediaType?.trim() || undefined,
       mediaFilename: media?.mediaFilename?.trim() || undefined,

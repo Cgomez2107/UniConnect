@@ -6,11 +6,13 @@ import {
   TouchableOpacity, 
   Modal, 
   ActivityIndicator,
-  Platform 
+  Platform,
+  Linking
 } from "react-native";
 import { useNotificationStore, type Prioridad, type Accion } from "@/store/useNotificationStore";
 import { supabase } from "@/lib/supabase";
 import { fetchApi } from "@/lib/api/httpClient";
+import { useRouter } from "expo-router";
 
 /**
  * GlobalNotificationModals
@@ -73,25 +75,23 @@ export function GlobalNotificationModals() {
 
 // 1. Modal de Transferencia de Administración
 function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void }) {
-  const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
   const priority = data.priority ?? "normal";
-  
-  // Lógica robusta para obtener el nombre del grupo
   const groupName = data.payload?.groupName || (data.title !== "transferencia_admin_solicitada" ? data.title : "un grupo");
+  const transferId = data.payload?.transferId ?? data.payload?.id;
+  const groupId = data.payload?.groupId ?? data.payload?.requestId;
 
-  const handleAccept = async () => {
-    setIsProcessing(true);
-    try {
-      await fetchApi(`/study-groups/transfers/${data.payload.transferId}/accept`, {
-        method: "POST",
-      });
-      onClose();
-      if (Platform.OS === 'web') window.location.reload();
-    } catch (error) {
-      console.error("Error al aceptar transferencia:", error);
-      onClose();
-    } finally {
-      setIsProcessing(false);
+  const handleAccept = () => {
+    onClose();
+    if (groupId && transferId) {
+      router.push(`/grupo/${groupId}?acceptTransfer=${transferId}` as any);
+    }
+  };
+
+  const handleReject = () => {
+    onClose();
+    if (groupId) {
+      router.push(`/grupo/${groupId}` as any);
     }
   };
 
@@ -110,11 +110,11 @@ function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void 
           {/* Decoradores */}
           <View style={styles.decoratorDivider} />
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={handleAccept} disabled={isProcessing}>
-              {isProcessing ? <ActivityIndicator color="#0047AB" /> : <Text style={styles.acceptText}>ACEPTAR CARGO</Text>}
+            <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={handleAccept}>
+              <Text style={styles.acceptText}>ACEPTAR CARGO</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onClose} disabled={isProcessing}>
-              <Text style={styles.rejectText}>RECHAZAR</Text>
+            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={handleReject}>
+              <Text style={styles.rejectText}>CERRAR</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -188,23 +188,23 @@ function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
 
 // 4. Modal Genérico con Acción Decorada (D03)
 function DefaultActionModal({ data, onClose }: { data: any, onClose: () => void }) {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [actionResult, setActionResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const router = useRouter();
+  const payload = data.payload ?? data.data ?? {};
 
-  const handleAction = useCallback(async () => {
-    if (!data.action?.endpoint || isProcessing) return;
-    setIsProcessing(true);
-    setActionResult(null);
-    try {
-      await fetchApi(data.action.endpoint, { method: "POST" });
-      setActionResult({ ok: true, message: "Completado" });
-      setTimeout(() => onClose(), 1500);
-    } catch (error: any) {
-      setActionResult({ ok: false, message: error?.message ?? "Error de conexión" });
-    } finally {
-      setIsProcessing(false);
+  const handleAction = useCallback(() => {
+    onClose();
+    const groupId = payload.groupId ?? payload.requestId;
+    const transferId = payload.transferId;
+    const requestId = payload.requestId;
+
+    if (transferId && groupId) {
+      router.push(`/grupo/${groupId}?acceptTransfer=${transferId}` as any);
+    } else if (groupId) {
+      router.push(`/grupo/${groupId}` as any);
+    } else if (requestId) {
+      router.push(`/solicitud/${requestId}` as any);
     }
-  }, [data.action, isProcessing, onClose]);
+  }, [data, onClose, router]);
 
   return (
     <Modal transparent visible animationType="fade">
@@ -219,29 +219,14 @@ function DefaultActionModal({ data, onClose }: { data: any, onClose: () => void 
           {/* Decoradores */}
           <View style={styles.decoratorDivider} />
 
-          {actionResult && !actionResult.ok && (
-            <Text style={styles.errorText}>{actionResult.message}</Text>
-          )}
-
           <View style={styles.buttonContainer}>
-            {actionResult?.ok ? (
-              <TouchableOpacity style={[styles.button, { backgroundColor: '#10B981' }]} onPress={onClose}>
-                <Text style={[styles.acceptText, { color: 'white' }]}>✓ {actionResult.message}</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.button, styles.acceptButton]}
-                onPress={handleAction}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <ActivityIndicator color="#0047AB" />
-                ) : (
-                  <Text style={styles.acceptText}>{data.action?.label ?? "ACCIÓN"}</Text>
-                )}
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onClose} disabled={isProcessing}>
+            <TouchableOpacity
+              style={[styles.button, styles.acceptButton]}
+              onPress={handleAction}
+            >
+              <Text style={styles.acceptText}>{data.action?.label ?? "VER"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onClose}>
               <Text style={styles.rejectText}>CERRAR</Text>
             </TouchableOpacity>
           </View>

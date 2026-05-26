@@ -3,6 +3,8 @@
  * Abstractions for HTTP and WebSocket communication
  */
 
+import type { z } from "zod";
+
 export interface RequestOptions {
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   url: string;
@@ -10,6 +12,7 @@ export interface RequestOptions {
   body?: any;
   params?: Record<string, string | number | boolean>;
   timeout?: number;
+  responseSchema?: z.ZodTypeAny;
 }
 
 export interface ResponseData<T = any> {
@@ -23,6 +26,21 @@ export interface TransportError extends Error {
   status?: number;
   response?: ResponseData;
   originalError?: Error;
+}
+
+export class ContractViolationError extends Error {
+  public readonly method: string;
+  public readonly url: string;
+  public readonly zodIssues: import("zod").ZodIssue[];
+
+  constructor(method: string, url: string, zodIssues: import("zod").ZodIssue[]) {
+    const messages = zodIssues.map((i) => `[${i.path.join(".") || "<root>"}] ${i.message}`).join("; ");
+    super(`[ContractViolation] API response validation failed for ${method} ${url}: ${messages}`);
+    this.name = "ContractViolationError";
+    this.method = method;
+    this.url = url;
+    this.zodIssues = zodIssues;
+  }
 }
 
 export interface ITransport {

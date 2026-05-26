@@ -104,6 +104,7 @@ export class ProfilesCatalogController {
         sendData(res, 200, result);
       }
     } catch (error) {
+      console.error("Error en getStudentProfile:", error instanceof Error ? error.message : error);
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
@@ -180,20 +181,20 @@ export class ProfilesCatalogController {
 
       sendData(res, 200, {
         id: student.id,
-        full_name: student.fullName,
-        avatar_url: student.avatarUrl,
+        fullName: student.fullName,
+        avatarUrl: student.avatarUrl,
         bio: student.bio,
-        phone_number: student.phoneNumber,
+        phoneNumber: student.phoneNumber,
         role: "estudiante",
         semester: student.semester,
-        program_id: student.programId,
-        program_name: student.programName ?? null,
-        faculty_name: student.facultyName ?? null,
-        is_active: true,
-        created_at: student.createdAt,
-        updated_at: student.updatedAt,
+        programId: student.programId,
+        programName: student.programName ?? null,
+        facultyName: student.facultyName ?? null,
+        isActive: true,
+        createdAt: student.createdAt,
+        updatedAt: student.updatedAt,
         carrera: meta.carrera ?? null,
-        asignaturas_activas: meta.asignaturasActivas ?? [],
+        asignaturasActivas: meta.asignaturasActivas ?? [],
         indicadores: meta.indicadores ?? null,
         insignias: meta.insignias ?? [],
       });
@@ -285,13 +286,10 @@ export class ProfilesCatalogController {
     try {
       const programs = await this.getMyProgramsUC.execute(userId);
       const mapped = programs.map((p) => ({
-        program_id: p.id,
-        is_primary: p.isPrimary,
-        programs: {
-          id: p.id,
-          name: p.name,
-          ...(p.facultyName ? { faculties: { name: p.facultyName } } : {}),
-        },
+        id: p.id,
+        name: p.name,
+        facultyName: p.facultyName ?? undefined,
+        isPrimary: p.isPrimary,
       }));
       sendData(res, 200, mapped, { total: mapped.length });
     } catch (error) {
@@ -310,7 +308,7 @@ export class ProfilesCatalogController {
     try {
       const subjects = await this.studentRepository.getSubjectsByUserId(userId);
       const mapped = subjects.map((s) => ({
-        subject_id: s.subjectId,
+        subjectId: s.subjectId,
         subject: {
           id: s.subjectId,
           name: s.name,

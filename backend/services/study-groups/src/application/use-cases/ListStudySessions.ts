@@ -12,6 +12,6 @@ export class ListStudySessions {
 
   async execute(input: ListSessionsInput): Promise<StudySession[]> {
     if (!input.groupId) throw new Error("Group ID is required");
-    return this.repository.findByGroup(input.groupId, input.from, input.to);
+    return this.repository.listByRequestId(input.groupId, { from: input.from, to: input.to });
   }
 }

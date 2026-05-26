@@ -33,7 +33,7 @@ export function ToastContainer() {
             id: notification.id,
             type: getToastType(notification.type),
             message: notification.title || notification.description || "",
-            timestamp: notification.createdAt instanceof Date ? notification.createdAt.getTime() : Date.now(),
+            timestamp: notification.createdAt ? new Date(notification.createdAt).getTime() : Date.now(),
           }}
           onClose={() => removeNotification(notification.id)}
         />

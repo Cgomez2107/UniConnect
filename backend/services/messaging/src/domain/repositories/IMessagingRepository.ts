@@ -1,5 +1,11 @@
 import type { ConversationSummary, CreateConversationInput } from "../entities/Conversation.js";
 import type { CreateMessageInput, Message, PollData, Reaction } from "../entities/Message.js";
+import type {
+  CreatePollConfigInput,
+  PollConfigDTO,
+  VoteResultDTO,
+  PollResultsDTO,
+} from "../../interfaces/http/dto/PollDTOs.js";
 
 export interface IMessagingRepository {
   getConversationById(id: string, currentUserId: string): Promise<ConversationSummary | null>;
@@ -22,4 +28,9 @@ export interface IMessagingRepository {
 
   voteInPoll(messageId: string, userId: string, optionIndex: number): Promise<{ conversationId: string; poll: PollData }>;
   closePoll(messageId: string): Promise<{ conversationId: string; poll: PollData }>;
+  createPollConfig(input: CreatePollConfigInput): Promise<PollConfigDTO>;
+  castVote(pollId: string, userId: string, selectedOption: number): Promise<VoteResultDTO>;
+  getPollResults(pollId: string): Promise<PollResultsDTO>;
+  closeExpiredPolls(): Promise<string[]>;
+  getPollGroupId(pollId: string): Promise<string>;
 }

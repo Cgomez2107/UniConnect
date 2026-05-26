@@ -3,12 +3,14 @@ import { z, ZodError } from "zod";
 
 import { ApplyToStudyRequest } from "../../../application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "../../../application/use-cases/AcceptAdminTransfer.js";
+import { CancelMyApplication } from "../../../application/use-cases/CancelMyApplication.js";
 import { CancelStudyRequest } from "../../../application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "../../../application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequestById.js";
 import { ListApplicationsByRequest } from "../../../application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "../../../application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "../../../application/use-cases/ListUserNotifications.js";
+import { MarkAllNotificationsAsRead } from "../../../application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "../../../application/use-cases/ListMyStudyRequests.js";
@@ -20,14 +22,20 @@ import { ReviewApplication } from "../../../application/use-cases/ReviewApplicat
 import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
 import { ToggleStudyGroupMessageReaction } from "../../../application/use-cases/ToggleStudyGroupMessageReaction.js";
 import { VoteInPoll } from "../../../application/use-cases/VoteInPoll.js";
+import { CreateStudySession } from "../../../application/use-cases/CreateStudySession.js";
+import { CancelStudySession } from "../../../application/use-cases/CancelStudySession.js";
+import { UpdateAvailability } from "../../../application/use-cases/UpdateAvailability.js";
+import { ListSessionsByGroup } from "../../../application/use-cases/ListSessionsByGroup.js";
 import type { CreateStudyGroupMessageDto } from "../dto/CreateStudyGroupMessageDto.js";
+import type { CreateSessionDto } from "../dto/CreateSessionDto.js";
+import type { UpdateAvailabilityDto } from "../dto/UpdateAvailabilityDto.js";
 import { CreateGroupRequestSchema } from "@uniconnect/shared-types/contracts/study-group";
 import type { CreateGroupRequest } from "@uniconnect/shared-types/contracts/study-group";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { validateBody } from "../../../middleware/validationMiddleware.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
-import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
 import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
 import type { PreferenceService } from "../../../application/services/PreferenceService.js";
 
@@ -76,9 +84,15 @@ export class StudyGroupsController {
     private readonly listMyStudyRequestsUC: ListMyStudyRequests,
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
+    private readonly cancelMyApplicationUC: CancelMyApplication,
     private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
     private readonly voteInPoll: VoteInPoll,
+    private readonly markAllNotificationsAsRead: MarkAllNotificationsAsRead,
     private readonly preferenceService: PreferenceService,
+    private readonly createStudySessionUC: CreateStudySession,
+    private readonly cancelStudySessionUC: CancelStudySession,
+    private readonly updateAvailabilityUC: UpdateAvailability,
+    private readonly listSessionsByGroupUC: ListSessionsByGroup,
   ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -282,6 +296,22 @@ export class StudyGroupsController {
     }
   }
 
+  async markNotificationsRead(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.markAllNotificationsAsRead.execute(actorUserId);
+      sendData(res, 200, { success: true });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async getPreferences(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
@@ -324,7 +354,7 @@ export class StudyGroupsController {
         }),
       );
 
-      sendData(res, 200, { preferences });
+      sendJson(res, 200, { preferences: preferences ?? [] });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -342,7 +372,7 @@ export class StudyGroupsController {
       const body = await readJsonBody(req);
       const parsed = UpdatePreferenceBodySchema.parse(body);
       await this.preferenceService.setCanalActivo(actorUserId, parsed.eventType, parsed.canal, parsed.active);
-      sendData(res, 200, { success: true });
+      sendJson(res, 200, { message: "Preferencia actualizada correctamente", success: true });
     } catch (error) {
       if (error instanceof ZodError) {
         sendError(res, 400, "Datos invalidos: " + error.errors.map(e => e.message).join(", "));
@@ -486,6 +516,7 @@ export class StudyGroupsController {
 
       sendData(res, 200, { message: "Transferencia aceptada correctamente." });
     } catch (error) {
+      console.error("Error en acceptAdminTransfer:", error instanceof Error ? error.message : error);
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
@@ -663,8 +694,165 @@ export class StudyGroupsController {
     }
 
     try {
-      const updated = await this.cancelStudyRequestUC.execute(requestId);
+      const updated = await this.cancelStudyRequestUC.execute(requestId, actorUserId);
       sendData(res, 200, updated);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async cancelMyApplication(
+    req: IncomingMessage,
+    res: ServerResponse,
+    applicationId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.cancelMyApplicationUC.execute(applicationId, actorUserId);
+      sendData(res, 200, { message: "Postulación cancelada correctamente." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async createSession(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const body = await readJsonBody<CreateSessionDto>(req);
+    try {
+      if (body.daysOfWeek && body.frequency) {
+        if (!body.startDate || !body.time || !body.durationMinutes) {
+          sendError(res, 400, "startDate, time, and durationMinutes are required for recurring sessions.");
+          return;
+        }
+        if (!Array.isArray(body.daysOfWeek) || body.daysOfWeek.length === 0) {
+          sendError(res, 400, "daysOfWeek must be a non-empty array.");
+          return;
+        }
+        const seriesEndDate = body.seriesEndDate ?? body.endDate;
+        const result = await this.createStudySessionUC.executeRecurring({
+          actorUserId,
+          requestId,
+          title: body.title,
+          description: body.description,
+          startDate: body.startDate,
+          endDate: seriesEndDate,
+          time: body.time,
+          durationMinutes: body.durationMinutes,
+          daysOfWeek: body.daysOfWeek,
+          frequency: "weekly",
+          location: body.location,
+          reminderMinutes: body.reminderMinutes,
+        });
+        sendData(res, 201, result);
+      } else {
+        if (!body.startTime || !body.durationMinutes) {
+          sendError(res, 400, "startTime and durationMinutes are required.");
+          return;
+        }
+        const result = await this.createStudySessionUC.executeSingle({
+          actorUserId,
+          requestId,
+          title: body.title,
+          description: body.description,
+          startTime: body.startTime,
+          durationMinutes: body.durationMinutes,
+          location: body.location,
+          reminderMinutes: body.reminderMinutes,
+        });
+        sendData(res, 201, result);
+      }
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listSessions(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const requestUrl = new URL(req.url ?? "/", "http://localhost");
+    try {
+      const sessions = await this.listSessionsByGroupUC.execute(requestId, {
+        from: requestUrl.searchParams.get("from") ?? undefined,
+        to: requestUrl.searchParams.get("to") ?? undefined,
+        status: requestUrl.searchParams.get("status") ?? undefined,
+      });
+      sendData(res, 200, sessions, { total: sessions.length });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async cancelSession(req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const result = await this.cancelStudySessionUC.execute(sessionId, actorUserId);
+      sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async updateAvailability(req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    const body = await readJsonBody<UpdateAvailabilityDto>(req);
+    if (!body.status || !["confirmed", "declined"].includes(body.status)) {
+      sendError(res, 400, "status must be 'confirmed' or 'declined'.");
+      return;
+    }
+
+    try {
+      const result = await this.updateAvailabilityUC.execute(
+        sessionId,
+        actorUserId,
+        "",
+        body.status,
+      );
+      sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async listSessionAttendees(req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      const attendees = await this.listSessionsByGroupUC.listAttendees(sessionId);
+      sendData(res, 200, attendees, { total: attendees.length });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

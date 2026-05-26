@@ -93,7 +93,7 @@ export function MentionInput({
     debounceMs: 300,
   });
 
-  const { validateFile } = useFileValidation({ maxSizeMb: 50 });
+  const { validateFile } = useFileValidation({ maxSizeMb: 10 });
 
   // Mapa de usuarios para autocomplete
   const autocompleteUsers = members.map((m) => ({

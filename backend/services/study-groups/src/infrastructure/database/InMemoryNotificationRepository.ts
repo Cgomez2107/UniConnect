@@ -4,12 +4,22 @@ import type { INotificationRepository } from "../../domain/repositories/INotific
 export class InMemoryNotificationRepository implements INotificationRepository {
   private readonly notifications: UserNotification[] = [];
 
+  async markAllAsRead(userId: string): Promise<void> {
+    for (const notification of this.notifications) {
+      if (notification.userId === userId && !notification.readAt) {
+        notification.readAt = new Date().toISOString();
+      }
+    }
+  }
+
   async create(input: {
     userId: string;
     type: string;
     title: string;
     body: string;
     payload: Record<string, unknown> | null;
+    priority?: "normal" | "urgente" | "critica";
+    action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
   }): Promise<string> {
     const created: UserNotification = {
       id: crypto.randomUUID(),
@@ -20,6 +30,8 @@ export class InMemoryNotificationRepository implements INotificationRepository {
       payload: input.payload,
       createdAt: new Date().toISOString(),
       readAt: null,
+      priority: input.priority,
+      action: input.action,
     };
 
     this.notifications.unshift(created);

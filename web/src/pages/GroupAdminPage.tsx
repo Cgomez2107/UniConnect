@@ -17,6 +17,7 @@ import { useNotificationStore } from "@/store/useNotificationStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
+import { getWsUrl } from "@/lib/wsUrl";
 import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
 import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
 import { CreateSessionModal } from "@/components/sessions/CreateSessionModal";
@@ -84,11 +85,14 @@ export function GroupDashboardPage() {
   // --- Session modal ---
   const [showSessionModal, setShowSessionModal] = useState(false);
 
-  // --- Accept transfer ---
+  // --- Accept / Reject transfer ---
   const [acceptTransferLoading, setAcceptTransferLoading] = useState(false);
   const [acceptTransferError, setAcceptTransferError] = useState<string | null>(null);
   const [acceptTransferSuccess, setAcceptTransferSuccess] = useState(false);
-  const pendingTransferId = searchParams.get("acceptTransfer");
+  const [rejectTransferLoading, setRejectTransferLoading] = useState(false);
+  const [rejectTransferError, setRejectTransferError] = useState<string | null>(null);
+  const pendingTransferId = searchParams.get("acceptTransfer") || (solicitud?.hasPendingTransfer && solicitud?.pendingTransferId ? solicitud.pendingTransferId : null);
+  const isTransferTarget = !!pendingTransferId && (!solicitud?.pendingTransferToUserId || solicitud.pendingTransferToUserId === user?.id);
 
   // --- Role detection (set after data loads) ---
   const [isMember, setIsMember] = useState(false);
@@ -219,6 +223,27 @@ export function GroupDashboardPage() {
     }
   }, [pendingTransferId, id, navigate]);
 
+  // --- Reject transfer handler ---
+  const handleRejectTransfer = useCallback(async () => {
+    if (!pendingTransferId) return;
+    setRejectTransferLoading(true);
+    setRejectTransferError(null);
+    try {
+      await studyGroupsService.rejectAdminTransfer(pendingTransferId);
+      const [data, membersData] = await Promise.all([
+        studyGroupsService.getStudyGroupById(id!),
+        studyGroupsService.getStudyGroupMembers(id!),
+      ]);
+      setSolicitud(data);
+      setMembers(membersData);
+      navigate(`/grupo/${id}`, { replace: true });
+    } catch (err: any) {
+      setRejectTransferError(err?.response?.data?.message || "Error al rechazar la transferencia.");
+    } finally {
+      setRejectTransferLoading(false);
+    }
+  }, [pendingTransferId, id, navigate]);
+
   // --- Realtime chat subscription ---
   useChatObserver(id ?? null, (newMsg) => {
     setMessages((prev) => {
@@ -240,7 +265,7 @@ export function GroupDashboardPage() {
     const connect = (token: string) => {
       if (!mounted) return;
       attempt++;
-      const url = `ws://localhost:3000/ws?token=${token}`;
+      const url = `${getWsUrl()}/ws?token=${token}`;
       console.log(`[GroupDashboardPage WS] Connecting (attempt ${attempt})...`);
       ws = new WebSocket(url);
 
@@ -293,8 +318,8 @@ export function GroupDashboardPage() {
         }, 3000);
       };
 
-      ws.onerror = (err) => {
-        console.error("[GroupDashboardPage WS] Error:", err);
+      ws.onerror = (event: Event) => {
+        console.error("[GroupDashboardPage WS] Error:", (event as any).message || event);
       };
     };
 
@@ -317,7 +342,7 @@ export function GroupDashboardPage() {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) {
         ws.onclose = null;
-        ws.close();
+        try { ws.close(); } catch {}
       }
     };
   }, [id]);
@@ -339,7 +364,7 @@ export function GroupDashboardPage() {
         title: `Nueva solicitud de ${name}`,
         description: "",
         read: false,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         data: {},
       });
       studyGroupsService.getStudyGroupApplications(id!).then(setApplications).catch(() => {});
@@ -354,7 +379,7 @@ export function GroupDashboardPage() {
         title: `${name} fue aceptado/a`,
         description: "",
         read: false,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         data: {},
       });
       Promise.all([
@@ -375,7 +400,7 @@ export function GroupDashboardPage() {
         title: `${name} fue rechazado/a`,
         description: "",
         read: false,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         data: {},
       });
       studyGroupsService.getStudyGroupApplications(id!).then(setApplications).catch(() => {});
@@ -861,17 +886,27 @@ export function GroupDashboardPage() {
           <p className="text-error-600 dark:text-error-400 text-sm">{acceptTransferError}</p>
         </div>
       )}
+      {rejectTransferError && (
+        <div className="bg-error-50 dark:bg-error-900/20 border-b border-error-200 dark:border-error-800 px-4 sm:px-6 py-2">
+          <p className="text-error-600 dark:text-error-400 text-sm">{rejectTransferError}</p>
+        </div>
+      )}
       {acceptTransferSuccess && (
         <div className="bg-success-50 dark:bg-success-900/20 border-b border-success-200 dark:border-success-800 px-4 sm:px-6 py-2">
           <p className="text-success-600 dark:text-success-400 text-sm">Transferencia aceptada correctamente.</p>
         </div>
       )}
-      {pendingTransferId && (
+      {isTransferTarget && (
         <div className="bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800 px-4 sm:px-6 py-2 flex items-center justify-between">
           <p className="text-primary-700 dark:text-primary-300 text-sm">Tienes una transferencia de administración pendiente.</p>
-          <Button variant="primary" size="sm" onClick={handleAcceptTransfer} loading={acceptTransferLoading}>
-            Aceptar transferencia
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="danger" size="sm" onClick={handleRejectTransfer} loading={rejectTransferLoading}>
+              Rechazar
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleAcceptTransfer} loading={acceptTransferLoading}>
+              Aceptar transferencia
+            </Button>
+          </div>
         </div>
       )}
 

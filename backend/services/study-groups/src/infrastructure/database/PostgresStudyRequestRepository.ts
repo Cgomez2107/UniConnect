@@ -2,6 +2,7 @@ import type { Pool } from "pg";
 
 import { ConflictError } from "../../../../../shared/libs/errors/ConflictError.js";
 import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
+import { AuthorizationError } from "../../../../../shared/libs/errors/AuthorizationError.js";
 import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 import type { StudyRequest } from "../../domain/entities/StudyRequest.js";
 import type {
@@ -35,6 +36,8 @@ interface StudyRequestRow {
   author_avatar_url: string | null;
   author_bio: string | null;
   has_pending_transfer: boolean;
+  pending_transfer_id: string | null;
+  pending_transfer_to_user_id: string | null;
 }
 
 interface StudyGroupHydrationRow {
@@ -68,6 +71,8 @@ function mapStudyRequest(row: StudyRequestRow): StudyRequest {
         ? undefined
         : Number(row.applications_count),
     hasPendingTransfer: row.has_pending_transfer,
+    pendingTransferId: row.pending_transfer_id ?? undefined,
+    pendingTransferToUserId: row.pending_transfer_to_user_id ?? undefined,
     author: row.author_full_name
       ? {
         fullName: row.author_full_name,
@@ -258,7 +263,9 @@ export class PostgresStudyRequestRepository
           pr.full_name                                  AS author_full_name,
           pr.avatar_url                                 AS author_avatar_url,
           pr.bio                                        AS author_bio,
-          (t.id IS NOT NULL)                            AS has_pending_transfer
+          (t.id IS NOT NULL)                            AS has_pending_transfer,
+          t.id                                        AS pending_transfer_id,
+          t.to_user_id                                AS pending_transfer_to_user_id
         FROM study_requests sr
         LEFT JOIN subjects  s  ON s.id  = sr.subject_id
         LEFT JOIN profiles  pr ON pr.id = sr.author_id
@@ -371,27 +378,25 @@ export class PostgresStudyRequestRepository
     return result.rows.map(mapStudyRequest);
   }
 
-  async cancel(id: string): Promise<StudyRequest> {
-    const result = await this.pool.query(
-      `UPDATE study_requests
-       SET status = 'cerrada', updated_at = NOW()
-       WHERE id = $1 AND status = 'abierta'
-       RETURNING id`,
-      [id],
-    );
-
-    if (result.rows.length === 0) {
-      const existing = await this.getById(id);
-      if (!existing) {
-        throw new NotFoundError(`Solicitud de estudio '${id}' no encontrada.`);
-      }
+  async cancel(id: string, actorUserId: string): Promise<StudyRequest> {
+    const existing = await this.getById(id);
+    if (!existing) {
+      throw new NotFoundError(`Solicitud de estudio '${id}' no encontrada.`);
+    }
+    if (existing.authorId !== actorUserId) {
+      throw new AuthorizationError("Solo el autor puede cancelar la solicitud.");
+    }
+    if (existing.status !== "abierta") {
       throw new ValidationError("Solo se pueden cancelar solicitudes abiertas.");
     }
 
-    const updated = await this.getById(id);
-    if (!updated) {
-      throw new Error("La solicitud fue cancelada pero no pudo ser recuperada.");
-    }
-    return updated;
+    await this.pool.query(
+      `UPDATE study_requests
+       SET status = 'cerrada', updated_at = NOW()
+       WHERE id = $1`,
+      [id],
+    );
+
+    return { ...existing, status: "cerrada", updatedAt: new Date().toISOString() };
   }
 }

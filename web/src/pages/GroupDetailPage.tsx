@@ -47,6 +47,8 @@ export function GroupDetailPage() {
   const [acceptTransferLoading, setAcceptTransferLoading] = useState(false);
   const [acceptTransferError, setAcceptTransferError] = useState<string | null>(null);
   const [acceptTransferSuccess, setAcceptTransferSuccess] = useState(false);
+  const [rejectTransferLoading, setRejectTransferLoading] = useState(false);
+  const [rejectTransferError, setRejectTransferError] = useState<string | null>(null);
 
   const pendingTransferId = searchParams.get("acceptTransfer");
 
@@ -148,6 +150,26 @@ export function GroupDetailPage() {
     }
   }, [pendingTransferId, id, navigate]);
 
+  const handleRejectTransfer = useCallback(async () => {
+    if (!pendingTransferId) return;
+    setRejectTransferLoading(true);
+    setRejectTransferError(null);
+    try {
+      await studyGroupsService.rejectAdminTransfer(pendingTransferId);
+      const [data, membersData] = await Promise.all([
+        studyGroupsService.getStudyGroupById(id!),
+        studyGroupsService.getStudyGroupMembers(id!),
+      ]);
+      setSolicitud(data);
+      setMembers(membersData);
+      navigate(`/grupo/${id}`, { replace: true });
+    } catch (err: any) {
+      setRejectTransferError(err?.response?.data?.message || "Error al rechazar la transferencia.");
+    } finally {
+      setRejectTransferLoading(false);
+    }
+  }, [pendingTransferId, id, navigate]);
+
   const memberIds = useMemo(
     () => members.filter((m) => !m.fullName).map((m) => m.userId),
     [members],
@@ -222,7 +244,9 @@ export function GroupDetailPage() {
   const currentMember = members.find((m) => m.userId === user?.id);
   const isAuthor = currentMember?.role === "autor";
 
-  const groupState: GroupState = solicitud.status === "cerrada"
+  const groupState: GroupState = acceptTransferSuccess
+    ? "TransferenciaAceptada"
+    : solicitud.status === "cerrada"
     ? "Disuelto"
     : solicitud.status === "expirada"
       ? "Bloqueado"
@@ -320,14 +344,24 @@ export function GroupDetailPage() {
               </>
             )}
             {perms.canAcceptTransfer && pendingTransferId && currentMember && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleAcceptTransfer}
-                loading={acceptTransferLoading}
-              >
-                Aceptar transferencia
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleRejectTransfer}
+                  loading={rejectTransferLoading}
+                >
+                  Rechazar
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleAcceptTransfer}
+                  loading={acceptTransferLoading}
+                >
+                  Aceptar transferencia
+                </Button>
+              </div>
             )}
             {!perms.isReadOnly && (
               <Button
@@ -342,6 +376,9 @@ export function GroupDetailPage() {
           </div>
           {acceptTransferError && (
             <p className="text-error-400 text-sm mt-2">{acceptTransferError}</p>
+          )}
+          {rejectTransferError && (
+            <p className="text-error-400 text-sm mt-2">{rejectTransferError}</p>
           )}
           {acceptTransferSuccess && (
             <p className="text-success-400 text-sm mt-2">Transferencia aceptada correctamente.</p>

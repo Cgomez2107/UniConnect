@@ -48,6 +48,10 @@ function buildStudyGroupsServer() {
   const listMyApplications: UseCaseStub = { execute: vi.fn().mockResolvedValue([]) };
   const cancelStudyRequest: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
   const toggleStudyGroupMessageReaction: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
+  const createStudySession: UseCaseStub = { execute: vi.fn().mockResolvedValue({ type: "single", session: {} }) };
+  const cancelStudySession: UseCaseStub = { execute: vi.fn().mockResolvedValue({}) };
+  const updateAvailability: UseCaseStub = { execute: vi.fn().mockResolvedValue({}) };
+  const listSessionsByGroup = { execute: vi.fn().mockResolvedValue([]), listAttendees: vi.fn().mockResolvedValue([]) };
 
   const controller = new StudyGroupsController(
     listOpenStudyRequests as never,
@@ -68,6 +72,10 @@ function buildStudyGroupsServer() {
     listMyApplications as never,
     cancelStudyRequest as never,
     toggleStudyGroupMessageReaction as never,
+    createStudySession as never,
+    cancelStudySession as never,
+    updateAvailability as never,
+    listSessionsByGroup as never,
   );
 
   return {
@@ -90,6 +98,7 @@ function buildStudyGroupsServer() {
     listMyApplications,
     cancelStudyRequest,
     toggleStudyGroupMessageReaction,
+    listSessionsByGroup,
   };
 }
 

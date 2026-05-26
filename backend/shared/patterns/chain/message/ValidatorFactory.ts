@@ -12,20 +12,53 @@ export class ValidatorFactory {
     permissionRepo?: IGroupPermissionRepository,
     adminResolver?: IAdminResolver,
   ): MessageValidator {
-    let head: MessageValidator = new SizeValidator(maxLength);
-    let current = head;
+    const resolvedMaxLength = resolveMaxLength(maxLength);
+    const resolvedForbiddenWords = resolveForbiddenWords(forbiddenWords);
 
-    current = current.setNext(new ContentValidator(forbiddenWords));
-    current = current.setNext(new MediaValidator());
+    const chain = new SizeValidator(resolvedMaxLength);
+
+    chain
+      .setSiguiente(new ContentValidator(resolvedForbiddenWords))
+      .setSiguiente(new MediaValidator());
 
     if (permissionRepo) {
-      current = current.setNext(new PermissionValidator(permissionRepo));
+      chain.setSiguiente(new PermissionValidator(permissionRepo));
     }
 
     if (adminResolver) {
-      current = current.setNext(new MentionResolver(adminResolver));
+      chain.setSiguiente(new MentionResolver(adminResolver));
     }
 
-    return head;
+    return chain;
   }
+}
+
+function resolveMaxLength(explicit?: number): number {
+  if (Number.isInteger(explicit) && explicit! > 0) {
+    return explicit!;
+  }
+
+  const envRaw = process.env.MAX_MESSAGE_LENGTH;
+  const envValue = envRaw ? Number(envRaw) : undefined;
+  if (Number.isInteger(envValue) && envValue! > 0) {
+    return envValue!;
+  }
+
+  return 5000;
+}
+
+function resolveForbiddenWords(explicit?: string[]): string[] {
+  const envRaw = process.env.FORBIDDEN_WORDS;
+  if (envRaw !== undefined) {
+    return envRaw
+      .split(",")
+      .map((word) => word.trim())
+      .filter((word) => word.length > 0);
+  }
+
+  if (explicit && explicit.length > 0) {
+    return explicit;
+  }
+
+  return ["violencia", "spam"];
 }

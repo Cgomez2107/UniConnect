@@ -1,10 +1,25 @@
 name: quality-gate
 
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   pull_request:
+    branches: [main, integration/pre-deploy]
     paths:
       - "packages/**"
       - "backend/**"
+      - "web/**"
+      - "frontend/**"
+      - ".github/workflows/quality-gate.yml"
+  push:
+    branches: [main, integration/pre-deploy, feature/**, feat/**, fix/**]
+    paths:
+      - "packages/**"
+      - "backend/**"
+      - "web/**"
+      - "frontend/**"
       - ".github/workflows/quality-gate.yml"
 
 env:
@@ -18,21 +33,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Install shared-types dependencies
-        run: pnpm install
-        working-directory: packages/shared-types
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Typecheck shared-types
         run: pnpm typecheck
         working-directory: packages/shared-types
+
       - name: Build shared-types
         run: pnpm build
         working-directory: packages/shared-types
+
       - name: Run contract tests
         run: pnpm test:contracts
         working-directory: packages/shared-types
@@ -43,101 +76,474 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-          cache-dependency-path: backend/pnpm-lock.yaml
-      - name: Install backend dependencies
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install backend workspace dependencies
         run: pnpm install --frozen-lockfile
         working-directory: backend
+
+      - name: Build shared-types (pre-requisite)
+        run: pnpm build
+        working-directory: packages/shared-types
+
       - name: Typecheck backend (all services)
         run: pnpm typecheck
         working-directory: backend
+
+      - name: Lint backend (all services)
+        run: pnpm lint
+        working-directory: backend
+
       - name: Run auth integration tests with coverage
         run: pnpm --filter @uniconnect/auth test:integration
         working-directory: backend
-        continue-on-error: true
-      - name: Check coverage threshold
-        shell: bash
-        working-directory: backend
-        run: |
-          COVERAGE_FILE="services/auth/coverage/coverage-summary.json"
-          if [ -f "$COVERAGE_FILE" ]; then
-            COVERAGE=$(jq '.total.lines.pct' "$COVERAGE_FILE")
-            echo "Cobertura global de líneas: $COVERAGE%"
-            if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
-              echo "❌ Cobertura $COVERAGE% por debajo del umbral ${{ env.COVERAGE_THRESHOLD }}%"
-              exit 1
-            fi
-            echo "✅ Cobertura $COVERAGE% supera el umbral ${{ env.COVERAGE_THRESHOLD }}%"
-          else
-            echo "⚠️ No se encontró reporte de cobertura en $COVERAGE_FILE"
-          fi
-      - name: Upload backend coverage artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: backend-coverage
-          path: backend/services/auth/coverage/
 
-  # ─── Job 3: Frontend Quality (typecheck — opt-in validation) ───
+  # ─── Job 3: Frontend Quality (typecheck) ───
   frontend:
     needs: [contracts]
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-      - name: Typecheck frontend
-        run: |
-          echo "⚠️ Frontend typecheck — pendiente de implementación"
-          echo "Este job valida el Criterio 4: los cambios en schemas Zod"
-          echo "deben romper compilación del frontend."
-          exit 0
 
-  # ─── Job 4: E2E Mobile (Maestro — placeholder) ───
-  e2e-mobile:
-    needs: [backend]
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Generate shared-types artifacts for frontend
+        run: pnpm prebuild
+        working-directory: frontend/shared-types
+
+      - name: Typecheck frontend (mobile)
+        run: npx tsc --noEmit
+        working-directory: frontend
+
+      - name: Lint frontend (mobile)
+        run: pnpm lint
+        working-directory: frontend
+
+  # ─── Job 4: Web Quality (typecheck + build) ───
+  web:
+    needs: [contracts]
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: Maestro E2E placeholder
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared-types (contracts updated)
+        run: pnpm build
+        working-directory: packages/shared-types
+
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      - name: Typecheck web
+        run: pnpm type-check
+        working-directory: web
+
+      - name: Lint web
+        run: pnpm lint
+        working-directory: web
+
+      - name: Build web (Vite)
+        run: pnpm build
+        working-directory: web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+  # ─── Job 5: Sprint 4 Contract Integration Tests ───
+  sprint4-contracts:
+    needs: [contracts]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install backend workspace dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: backend
+
+      - name: Build shared-types
+        run: pnpm build
+        working-directory: packages/shared-types
+
+      - name: Run Sprint 4 contract integration tests
+        run: npx vitest run tests/integration/sprint4/ --reporter=verbose --coverage
+        working-directory: backend
+
+      - name: Check coverage threshold
+        shell: bash
+        working-directory: backend
         run: |
-          echo "📱 E2E Mobile — Maestro flows (simulado)"
-          echo "Flujos pendientes: login-register-resource.yaml"
-          echo "Reporte generado: maestro-report/"
+          COVERAGE_FILE="coverage/coverage-summary.json"
+          if [ -f "$COVERAGE_FILE" ]; then
+            COVERAGE=$(jq '.total.lines.pct' "$COVERAGE_FILE")
+            echo "Sprint 4 Coverage: $COVERAGE%"
+            if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+              echo "❌ Coverage $COVERAGE% below threshold ${{ env.COVERAGE_THRESHOLD }}%"
+              exit 1
+            fi
+            echo "✅ Coverage $COVERAGE% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
+          else
+            echo "❌ No coverage report found at $COVERAGE_FILE"
+            exit 1
+          fi
+
+      - name: Publish Sprint 4 coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sprint4-contract-coverage
+          path: backend/coverage/
+
+  # # ─── Job 6: E2E Mobile (Maestro) ─── TEMPORALMENTE DESHABILITADO
+  # e2e-mobile:
+  #   needs: [backend, sprint4-contracts]
+  #   runs-on: ubuntu-latest
+  #   if: ${{ secrets.EXPO_TOKEN != '' }}
+  #   continue-on-error: true
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: pnpm/action-setup@v4
+  #       with:
+  #         version: ${{ env.PNPM_VERSION }}
+  #         run_install: false
+  #
+  #     - name: Get pnpm store directory
+  #       id: pnpm-cache
+  #       shell: bash
+  #       run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+  #
+  #     - uses: actions/cache@v4
+  #       with:
+  #         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+  #         key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+  #         restore-keys: |
+  #           pnpm-${{ runner.os }}-
+  #
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --frozen-lockfile
+  #       working-directory: frontend
+  #
+  #     - name: Install Maestro CLI
+  #       run: |
+  #         curl -Ls https://get.maestro.mobile.dev | bash
+  #         echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+  #
+  #     - name: Build Android APK for E2E
+  #       run: npx eas-cli build --platform android --profile preview --local --output build.apk
+  #       working-directory: frontend
+  #       env:
+  #         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  #
+  #     - name: Install APK on emulator
+  #       uses: reactivecircus/android-emulator-runner@v2
+  #       with:
+  #         api-level: 30
+  #         target: google_apis
+  #         arch: x86_64
+  #         avd-name: MaestroTest
+  #         script: |
+  #           adb wait-for-device
+  #           adb install frontend/build.apk
+  #           adb push frontend/maestro/data/test-resource.pdf /sdcard/Download/test-resource.pdf
+  #
+  #     - name: Run Maestro E2E flows
+  #       run: |
+  #         maestro test frontend/maestro/flows/ \
+  #           --format junit \
+  #           --output maestro-report/
+  #       working-directory: frontend
+  #       continue-on-error: true
+  #
+  #     - name: Publish Maestro report
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: maestro-report
+  #         path: frontend/maestro-report/
+
+  # ─── Job: Pattern & Global Coverage ───
+  test-coverage:
+    needs: [contracts]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Install backend workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared-types
+        run: pnpm build
+        working-directory: packages/shared-types
+
+      - name: Run tests with coverage
+        run: pnpm test:coverage
+
+      - name: Upload coverage HTML artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: backend/coverage/
+          include-hidden-files: true
+
+  # ─── Job: Post Coverage Comment on PR ───
+  coverage-comment:
+    needs: [test-coverage]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+        continue-on-error: true
+
+      - name: Check if report exists
+        id: check
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No coverage report found — skipping comment"
+          fi
+
+      - name: Build coverage comment
+        id: build
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          FILE="coverage/coverage-summary.json"
+
+          LINES=$(jq -r '.total.lines.pct' "$FILE")
+          BRANCHES=$(jq -r '.total.branches.pct' "$FILE")
+          FUNCTIONS=$(jq -r '.total.functions.pct' "$FILE")
+          STATEMENTS=$(jq -r '.total.statements.pct' "$FILE")
+
+          PATTERNS_PREFIXES=("services/messaging/src/domain/decorators" "shared/patterns/decorator" "services/events/src/domain/events" "shared/patterns/observer")
+          TOTAL=0
+          COVERED=0
+          for prefix in "${PATTERNS_PREFIXES[@]}"; do
+            while IFS=$'\t' read -r t c; do
+              TOTAL=$((TOTAL + t))
+              COVERED=$((COVERED + c))
+            done < <(jq -r --arg prefix "$prefix" '
+              to_entries[]
+              | select(.key | gsub("\\\\"; "/") | contains($prefix))
+              | "\(.value.lines.total)\t\(.value.lines.covered)"
+            ' "$FILE")
+          done
+
+          if [ "$TOTAL" -gt 0 ]; then
+            PATTERNS_PCT=$(echo "scale=2; $COVERED * 100 / $TOTAL" | bc)
+          else
+            PATTERNS_PCT="N/A"
+          fi
+
+          GLOBAL_PASS=true
+          PATTERNS_PASS=true
+          for metric in "$LINES" "$BRANCHES" "$FUNCTIONS" "$STATEMENTS"; do
+            if (( $(echo "$metric < 70" | bc -l) )); then
+              GLOBAL_PASS=false
+              break
+            fi
+          done
+          if [ "$PATTERNS_PCT" != "N/A" ] && (( $(echo "$PATTERNS_PCT < 85" | bc -l) )); then
+            PATTERNS_PASS=false
+          fi
+
+          if [ "$GLOBAL_PASS" = true ]; then GLOBAL_ICON="✅"; else GLOBAL_ICON="❌"; fi
+          if [ "$PATTERNS_PASS" = true ]; then PATTERNS_ICON="✅"; else PATTERNS_ICON="❌"; fi
+
+          {
+            echo "## 📊 Coverage Report"
+            echo ""
+            echo "### Global Coverage ${GLOBAL_ICON} (threshold 70%)"
+            echo ""
+            echo "| Metric | Coverage |"
+            echo "|--------|----------|"
+            echo "| Lines | ${LINES}% |"
+            echo "| Branches | ${BRANCHES}% |"
+            echo "| Functions | ${FUNCTIONS}% |"
+            echo "| Statements | ${STATEMENTS}% |"
+            echo ""
+            echo "### Pattern Coverage ${PATTERNS_ICON} (threshold 85%)"
+            echo ""
+            echo "| Module | Coverage |"
+            echo "|--------|----------|"
+            echo "| Decorator + Observer | ${PATTERNS_PCT}% |"
+            echo ""
+            if [ "$GLOBAL_PASS" = false ] || [ "$PATTERNS_PASS" = false ]; then
+              echo "> ⚠️ **Quality gate will fail** — one or more coverage thresholds not met."
+            else
+              echo "> ✅ **All coverage thresholds met.**"
+            fi
+          } > /tmp/coverage-comment.md
+
+          cat /tmp/coverage-comment.md
+
+      - name: Post comment on PR
+        if: steps.build.outcome == 'success'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-report
+          path: /tmp/coverage-comment.md
 
   # ─── Quality Gate Final ───
   quality-gate:
-    needs: [contracts, backend, frontend, e2e-mobile]
+    needs: [contracts, backend, frontend, web, sprint4-contracts, test-coverage]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate quality gate
         run: |
-          if [ "${{ needs.contracts.result }}" != "success" ]; then
-            echo "❌ Quality Gate FAILED — contracts job falló"
-            exit 1
-          fi
-          if [ "${{ needs.backend.result }}" != "success" ]; then
-            echo "❌ Quality Gate FAILED — backend job falló"
-            exit 1
-          fi
-          echo "✅ Quality Gate PASSED"
+          echo "Quality Gate Evaluation:"
+          FAILED=""
+          check() {
+            local j="$1" r="$2"
+            if [ "$r" = "success" ]; then
+              echo "  PASS $j"
+            else
+              echo "  FAIL $j ($r)"
+              FAILED="$FAILED $j"
+            fi
+          }
+          check "contracts"          "${{ needs.contracts.result }}"
+          check "backend"            "${{ needs.backend.result }}"
+          check "frontend"           "${{ needs.frontend.result }}"
+          check "web"                "${{ needs.web.result }}"
+          check "sprint4-contracts"  "${{ needs.sprint4-contracts.result }}"
+          check "test-coverage"      "${{ needs.test-coverage.result }}"
           echo ""
-          echo "Resumen:"
-          echo "  contracts:   ${{ needs.contracts.result }}"
-          echo "  backend:     ${{ needs.backend.result }}"
-          echo "  frontend:    ${{ needs.frontend.result }} (no bloqueante)"
-          echo "  e2e-mobile:  ${{ needs.e2e-mobile.result }} (no bloqueante)"
+          if [ -n "$FAILED" ]; then
+            echo "QUALITY GATE FAILED - Failed jobs:$FAILED"
+            exit 1
+          fi
+          echo "QUALITY GATE PASSED"

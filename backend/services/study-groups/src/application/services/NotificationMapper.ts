@@ -14,7 +14,7 @@ type PersistenceInput = {
   payload: Record<string, unknown> | null;
 };
 
-type MappingResult = {
+export type MappingResult = {
   persistence: PersistenceInput;
   dto: NotificacionDTO;
 };
@@ -57,10 +57,10 @@ function buildNotificacion(
 }
 
 export class NotificationMapper {
-  map(event: StudyGroupEvent): MappingResult {
+  map(event: StudyGroupEvent): MappingResult[] {
     switch (event.type) {
       case "JOIN_REQUEST":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.recipientUserId,
           "solicitud_ingreso",
           event.groupName,
@@ -73,10 +73,10 @@ export class NotificationMapper {
             groupName: event.groupName,
           },
           "normal",
-        );
+        )];
 
       case "MEMBER_ACCEPTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.applicantId,
           "miembro_aceptado",
           event.groupName,
@@ -88,11 +88,11 @@ export class NotificationMapper {
             groupName: event.groupName,
           },
           "normal",
-          { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.requestId}` },
-        );
+          { label: "Ver grupo", endpoint: `/study-groups/${event.requestId}`, method: "GET" },
+        )];
 
       case "MEMBER_REJECTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.applicantId,
           "miembro_rechazado",
           "Solicitud rechazada",
@@ -103,10 +103,10 @@ export class NotificationMapper {
             rejectedBy: event.rejectedBy,
           },
           "normal",
-        );
+        )];
 
       case "ADMIN_TRANSFER_REQUESTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.newAdminId,
           "transferencia_admin_solicitada",
           event.groupName,
@@ -117,11 +117,11 @@ export class NotificationMapper {
             oldAdminId: event.oldAdminId,
           },
           "urgente",
-          { label: "Revisar solicitud", endpoint: `/api/v1/study-groups/transfers/${event.transferId}/accept` },
-        );
+          { label: "Revisar solicitud", endpoint: `/study-groups/transfers/${event.transferId}/accept`, method: "POST" },
+        )];
 
       case "ADMIN_TRANSFER_ACCEPTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.oldAdminId,
           "transferencia_admin_aceptada",
           "Transferencia aceptada",
@@ -131,12 +131,12 @@ export class NotificationMapper {
             groupId: event.groupId,
             newAdminId: event.newAdminId,
           },
-          "normal",
-          { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.groupId}` },
-        );
+          "urgente",
+          { label: "Ver grupo", endpoint: `/study-groups/${event.groupId}`, method: "GET" },
+        )];
 
       case "ADMIN_TRANSFER_REJECTED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.oldAdminId,
           "transferencia_admin_rechazada",
           "Transferencia rechazada",
@@ -147,10 +147,10 @@ export class NotificationMapper {
             newAdminId: event.newAdminId,
           },
           "normal",
-        );
+        )];
 
       case "ADMIN_TRANSFER_COMPLETED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.newAdminId,
           "transferencia_admin_transferida",
           event.groupName,
@@ -161,11 +161,11 @@ export class NotificationMapper {
             oldAdminId: event.oldAdminId,
           },
           "urgente",
-          { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.groupId}` },
-        );
+          { label: "Ver grupo", endpoint: `/study-groups/${event.groupId}`, method: "GET" },
+        )];
 
       case "ADMIN_ROLE_LEFT":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.userId,
           "admin_role_left",
           event.groupName,
@@ -174,10 +174,58 @@ export class NotificationMapper {
             requestId: event.requestId,
           },
           "normal",
+        )];
+
+      case "AVAILABILITY_UPDATED":
+        return [buildNotificacion(
+          event.organizerId,
+          "disponibilidad_actualizada",
+          event.groupName,
+          `${event.userName} ha ${event.status === "confirmed" ? "confirmado" : "declinado"} su asistencia a la sesion.`,
+          {
+            sessionId: event.sessionId,
+            requestId: event.requestId,
+            userId: event.userId,
+            status: event.status,
+          },
+          "normal",
+        )];
+
+      case "SESSION_CANCELLED": {
+        const attendeeNotifications = event.attendeeIds.map(attendeeId =>
+          buildNotificacion(
+            attendeeId,
+            "sesion_cancelada",
+            event.groupName,
+            `La sesion "${event.title}" ha sido cancelada.`,
+            {
+              sessionId: event.sessionId,
+              requestId: event.requestId,
+              title: event.title,
+            },
+            "urgente",
+          ),
         );
 
+        if (event.cancelledBy) {
+          attendeeNotifications.push(buildNotificacion(
+            event.cancelledBy,
+            "study_session_cancelled",
+            event.title,
+            "Se ha cancelado una sesión de estudio.",
+            {
+              sessionId: event.sessionId,
+              groupId: event.groupId,
+            },
+            "normal",
+          ));
+        }
+
+        return attendeeNotifications;
+      }
+
       case "SESSION_CREATED":
-        return buildNotificacion(
+        return [buildNotificacion(
           event.createdBy,
           "study_session_created",
           event.title,
@@ -188,20 +236,7 @@ export class NotificationMapper {
             startTime: event.startTime,
           },
           "normal",
-        );
-
-      case "SESSION_CANCELLED":
-        return buildNotificacion(
-          event.cancelledBy,
-          "study_session_cancelled",
-          event.title,
-          "Se ha cancelado una sesión de estudio.",
-          {
-            sessionId: event.sessionId,
-            groupId: event.groupId,
-          },
-          "normal",
-        );
+        )];
 
       default: {
         const _exhaustive: never = event;

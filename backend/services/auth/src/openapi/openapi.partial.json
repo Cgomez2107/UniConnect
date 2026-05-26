@@ -1,0 +1,787 @@
+{
+  "title": "UniConnect Auth Service",
+  "version": "0.1.0",
+  "serverUrl": "http://localhost:3102",
+  "basePath": "/api/v1",
+  "paths": {
+    "/api/v1/auth/signin": {
+      "post": {
+        "summary": "Iniciar sesión con credenciales",
+        "description": "Autentica al usuario con email y contraseña. Retorna un token JWT de acceso, refresh token y los datos del perfil.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_auth_signin_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inicio de sesión exitoso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_auth_signin_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciales inválidas — email o contraseña incorrectos"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "summary": "Registrar un nuevo usuario",
+        "description": "Crea una cuenta de usuario con email corporativo @ucaldas.edu.co, contraseña y nombre completo.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_auth_signup_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario registrado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_auth_signup_201Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación — datos de entrada inválidos"
+          },
+          "409": {
+            "description": "El email ya está registrado"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "summary": "Renovar token de acceso",
+        "description": "Intercambia un refresh token válido por un nuevo par de tokens.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_auth_refresh_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens renovados exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_auth_refresh_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token inválido o expirado"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "get": {
+        "summary": "Obtener sesión actual",
+        "description": "Retorna la información de la sesión actual del usuario autenticado.",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Sesión obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_auth_session_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "summary": "Obtener perfil del usuario autenticado",
+        "description": "Retorna los datos básicos del perfil del usuario autenticado.",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil obtenido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_auth_me_200Response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido o inválido"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google": {
+      "get": {
+        "summary": "Obtener URL de autenticación Google OAuth (GET)",
+        "description": "Genera la URL de redirección para iniciar el flujo de autenticación con Google. Acepta redirectTo como query param.",
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [
+          {
+            "name": "redirectTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "URL de OAuth generada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get_auth_google_200Response"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Obtener URL de autenticación Google OAuth (POST)",
+        "description": "Genera la URL de redirección para iniciar el flujo de autenticación con Google. Acepta redirectTo en el body.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_auth_google_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "URL de OAuth generada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_auth_google_200Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/oauth/callback": {
+      "post": {
+        "summary": "Procesar callback de OAuth",
+        "description": "Intercambia un token de acceso de Supabase (obtenido del flujo OAuth) por un par de tokens JWT del backend.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post_auth_oauth_callback_RequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Autenticación OAuth completada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post_auth_oauth_callback_200Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación — accessToken o email faltantes"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Post_auth_signin_RequestBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "Post_auth_signin_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "estudiante",
+                      "admin"
+                    ]
+                  },
+                  "profileImageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "isVerified": {
+                    "type": "boolean"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "isOnboarded": {
+                    "type": "boolean"
+                  },
+                  "lastLoginAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "email",
+                  "firstName",
+                  "lastName",
+                  "role",
+                  "isVerified",
+                  "createdAt",
+                  "updatedAt",
+                  "isOnboarded"
+                ],
+                "additionalProperties": false
+              },
+              "accessToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "refreshToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expiresIn": {
+                "type": "number",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              }
+            },
+            "required": [
+              "user",
+              "accessToken",
+              "refreshToken",
+              "expiresIn"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_auth_signup_RequestBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 100
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "fullName"
+        ],
+        "additionalProperties": false
+      },
+      "Post_auth_signup_201Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "estudiante",
+                      "admin"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "email",
+                  "fullName",
+                  "role"
+                ],
+                "additionalProperties": false
+              },
+              "accessToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "refreshToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expiresIn": {
+                "type": "number",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              }
+            },
+            "required": [
+              "user",
+              "accessToken",
+              "refreshToken",
+              "expiresIn"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_auth_refresh_RequestBody": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "additionalProperties": false
+      },
+      "Post_auth_refresh_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "accessToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "refreshToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expiresIn": {
+                "type": "number",
+                "exclusiveMinimum": true,
+                "minimum": 0
+              }
+            },
+            "required": [
+              "accessToken",
+              "refreshToken",
+              "expiresIn"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_auth_session_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "session": {
+                "type": "object",
+                "properties": {
+                  "user": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "fullName": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "estudiante",
+                          "admin"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "email",
+                      "fullName",
+                      "role"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "accessToken": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "user",
+                  "accessToken"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "session"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_auth_me_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "estudiante",
+                  "admin"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "fullName",
+              "role"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Get_auth_google_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_auth_google_RequestBody": {
+        "type": "object",
+        "properties": {
+          "redirectTo": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Post_auth_google_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Post_auth_oauth_callback_RequestBody": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "accessToken",
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "Post_auth_oauth_callback_200Response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "accessToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "refreshToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "estudiante",
+                      "admin"
+                    ]
+                  },
+                  "profileImageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "isVerified": {
+                    "type": "boolean"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "isOnboarded": {
+                    "type": "boolean"
+                  },
+                  "lastLoginAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "email",
+                  "firstName",
+                  "lastName",
+                  "role",
+                  "isVerified",
+                  "createdAt",
+                  "updatedAt",
+                  "isOnboarded"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "accessToken",
+              "refreshToken",
+              "user"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Autenticación y gestión de sesiones"
+    }
+  ]
+}

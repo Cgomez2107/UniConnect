@@ -206,14 +206,15 @@ BEGIN
     WHERE id = v_transfer.request_id;
   END IF;
 
-  -- 6. Eliminar al admin anterior de admins y miembros
+  -- 6. SWAP de roles: antiguo admin pasa a 'miembro', nuevo admin a 'owner'
   DELETE FROM study_request_admins
   WHERE request_id = v_transfer.request_id
     AND user_id = v_transfer.from_user_id;
 
-  DELETE FROM applications
-  WHERE request_id = v_transfer.request_id
-    AND applicant_id = v_transfer.from_user_id;
+  INSERT INTO applications (request_id, applicant_id, status, reviewed_at)
+  VALUES (v_transfer.request_id, v_transfer.from_user_id, 'aceptada', NOW())
+  ON CONFLICT (request_id, applicant_id)
+  DO UPDATE SET status = 'aceptada', reviewed_at = NOW();
 END;
 $$;
 
@@ -286,14 +287,14 @@ BEGIN
     WHERE id = v_transfer.request_id;
   END IF;
 
-  -- 6. Eliminar al admin anterior de admins y miembros
+  -- 6. Eliminar al admin anterior de admins y mantenerlo como miembro
   DELETE FROM study_request_admins
   WHERE request_id = v_transfer.request_id
     AND user_id = v_transfer.from_user_id;
 
-  DELETE FROM applications
-  WHERE request_id = v_transfer.request_id
-    AND applicant_id = v_transfer.from_user_id;
+  INSERT INTO applications (request_id, applicant_id, message, status)
+  VALUES (v_transfer.request_id, v_transfer.from_user_id, '', 'aceptada')
+  ON CONFLICT (request_id, applicant_id) DO NOTHING;
 END;
 $$;
 

@@ -8,6 +8,7 @@ test.describe("C2 - Create study group", () => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+    await loginPage.waitForNavigation();
     await expect(page).toHaveURL(/.*\/solicitudes/);
   });
 
@@ -26,7 +27,7 @@ test.describe("C2 - Create study group", () => {
     });
     expect(token).toBeTruthy();
 
-    const gatewayUrl = "http://localhost:3000";
+    const gatewayUrl = process.env.E2E_GATEWAY_URL || "http://localhost:3000";
 
     const existingResponse = await page.request.get(`${gatewayUrl}/api/v1/study-groups/me`, {
       headers: { Authorization: `Bearer ${token}` },

@@ -7,10 +7,13 @@ export interface INotificationRepository {
     title: string;
     body: string;
     payload: Record<string, unknown> | null;
+    priority?: "normal" | "urgente" | "critica";
+    action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
   }): Promise<string>;
   listByUser(input: {
     actorUserId: string;
     page: number;
     pageSize: number;
   }): Promise<UserNotification[]>;
+  markAllAsRead(userId: string): Promise<void>;
 }

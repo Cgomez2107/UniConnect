@@ -1,0 +1,88 @@
+appId: com.uniconnect.app
+name: Login — escenarios de error
+---
+# =============================================================================
+# FLUJO: Validación de errores en el Login
+# =============================================================================
+# Cubre:
+#   - Correo no institucional (@gmail.com)
+#   - Campos vacíos
+#   - Contraseña incorrecta
+# =============================================================================
+
+# ── ESCENARIO 1: CORREO NO INSTITUCIONAL ─────────────────────────────────────
+- runFlow:
+    file: ../shared/skip-onboarding.yaml
+    when:
+      visible:
+        text: "Saltar"
+
+- assertVisible:
+    text: "Inicia sesión"
+    timeout: 10000
+
+- tapOn:
+    text: "Correo institucional"
+
+- inputText:
+    text: "usuario@gmail.com"
+
+- tapOn:
+    text: "Contraseña"
+
+- inputText:
+    text: "SomePass123"
+
+- tapOn:
+    text: "Ingresar"
+
+# Debe mostrar error de dominio no válido
+- assertVisible:
+    text: "Debe ser un correo @ucaldas.edu.co"
+    timeout: 5000
+
+# ── ESCENARIO 2: CAMPOS VACÍOS ──────────────────────────────────────────────
+# Limpiar campos y pulsar Ingresar sin datos
+
+- tapOn:
+    text: "Correo institucional"
+
+- inputText:
+    text: ""
+
+- tapOn:
+    text: "Contraseña"
+
+- inputText:
+    text: ""
+
+- tapOn:
+    text: "Ingresar"
+
+# Debe mostrar error de campos requeridos
+- assertVisible:
+    text: "Completa todos los campos"
+    timeout: 5000
+
+# ── ESCENARIO 3: CREDENCIALES INCORRECTAS ────────────────────────────────────
+# Ingresar correo institucional válido pero con contraseña incorrecta
+
+- tapOn:
+    text: "Correo institucional"
+
+- inputText:
+    text: "e2e@ucaldas.edu.co"
+
+- tapOn:
+    text: "Contraseña"
+
+- inputText:
+    text: "WrongPassword999"
+
+- tapOn:
+    text: "Ingresar"
+
+# Debe mostrar error de credenciales inválidas (depende de Supabase)
+- assertVisible:
+    text: "Correo o contraseña incorrectos"
+    timeout: 15000

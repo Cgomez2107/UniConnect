@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   useColorScheme,
   View,
+  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -59,6 +60,10 @@ interface Props {
   send: ChatInputSendState;
   voice: ChatInputVoiceState;
   validationState?: ValidationState;
+  containerStyle?: ViewStyle;
+  backgroundColorOverride?: string;
+  borderTopColorOverride?: string;
+  paddingBottomOverride?: number;
 }
 
 export function ChatInput({
@@ -68,6 +73,10 @@ export function ChatInput({
   send,
   voice,
   validationState,
+  containerStyle,
+  backgroundColorOverride,
+  borderTopColorOverride,
+  paddingBottomOverride,
 }: Props) {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
@@ -107,10 +116,11 @@ export function ChatInput({
       style={[
         styles.container,
         {
-          backgroundColor: C.background,
-          borderTopColor: "transparent",
-          paddingBottom: Math.max(insets.bottom, 8),
+          backgroundColor: backgroundColorOverride ?? C.background,
+          borderTopColor: borderTopColorOverride ?? "transparent",
+          paddingBottom: paddingBottomOverride ?? Math.max(insets.bottom, 8),
         },
+        containerStyle,
       ]}
     >
       {imagePreviewUri && (
@@ -263,6 +273,7 @@ const styles = StyleSheet.create({
   },
   inputShell: {
     flex: 1,
+    minWidth: 0,
     borderRadius: 24,
     borderWidth: 1,
     paddingHorizontal: 14,
@@ -271,6 +282,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    width: "100%",
+    minWidth: 0,
     paddingTop: 9,
     paddingBottom: 9,
     fontSize: 15,

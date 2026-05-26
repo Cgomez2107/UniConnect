@@ -10,7 +10,11 @@ test.describe("C1 - Authentication flow", () => {
     await expect(page).toHaveURL(/\/login/);
 
     const { email, password } = testUsers.standard;
+    
+    console.log(`Attempting login with: ${email}`);
+    
     await loginPage.login(email, password);
+    await loginPage.waitForNavigation();
 
     await expect(page).toHaveURL(/.*\/solicitudes/);
   });

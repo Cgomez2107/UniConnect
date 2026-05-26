@@ -47,7 +47,7 @@ interface GroupStateBadgeProps {
 }
 
 export function GroupStateBadge({ state, size = "medium" }: GroupStateBadgeProps) {
-  const config = STATE_CONFIG[state] ?? FALLBACK_CONFIG;
+  const config = STATE_CONFIG[state as GroupState] ?? FALLBACK_CONFIG;
 
   return (
     <div className={`state-badge ${config.className} size-${size}`}>

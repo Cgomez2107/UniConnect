@@ -135,7 +135,7 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
         onClose();
       }, 1200);
     } catch (err: any) {
-      const msg = err?.message || "";
+      const msg = err?.response?.data?.error || err?.message || "";
       if (msg.includes("Start time must be in the future")) {
         setError("La fecha de inicio debe ser en el futuro");
       } else if (msg.includes("End time must be after start time")) {

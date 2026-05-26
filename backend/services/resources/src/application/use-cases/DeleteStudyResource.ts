@@ -1,4 +1,7 @@
 import type { IStudyResourceRepository } from "../../domain/repositories/IStudyResourceRepository.js";
+import type { IPermissionValidator } from "../../domain/services/IPermissionValidator.js";
+import { AuthorizationError } from "../../../../../shared/libs/errors/AuthorizationError.js";
+import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 
 interface StorageCleaner {
   deletePublicResource(fileUrl: string): Promise<void>;
@@ -7,16 +10,17 @@ interface StorageCleaner {
 export class DeleteStudyResource {
   constructor(
     private readonly repository: IStudyResourceRepository,
+    private readonly permissionValidator: IPermissionValidator,
     private readonly storageCleaner?: StorageCleaner,
   ) {}
 
   async execute(id: string, actorUserId: string, isAdmin = false): Promise<boolean> {
     if (!id.trim()) {
-      throw new Error("id es obligatorio.");
+      throw new ValidationError("id es obligatorio.");
     }
 
     if (!actorUserId.trim()) {
-      throw new Error("Token de autenticación requerido.");
+      throw new ValidationError("Token de autenticación requerido.");
     }
 
     const existing = await this.repository.getById(id);
@@ -24,7 +28,12 @@ export class DeleteStudyResource {
       return false;
     }
 
-    const deleted = await this.repository.deleteById(id, actorUserId, isAdmin);
+    const allowed = await this.permissionValidator.canEditResource(id, actorUserId);
+    if (!allowed) {
+      throw new AuthorizationError("No tienes permisos para eliminar este recurso.");
+    }
+
+    const deleted = await this.repository.deleteById(id);
     if (!deleted) {
       return false;
     }

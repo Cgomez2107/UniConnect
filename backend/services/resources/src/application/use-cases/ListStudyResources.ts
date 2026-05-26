@@ -1,11 +1,11 @@
-import type { StudyResource } from "../../domain/entities/StudyResource.js";
+import type { ListStudyResourcesResult } from "../../domain/repositories/IStudyResourceRepository.js";
 import type { IStudyResourceRepository } from "../../domain/repositories/IStudyResourceRepository.js";
 
 export interface ListStudyResourcesInput {
   readonly subjectId?: string;
   readonly userId?: string;
   readonly search?: string;
-  readonly resourceType?: string;
+  readonly resourceType?: "file" | "link";
   readonly page: number;
   readonly pageSize: number;
 }
@@ -13,7 +13,7 @@ export interface ListStudyResourcesInput {
 export class ListStudyResources {
   constructor(private readonly repository: IStudyResourceRepository) {}
 
-  async execute(input: ListStudyResourcesInput): Promise<StudyResource[]> {
+  async execute(input: ListStudyResourcesInput): Promise<ListStudyResourcesResult> {
     const page = Number.isInteger(input.page) && input.page >= 0 ? input.page : 0;
     const pageSize = Number.isInteger(input.pageSize)
       ? Math.min(50, Math.max(1, input.pageSize))

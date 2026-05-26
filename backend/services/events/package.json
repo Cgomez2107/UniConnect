@@ -7,19 +7,25 @@
     "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
+    "generate:openapi": "tsx src/openapi/index.ts",
     "lint": "echo \"events lint config scaffold\"",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"events tests config scaffold\""
+    "test": "echo \"events tests config scaffold\"",
+    "test:integration": "vitest run tests/integration/events.integration.spec.ts --coverage"
   },
   "dependencies": {
-    "@uniconnect/shared-types": "file:../../../packages/shared-types",
     "@supabase/supabase-js": "^2.105.4",
+    "@uniconnect/shared-types": "file:../../../packages/shared-types",
     "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
     "@types/pg": "^8.11.10",
+    "@types/supertest": "^6.0.3",
+    "@vitest/coverage-v8": "^3.2.4",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
   }
 }

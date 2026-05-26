@@ -2,18 +2,14 @@ import React, { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { useStrategyNotifier } from "@/hooks/application/useStrategyNotifier";
 
-/**
- * RealtimeNotificationHandler
- * 
- * Componente global que escucha cambios en la tabla 'user_notifications'
- * y mapea los eventos a acciones del store.
- */
 export function RealtimeNotificationHandler() {
   const { user } = useAuthStore();
   const userId = user?.id;
   const pushNotification = useNotificationStore((s) => s.pushNotification);
   const markTransferAccepted = useNotificationStore((s) => s.markTransferAccepted);
+  const { notificar } = useStrategyNotifier();
   const channelRef = React.useRef<any>(null);
 
   useEffect(() => {
@@ -32,7 +28,7 @@ export function RealtimeNotificationHandler() {
 
       const channelId = `notifications-${userId}-${Math.random().toString(36).substring(7)}`;
       console.log(`[RealtimeNotificationHandler] Intentando suscripción (${retryCount}):`, channelId);
-      
+
       const channel = supabase.channel(channelId);
       channelRef.current = channel;
 
@@ -43,26 +39,33 @@ export function RealtimeNotificationHandler() {
             event: "INSERT",
             schema: "public",
             table: "user_notifications",
-            filter: `user_id=eq.${userId}`, 
+            filter: `user_id=eq.${userId}`,
           },
           (payload: any) => {
-            console.log("[RealtimeNotificationHandler] ¡EVENTO CAPTURADO!", payload);
             const notification = payload.new;
             if (!notification) return;
 
             const type = String(notification.type || "").toLowerCase();
-            console.log("[RealtimeNotificationHandler] Procesando notificación:", type, notification.id);
-            
+
+            void notificar({
+              userId: notification.user_id ?? userId,
+              type,
+              title: notification.title ?? "",
+              body: notification.body ?? "",
+              payload: notification.payload ?? null,
+              priority: notification.priority ?? "normal",
+            });
+
             if (type === "transferencia_admin_aceptada") {
-               markTransferAccepted(notification.payload.requestId);
+              markTransferAccepted(notification.payload?.requestId);
             } else {
-               pushNotification(notification as any);
+              pushNotification(notification as any);
             }
           }
         )
         .subscribe((status: string) => {
           console.log(`[RealtimeNotificationHandler] Estado: ${status} | Canal: ${channelId}`);
-          
+
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             if (retryCount < MAX_RETRIES) {
               retryCount++;
@@ -84,7 +87,7 @@ export function RealtimeNotificationHandler() {
         channelRef.current = null;
       }
     };
-  }, [userId, pushNotification, markTransferAccepted]);
+  }, [userId, pushNotification, markTransferAccepted, notificar]);
 
   return null;
 }

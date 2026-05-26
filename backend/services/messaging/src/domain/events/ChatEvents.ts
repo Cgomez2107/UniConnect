@@ -62,7 +62,7 @@ export interface ReactionUpdatedEvent {
 }
 
 /**
- * Evento: Voto en encuesta
+ * Evento: Voto en encuesta (legacy)
  */
 export interface PollVoteEvent {
   readonly type: "PollVote";
@@ -85,7 +85,22 @@ export interface PollVoteEvent {
 }
 
 /**
- * Evento: Encuesta cerrada por temporizador
+ * Evento: Voto registrado en una encuesta
+ */
+export interface PollVoteRegisteredEvent {
+  readonly type: "POLL_VOTE_REGISTERED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly pollId: string;
+  readonly groupId: string;
+  readonly userId: string;
+  readonly selectedOption: number;
+  readonly results: Array<{ option: string; count: number; percentage: number }>;
+  readonly totalVotes: number;
+}
+
+/**
+ * Evento: Encuesta cerrada por temporizador (legacy)
  */
 export interface PollClosedEvent {
   readonly type: "PollClosed";
@@ -93,6 +108,20 @@ export interface PollClosedEvent {
   readonly timestamp: Date;
   readonly messageId: string;
   readonly conversationId: string;
+}
+
+/**
+ * Evento: Encuesta cerrada automáticamente por scheduler
+ */
+export interface PollClosedStatusEvent {
+  readonly type: "POLL_CLOSED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly pollId: string;
+  readonly groupId: string;
+  readonly status: "closed";
+  readonly finalResults: Array<{ option: string; count: number; percentage: number }>;
+  readonly totalVotes: number;
 }
 
 /**
@@ -104,7 +133,11 @@ export type ChatEvent =
   | UserTypingEvent
   | ReactionUpdatedEvent
   | PollVoteEvent
-  | PollClosedEvent;
+  | PollVoteRegisteredEvent
+  | PollVoteEvent
+  | PollVoteRegisteredEvent
+  | PollClosedEvent
+  | PollClosedStatusEvent;
 
 /**
  * Sistema de canales para enrutamiento de eventos

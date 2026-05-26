@@ -1,9 +1,11 @@
 import jwt from "jsonwebtoken";
+import { randomUUID } from "node:crypto";
 
 export interface JWTPayload {
   sub: string; // user id
   iat: number;
   exp: number;
+  jti: string;
 }
 
 export class JWTService {
@@ -30,15 +32,16 @@ export class JWTService {
     accessTokenExpiry: number;
   } {
     const now = Math.floor(Date.now() / 1000);
+    const jti = randomUUID();
 
     const accessToken = jwt.sign(
-      { sub: userId, iat: now, exp: now + this.accessTokenExpiry },
+      { sub: userId, iat: now, exp: now + this.accessTokenExpiry, jti },
       this.accessTokenSecret,
       { algorithm: "HS256" }
     );
 
     const refreshToken = jwt.sign(
-      { sub: userId, iat: now, exp: now + this.refreshTokenExpiry },
+      { sub: userId, iat: now, exp: now + this.refreshTokenExpiry, jti },
       this.refreshTokenSecret,
       { algorithm: "HS256" }
     );

@@ -38,6 +38,7 @@ services:
       MESSAGING_BASE_URL: http://messaging:3104
       PROFILES_CATALOG_BASE_URL: http://profiles-catalog:3105
       EVENTS_BASE_URL: http://events:3106
+      FORUM_BASE_URL: http://academic-qna:3107
       AUTH_BASE_URL: http://auth:3102
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_secret_access}
     ports:
@@ -59,7 +60,32 @@ services:
         condition: service_started
       profiles-catalog:
         condition: service_started
-      events:
+      academic-qna:
+        condition: service_started
+  academic-qna:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: uniconnect-academic-qna
+    working_dir: /app
+    command: sh -c "pnpm --filter @uniconnect/academic-qna dev"
+    env_file:
+      - ./backend/services/academic-qna/.env
+    environment:
+      PNPM_STORE_DIR: /pnpm-store
+    ports:
+      - "3107:3107"
+    volumes:
+      - ./backend:/app
+      - backend-pnpm-store:/pnpm-store
+      - backend-node-modules:/app/node_modules
+    depends_on:
+      backend-setup:
+        condition: service_completed_successfully
+    networks:
+      - uniconnect-network
+
+  events:
         condition: service_started
     networks:
       - uniconnect-network

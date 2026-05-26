@@ -5,12 +5,12 @@ import { DeleteStudyResource } from "./application/use-cases/DeleteStudyResource
 import { GetStudyResourceById } from "./application/use-cases/GetStudyResourceById.js";
 import { ListStudyResources } from "./application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "./application/use-cases/UpdateStudyResource.js";
-import { ParseUrlMetadata } from "./application/use-cases/ParseUrlMetadata.js";
 import { loadResourcesEnv } from "./config/env.js";
 import type { IStudyResourceRepository } from "./domain/repositories/IStudyResourceRepository.js";
-import { OpenGraphExtractorService } from "./domain/services/OpenGraphExtractorService.js";
 import { InMemoryStudyResourceRepository } from "./infrastructure/database/InMemoryStudyResourceRepository.js";
 import { PostgresStudyResourceRepository } from "./infrastructure/database/PostgresStudyResourceRepository.js";
+import { PostgresPermissionValidator } from "./infrastructure/database/PostgresPermissionValidator.js";
+import { OpenGraphService } from "./infrastructure/og/OpenGraphService.js";
 import { Database } from "./infrastructure/database/Database.js";
 import { SupabaseStorageCleaner } from "./infrastructure/storage/SupabaseStorageCleaner.js";
 import type { Pool } from "pg";
@@ -90,14 +90,17 @@ function bootstrap(): void {
   const pool = hasDatabaseConfig ? Database.getInstance(env).getPool() : null;
 
   const repository = createRepository(env, pool);
+  const permissionValidator = pool
+    ? new PostgresPermissionValidator(pool)
+    : { canEditResource: async () => false };
+  const openGraphService = new OpenGraphService();
+
   const listStudyResources = new ListStudyResources(repository);
   const getStudyResourceById = new GetStudyResourceById(repository);
-  const ogExtractor = new OpenGraphExtractorService();
-  const createStudyResource = new CreateStudyResource(repository, ogExtractor);
-  const updateStudyResource = new UpdateStudyResource(repository);
+  const createStudyResource = new CreateStudyResource(repository, openGraphService);
+  const updateStudyResource = new UpdateStudyResource(repository, permissionValidator);
   const storageCleaner = new SupabaseStorageCleaner(env);
-  const deleteStudyResource = new DeleteStudyResource(repository, storageCleaner);
-  const parseUrlMetadata = new ParseUrlMetadata();
+  const deleteStudyResource = new DeleteStudyResource(repository, permissionValidator, storageCleaner);
 
   const controller = new ResourcesController(
     listStudyResources,
@@ -105,7 +108,6 @@ function bootstrap(): void {
     createStudyResource,
     updateStudyResource,
     deleteStudyResource,
-    parseUrlMetadata,
   );
 
   const server = createServer((req, res) => {

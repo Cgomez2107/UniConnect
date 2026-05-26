@@ -1,26 +1,18 @@
+export type SessionStatus = "scheduled" | "cancelled";
+
 export interface StudySession {
   readonly id: string;
-  readonly groupId: string;
+  readonly seriesId: string | null;
+  readonly requestId: string;
   readonly title: string;
-  readonly description: string;
+  readonly description?: string;
   readonly startTime: string;
   readonly endTime: string;
-  readonly rrule?: string | null;
-  readonly parentSeriesId?: string | null;
+  readonly location: string | null;
+  readonly status: SessionStatus;
+  readonly remindAt: string | null;
+  readonly reminded: boolean;
   readonly createdBy: string;
-  readonly cancelledAt?: string | null;
-  readonly reminderSentAt?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
-}
-
-export interface CreateSessionInput {
-  readonly groupId: string;
-  readonly title: string;
-  readonly description: string;
-  readonly startTime: string;
-  readonly endTime: string;
-  readonly rrule?: string | null;
-  readonly parentSeriesId?: string | null;
-  readonly createdBy: string;
 }

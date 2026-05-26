@@ -34,6 +34,7 @@ export class MarcarComoSolucion {
     }
 
     await this.questionRepo.markAsSolved(input.questionId);
+    await this.answerRepo.markAsSolution(input.answerId);
 
     await this.forumSubject.emitSolucionEvent({
       type: 'SOLUCION_MARCADA',

@@ -134,6 +134,7 @@ export interface StudyRequest {
   // campos derivados (feed)
   faculty_name?: string;
   subject_name?: string;
+  hasPendingTransfer?: boolean;
 }
 
 export interface CreateStudyRequestPayload {
@@ -193,6 +194,8 @@ export interface Message {
   created_at: string;
   read_at: string | null;
   reactions?: Reaction[];
+  poll_data?: PollData | null;
+  mentions?: { userId: string; displayName: string }[];
   poll_data?: PollData | null;
   // join
   sender?: { full_name: string; avatar_url: string | null };

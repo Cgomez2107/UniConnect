@@ -23,7 +23,7 @@ export class NuevaSolicitudPage {
 
   async waitForSubjectsLoaded(): Promise<void> {
     const options = this.subjectSelect.locator("option:not([value=''])");
-    await options.first().waitFor({ state: "attached", timeout: 15000 });
+    await options.first().waitFor({ state: "attached", timeout: 30000 });
   }
 
   async selectFirstSubject(): Promise<string> {

@@ -37,9 +37,7 @@ export class StudySessionReminderJob {
 
   private async tick(): Promise<void> {
     try {
-      const sessions = await this.repository.findUpcomingWithoutReminder(
-        this.REMINDER_WINDOW_MINUTES,
-      );
+      const sessions = await this.repository.findPendingReminders();
 
       if (sessions.length === 0) return;
 
@@ -54,7 +52,7 @@ export class StudySessionReminderJob {
 
       for (const session of sessions) {
         try {
-          const members = await this.memberRepository.findByGroup(session.groupId);
+          const members = await this.memberRepository.findByGroup(session.requestId);
           const promises = members.map(member =>
             this.notificationService.notificar({
               userId: member.userId,
@@ -63,7 +61,7 @@ export class StudySessionReminderJob {
               body: `"${session.title}" comienza en menos de ${this.REMINDER_WINDOW_MINUTES} minutos`,
               payload: {
                 sessionId: session.id,
-                groupId: session.groupId,
+                groupId: session.requestId,
                 title: session.title,
                 startTime: session.startTime,
                 endTime: session.endTime,
@@ -72,7 +70,7 @@ export class StudySessionReminderJob {
             }),
           );
           await Promise.allSettled(promises);
-          await this.repository.markReminderSent(session.id);
+          await this.repository.markReminded(session.id);
         } catch (err) {
           console.error(
             JSON.stringify({

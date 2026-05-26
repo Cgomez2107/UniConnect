@@ -125,6 +125,22 @@ export interface AdminRoleLeftEvent {
 }
 
 /**
+ * Evento: Participante actualiza su disponibilidad (confirmed/declined)
+ */
+export interface AvailabilityUpdatedEvent {
+  readonly type: "AVAILABILITY_UPDATED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly sessionId: string;
+  readonly requestId: string;
+  readonly userId: string;
+  readonly userName: string;
+  readonly status: "confirmed" | "declined";
+  readonly groupName: string;
+  readonly organizerId: string;
+}
+
+/**
  * Evento: Sesión de estudio creada
  */
 export interface SessionCreatedEvent {
@@ -149,9 +165,12 @@ export interface SessionCancelledEvent {
   readonly version: "1.0";
   readonly timestamp: Date;
   readonly sessionId: string;
-  readonly groupId: string;
+  readonly requestId: string;
   readonly title: string;
-  readonly cancelledBy: string;
+  readonly groupName: string;
+  readonly attendeeIds: string[];
+  readonly groupId?: string;
+  readonly cancelledBy?: string;
 }
 
 /**
@@ -167,6 +186,7 @@ export type StudyGroupEvent =
   | AdminTransferCompletedEvent
   | AdminRoleLeftEvent
   | SessionCreatedEvent
+  | AvailabilityUpdatedEvent
   | SessionCancelledEvent;
 
 /**

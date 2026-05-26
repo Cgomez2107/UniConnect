@@ -90,10 +90,6 @@ export function MessageBubble({
           <div className="text-sm whitespace-pre-wrap break-words">
             {decoratedMessage.render(decoratorContext)}
           </div>
-          {(() => {
-            console.log("[DEBUG] MessageBubble poll:", { id: message.id, hasPoll: !!message.poll, pollType: message.poll ? typeof message.poll : 'undefined', content: message.content });
-            return null;
-          })()}
           {message.poll && (
             <PollMessage
               poll={message.poll}

@@ -10,3 +10,4 @@ export { MentionDecorator, type Mention } from "./MentionDecorator.js";
 export { ReactionDecorator, type Reaction } from "./ReactionDecorator.js";
 export { PollDecorator, type PollMetadata, type PollOption } from "./PollDecorator.js";
 export { extractMentionsFromContent } from "./mentionParser.js";
+export { PollMessageDecorator, type PollConfigData, type PollConfigInput, type PollStatus } from "./PollMessageDecorator.js";

@@ -1,4 +1,7 @@
 import { ConflictError } from "../../../../../shared/libs/errors/ConflictError.js";
+import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
+import { AuthorizationError } from "../../../../../shared/libs/errors/AuthorizationError.js";
+import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 import type { Application } from "../../domain/entities/Application.js";
 import type { IApplicationRepository } from "../../domain/repositories/IApplicationRepository.js";
 
@@ -62,5 +65,20 @@ export class InMemoryApplicationRepository implements IApplicationRepository {
 
   async getByApplicantId(applicantId: string): Promise<Application[]> {
     return this.applications.filter((app) => app.applicantId === applicantId);
+  }
+
+  async delete(applicationId: string, actorUserId: string): Promise<void> {
+    const idx = this.applications.findIndex((a) => a.id === applicationId);
+    if (idx === -1) {
+      throw new NotFoundError("Postulación no encontrada.");
+    }
+    const app = this.applications[idx];
+    if (app.applicantId !== actorUserId) {
+      throw new AuthorizationError("No puedes cancelar una postulación que no te pertenece.");
+    }
+    if (app.status !== "pendiente") {
+      throw new ValidationError("Solo puedes cancelar postulaciones en estado pendiente.");
+    }
+    this.applications.splice(idx, 1);
   }
 }

@@ -9,6 +9,7 @@
     "build": "pnpm generate:openapi && tsc -p tsconfig.json",
     "start": "node dist/gateway/src/main.js",
     "archive:openapi": "tsx ../scripts/archive-openapi.ts",
+    "merge:openapi": "tsx scripts/merge-openapi.ts",
     "lint": "echo \"gateway lint config scaffold\"",
     "typecheck": "tsc --noEmit",
     "test": "echo \"gateway tests config scaffold\""

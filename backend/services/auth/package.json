@@ -7,6 +7,7 @@
     "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
+    "generate:openapi": "tsx src/openapi/index.ts",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed-test-user.ts",
     "test:integration": "vitest run tests/integration/auth.integration.spec.ts --coverage"
@@ -14,7 +15,8 @@
   "dependencies": {
     "@uniconnect/shared-types": "file:../../../packages/shared-types",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

@@ -33,12 +33,14 @@ import { CompanionsPage } from "./pages/CompanionsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import DirectorioPage from "./pages/DirectorioPage";
+import { StudyGroupsMobilePage } from "./pages/StudyGroupsMobilePage";
 import { ForumPage } from "./pages/ForumPage";
 import { ForumQuestionPage } from "./pages/ForumQuestionPage";
 import { StudyCalendarPage } from "./pages/StudyCalendarPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import { fetchNotifications } from "./lib/services/notifications.service";
+import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import "./App.css";
 
 function PrivateRoute({
@@ -87,6 +89,8 @@ function App() {
     })();
   }, [hydrate]);
 
+  useRealtimeNotifications();
+
   useEffect(() => {
     if (!isAuthenticated) return;
     fetchNotifications();
@@ -127,6 +131,14 @@ function App() {
           }
         />
         <Route
+          path="/chat/:conversationId"
+          element={
+            <PrivateRoute isAuthenticated={isAuthenticated}>
+              <ChatPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
           element={
             <PrivateRoute isAuthenticated={isAuthenticated}>
               <AppLayout />
@@ -150,12 +162,12 @@ function App() {
           <Route path="/perfil" element={<PerfilPage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/mensajes" element={<MensajesPage />} />
-          <Route path="/chat/:conversationId" element={<ChatPage />} />
           <Route path="/directorio" element={<CompanionsPage />} />
           <Route path="/companions" element={<CompanionsPage />} />
           <Route path="/perfil-estudiante/:id" element={<StudentProfilePage />} />
           <Route path="/notificaciones" element={<NotificationsPage />} />
           <Route path="/ajustes/notificaciones" element={<NotificationSettingsPage />} />
+          <Route path="/ui/study-groups" element={<StudyGroupsMobilePage />} />
           <Route path="/forum" element={<ForumPage />} />
           <Route path="/forum/pregunta/:id" element={<ForumQuestionPage />} />
           <Route path="/calendario-estudio" element={<StudyCalendarPage />} />

@@ -1,13 +1,18 @@
 import { z } from "zod";
 import { UuidSchema, DateStringSchema } from "./_common.schema.js";
 
+export const ForumQuestionStatusEnum = z.enum(["active", "solved", "closed"]);
+
+export const ForumVoteTargetTypeEnum = z.enum(["question", "answer"]);
+
+export const ForumVoteTypeEnum = z.enum(["upvote", "downvote"]);
 export const ForumQuestionSchema = z.object({
   id: UuidSchema,
   subjectId: UuidSchema,
   authorId: UuidSchema,
-  title: z.string().min(1).max(200),
-  body: z.string().min(1).max(5000),
-  status: z.enum(["active", "solved"]),
+  title: z.string().min(5).max(300),
+  body: z.string().min(10).max(10000),
+  status: ForumQuestionStatusEnum,
   answerCount: z.number().int().nonnegative(),
   voteCount: z.number().int(),
   userVote: z.enum(["upvote", "downvote"]).nullable().optional(),
@@ -15,17 +20,16 @@ export const ForumQuestionSchema = z.object({
   updatedAt: DateStringSchema,
 });
 
-export const ForumQuestionDTOSchema = z.object({
+export const ForumQuestionSummarySchema = z.object({
   id: UuidSchema,
-  subject_id: UuidSchema,
-  author_id: UuidSchema,
-  title: z.string().min(1).max(200),
-  body: z.string().min(1).max(5000),
-  status: z.enum(["active", "solved"]),
-  answer_count: z.number().int().nonnegative(),
-  vote_count: z.number().int(),
-  created_at: DateStringSchema,
-  updated_at: DateStringSchema,
+  subjectId: UuidSchema,
+  authorId: UuidSchema,
+  title: z.string().min(5).max(300),
+  status: ForumQuestionStatusEnum,
+  answerCount: z.number().int().nonnegative(),
+  voteCount: z.number().int(),
+  createdAt: DateStringSchema,
+  updatedAt: DateStringSchema,
 });
 
 export const ForumAnswerSchema = z.object({
@@ -42,6 +46,71 @@ export const ForumAnswerSchema = z.object({
   updatedAt: DateStringSchema,
 });
 
+export const ForumVoteSchema = z.object({
+  id: UuidSchema,
+  targetType: ForumVoteTargetTypeEnum,
+  targetId: UuidSchema,
+  voterId: UuidSchema,
+  voteType: ForumVoteTypeEnum,
+  createdAt: DateStringSchema,
+});
+
+export const CreateQuestionInputSchema = z.object({
+  subjectId: UuidSchema,
+  title: z.string().min(5).max(300),
+  body: z.string().min(10).max(10000),
+});
+
+export const CreateAnswerInputSchema = z.object({
+  questionId: UuidSchema,
+  body: z.string().min(1).max(5000),
+});
+
+export const CastVoteInputSchema = z.object({
+  targetType: ForumVoteTargetTypeEnum,
+  targetId: UuidSchema,
+  voteType: ForumVoteTypeEnum,
+});
+
+export const ForumQuestionDetailSchema = z.object({
+  question: ForumQuestionSchema,
+  answers: z.array(ForumAnswerSchema),
+});
+
+export type ForumQuestion = z.infer<typeof ForumQuestionSchema>;
+export type ForumQuestionSummary = z.infer<typeof ForumQuestionSummarySchema>;
+export type ForumAnswer = z.infer<typeof ForumAnswerSchema>;
+export type ForumVote = z.infer<typeof ForumVoteSchema>;
+export type CreateQuestionInput = z.infer<typeof CreateQuestionInputSchema>;
+export type CreateAnswerInput = z.infer<typeof CreateAnswerInputSchema>;
+export type CastVoteInput = z.infer<typeof CastVoteInputSchema>;
+export type ForumQuestionDetail = z.infer<typeof ForumQuestionDetailSchema>;
+
+export const ForumQuestionDTOSchema = z.object({
+  id: UuidSchema,
+  subject_id: UuidSchema,
+  author_id: UuidSchema,
+  title: z.string().min(5).max(300),
+  body: z.string().min(10).max(10000),
+  status: ForumQuestionStatusEnum,
+  answer_count: z.number().int().nonnegative(),
+  vote_count: z.number().int(),
+  created_at: DateStringSchema,
+  updated_at: DateStringSchema,
+});
+
+export const ForumQuestionSummaryDTOSchema = z.object({
+  id: UuidSchema,
+  subject_id: UuidSchema,
+  author_id: UuidSchema,
+  title: z.string().min(5).max(300),
+  status: ForumQuestionStatusEnum,
+  answer_count: z.number().int().nonnegative(),
+  vote_count: z.number().int(),
+  created_at: DateStringSchema,
+  updated_at: DateStringSchema,
+});
+
 export const ForumAnswerDTOSchema = z.object({
   id: UuidSchema,
   question_id: UuidSchema,
@@ -55,46 +124,11 @@ export const ForumAnswerDTOSchema = z.object({
   updated_at: DateStringSchema,
 });
 
-export const ForumVoteSchema = z.object({
-  id: UuidSchema,
-  targetType: z.enum(["question", "answer"]),
-  targetId: UuidSchema,
-  voterId: UuidSchema,
-  voteType: z.enum(["upvote", "downvote"]),
-  createdAt: DateStringSchema,
-});
-
-export const ForumQuestionSummarySchema = z.object({
-  id: UuidSchema,
-  subjectId: UuidSchema,
-  authorId: UuidSchema,
-  title: z.string().min(1).max(200),
-  status: z.enum(["active", "solved"]),
-  answerCount: z.number().int().nonnegative(),
-  voteCount: z.number().int(),
-  createdAt: DateStringSchema,
-  updatedAt: DateStringSchema,
-});
-
-export const QuestionSummarySchema = ForumQuestionSummarySchema;
-
 export const ForumVoteDTOSchema = z.object({
   id: UuidSchema,
-  target_type: z.enum(["question", "answer"]),
+  target_type: ForumVoteTargetTypeEnum,
   target_id: UuidSchema,
   voter_id: UuidSchema,
-  vote_type: z.enum(["upvote", "downvote"]),
+  vote_type: ForumVoteTypeEnum,
   created_at: DateStringSchema,
-});
-
-export const QuestionSummaryDTOSchema = z.object({
-  id: UuidSchema,
-  subject_id: UuidSchema,
-  author_id: UuidSchema,
-  title: z.string().min(1).max(200),
-  status: z.enum(["active", "solved"]),
-  answer_count: z.number().int().nonnegative(),
-  vote_count: z.number().int(),
-  created_at: DateStringSchema,
-  updated_at: DateStringSchema,
 });

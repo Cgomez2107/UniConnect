@@ -5,6 +5,7 @@ export interface ForumAnswer {
   authorName: string;
   body: string;
   voteCount: number;
+  isSolution: boolean;
   isPinned: boolean;
   createdAt: Date;
   updatedAt: Date;

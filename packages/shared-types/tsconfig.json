@@ -14,15 +14,18 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "composite": true
+    "noUnusedParameters": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/generated/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "tests"
+    "tests",
+    "**/__tests__",
+    "**/*.spec.ts",
+    "**/*.test.ts"
   ]
 }

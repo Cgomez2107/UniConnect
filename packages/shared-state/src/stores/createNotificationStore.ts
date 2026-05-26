@@ -44,6 +44,7 @@ export function createNotificationStore(
         // Add notification
         addNotification(notification: Notification): void {
           const current = get();
+          if (current.notifications.some((n) => n.id === notification.id)) return;
 
           set((state) => ({
             notifications: [notification, ...state.notifications],

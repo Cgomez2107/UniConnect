@@ -66,7 +66,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
         timeoutsRef.current.delete(id);
       }, duration);
 
-      timeoutsRef.current.set(id, timeout);
+      timeoutsRef.current.set(id, timeout as unknown as NodeJS.Timeout);
     },
     []
   );

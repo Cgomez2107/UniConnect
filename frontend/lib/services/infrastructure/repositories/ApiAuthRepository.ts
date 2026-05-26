@@ -158,4 +158,8 @@ export class ApiAuthRepository implements IAuthRepository {
   onAuthStateChange(callback: AuthStateChangeCallback) {
     return this.fallback.onAuthStateChange(callback);
   }
+
+  async validateInstitutionalAccess(): Promise<boolean> {
+    return this.fallback.validateInstitutionalAccess();
+  }
 }

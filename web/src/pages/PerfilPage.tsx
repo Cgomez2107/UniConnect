@@ -32,13 +32,13 @@ export function PerfilPage() {
   if (isLoading) return <LoadingState />;
 
   const displayName = profile?.fullName || user?.name || user?.email?.split("@")[0] || "Usuario";
-  const primaryProgramName = primaryProgram?.programs?.name || primaryProgram?.program_id || "";
-  const facultyName = primaryProgram?.programs?.faculties?.name || "";
+  const primaryProgramName = primaryProgram?.programs?.name ?? (primaryProgram as any)?.name ?? primaryProgram?.program_id ?? "";
+  const facultyName = primaryProgram?.programs?.faculties?.name ?? (primaryProgram as any)?.facultyName ?? "";
   const displayPhone = profile?.phoneNumber;
   const displayBio = profile?.bio;
   const displaySemester = profile?.semester ?? user?.semester;
   const studySubjects = subjects
-    .map((s) => s.subjects)
+    .map((s: any) => s.subjects ?? s.subject)
     .filter(Boolean) as { id: string; name: string }[];
   const publicationCount = publications.length;
   const subjectCount = subjects.length;
@@ -95,8 +95,8 @@ export function PerfilPage() {
                 <div className="flex flex-wrap gap-2">
                   {programs.map((p, index) => (
                     <span key={p.program_id ?? p.programs?.id ?? `prog-${index}`} className="inline-flex items-center gap-1">
-                      <span>{p.programs?.name || p.program_id}</span>
-                      {p.is_primary && (
+                      <span>{(p as any)?.programs?.name ?? (p as any)?.name ?? p.program_id}</span>
+                      {(p.is_primary) && (
                         <span className="px-2 py-0.5 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded-full text-xs font-medium">
                           Principal
                         </span>

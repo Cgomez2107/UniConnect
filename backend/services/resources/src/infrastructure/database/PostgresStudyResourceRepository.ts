@@ -4,28 +4,35 @@ import type {
   IStudyResourceRepository,
   ListStudyResourcesFilters,
 } from "../../domain/repositories/IStudyResourceRepository.js";
-import { detectResourceType } from "../../domain/services/ResourceTypeMapper.js";
 
 interface StudyResourceRow {
   id: string;
   user_id: string;
   program_id: string;
   subject_id: string;
+  resource_type: string | null;
   title: string;
   description: string | null;
-  file_url: string;
-  file_name: string;
+  url: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image: string | null;
+  og_scraped_at: string | Date | null;
+  file_url: string | null;
+  file_name: string | null;
   file_type: string | null;
   file_size_kb: number | null;
-  resource_type: string | null;
-  og_title: string | null;
-  og_image: string | null;
-  og_description: string | null;
   created_at: string | Date;
   updated_at: string | Date;
   author_full_name: string | null;
   author_avatar_url: string | null;
   subject_name: string | null;
+  full_count?: string | number;
+}
+
+function parseResourceType(value: string | null): "file" | "link" {
+  if (value === "file" || value === "link") return value;
+  return "file";
 }
 
 function mapStudyResource(row: StudyResourceRow): StudyResource {
@@ -34,16 +41,18 @@ function mapStudyResource(row: StudyResourceRow): StudyResource {
     userId: row.user_id,
     programId: row.program_id,
     subjectId: row.subject_id,
+    resourceType: parseResourceType(row.resource_type),
     title: row.title,
     description: row.description,
+    url: row.url,
+    ogTitle: row.og_title,
+    ogDescription: row.og_description,
+    ogImage: row.og_image,
+    ogScrapedAt: row.og_scraped_at ? new Date(row.og_scraped_at).toISOString() : null,
     fileUrl: row.file_url,
     fileName: row.file_name,
     fileType: row.file_type,
     fileSizeKb: row.file_size_kb,
-    resourceType: detectResourceType(row.file_type, row.resource_type),
-    ogTitle: row.og_title,
-    ogImage: row.og_image,
-    ogDescription: row.og_description,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
     profiles: row.author_full_name
@@ -63,7 +72,7 @@ function mapStudyResource(row: StudyResourceRow): StudyResource {
 export class PostgresStudyResourceRepository implements IStudyResourceRepository {
   constructor(private readonly pool: Pool) {}
 
-  async list(filters: ListStudyResourcesFilters): Promise<StudyResource[]> {
+  async list(filters: ListStudyResourcesFilters): Promise<{ rows: StudyResource[]; total: number }> {
     const values: Array<string | number> = [];
     const conditions: string[] = [];
 
@@ -79,7 +88,7 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
 
     if (filters.resourceType) {
       values.push(filters.resourceType);
-      conditions.push(`(sr.resource_type = $${values.length} OR sr.file_type = $${values.length})`);
+      conditions.push(`sr.resource_type = $${values.length}`);
     }
 
     if (filters.search) {
@@ -103,21 +112,24 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           sr.user_id,
           sr.program_id,
           sr.subject_id,
+          sr.resource_type,
           sr.title,
           sr.description,
+          sr.url,
+          sr.og_title,
+          sr.og_description,
+          sr.og_image,
+          sr.og_scraped_at,
           sr.file_url,
           sr.file_name,
           sr.file_type,
           sr.file_size_kb,
-          sr.resource_type,
-          sr.og_title,
-          sr.og_image,
-          sr.og_description,
           sr.created_at,
           sr.updated_at,
           p.full_name AS author_full_name,
           p.avatar_url AS author_avatar_url,
-          s.name AS subject_name
+          s.name AS subject_name,
+          COUNT(*) OVER() AS full_count
         FROM study_resources sr
         LEFT JOIN profiles p ON p.id = sr.user_id
         LEFT JOIN subjects s ON s.id = sr.subject_id
@@ -129,7 +141,8 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
       values,
     );
 
-    return result.rows.map(mapStudyResource);
+    const total = result.rows.length > 0 ? Number(result.rows[0].full_count ?? 0) : 0;
+    return { rows: result.rows.map(mapStudyResource), total };
   }
 
   async getById(id: string): Promise<StudyResource | null> {
@@ -140,16 +153,18 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           sr.user_id,
           sr.program_id,
           sr.subject_id,
+          sr.resource_type,
           sr.title,
           sr.description,
+          sr.url,
+          sr.og_title,
+          sr.og_description,
+          sr.og_image,
+          sr.og_scraped_at,
           sr.file_url,
           sr.file_name,
           sr.file_type,
           sr.file_size_kb,
-          sr.resource_type,
-          sr.og_title,
-          sr.og_image,
-          sr.og_description,
           sr.created_at,
           sr.updated_at,
           p.full_name AS author_full_name,
@@ -174,33 +189,37 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           user_id,
           program_id,
           subject_id,
+          resource_type,
           title,
           description,
+          url,
+          og_title,
+          og_description,
+          og_image,
+          og_scraped_at,
           file_url,
           file_name,
           file_type,
-          file_size_kb,
-          resource_type,
-          og_title,
-          og_image,
-          og_description
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          file_size_kb
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING id
       `,
       [
         input.userId,
         input.programId,
         input.subjectId,
+        input.resourceType,
         input.title,
         input.description ?? null,
-        input.fileUrl,
-        input.fileName,
+        input.url ?? null,
+        input.ogTitle ?? null,
+        input.ogDescription ?? null,
+        input.ogImage ?? null,
+        input.ogScrapedAt ? new Date(input.ogScrapedAt).toISOString() : null,
+        input.fileUrl ?? null,
+        input.fileName ?? null,
         input.fileType ?? null,
         input.fileSizeKb ?? null,
-        input.resourceType ?? null,
-        input.ogTitle ?? null,
-        input.ogImage ?? null,
-        input.ogDescription ?? null,
       ],
     );
 
@@ -214,23 +233,8 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
 
   async updateById(
     id: string,
-    actorUserId: string,
-    isAdmin = false,
     payload: { title?: string; description?: string | null },
   ): Promise<StudyResource | null> {
-    const current = await this.pool.query<{ user_id: string }>(
-      "SELECT user_id FROM study_resources WHERE id = $1 LIMIT 1",
-      [id],
-    );
-
-    if (!current.rows[0]) {
-      return null;
-    }
-
-    if (current.rows[0].user_id !== actorUserId && !isAdmin) {
-      throw new Error("Solo el autor o un administrador puede editar este recurso.");
-    }
-
     const updated = await this.pool.query(
       `
         UPDATE study_resources
@@ -250,21 +254,8 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
     return this.getById(id);
   }
 
-  async deleteById(id: string, actorUserId: string, isAdmin = false): Promise<boolean> {
-    const current = await this.pool.query<{ user_id: string }>(
-      "SELECT user_id FROM study_resources WHERE id = $1 LIMIT 1",
-      [id],
-    );
-
-    if (!current.rows[0]) {
-      return false;
-    }
-
-    if (current.rows[0].user_id !== actorUserId && !isAdmin) {
-      throw new Error("Solo el autor o un administrador puede eliminar este recurso.");
-    }
-
-    await this.pool.query("DELETE FROM study_resources WHERE id = $1", [id]);
-    return true;
+  async deleteById(id: string): Promise<boolean> {
+    const result = await this.pool.query("DELETE FROM study_resources WHERE id = $1", [id]);
+    return (result.rowCount ?? 0) > 0;
   }
 }

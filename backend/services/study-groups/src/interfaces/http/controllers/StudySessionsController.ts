@@ -29,7 +29,7 @@ export class StudySessionsController {
 
       const input = {
         actorUserId,
-        groupId,
+        requestId: groupId,
         title: String(body.title || ""),
         description: String(body.description || ""),
         startTime: String(body.startTime || ""),

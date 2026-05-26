@@ -13,9 +13,10 @@ import {
   StudySessionsClient,
 } from "@uniconnect/shared-api";
 import { WebStorageAdapter, ConsoleLogger } from "@uniconnect/shared-state";
+import { getWsUrl } from "@/lib/wsUrl";
 
 const GATEWAY_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3000";
+const WS_URL = getWsUrl();
 const AUTH_SESSION_KEY = "uniconnect-auth-session";
 
 const transport = new FetchTransport(GATEWAY_URL);

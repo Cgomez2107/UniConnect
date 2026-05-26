@@ -1,0 +1,60 @@
+app = 'uniconnect-backend-grupo-2'
+primary_region = 'gru'
+
+[build]
+  dockerfile = 'backend/Dockerfile'
+
+[build.args]
+  COMMIT_SHA = 'unknown'
+
+[deploy]
+  strategy = 'rolling'
+
+[env]
+  NODE_ENV = 'production'
+  PORT = '3000'
+  HOST = '0.0.0.0'
+  LOG_LEVEL = 'info'
+  DB_SSL = 'true'
+  
+  # Configuración de JWT pública
+  JWT_ISSUER = 'https://becitrklvpadvjwdbmck.supabase.co/auth/v1'
+  JWT_JWKS_URL = 'https://becitrklvpadvjwdbmck.supabase.co/auth/v1/.well-known/jwks.json'
+  JWT_AUDIENCE = 'authenticated'
+  
+  # URL pública del API
+  GATEWAY_PUBLIC_URL = 'https://uniconnect-backend-grupo-2.fly.dev'
+  
+  # Configuración de correos
+  EMAIL_FROM = 'espinosaj.sofia@gmail.com'
+  EMAIL_FROM_NAME = 'UniConnect'
+  TO_EMAIL = 'sofia.espinosa31634@ucaldas.edu.co'
+
+  # Conexiones internas ("Falso Microservicio")
+  STUDY_GROUPS_BASE_URL = 'http://localhost:3101'
+  AUTH_BASE_URL = 'http://localhost:3102'
+  RESOURCES_BASE_URL = 'http://localhost:3103'
+  MESSAGING_BASE_URL = 'http://localhost:3104'
+  PROFILES_CATALOG_BASE_URL = 'http://localhost:3105'
+  EVENTS_BASE_URL = 'http://localhost:3106'
+  FORUM_BASE_URL = 'http://localhost:3107'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+  [[http_service.checks]]
+    interval = '15s'
+    timeout = '5s'
+    grace_period = '90s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  memory = '1gb'
+  cpus = 1
+  memory_mb = 1024

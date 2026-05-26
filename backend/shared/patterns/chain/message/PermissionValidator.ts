@@ -1,5 +1,5 @@
 import { MessageValidator, type ValidationMetadata } from "./MessageValidator.js";
-import { PermissionError } from "../../../libs/errors/PermissionError.js";
+import type { ResultadoValidacion } from "./ResultadoValidacion.js";
 
 export interface IGroupPermissionRepository {
   isMemberOrAdmin(requestId: string, userId: string): Promise<boolean>;
@@ -10,7 +10,7 @@ export class PermissionValidator extends MessageValidator {
     super();
   }
 
-  async validate(content: string, metadata?: ValidationMetadata): Promise<void> {
+  protected async validar(content: string, metadata?: ValidationMetadata): Promise<ResultadoValidacion> {
     if (metadata?.isGroup && metadata.senderId && metadata.requestId) {
       const hasPermission = await this.permissionRepo.isMemberOrAdmin(
         metadata.requestId,
@@ -18,10 +18,14 @@ export class PermissionValidator extends MessageValidator {
       );
 
       if (!hasPermission) {
-        throw new PermissionError("No tienes permisos para enviar mensajes en este grupo.");
+        return {
+          valido: false,
+          codigoError: "PermissionError",
+          mensajeError: "No tienes permisos para enviar mensajes en este grupo.",
+        };
       }
     }
 
-    await this.executeNext(content, metadata);
+    return { valido: true };
   }
 }

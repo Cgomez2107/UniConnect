@@ -1,0 +1,34 @@
+export * from "./schemas/_common.schema";
+export * from "./schemas/auth.schema";
+export * from "./schemas/user.schema";
+export * from "./schemas/study-group.schema";
+export * from "./schemas/messaging.schema";
+export * from "./schemas/resource.schema";
+export * from "./schemas/event.schema";
+export * from "./schemas/notification.schema";
+export * from "./schemas/notification-preference.schema";
+export * from "./schemas/forum.schema";
+
+export * from "./api/_base.contract";
+export * from "./api/auth.contract";
+export * from "./api/study-group.contract";
+export * from "./api/resource.contract";
+export * from "./api/messaging.contract";
+export * from "./api/event.contract";
+export * from "./api/notification.contract";
+export * from "./api/forum.contract";
+
+export * from "./types/domain";
+export * from "./types/dto";
+export type { LoginResponseDTO, OAuthSignInUrlResponseDTO, OAuthCallbackResponseDTO } from "./dto";
+export type { SessionData, LoginResponse, OAuthSignInUrlResponse, OAuthCallbackResponse, DirectMessage, GroupConversation } from "./domain";
+export * from "./lib/mappers";
+export * from "./lib/errors";
+export * from "./validation/MessageValidationErrors";
+export * from "./validation/ValidationResult";
+
+export type { paths, components, operations } from "./generated/api";
+
+export * from "./generated/zod";
+
+export const SHARED_TYPES_VERSION = "0.2.0";

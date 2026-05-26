@@ -238,7 +238,7 @@ describe("Decorator Pattern - Mensajes (Criterios C1 a C5)", () => {
         assert.equal(result.url, "https://cdn.test.com/img.png");
       });
 
-      it("C5: debe rechazar size > 100MB (límite superior)", () => {
+      it("C5: debe rechazar size > 50MB (límite superior)", () => {
         const base = new BaseMessage({
           id: "c5-file-02",
           content: "x",
@@ -248,14 +248,14 @@ describe("Decorator Pattern - Mensajes (Criterios C1 a C5)", () => {
 
         const oversized: FileMetadata = {
           filename: "huge.bin",
-          size: 101 * 1024 * 1024,
+          size: 51 * 1024 * 1024,
           mimeType: "application/octet-stream",
           url: "https://cdn.test.com/huge.bin",
         };
 
         assert.throws(
           () => new FileDecorator(base, oversized),
-          /size debe estar entre 0 y 100MB/,
+          /size debe estar entre 0 y 50MB/,
         );
       });
 

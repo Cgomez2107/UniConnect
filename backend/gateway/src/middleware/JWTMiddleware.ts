@@ -3,6 +3,7 @@ import { sendJson } from "../shared/http/sendJson.js";
 
 export interface JWTPayload {
   sub: string; // user id
+  role?: string;
   iat: number;
   exp: number;
 }
