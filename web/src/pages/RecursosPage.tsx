@@ -30,7 +30,7 @@ export function RecursosPage() {
   }, [activeTab, filter.selectedSubjectId, refresh, user?.id]);
 
   const filteredResources = useMemo(() => {
-    let mapped = (resources || []).map((r: any) => ({
+    const mapped = (resources || []).map((r: any) => ({
       ...r,
       subjectName: r.subjects?.name || r.subjectName,
       uploaderName: r.profiles?.fullName,
