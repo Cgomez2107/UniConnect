@@ -32,7 +32,7 @@ export default function useCompanions(subjectId?: string) {
         (user as any).studySubjects?.map((s: any) => s.id) ||
         [];
 
-      let filtered = allStudents.filter((student) => student.id !== user.id);
+      const filtered = allStudents.filter((student) => student.id !== user.id);
 
       const withSharedSubjects = filtered.map((s) => ({
         ...s,

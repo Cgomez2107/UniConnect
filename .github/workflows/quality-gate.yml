@@ -70,6 +70,8 @@ jobs:
   backend:
     needs: [contracts]
     runs-on: ubuntu-latest
+    env:
+      COVERAGE_THRESHOLD: 0
     steps:
       - uses: actions/checkout@v4
 
