@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle, MessageSquare } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -92,11 +92,14 @@ export function ForumQuestionPage() {
     setAnswers((prev) => [...prev, newAnswer]);
   };
 
-  const orderedAnswers = ordenarRespuestas(answers.map((a) => ({
-    ...a,
-    isPinned: a.isPinned ?? false,
-    isSolution: a.isSolution ?? false,
-  })));
+  const orderedAnswers = useMemo(
+    () => ordenarRespuestas(answers.map((a) => ({
+      ...a,
+      isPinned: a.isPinned ?? false,
+      isSolution: a.isSolution ?? false,
+    }))),
+    [answers],
+  );
 
   if (loading) {
     return (
