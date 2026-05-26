@@ -434,6 +434,7 @@ export interface ForumQuestion {
   status: "active" | "solved";
   answer_count: number;
   vote_count: number;
+  user_vote?: "upvote" | "downvote" | null;
   created_at: string;
   updated_at: string;
 }
@@ -454,9 +455,12 @@ export interface ForumAnswer {
   id: string;
   question_id: string;
   author_id: string;
+  author_name: string;
   body: string;
   vote_count: number;
   is_solution: boolean;
+  is_pinned: boolean;
+  user_vote?: "upvote" | "downvote" | null;
   created_at: string;
   updated_at: string;
 }

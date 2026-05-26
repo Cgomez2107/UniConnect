@@ -84,6 +84,7 @@ import { GetForumQuestionDetail } from "../domain/use-cases/forum/GetForumQuesti
 import { CreateForumAnswer } from "../domain/use-cases/forum/CreateForumAnswer";
 import { VoteForum } from "../domain/use-cases/forum/VoteForum";
 import { MarkForumSolution } from "../domain/use-cases/forum/MarkForumSolution";
+import { PinForumAnswer } from "../domain/use-cases/forum/PinForumAnswer";
 import { GetProfileByUserId } from "../domain/use-cases/profile/GetProfileByUserId";
 import { GetMyPrograms } from "../domain/use-cases/profile/GetMyPrograms";
 import { GetMySubjects } from "../domain/use-cases/profile/GetMySubjects";
@@ -732,6 +733,7 @@ export class DIContainer {
   private createForumAnswer?: CreateForumAnswer;
   private voteForum?: VoteForum;
   private markForumSolution?: MarkForumSolution;
+  private pinForumAnswer?: PinForumAnswer;
 
   getForumRepository(): IForumRepository {
     if (!this.forumRepo) {
@@ -780,5 +782,12 @@ export class DIContainer {
       this.markForumSolution = new MarkForumSolution(this.getForumRepository());
     }
     return this.markForumSolution;
+  }
+
+  getPinForumAnswer(): PinForumAnswer {
+    if (!this.pinForumAnswer) {
+      this.pinForumAnswer = new PinForumAnswer(this.getForumRepository());
+    }
+    return this.pinForumAnswer;
   }
 }
