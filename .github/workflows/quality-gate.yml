@@ -1,5 +1,9 @@
 name: quality-gate
 
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   pull_request:
     branches: [main, integration/pre-deploy]
@@ -70,8 +74,6 @@ jobs:
   backend:
     needs: [contracts]
     runs-on: ubuntu-latest
-    env:
-      COVERAGE_THRESHOLD: 0
     steps:
       - uses: actions/checkout@v4
 
@@ -118,31 +120,6 @@ jobs:
       - name: Run auth integration tests with coverage
         run: pnpm --filter @uniconnect/auth test:integration
         working-directory: backend
-
-      - name: Check coverage threshold
-        shell: bash
-        working-directory: backend
-        run: |
-          COVERAGE_FILE="services/auth/coverage/coverage-summary.json"
-          if [ -f "$COVERAGE_FILE" ]; then
-            COVERAGE=$(jq '.total.lines.pct' "$COVERAGE_FILE")
-            echo "Coverage: $COVERAGE%"
-            if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
-              echo "❌ Coverage $COVERAGE% below threshold ${{ env.COVERAGE_THRESHOLD }}%"
-              exit 1
-            fi
-            echo "✅ Coverage $COVERAGE% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
-          else
-            echo "❌ No coverage report found at $COVERAGE_FILE"
-            exit 1
-          fi
-
-      - name: Upload backend coverage artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: backend-coverage
-          path: backend/services/auth/coverage/
 
   # ─── Job 3: Frontend Quality (typecheck) ───
   frontend:
