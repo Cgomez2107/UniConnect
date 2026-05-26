@@ -17,6 +17,8 @@ const PUBLIC_PATHS = new Set([
 const conversationRooms = new Map<string, Set<WebSocket>>();
 const studyGroupRooms = new Map<string, Set<WebSocket>>();
 
+const DEPLOYED_AT = new Date().toISOString();
+
 function getAppVersion(): string {
   try {
     const packageJsonPath = join(process.cwd(), "package.json");
@@ -25,6 +27,15 @@ function getAppVersion(): string {
   } catch {
     return "0.0.0";
   }
+}
+
+function getHealthPayload(version: string) {
+  return {
+    status: "ok",
+    version,
+    commit: process.env.COMMIT_SHA ?? "unknown",
+    deployedAt: DEPLOYED_AT,
+  };
 }
 
 const OPENAPI_SPEC_PATH = resolve(
@@ -475,10 +486,7 @@ async function handleRequest(
   // 4. Health endpoint (no auth)
   // ──────────────────────────────────────────────────────────────────────────
   if (req.method === "GET" && requestUrl.pathname === "/health") {
-    sendJson(res, 200, {
-      status: "ok",
-      version: appVersion,
-    });
+    sendJson(res, 200, getHealthPayload(appVersion));
     return;
   }
 

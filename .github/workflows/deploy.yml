@@ -86,18 +86,37 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy backend to Fly.io
-        run: flyctl deploy --remote-only
+        run: flyctl deploy --remote-only --build-arg COMMIT_SHA=${{ github.sha }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Validate backend deployment
         run: |
-          APP_NAME=$(grep '^app =' fly.toml | head -1 | cut -d"'" -f2)
-          echo "App: $APP_NAME"
-          STATUS=$(flyctl status --app "$APP_NAME" --json 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 || echo '"status":"unknown"')
-          echo "State of $APP_NAME: $STATUS"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          HEALTH_URL="https://uniconnect-backend-grupo-2.fly.dev/health"
+          EXPECTED_SHA="${{ github.sha }}"
+          MAX_RETRIES=18
+          RETRY_DELAY=10
+          DEPLOYED_SHA=""
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -s -o /tmp/health.json -w "%{http_code}" "$HEALTH_URL")
+            if [ "$HTTP_CODE" = "200" ]; then
+              DEPLOYED_SHA=$(jq -r '.commit // empty' /tmp/health.json)
+              echo "[$i/$MAX_RETRIES] Health OK — commit: $DEPLOYED_SHA"
+              if [ "$DEPLOYED_SHA" = "$EXPECTED_SHA" ]; then
+                echo "Deploy validated: commit $DEPLOYED_SHA matches GITHUB_SHA"
+                break
+              else
+                echo "Commit mismatch (expected $EXPECTED_SHA), waiting for rollout..."
+              fi
+            else
+              echo "[$i/$MAX_RETRIES] HTTP $HTTP_CODE, retrying in ${RETRY_DELAY}s..."
+            fi
+            sleep $RETRY_DELAY
+          done
+          if [ "$DEPLOYED_SHA" != "$EXPECTED_SHA" ]; then
+            echo "Deployment validation failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
 
   # ── Job 3: Deploy Web ────────────────────────────────────────────────
   deploy-web:
@@ -110,15 +129,27 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy web to Fly.io
-        run: flyctl deploy --remote-only --config fly-web.toml
+        run: flyctl deploy --remote-only --config fly-web.toml --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Validate web deployment
         run: |
-          APP_NAME=$(grep '^app =' fly-web.toml | head -1 | cut -d'"' -f2)
-          echo "App: $APP_NAME"
-          STATUS=$(flyctl status --app "$APP_NAME" --json 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 || echo '"status":"unknown"')
-          echo "State of $APP_NAME: $STATUS"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          WEB_URL="https://uniconnect-dashboard-web.fly.dev"
+          MAX_RETRIES=12
+          RETRY_DELAY=10
+          SUCCESS=false
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$WEB_URL")
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
+              echo "[$i/$MAX_RETRIES] Web responds HTTP $HTTP_CODE"
+              SUCCESS=true
+              break
+            fi
+            echo "[$i/$MAX_RETRIES] HTTP $HTTP_CODE, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+          if [ "$SUCCESS" != "true" ]; then
+            echo "Web deployment validation failed after $MAX_RETRIES attempts"
+            exit 1
+          fi

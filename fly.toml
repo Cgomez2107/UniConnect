@@ -4,6 +4,9 @@ primary_region = 'gru'
 [build]
   dockerfile = 'backend/Dockerfile'
 
+[build.args]
+  COMMIT_SHA = 'unknown'
+
 [deploy]
   strategy = 'rolling'
 
