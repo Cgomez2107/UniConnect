@@ -8,7 +8,7 @@ import { PollCreator } from "./PollCreator";
 
 interface PollData {
   question: string;
-  options: string[];
+  options: Array<{ text: string; votes: string[] }>;
   isOpen: boolean;
   closesAt: string | null;
   createdAt: string;

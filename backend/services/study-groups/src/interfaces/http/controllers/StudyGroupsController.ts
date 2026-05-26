@@ -604,10 +604,6 @@ export class StudyGroupsController {
     } catch (error) {
       if (error instanceof Error) {
         const msg = error.message.toLowerCase();
-        if (msg.includes("ya has votado")) {
-          sendError(res, 409, error.message);
-          return;
-        }
         if (msg.includes("cerrada")) {
           sendError(res, 403, error.message);
           return;

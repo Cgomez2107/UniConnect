@@ -18,6 +18,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import type { MentionData, ReactionData } from "@/chat/models/IMessage";
 import { getWsUrl } from "@/lib/wsUrl";
+import { apiClient } from "@/lib/api/client";
 import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
 import { getGroupPermissions } from "@/components/groups/useGroupPermissions";
 import { CreateSessionModal } from "@/components/sessions/CreateSessionModal";
@@ -592,6 +593,7 @@ export function GroupDashboardPage() {
     () => new Map(members.map((m: any) => [m.userId, m.fullName || m.user?.fullName || "Usuario"])),
     [members],
   );
+  const voterMap = Object.fromEntries(memberNameMap);
 
   const enhancedMessages = useMemo(
     () => messages.map((msg: any) => ({
@@ -614,8 +616,8 @@ export function GroupDashboardPage() {
     [messages, id, memberNameMap],
   );
 
-  const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string }) => {
-    if (!content.trim() && !options?.mediaUrl) return;
+  const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string; poll?: any }) => {
+    if (!content.trim() && !options?.mediaUrl && !options?.poll) return;
     if (!id) return;
 
     const finalContent = content.trim() || "Archivo";
@@ -626,7 +628,7 @@ export function GroupDashboardPage() {
       group_id: id,
       sender_id: user?.id,
       senderId: user?.id,
-      content: finalContent,
+      content: options?.poll ? options.poll.question : finalContent,
       created_at: new Date().toISOString(),
       clientStatus: "sending",
       sender: { full_name: user?.name || "Tú", avatar_url: user?.profileImage || null },
@@ -634,6 +636,7 @@ export function GroupDashboardPage() {
       reply_preview: replyingTo?.content || null,
       media_url: options?.mediaUrl || null,
       media_type: options?.mediaType || null,
+      poll: options?.poll || null,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -647,6 +650,7 @@ export function GroupDashboardPage() {
         mentions,
         mediaUrl: options?.mediaUrl,
         mediaType: options?.mediaType,
+        poll: options?.poll,
       });
       setMessages((prev) => {
         if (prev.some((m: any) => m.id === msg.id)) {
@@ -688,6 +692,30 @@ export function GroupDashboardPage() {
       setMessages((prev) =>
         prev.map((m: any) => (m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m))
       );
+    }
+  };
+
+  const handleVote = async (messageId: string, optionIndex: number) => {
+    try {
+      const response = await apiClient.post(
+        `/study-groups/${id}/messages/${messageId}/polls/vote`,
+        { optionIndex },
+      );
+      const data = response.data?.data || response.data;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, poll: data.poll ?? data.poll_data ?? data }
+            : m,
+        ),
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err.message;
+      if (typeof msg === "string" && msg.toLowerCase().includes("cerrada")) {
+        alert("Esta encuesta está cerrada");
+      } else {
+        console.error("Error al votar:", msg);
+      }
     }
   };
 
@@ -942,6 +970,8 @@ export function GroupDashboardPage() {
                       previousSenderSame={index > 0 && enhancedMessages[index - 1].senderId === msg.senderId}
                       onRetry={handleRetry}
                       onReply={(m) => setReplyingTo(m)}
+                      onVote={handleVote}
+                      voterMap={voterMap}
                       onToggleReaction={async (messageId, emoji) => {
                         try {
                           const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);

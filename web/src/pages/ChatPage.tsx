@@ -14,6 +14,7 @@ import { useConversationsStore } from "@/store/useConversationsStore";
 import { isForbiddenContent } from "@/hooks/useMessageValidation";
 import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 import { getWsUrl } from "@/lib/wsUrl";
+import type { PollDataUI } from "@/types/ui";
 
 interface Message {
   id: string;
@@ -29,6 +30,7 @@ interface Message {
   mediaType?: string | null;
   mediaFilename?: string | null;
   reactions?: { emoji: string; userId: string }[];
+  poll?: PollDataUI | null;
 }
 
 interface Conversation {

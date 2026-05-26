@@ -156,16 +156,12 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
       throw new Error("Opción inválida.");
     }
 
-    const alreadyVoted = poll.options.some((opt: any) => opt.votes?.includes(userId));
-    if (alreadyVoted) {
-      throw new Error("Ya has votado en esta encuesta.");
-    }
-
     const updatedOptions = poll.options.map((opt: any, i: number) => {
+      const cleaned = opt.votes ? opt.votes.filter((uid: string) => uid !== userId) : [];
       if (i === optionIndex) {
-        return { ...opt, votes: [...(opt.votes || []), userId] };
+        return { ...opt, votes: [...cleaned, userId] };
       }
-      return opt;
+      return { ...opt, votes: cleaned };
     });
 
     const updatedPoll = { ...poll, options: updatedOptions };

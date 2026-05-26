@@ -15,12 +15,12 @@ export class PollDecorator extends MessageDecorator {
   }
 
   override getContent(): string {
-    return this.message.getContent();
+    return this.wrapper.getContent();
   }
 
   override getMetadata(): Record<string, unknown> {
     return {
-      ...this.message.getMetadata(),
+      ...this.wrapper.getMetadata(),
       poll: this.poll,
     };
   }
@@ -28,7 +28,7 @@ export class PollDecorator extends MessageDecorator {
   override render(context?: IRenderContext): React.ReactNode {
     return (
       <React.Fragment key="poll-decorator">
-        {this.message.render(context)}
+        {this.wrapper.render(context)}
       </React.Fragment>
     );
   }

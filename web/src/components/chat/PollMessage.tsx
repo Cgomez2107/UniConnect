@@ -1,11 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import type { PollDataUI } from "@/types/ui";
 
 interface PollMessageProps {
   poll: PollDataUI;
   currentUserId?: string;
-  senderId: string;
   onVote: (optionIndex: number) => void;
+  voterMap?: Record<string, string>;
 }
 
 function getTotalVotes(options: PollDataUI["options"]): number {
@@ -21,17 +21,17 @@ function getPercentage(options: PollDataUI["options"], index: number): number {
 export function PollMessage({
   poll,
   currentUserId,
-  senderId,
   onVote,
+  voterMap,
 }: PollMessageProps) {
+  const [expandedOption, setExpandedOption] = useState<number | null>(null);
   const hasVoted = useMemo(
     () => currentUserId && poll.options.some((o) => o.votes.includes(currentUserId)),
     [poll.options, currentUserId],
   );
 
-  const isCreator = currentUserId === senderId;
   const isClosed = !poll.isOpen;
-  const showResults = isClosed || hasVoted || isCreator;
+  const showResults = isClosed || hasVoted;
 
   return (
     <div className="mt-2 border border-neutral-200 rounded-lg p-3 bg-neutral-50">
@@ -43,41 +43,61 @@ export function PollMessage({
           const pct = getPercentage(poll.options, index);
           const total = getTotalVotes(poll.options);
           const voted = currentUserId && option.votes.includes(currentUserId);
-
-          if (showResults) {
-            return (
-              <div key={index} className="relative">
-                <div
-                  className={`w-full h-8 rounded-md flex items-center px-3 text-xs font-medium ${
-                    voted
-                      ? "bg-primary-100 text-primary-800"
-                      : "bg-neutral-200 text-neutral-700"
-                  }`}
-                >
-                  <span className="relative z-10 flex items-center justify-between w-full">
-                    <span>{option.text}</span>
-                    <span>
-                      {option.votes.length} voto{option.votes.length !== 1 ? "s" : ""} ({pct}%)
-                    </span>
-                  </span>
-                </div>
-                <div
-                  className="absolute inset-0 rounded-md bg-primary-500/10"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            );
-          }
+          const canChangeVote = showResults && !isClosed && !voted;
 
           return (
-            <button
-              key={index}
-              onClick={() => onVote(index)}
-              disabled={!poll.isOpen}
-              className="w-full text-left px-3 py-2 rounded-md border border-primary-300 text-sm font-medium text-primary-700 hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {option.text}
-            </button>
+            <div key={index}>
+              {showResults ? (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (canChangeVote) onVote(index);
+                      setExpandedOption(expandedOption === index ? null : index);
+                    }}
+                    disabled={!poll.isOpen}
+                    className="w-full text-left"
+                  >
+                    <div
+                      className={`w-full h-8 rounded-md flex items-center px-3 text-xs font-medium ${
+                        voted
+                          ? "bg-primary-100 text-primary-800"
+                          : canChangeVote
+                            ? "bg-neutral-200 text-neutral-700 cursor-pointer hover:bg-neutral-300"
+                            : "bg-neutral-200 text-neutral-700"
+                      }`}
+                    >
+                      <span className="relative z-10 flex items-center justify-between w-full">
+                        <span>{option.text}</span>
+                        <span>
+                          {option.votes.length} voto{option.votes.length !== 1 ? "s" : ""} ({pct}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div
+                      className="absolute bottom-0 left-0 h-1 rounded-md bg-primary-500/30"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </button>
+                  {expandedOption === index && voterMap && option.votes.length > 0 && (
+                    <div className="mt-1 pl-2 text-[11px] text-neutral-500 flex flex-wrap gap-x-2">
+                      {option.votes.map((uid) => (
+                        <span key={uid}>{voterMap[uid] || uid}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onVote(index)}
+                  disabled={!poll.isOpen}
+                  className="w-full text-left px-3 py-2 rounded-md border border-primary-300 text-sm font-medium text-primary-700 hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {option.text}
+                </button>
+              )}
+            </div>
           );
         })}
       </div>

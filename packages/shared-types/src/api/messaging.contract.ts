@@ -38,7 +38,17 @@ export const SendMessageResponseSchema = z.object({
     conversationId: z.string().uuid(),
     senderId: z.string().uuid(),
     content: z.string(),
-    type: z.enum(["text", "file", "mention", "reaction"]),
+    type: z.enum(["text", "file", "mention", "reaction", "poll"]),
+    poll: z.object({
+      question: z.string(),
+      options: z.array(z.object({
+        text: z.string(),
+        votes: z.array(z.string()),
+      })),
+      isOpen: z.boolean(),
+      closesAt: z.string().nullable(),
+      createdAt: z.string(),
+    }).nullable().optional(),
     createdAt: z.string().datetime(),
   }),
 });

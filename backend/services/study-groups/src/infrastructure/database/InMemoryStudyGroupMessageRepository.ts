@@ -93,16 +93,12 @@ export class InMemoryStudyGroupMessageRepository implements IStudyGroupMessageRe
       throw new Error("Opción inválida.");
     }
 
-    const alreadyVoted = message.poll.options.some((opt) => opt.votes.includes(userId));
-    if (alreadyVoted) {
-      throw new Error("Ya has votado en esta encuesta.");
-    }
-
     const updatedOptions = message.poll.options.map((opt, i) => {
+      const cleaned = opt.votes.filter((uid) => uid !== userId);
       if (i === optionIndex) {
-        return { ...opt, votes: [...opt.votes, userId] };
+        return { ...opt, votes: [...cleaned, userId] };
       }
-      return opt;
+      return { ...opt, votes: cleaned };
     });
 
     const updatedPoll = {

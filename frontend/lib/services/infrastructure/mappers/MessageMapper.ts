@@ -9,6 +9,7 @@ export class MessageMapper {
       content: raw.content,
       created_at: raw.created_at,
       read_at: raw.read_at,
+      poll_data: raw.poll ?? raw.poll_data ?? null,
       sender: raw.profiles ? { full_name: raw.profiles.full_name, avatar_url: raw.profiles.avatar_url } : undefined,
     } as Message
   }

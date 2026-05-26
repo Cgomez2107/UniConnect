@@ -201,6 +201,13 @@ export interface Message {
   client_error?: string | null;
   created_at: string;
   read_at: string | null;
+  poll_data?: {
+    question: string;
+    options: Array<{ text: string; votes: string[] }>;
+    is_open: boolean;
+    closes_at: string | null;
+    created_at: string;
+  } | null;
   // join
   sender?: { full_name: string; avatar_url: string | null };
 }

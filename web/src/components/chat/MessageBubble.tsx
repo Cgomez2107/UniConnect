@@ -14,6 +14,7 @@ interface MessageBubbleProps {
   onRetry?: (message: MessageUI) => void;
   onToggleReaction?: (messageId: string, emoji: string) => void;
   onVote?: (messageId: string, optionIndex: number) => void;
+  voterMap?: Record<string, string>;
 }
 
 export function MessageBubble({
@@ -24,6 +25,7 @@ export function MessageBubble({
   onRetry,
   onToggleReaction,
   onVote,
+  voterMap,
 }: MessageBubbleProps) {
   const navigate = useNavigate();
   const isOwn = currentUser?.id === message.senderId;
@@ -94,8 +96,8 @@ export function MessageBubble({
             <PollMessage
               poll={message.poll}
               currentUserId={currentUser?.id}
-              senderId={message.senderId}
               onVote={(optionIndex) => onVote?.(message.id, optionIndex)}
+              voterMap={voterMap}
             />
           )}
           <div className={`flex items-center justify-end gap-1 mt-1`}>

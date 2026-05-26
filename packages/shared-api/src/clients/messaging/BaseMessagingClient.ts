@@ -31,6 +31,13 @@ export interface SendMessagePayload {
   mediaFilename?: string;
   replyToMessageId?: string;
   replyPreview?: string;
+  poll?: {
+    question: string;
+    options: Array<{ text: string; votes: string[] }>;
+    isOpen: boolean;
+    closesAt: string | null;
+    createdAt: string;
+  };
 }
 
 export interface GetMessagesParams {
@@ -122,6 +129,7 @@ export class BaseMessagingClient {
         ...(payload.mediaFilename !== undefined && { mediaFilename: payload.mediaFilename }),
         ...(payload.replyToMessageId !== undefined && { replyToMessageId: payload.replyToMessageId }),
         ...(payload.replyPreview !== undefined && { replyPreview: payload.replyPreview }),
+        ...(payload.poll !== undefined && { poll: payload.poll }),
       },
     });
 

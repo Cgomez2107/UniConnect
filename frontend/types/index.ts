@@ -196,7 +196,6 @@ export interface Message {
   reactions?: Reaction[];
   poll_data?: PollData | null;
   mentions?: { userId: string; displayName: string }[];
-  poll_data?: PollData | null;
   // join
   sender?: { full_name: string; avatar_url: string | null };
 }

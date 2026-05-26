@@ -15,6 +15,7 @@ import type { MentionData, ReactionData } from "@/chat/models/IMessage";
 import { isForbiddenContent } from "@/hooks/useMessageValidation";
 import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 import { getWsUrl } from "@/lib/wsUrl";
+import { apiClient } from "@/lib/api/client";
 
 function transformMentions(mentions?: any[]): MentionData[] | undefined {
   if (!mentions || mentions.length === 0) return undefined;
@@ -311,6 +312,30 @@ export function GroupChatPage() {
     }
   };
 
+  const handleVote = async (messageId: string, optionIndex: number) => {
+    try {
+      const response = await apiClient.post(
+        `/study-groups/${id}/messages/${messageId}/polls/vote`,
+        { optionIndex },
+      );
+      const data = response.data?.data || response.data;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, poll: data.poll ?? data.poll_data ?? data }
+            : m,
+        ),
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err.message;
+      if (typeof msg === "string" && msg.toLowerCase().includes("cerrada")) {
+        alert("Esta encuesta está cerrada");
+      } else {
+        console.error("Error al votar:", msg);
+      }
+    }
+  };
+
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !id) return;
@@ -403,6 +428,7 @@ export function GroupChatPage() {
   };
 
   const memberNameMap = new Map(members.map((m) => [m.userId, m.fullName || "Usuario"]));
+  const voterMap = Object.fromEntries(memberNameMap);
 
   const enhancedMessages = messages.map((msg) => ({
     ...msg,
@@ -477,6 +503,8 @@ export function GroupChatPage() {
                   previousSenderSame={index > 0 && enhancedMessages[index - 1].senderId === msg.senderId}
                   onRetry={handleRetry}
                   onReply={(m) => setReplyingTo(m)}
+                  onVote={handleVote}
+                  voterMap={voterMap}
                   onToggleReaction={async (messageId, emoji) => {
                     try {
                       const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);

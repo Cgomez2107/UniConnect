@@ -53,6 +53,7 @@ export class SupabaseMessageRepository implements IMessageRepository {
         media_filename: normalized.media_filename ?? null,
         reply_to_message_id: normalized.reply_to_message_id ?? null,
         reply_preview: normalized.reply_preview ?? null,
+        poll_data: (normalized as any).poll_data ?? null,
       })
       .select("*, profiles:sender_id ( full_name, avatar_url )")
       .single()

@@ -7,6 +7,7 @@ export interface CreateMessagePayload {
   media_filename?: string
   reply_to_message_id?: string
   reply_preview?: string
+  poll_data?: Record<string, unknown>
 }
 
 /**
