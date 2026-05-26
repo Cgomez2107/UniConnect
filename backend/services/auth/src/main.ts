@@ -161,6 +161,7 @@ async function main() {
       "http://127.0.0.1:8082",
       "http://192.168.140.38:8081",
       "http://192.168.140.38:8082",
+      "https://uniconnect-dashboard-web.fly.dev",
     ];
     
     if (origin && allowedOrigins.includes(origin)) {

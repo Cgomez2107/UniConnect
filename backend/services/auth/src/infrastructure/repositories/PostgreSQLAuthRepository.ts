@@ -9,8 +9,9 @@ export class PostgreSQLAuthRepository implements IAuthRepository {
     if (!connectionString) {
       throw new Error("DATABASE_URL environment variable is required");
     }
+    const cleanUrl = connectionString.replace(/[?&]sslmode=[^&]+/g, "").replace(/[?&]$/, "");
     this.pool = new Pool({
-      connectionString,
+      connectionString: cleanUrl,
       ssl: {
         rejectUnauthorized: false,
       },

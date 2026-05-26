@@ -34,36 +34,38 @@ export class SignUpUseCase {
       throw new ConflictError("Email already registered");
     }
 
-    // Crear usuario en Supabase Auth vía Admin API
-    let supabaseUserId: string;
+    // Crear usuario en Supabase Auth vía Admin API (opcional)
+    let supabaseUserId: string = crypto.randomUUID();
     if (this.supabaseUrl && this.supabaseServiceRoleKey) {
-      const response = await fetch(`${this.supabaseUrl}/auth/v1/admin/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.supabaseServiceRoleKey}`,
-        },
-        body: JSON.stringify({
-          email: request.email,
-          password: request.password,
-          email_confirm: true,
-          user_metadata: { full_name: request.fullName },
-        }),
-      });
+      try {
+        const response = await fetch(`${this.supabaseUrl}/auth/v1/admin/users`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.supabaseServiceRoleKey}`,
+          },
+          body: JSON.stringify({
+            email: request.email,
+            password: request.password,
+            email_confirm: true,
+            user_metadata: { full_name: request.fullName },
+          }),
+        });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ msg: "Unknown error" }));
-        if (response.status === 409) {
-          throw new ConflictError("Email already registered");
+        if (response.ok) {
+          const supabaseUser = await response.json() as { id: string };
+          supabaseUserId = supabaseUser.id;
+        } else {
+          const err = await response.json().catch(() => ({ msg: "Unknown error" }));
+          if (response.status === 409) {
+            throw new ConflictError("Email already registered");
+          }
+          console.warn(`Supabase Auth creation failed (${response.status}): ${err.msg ?? "Unknown error"}. Proceeding with local user.`);
         }
-        throw new Error(`Failed to create user in Supabase Auth: ${err.msg ?? "Unknown error"}`);
+      } catch (err) {
+        if (err instanceof ConflictError) throw err;
+        console.warn(`Supabase Auth creation failed: ${err}. Proceeding with local user.`);
       }
-
-      const supabaseUser = await response.json() as { id: string };
-      supabaseUserId = supabaseUser.id;
-    } else {
-      // Sin Supabase Admin API, generar ID local
-      throw new Error("Supabase Admin API is not configured");
     }
 
     // Hash password para almacenamiento local
