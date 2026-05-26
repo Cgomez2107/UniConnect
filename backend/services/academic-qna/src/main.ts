@@ -10,6 +10,7 @@ import { CreateQuestion } from "./application/use-cases/CreateQuestion.js";
 import { CreateAnswer } from "./application/use-cases/CreateAnswer.js";
 import { CastVote } from "./application/use-cases/CastVote.js";
 import { MarcarComoSolucion } from "./application/use-cases/MarcarComoSolucion.js";
+import { PinAnswer } from "./application/use-cases/PinAnswer.js";
 import { ListQuestions } from "./application/use-cases/ListQuestions.js";
 import { GetQuestionDetail } from "./application/use-cases/GetQuestionDetail.js";
 import { ListAnswers } from "./application/use-cases/ListAnswers.js";
@@ -69,8 +70,9 @@ function bootstrap(): void {
   const createAnswer = new CreateAnswer(answerRepo, questionRepo, enrollmentRepo);
   const castVote = new CastVote(voteRepo, questionRepo, answerRepo, forumSubject);
   const marcarComoSolucion = new MarcarComoSolucion(questionRepo, answerRepo, forumSubject);
+  const pinAnswer = new PinAnswer(questionRepo, answerRepo);
   const listQuestions = new ListQuestions(questionRepo);
-  const getQuestionDetail = new GetQuestionDetail(questionRepo, answerRepo);
+  const getQuestionDetail = new GetQuestionDetail(questionRepo, answerRepo, voteRepo);
   const listAnswers = new ListAnswers(answerRepo);
 
   const controller = new ForumController(
@@ -81,6 +83,7 @@ function bootstrap(): void {
     listQuestions,
     getQuestionDetail,
     listAnswers,
+    pinAnswer,
   );
 
   const server = createServer((req, res) => {

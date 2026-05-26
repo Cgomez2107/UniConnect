@@ -10,6 +10,7 @@ export interface ForumQuestion {
   status: "active" | "solved";
   answerCount: number;
   voteCount: number;
+  userVote?: "upvote" | "downvote" | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,9 +31,12 @@ export interface ForumAnswer {
   id: string;
   questionId: string;
   authorId: string;
+  authorName: string;
   body: string;
   voteCount: number;
   isSolution: boolean;
+  isPinned: boolean;
+  userVote?: "upvote" | "downvote" | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -119,6 +123,13 @@ export class ForumClient extends BaseClient {
       method: "POST",
       url: `/forum/questions/${questionId}/solution`,
       body: data,
+    });
+  }
+
+  async pinAnswer(questionId: string, answerId: string): Promise<void> {
+    await this.transport.request({
+      method: "PATCH",
+      url: `/forum/questions/${questionId}/answers/${answerId}/pin`,
     });
   }
 }

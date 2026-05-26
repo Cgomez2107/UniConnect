@@ -8,12 +8,17 @@ export interface ValidationContext {
   enrollmentRepo: IEnrollmentRepository;
 }
 
-export abstract class ForumValidator {
-  protected next: ForumValidator | null = null;
+export interface IForumQuestionHandler {
+  setNext(handler: IForumQuestionHandler): IForumQuestionHandler;
+  validate(context: ValidationContext): Promise<void>;
+}
 
-  setNext(validator: ForumValidator): ForumValidator {
-    this.next = validator;
-    return validator;
+export abstract class BaseForumQuestionHandler implements IForumQuestionHandler {
+  protected next: IForumQuestionHandler | null = null;
+
+  setNext(handler: IForumQuestionHandler): IForumQuestionHandler {
+    this.next = handler;
+    return handler;
   }
 
   abstract validate(context: ValidationContext): Promise<void>;

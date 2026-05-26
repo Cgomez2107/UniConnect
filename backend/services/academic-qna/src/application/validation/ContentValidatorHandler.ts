@@ -1,9 +1,9 @@
 import { ContentError } from '../../../../../shared/libs/errors/ContentError.js';
-import { ForumValidator, type ValidationContext } from './ForumValidator.js';
+import { BaseForumQuestionHandler, type ValidationContext } from './ForumQuestionHandler.js';
 
 const FORBIDDEN_WORDS = ['spam', 'ofensa'];
 
-export class ContentValidator extends ForumValidator {
+export class ContentValidatorHandler extends BaseForumQuestionHandler {
   async validate(context: ValidationContext): Promise<void> {
     const trimmed = context.body.trim();
 

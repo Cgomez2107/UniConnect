@@ -1,7 +1,7 @@
 import { AuthorizationError } from '../../../../../shared/libs/errors/AuthorizationError.js';
-import { ForumValidator, type ValidationContext } from './ForumValidator.js';
+import { BaseForumQuestionHandler, type ValidationContext } from './ForumQuestionHandler.js';
 
-export class EnrollmentValidator extends ForumValidator {
+export class EnrollmentValidatorHandler extends BaseForumQuestionHandler {
   async validate(context: ValidationContext): Promise<void> {
     const enrolled = await context.enrollmentRepo.isEnrolled(context.userId, context.subjectId);
 

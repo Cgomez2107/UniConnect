@@ -18,6 +18,7 @@ export function ForumQuestionPage() {
   const [answers, setAnswers] = useState<ForumAnswer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [questionUserVote, setQuestionUserVote] = useState<"upvote" | "downvote" | null>(null);
 
   const loadQuestion = async () => {
     if (!id) return;
@@ -27,6 +28,7 @@ export function ForumQuestionPage() {
       const detail = await forumService.getQuestionDetail(id);
       setQuestion(detail.question);
       setAnswers(detail.answers);
+      setQuestionUserVote(detail.question.userVote ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar la pregunta.");
     } finally {
@@ -45,11 +47,14 @@ export function ForumQuestionPage() {
       });
       if (targetType === "question" && question) {
         setQuestion({ ...question, voteCount: result.voteCount });
+        setQuestionUserVote((prev) => (prev === "upvote" ? null : "upvote"));
       } else {
         setAnswers((prev) =>
-          prev.map((a) =>
-            a.id === targetId ? { ...a, voteCount: result.voteCount } : a
-          )
+          prev.map((a) => {
+            if (a.id !== targetId) return a;
+            const userVote = a.userVote === "upvote" ? null : "upvote" as const;
+            return { ...a, voteCount: result.voteCount, userVote };
+          })
         );
       }
     } catch {
@@ -71,6 +76,16 @@ export function ForumQuestionPage() {
     }
   };
 
+  const handlePinAnswer = async (answerId: string) => {
+    if (!id) return;
+    try {
+      await forumService.pinAnswer(id, answerId);
+      await loadQuestion();
+    } catch {
+      // handled
+    }
+  };
+
   const handleSubmitAnswer = async (body: string) => {
     if (!id) return;
     const newAnswer = await forumService.createAnswer(id, { body });
@@ -79,6 +94,7 @@ export function ForumQuestionPage() {
 
   const orderedAnswers = ordenarRespuestas(answers.map((a) => ({
     ...a,
+    isPinned: a.isPinned ?? false,
     isSolution: a.isSolution ?? false,
   })));
 
@@ -129,11 +145,13 @@ export function ForumQuestionPage() {
             <button
               onClick={() => handleVote(question.id, "question")}
               className={`p-1.5 rounded-full transition-all ${
-                "text-neutral-400 hover:text-primary-500 hover:bg-neutral-100"
+                questionUserVote === "upvote"
+                  ? "bg-primary-100 text-primary-600"
+                  : "text-neutral-400 hover:text-primary-500 hover:bg-neutral-100"
               }`}
               aria-label="Votar"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={questionUserVote === "upvote" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                 <path d="M18 15l-6-6-6 6" />
               </svg>
             </button>
@@ -173,15 +191,18 @@ export function ForumQuestionPage() {
             <AnswerItem
               key={answer.id}
               id={answer.id}
-              authorName={answer.authorId}
+              authorName={answer.authorName}
               body={answer.body}
               voteCount={answer.voteCount}
+              isPinned={answer.isPinned ?? false}
               isSolution={answer.isSolution ?? false}
               createdAt={answer.createdAt}
               currentUserId={user?.id}
               isAdmin={isAdmin}
+              userVote={answer.userVote ?? null}
               onVote={handleAnswerVote}
               onMarkSolution={handleMarkSolution}
+              onPinAnswer={handlePinAnswer}
             />
           ))}
         </div>

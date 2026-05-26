@@ -1,7 +1,7 @@
 import type { ForumQuestion } from '../../domain/entities/ForumQuestion.js';
 import type { IForumQuestionRepository } from '../../domain/repositories/IForumQuestionRepository.js';
 import type { IEnrollmentRepository } from '../../domain/repositories/IEnrollmentRepository.js';
-import { ForumValidatorFactory } from '../validation/ForumValidatorFactory.js';
+import { ForumQuestionCoRFactory } from '../validation/ForumQuestionCoRFactory.js';
 
 export interface CreateQuestionInput {
   userId: string;
@@ -17,7 +17,7 @@ export class CreateQuestion {
   ) {}
 
   async execute(input: CreateQuestionInput): Promise<ForumQuestion> {
-    const chain = ForumValidatorFactory.createPublicationChain();
+    const chain = ForumQuestionCoRFactory.createPublicationChain();
 
     await chain.validate({
       userId: input.userId,

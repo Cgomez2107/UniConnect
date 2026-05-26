@@ -148,5 +148,25 @@ export type CastVoteRequest = z.infer<typeof CastVoteRequestSchema>;
 export type CastVoteResponse = z.infer<typeof CastVoteResponseSchema>;
 export type MarkSolutionRequest = z.infer<typeof MarkSolutionRequestSchema>;
 export type MarkSolutionResponse = z.infer<typeof MarkSolutionResponseSchema>;
+export const PinAnswerRequestSchema = z.object({
+  params: z.object({
+    questionId: UuidSchema,
+    answerId: UuidSchema,
+  }),
+});
+
+export const PinAnswerResponseSchema = z.object({
+  success: z.literal(true),
+});
+
+export const PinAnswerContract: ApiContract<typeof PinAnswerRequestSchema, typeof PinAnswerResponseSchema> = {
+  method: "PATCH",
+  path: "/api/v1/forum/questions/:questionId/answers/:answerId/pin",
+  request: PinAnswerRequestSchema,
+  response: PinAnswerResponseSchema,
+};
+
 export type ListAnswersRequest = z.infer<typeof ListAnswersRequestSchema>;
 export type ListAnswersResponse = z.infer<typeof ListAnswersResponseSchema>;
+export type PinAnswerRequest = z.infer<typeof PinAnswerRequestSchema>;
+export type PinAnswerResponse = z.infer<typeof PinAnswerResponseSchema>;

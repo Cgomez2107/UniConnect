@@ -10,6 +10,7 @@ export const ForumQuestionSchema = z.object({
   status: z.enum(["active", "solved"]),
   answerCount: z.number().int().nonnegative(),
   voteCount: z.number().int(),
+  userVote: z.enum(["upvote", "downvote"]).nullable().optional(),
   createdAt: DateStringSchema,
   updatedAt: DateStringSchema,
 });
@@ -31,9 +32,12 @@ export const ForumAnswerSchema = z.object({
   id: UuidSchema,
   questionId: UuidSchema,
   authorId: UuidSchema,
+  authorName: z.string(),
   body: z.string().min(1).max(5000),
   voteCount: z.number().int(),
   isSolution: z.boolean().default(false),
+  isPinned: z.boolean().default(false),
+  userVote: z.enum(["upvote", "downvote"]).nullable().optional(),
   createdAt: DateStringSchema,
   updatedAt: DateStringSchema,
 });
@@ -42,9 +46,11 @@ export const ForumAnswerDTOSchema = z.object({
   id: UuidSchema,
   question_id: UuidSchema,
   author_id: UuidSchema,
+  author_name: z.string(),
   body: z.string().min(1).max(5000),
   vote_count: z.number().int(),
   is_solution: z.boolean().default(false),
+  is_pinned: z.boolean().default(false),
   created_at: DateStringSchema,
   updated_at: DateStringSchema,
 });
