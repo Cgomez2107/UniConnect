@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSearchParams } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import profilesService from "@/lib/services/profiles.service";
 import resourcesService from "@/lib/services/resources.service";
@@ -9,6 +8,38 @@ import { Button } from "@/components/ui/Button";
 import type { UserProgram } from "@/types";
 
 const MAX_SIZE = 10 * 1024 * 1024;
+
+const EXT_TO_RESOURCE_TYPE: Record<string, string> = {
+  pdf: "pdf",
+  doc: "document",
+  docx: "document",
+  ppt: "presentation",
+  pptx: "presentation",
+  xls: "spreadsheet",
+  xlsx: "spreadsheet",
+  jpg: "image",
+  jpeg: "image",
+  png: "image",
+  gif: "image",
+  webp: "image",
+  svg: "image",
+  mp4: "video",
+  mov: "video",
+  avi: "video",
+  mkv: "video",
+  webm: "video",
+  mp3: "audio",
+  wav: "audio",
+  zip: "archive",
+  rar: "archive",
+  "7z": "archive",
+  txt: "document",
+};
+
+function detectResourceType(fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  return EXT_TO_RESOURCE_TYPE[ext] ?? "other";
+}
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -29,7 +60,11 @@ export function SubirRecursoPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+
+  const [uploadMode, setUploadMode] = useState<"file" | "link">("file");
   const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [linkUrl, setLinkUrl] = useState("");
+
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -80,8 +115,18 @@ export function SubirRecursoPage() {
   };
 
   const handleUpload = async () => {
-    if (!user?.id || !pickedFile || !title.trim() || !selectedSubjectId || !programId) {
+    if (!user?.id || !title.trim() || !selectedSubjectId || !programId) {
       setUploadError("Completa todos los campos requeridos antes de subir.");
+      return;
+    }
+
+    if (uploadMode === "file" && !pickedFile) {
+      setUploadError("Selecciona un archivo para subir.");
+      return;
+    }
+
+    if (uploadMode === "link" && !linkUrl.trim()) {
+      setUploadError("Ingresa la URL del enlace.");
       return;
     }
 
@@ -89,9 +134,25 @@ export function SubirRecursoPage() {
     setUploadError(null);
 
     try {
-      const fileUrl = await uploadResourceFile(user.id, pickedFile);
-      if (!fileUrl) {
-        throw new Error("Error al subir el archivo al almacenamiento.");
+      let fileUrl: string;
+      let fileName: string;
+      let fileType: string | undefined;
+      let fileSizeKb: number | undefined;
+      let resourceType: string;
+
+      if (uploadMode === "file" && pickedFile) {
+        fileUrl = (await uploadResourceFile(user.id, pickedFile)) ?? "";
+        if (!fileUrl) {
+          throw new Error("Error al subir el archivo al almacenamiento.");
+        }
+        fileName = pickedFile.name;
+        fileType = pickedFile.name.split(".").pop()?.toLowerCase() || undefined;
+        fileSizeKb = Math.round(pickedFile.size / 1024);
+        resourceType = detectResourceType(pickedFile.name);
+      } else {
+        fileUrl = linkUrl.trim();
+        fileName = linkUrl.trim();
+        resourceType = "link";
       }
 
       await resourcesService.uploadResource({
@@ -99,10 +160,11 @@ export function SubirRecursoPage() {
         title: title.trim(),
         description: description.trim() || undefined,
         fileUrl,
-        fileName: pickedFile.name,
-        fileType: pickedFile.name.split(".").pop()?.toLowerCase() || undefined,
-        fileSizeKb: Math.round(pickedFile.size / 1024),
+        fileName,
+        fileType,
+        fileSizeKb,
         programId,
+        resourceType,
       });
 
       navigate("/recursos");
@@ -113,7 +175,12 @@ export function SubirRecursoPage() {
     }
   };
 
-  const isValid = title.trim().length >= 3 && !!selectedSubjectId && !!pickedFile && !!programId && !!user?.id;
+  const isValid =
+    title.trim().length >= 3 &&
+    !!selectedSubjectId &&
+    !!programId &&
+    !!user?.id &&
+    (uploadMode === "file" ? !!pickedFile : linkUrl.trim().length > 0);
 
   if (loadingSubjects) {
     return (
@@ -170,6 +237,30 @@ export function SubirRecursoPage() {
         </h1>
 
         <div className="space-y-6">
+          {/* Mode toggle */}
+          <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg w-fit">
+            <button
+              onClick={() => setUploadMode("file")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                uploadMode === "file"
+                  ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700"
+              }`}
+            >
+              Archivo
+            </button>
+            <button
+              onClick={() => setUploadMode("link")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                uploadMode === "link"
+                  ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700"
+              }`}
+            >
+              Enlace
+            </button>
+          </div>
+
           {/* Title */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5">
@@ -232,51 +323,69 @@ export function SubirRecursoPage() {
             </div>
           </div>
 
-          {/* File picker */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5">
-              Archivo *
-            </label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="*/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+          {/* File or Link input */}
+          {uploadMode === "file" ? (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5">
+                Archivo *
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="*/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
 
-            {pickedFile ? (
-              <div className="flex items-center gap-3 p-3 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
-                    📎 {pickedFile.name}
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    {formatSize(pickedFile.size)}
-                  </p>
+              {pickedFile ? (
+                <div className="flex items-center gap-3 p-3 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                      📎 {pickedFile.name}
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {formatSize(pickedFile.size)} · {detectResourceType(pickedFile.name)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="text-error-600 hover:text-error-700 dark:text-error-400 dark:hover:text-error-300 font-bold text-lg px-1"
+                  >
+                    ✕
+                  </button>
                 </div>
+              ) : (
                 <button
-                  onClick={handleRemoveFile}
-                  className="text-error-600 hover:text-error-700 dark:text-error-400 dark:hover:text-error-300 font-bold text-lg px-1"
+                  onClick={handlePickFile}
+                  className="w-full p-6 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-center"
                 >
-                  ✕
+                  <p className="text-2xl mb-1">📁</p>
+                  <p className="text-sm font-semibold text-primary-600 dark:text-primary-400">
+                    Seleccionar archivo
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    Cualquier formato · máx 10 MB
+                  </p>
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={handlePickFile}
-                className="w-full p-6 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-center"
-              >
-                <p className="text-2xl mb-1">📁</p>
-                <p className="text-sm font-semibold text-primary-600 dark:text-primary-400">
-                  Seleccionar archivo
-                </p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                  Cualquier formato · máx 10 MB
-                </p>
-              </button>
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5">
+                URL del enlace *
+              </label>
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://ejemplo.com/recurso"
+                className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                El sistema extraerá automáticamente el título, descripción e imagen de la página
+              </p>
+            </div>
+          )}
 
           {/* Upload error */}
           {uploadError && (

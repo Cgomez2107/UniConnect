@@ -5,6 +5,7 @@ import type {
   IStudyResourceRepository,
   ListStudyResourcesFilters,
 } from "../../domain/repositories/IStudyResourceRepository.js";
+import { detectResourceType } from "../../domain/services/ResourceTypeMapper.js";
 
 export class InMemoryStudyResourceRepository implements IStudyResourceRepository {
   private readonly resources = new Map<string, StudyResource>();
@@ -19,6 +20,10 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
         }
 
         if (filters.userId && resource.userId !== filters.userId) {
+          return false;
+        }
+
+        if (filters.resourceType && (detectResourceType(resource.fileType, resource.resourceType) ?? resource.fileType) !== filters.resourceType) {
           return false;
         }
 
@@ -56,6 +61,10 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
       fileName: input.fileName,
       fileType: input.fileType ?? null,
       fileSizeKb: input.fileSizeKb ?? null,
+      resourceType: detectResourceType(input.fileName, input.resourceType ?? null),
+      ogTitle: input.ogTitle ?? null,
+      ogImage: input.ogImage ?? null,
+      ogDescription: input.ogDescription ?? null,
       createdAt: now,
       updatedAt: now,
     };
@@ -67,6 +76,7 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
   async updateById(
     id: string,
     actorUserId: string,
+    isAdmin = false,
     payload: { title?: string; description?: string | null },
   ): Promise<StudyResource | null> {
     const existing = this.resources.get(id);
@@ -74,8 +84,8 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
       return null;
     }
 
-    if (existing.userId !== actorUserId) {
-      throw new Error("Solo el autor puede editar este recurso.");
+    if (existing.userId !== actorUserId && !isAdmin) {
+      throw new Error("Solo el autor o un administrador puede editar este recurso.");
     }
 
     const updated: StudyResource = {
@@ -89,14 +99,14 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
     return updated;
   }
 
-  async deleteById(id: string, actorUserId: string): Promise<boolean> {
+  async deleteById(id: string, actorUserId: string, isAdmin = false): Promise<boolean> {
     const existing = this.resources.get(id);
     if (!existing) {
       return false;
     }
 
-    if (existing.userId !== actorUserId) {
-      throw new Error("Solo el autor puede eliminar este recurso.");
+    if (existing.userId !== actorUserId && !isAdmin) {
+      throw new Error("Solo el autor o un administrador puede eliminar este recurso.");
     }
 
     this.resources.delete(id);

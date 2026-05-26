@@ -41,6 +41,23 @@ export function useResources() {
     [container]
   )
 
+  const listResources = useCallback(
+    async (filters?: { subjectId?: string; type?: string }) => {
+      setState({ loading: true, error: null, data: [] })
+      try {
+        const useCase = container.getListStudyResources()
+        const result = await useCase.execute(filters)
+        setState({ loading: false, error: null, data: result })
+        return result
+      } catch (err) {
+        const errorMsg = toErrorMessage(err, "Error al cargar recursos")
+        setState({ loading: false, error: errorMsg, data: [] })
+        throw err
+      }
+    },
+    [container]
+  )
+
   const uploadResource = useCallback(
     async (
       userId: string,
@@ -105,5 +122,6 @@ export function useResources() {
     getResourceById,
     updateResource,
     uploadResource,
+    listResources,
   }
 }

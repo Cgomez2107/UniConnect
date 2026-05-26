@@ -123,6 +123,10 @@ export interface StudyResourceUI {
   fileName: string;
   fileType: string | null;
   fileSizeKb: number | null;
+  resourceType: string | null;
+  ogTitle: string | null;
+  ogImage: string | null;
+  ogDescription: string | null;
   createdAt: string;
   updatedAt: string;
   profiles?: { fullName: string; avatarUrl: string | null };

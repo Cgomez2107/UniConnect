@@ -4,6 +4,7 @@ export interface ListStudyResourcesFilters {
   readonly subjectId?: string;
   readonly userId?: string;
   readonly search?: string;
+  readonly resourceType?: string;
   readonly page: number;
   readonly pageSize: number;
 }
@@ -15,7 +16,8 @@ export interface IStudyResourceRepository {
   updateById(
     id: string,
     actorUserId: string,
+    isAdmin: boolean,
     payload: { title?: string; description?: string | null },
   ): Promise<StudyResource | null>;
-  deleteById(id: string, actorUserId: string): Promise<boolean>;
+  deleteById(id: string, actorUserId: string, isAdmin?: boolean): Promise<boolean>;
 }

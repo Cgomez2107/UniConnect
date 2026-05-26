@@ -24,6 +24,7 @@ export * from "./types/dto.js";
 export type { LoginResponseDTO, OAuthSignInUrlResponseDTO, OAuthCallbackResponseDTO } from "./dto.js";
 export * from "./lib/mappers.js";
 export * from "./lib/errors.js";
+export * from "./decorators/index.js";
 export * from "./validation/MessageValidationErrors.js";
 export * from "./validation/ValidationResult.js";
 

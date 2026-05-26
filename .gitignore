@@ -37,6 +37,8 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+**/.turbo/
+
 app-examples/
 
 openspec/*

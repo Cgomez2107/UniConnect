@@ -17,6 +17,10 @@ function mapResource(r: any): StudyResourceUI {
     fileName: r.fileName ?? r.file_name ?? "",
     fileType: r.fileType ?? r.file_type ?? null,
     fileSizeKb: r.fileSizeKb ?? r.file_size_kb ?? null,
+    resourceType: r.resourceType ?? r.resource_type ?? r.fileType ?? null,
+    ogTitle: r.ogTitle ?? r.og_title ?? null,
+    ogImage: r.ogImage ?? r.og_image ?? null,
+    ogDescription: r.ogDescription ?? r.og_description ?? null,
     createdAt: r.createdAt?.toISOString?.() ?? r.created_at ?? r.createdAt,
     updatedAt: r.updatedAt?.toISOString?.() ?? r.updated_at ?? r.updatedAt,
     profiles: r.profiles ?? undefined,
@@ -44,6 +48,7 @@ const resourcesService = {
     fileType?: string;
     fileSizeKb?: number;
     programId?: string;
+    resourceType?: string;
   }) {
     const resource = await deps.apiClients.resources.create(payload);
     return mapResource(resource);

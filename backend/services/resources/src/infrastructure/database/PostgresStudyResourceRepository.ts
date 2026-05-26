@@ -4,6 +4,7 @@ import type {
   IStudyResourceRepository,
   ListStudyResourcesFilters,
 } from "../../domain/repositories/IStudyResourceRepository.js";
+import { detectResourceType } from "../../domain/services/ResourceTypeMapper.js";
 
 interface StudyResourceRow {
   id: string;
@@ -16,6 +17,10 @@ interface StudyResourceRow {
   file_name: string;
   file_type: string | null;
   file_size_kb: number | null;
+  resource_type: string | null;
+  og_title: string | null;
+  og_image: string | null;
+  og_description: string | null;
   created_at: string | Date;
   updated_at: string | Date;
   author_full_name: string | null;
@@ -35,6 +40,10 @@ function mapStudyResource(row: StudyResourceRow): StudyResource {
     fileName: row.file_name,
     fileType: row.file_type,
     fileSizeKb: row.file_size_kb,
+    resourceType: detectResourceType(row.file_type, row.resource_type),
+    ogTitle: row.og_title,
+    ogImage: row.og_image,
+    ogDescription: row.og_description,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
     profiles: row.author_full_name
@@ -68,6 +77,11 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
       conditions.push(`sr.user_id = $${values.length}`);
     }
 
+    if (filters.resourceType) {
+      values.push(filters.resourceType);
+      conditions.push(`(sr.resource_type = $${values.length} OR sr.file_type = $${values.length})`);
+    }
+
     if (filters.search) {
       values.push(`%${filters.search}%`);
       conditions.push(`(sr.title ILIKE $${values.length} OR COALESCE(sr.description, '') ILIKE $${values.length})`);
@@ -95,6 +109,10 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           sr.file_name,
           sr.file_type,
           sr.file_size_kb,
+          sr.resource_type,
+          sr.og_title,
+          sr.og_image,
+          sr.og_description,
           sr.created_at,
           sr.updated_at,
           p.full_name AS author_full_name,
@@ -128,6 +146,10 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           sr.file_name,
           sr.file_type,
           sr.file_size_kb,
+          sr.resource_type,
+          sr.og_title,
+          sr.og_image,
+          sr.og_description,
           sr.created_at,
           sr.updated_at,
           p.full_name AS author_full_name,
@@ -157,8 +179,12 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
           file_url,
           file_name,
           file_type,
-          file_size_kb
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          file_size_kb,
+          resource_type,
+          og_title,
+          og_image,
+          og_description
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING id
       `,
       [
@@ -171,6 +197,10 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
         input.fileName,
         input.fileType ?? null,
         input.fileSizeKb ?? null,
+        input.resourceType ?? null,
+        input.ogTitle ?? null,
+        input.ogImage ?? null,
+        input.ogDescription ?? null,
       ],
     );
 
@@ -185,6 +215,7 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
   async updateById(
     id: string,
     actorUserId: string,
+    isAdmin = false,
     payload: { title?: string; description?: string | null },
   ): Promise<StudyResource | null> {
     const current = await this.pool.query<{ user_id: string }>(
@@ -196,8 +227,8 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
       return null;
     }
 
-    if (current.rows[0].user_id !== actorUserId) {
-      throw new Error("Solo el autor puede editar este recurso.");
+    if (current.rows[0].user_id !== actorUserId && !isAdmin) {
+      throw new Error("Solo el autor o un administrador puede editar este recurso.");
     }
 
     const updated = await this.pool.query(
@@ -219,7 +250,7 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
     return this.getById(id);
   }
 
-  async deleteById(id: string, actorUserId: string): Promise<boolean> {
+  async deleteById(id: string, actorUserId: string, isAdmin = false): Promise<boolean> {
     const current = await this.pool.query<{ user_id: string }>(
       "SELECT user_id FROM study_resources WHERE id = $1 LIMIT 1",
       [id],
@@ -229,8 +260,8 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
       return false;
     }
 
-    if (current.rows[0].user_id !== actorUserId) {
-      throw new Error("Solo el autor puede eliminar este recurso.");
+    if (current.rows[0].user_id !== actorUserId && !isAdmin) {
+      throw new Error("Solo el autor o un administrador puede eliminar este recurso.");
     }
 
     await this.pool.query("DELETE FROM study_resources WHERE id = $1", [id]);

@@ -6,6 +6,38 @@ import type { IResourceUploadRepository } from "../../domain/repositories/IResou
 
 const MAX_FILE_SIZE_KB = 10_240
 
+const EXT_TO_RESOURCE_TYPE: Record<string, string> = {
+  pdf: "pdf",
+  doc: "document",
+  docx: "document",
+  ppt: "presentation",
+  pptx: "presentation",
+  xls: "spreadsheet",
+  xlsx: "spreadsheet",
+  jpg: "image",
+  jpeg: "image",
+  png: "image",
+  gif: "image",
+  webp: "image",
+  svg: "image",
+  mp4: "video",
+  mov: "video",
+  avi: "video",
+  mkv: "video",
+  webm: "video",
+  mp3: "audio",
+  wav: "audio",
+  zip: "archive",
+  rar: "archive",
+  "7z": "archive",
+  txt: "document",
+}
+
+function detectResourceType(fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? ""
+  return EXT_TO_RESOURCE_TYPE[ext] ?? "other"
+}
+
 const MIME_TYPES: Record<string, string> = {
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -100,6 +132,7 @@ export class SupabaseResourceUploadRepository implements IResourceUploadReposito
         file_url: fileUrl,
         file_name,
         file_type: ext.toUpperCase(),
+        resource_type: detectResourceType(file_name),
         file_size_kb: fileSizeKb,
       })
       .select("*, profiles(full_name, avatar_url), subjects(name)")

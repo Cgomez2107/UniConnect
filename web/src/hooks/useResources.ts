@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { deps } from "@/store/deps";
 
 interface Resource {
@@ -12,6 +12,10 @@ interface Resource {
   fileName: string;
   fileType: string | null;
   fileSizeKb: number | null;
+  resourceType: string | null;
+  ogTitle: string | null;
+  ogImage: string | null;
+  ogDescription: string | null;
   createdAt: string;
   updatedAt: string;
   profiles?: { fullName: string; avatarUrl: string | null };
@@ -44,6 +48,7 @@ interface UseResourcesState {
 interface LoadResourcesOptions {
   subjectId?: string;
   userId?: string;
+  type?: string;
 }
 
 export default function useResources() {
@@ -52,16 +57,20 @@ export default function useResources() {
     isLoading: false,
     error: null,
   });
+  const latestRequestRef = useRef(0);
 
   const loadResources = useCallback(
     async (options?: LoadResourcesOptions) => {
+      const requestId = ++latestRequestRef.current;
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
         const data = options?.userId
           ? await deps.apiClients.resources.getMyResources(options.userId)
-          : options?.subjectId
-            ? await deps.apiClients.resources.getBySubject(options.subjectId)
-            : await deps.apiClients.resources.list();
+          : await deps.apiClients.resources.list({
+              subjectId: options?.subjectId,
+              type: options?.type,
+            });
+        if (requestId !== latestRequestRef.current) return;
 
         const resources = (data as any[]).map((r: any) => ({
           id: r.id,
@@ -70,10 +79,14 @@ export default function useResources() {
           subjectId: r.subjectId,
           title: r.title,
           description: r.description ?? null,
-          fileUrl: r.url,
-          fileName: r.title,
-          fileType: r.type ?? null,
-          fileSizeKb: null,
+          fileUrl: r.url ?? r.fileUrl,
+          fileName: r.fileName ?? r.title,
+          fileType: r.fileType ?? r.type ?? null,
+          fileSizeKb: r.fileSizeKb ?? null,
+          resourceType: r.resourceType ?? r.fileType ?? null,
+          ogTitle: r.ogTitle ?? null,
+          ogImage: r.ogImage ?? null,
+          ogDescription: r.ogDescription ?? null,
           createdAt: typeof r.createdAt === "string" ? r.createdAt : r.createdAt?.toISOString?.() ?? "",
           updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : r.updatedAt?.toISOString?.() ?? "",
           profiles: r.profiles ?? undefined,
@@ -82,6 +95,7 @@ export default function useResources() {
 
         setState({ resources, isLoading: false, error: null });
       } catch (err) {
+        if (requestId !== latestRequestRef.current) return;
         const errorMessage =
           err instanceof Error ? err.message : "Error cargando recursos";
         console.error("Error loading resources:", err);

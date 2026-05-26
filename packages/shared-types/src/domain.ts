@@ -249,20 +249,23 @@ export interface Notification {
 
 export interface StudyResource {
   id: string;
-  title: string;
-  description?: string;
-  type: string;
-  url: string;
-  uploaderUserId: string;
-  uploader?: User;
+  userId: string;
+  programId: string;
   subjectId: string;
-  subject?: Subject;
-  tags: string[];
-  viewCount: number;
-  downloadCount: number;
-  isPublic: boolean;
+  title: string;
+  description: string | null;
+  fileUrl: string;
+  fileName: string;
+  fileType: string | null;
+  fileSizeKb: number | null;
+  resourceType: string | null;
+  ogTitle: string | null;
+  ogImage: string | null;
+  ogDescription: string | null;
   createdAt: Date;
   updatedAt: Date;
+  profiles?: { fullName: string; avatarUrl: string | null };
+  subjects?: { name: string };
 }
 
 // ============================================================================

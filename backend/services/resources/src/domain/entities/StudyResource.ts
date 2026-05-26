@@ -1,3 +1,9 @@
+export interface OgMetadata {
+  readonly ogTitle?: string;
+  readonly ogImage?: string;
+  readonly ogDescription?: string;
+}
+
 export interface StudyResource {
   readonly id: string;
   readonly userId: string;
@@ -9,6 +15,10 @@ export interface StudyResource {
   readonly fileName: string;
   readonly fileType: string | null;
   readonly fileSizeKb: number | null;
+  readonly resourceType: string | null;
+  readonly ogTitle: string | null;
+  readonly ogImage: string | null;
+  readonly ogDescription: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly profiles?: {
@@ -30,4 +40,8 @@ export interface CreateStudyResourceInput {
   readonly fileName: string;
   readonly fileType?: string;
   readonly fileSizeKb?: number;
+  readonly resourceType?: string;
+  readonly ogTitle?: string;
+  readonly ogImage?: string;
+  readonly ogDescription?: string;
 }

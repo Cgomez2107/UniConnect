@@ -9,6 +9,7 @@ import { UpdateStudyResource } from "../../../application/use-cases/UpdateStudyR
 import type { UpdateResourceDto } from "../dto/UpdateResourceDto.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
+import { checkEditPermission } from "../middlewares/ResourceEditGuard.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
@@ -21,6 +22,10 @@ const CreateResourceBodySchema = z.object({
   fileName: z.string().min(1),
   fileType: z.string().optional(),
   fileSizeKb: z.number().positive().optional(),
+  resourceType: z.string().optional(),
+  ogTitle: z.string().optional(),
+  ogImage: z.string().optional(),
+  ogDescription: z.string().optional(),
 });
 
 export class ResourcesController {
@@ -46,6 +51,7 @@ export class ResourcesController {
         subjectId: requestUrl.searchParams.get("subjectId") ?? undefined,
         userId: requestUrl.searchParams.get("userId") ?? undefined,
         search: requestUrl.searchParams.get("search") ?? undefined,
+        resourceType: requestUrl.searchParams.get("type") ?? undefined,
         page,
         pageSize,
       });
@@ -94,6 +100,10 @@ export class ResourcesController {
         fileName: parsed.fileName,
         fileType: parsed.fileType,
         fileSizeKb: parsed.fileSizeKb,
+        resourceType: parsed.resourceType,
+        ogTitle: parsed.ogTitle,
+        ogImage: parsed.ogImage,
+        ogDescription: parsed.ogDescription,
       });
 
       sendData(res, 201, created);
@@ -122,13 +132,13 @@ export class ResourcesController {
 
   async delete(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
     try {
-      const actorUserId = getActorUserId(req);
-      if (!actorUserId) {
+      const permission = checkEditPermission(req);
+      if (!permission) {
         sendError(res, 401, "Token de autenticación requerido.");
         return;
       }
 
-      const deleted = await this.deleteStudyResource.execute(id, actorUserId);
+      const deleted = await this.deleteStudyResource.execute(id, permission.actorUserId, permission.isAdmin);
 
       if (!deleted) {
         sendError(res, 404, "Recurso no encontrado.");
@@ -144,14 +154,14 @@ export class ResourcesController {
 
   async update(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
     try {
-      const actorUserId = getActorUserId(req);
-      if (!actorUserId) {
+      const permission = checkEditPermission(req);
+      if (!permission) {
         sendError(res, 401, "Token de autenticación requerido.");
         return;
       }
 
       const body = await readJsonBody<UpdateResourceDto>(req);
-      const updated = await this.updateStudyResource.execute(id, actorUserId, {
+      const updated = await this.updateStudyResource.execute(id, permission.actorUserId, permission.isAdmin, {
         title: body.title,
         description: body.description,
       });

@@ -56,6 +56,7 @@ import { GetStudyResourcesByUser } from "../domain/use-cases/resources/GetStudyR
 import { GetStudyResourceById } from "../domain/use-cases/resources/GetStudyResourceById";
 import { UpdateStudyResource } from "../domain/use-cases/resources/UpdateStudyResource";
 import { DeleteStudyResource } from "../domain/use-cases/resources/DeleteStudyResource";
+import { ListStudyResources } from "../domain/use-cases/resources/ListStudyResources";
 import { GetConversations } from "../domain/use-cases/messaging/GetConversations";
 import { GetMessages } from "../domain/use-cases/messaging/GetMessages";
 import { SendMessage } from "../domain/use-cases/messaging/SendMessage";
@@ -157,6 +158,7 @@ export class DIContainer {
   private getStudyResourceById?: GetStudyResourceById;
   private updateStudyResource?: UpdateStudyResource;
   private deleteStudyResource?: DeleteStudyResource;
+  private listStudyResources?: ListStudyResources;
   private getConversations?: GetConversations;
   private getMessages?: GetMessages;
   private sendMessage?: SendMessage;
@@ -491,6 +493,13 @@ export class DIContainer {
       this.deleteStudyResource = new DeleteStudyResource(this.getStudyResourceRepository());
     }
     return this.deleteStudyResource;
+  }
+
+  getListStudyResources(): ListStudyResources {
+    if (!this.listStudyResources) {
+      this.listStudyResources = new ListStudyResources(this.getStudyResourceRepository());
+    }
+    return this.listStudyResources;
   }
 
   getGetConversations(): GetConversations {
