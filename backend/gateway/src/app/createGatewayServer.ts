@@ -391,6 +391,10 @@ async function handleRequest(
     req.headers["x-user-id"] = payload.sub;
   }
 
+  if (payload.role) {
+    req.headers["x-user-role"] = payload.role;
+  }
+
   if (isStudyGroupsRoute(requestUrl.pathname)) {
     await proxyRequest(req, res, env.studyGroupsBaseUrl, undefined, (info) => {
       onStudygroupsResponse(info, requestUrl, payload);

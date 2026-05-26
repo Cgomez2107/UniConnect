@@ -18,9 +18,10 @@ export interface CreateStudyResourcePayload {
   fileType?: string;
   fileSizeKb?: number;
   programId?: string;
-  ogTitle?: string | null;
-  ogDescription?: string | null;
-  ogImage?: string | null;
+  resourceType?: string;
+  ogTitle?: string;
+  ogImage?: string;
+  ogDescription?: string;
 }
 
 export interface UpdateStudyResourcePayload {
@@ -33,14 +34,9 @@ export interface ListResourcesFilters {
   programId?: string;
   userId?: string;
   search?: string;
+  type?: string;
   page?: number;
   perPage?: number;
-}
-
-export interface OpenGraphMetadata {
-  ogTitle: string | null;
-  ogDescription: string | null;
-  ogImage: string | null;
 }
 
 export class ResourcesClient extends BaseClient {
@@ -56,6 +52,7 @@ export class ResourcesClient extends BaseClient {
         ...(filters?.subjectId !== undefined && { subjectId: filters.subjectId }),
         ...(filters?.userId !== undefined && { userId: filters.userId }),
         ...(filters?.search !== undefined && { search: filters.search }),
+        ...(filters?.type !== undefined && { type: filters.type }),
         ...(filters?.programId !== undefined && { program_id: filters.programId }),
         ...(filters?.page !== undefined && { page: filters.page }),
         ...(filters?.perPage !== undefined && { limit: filters.perPage }),
@@ -93,9 +90,10 @@ export class ResourcesClient extends BaseClient {
         fileType: payload.fileType,
         fileSizeKb: payload.fileSizeKb,
         programId: payload.programId,
+        resourceType: payload.resourceType,
         ogTitle: payload.ogTitle,
-        ogDescription: payload.ogDescription,
         ogImage: payload.ogImage,
+        ogDescription: payload.ogDescription,
       },
     });
     return mapStudyResourceDtoToDomain(response.data);
@@ -118,14 +116,5 @@ export class ResourcesClient extends BaseClient {
       method: "DELETE",
       url: `/resources/${id}`,
     });
-  }
-
-  async parseUrl(url: string): Promise<OpenGraphMetadata> {
-    const response = await this.transport.request<OpenGraphMetadata>({
-      method: "POST",
-      url: "/resources/parse-url",
-      body: { url },
-    });
-    return response.data;
   }
 }

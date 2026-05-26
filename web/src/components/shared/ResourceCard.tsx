@@ -1,135 +1,125 @@
 import React from "react";
-import type { StudyResourceUI } from "@/types/ui";
+import { StudyResourceUI } from "@/types/ui";
 import { Badge } from "@/components/ui/Badge";
 
 interface ResourceCardProps {
   resource: StudyResourceUI;
   onViewDetails: (id: string) => void;
   onDelete?: (id: string) => void;
-  onEdit?: (id: string) => void;
   isOwner?: boolean;
 }
 
-function getFileIcon(fileType: string | null): string {
-  if (!fileType) return "📎";
-  if (fileType.includes("pdf")) return "📄";
-  if (fileType.includes("image")) return "🖼️";
-  if (fileType.includes("video")) return "🎬";
-  if (fileType.includes("audio")) return "🎵";
-  if (fileType.includes("link") || fileType === "url") return "🔗";
-  return "📎";
+const RESOURCE_TYPE_LABELS: Record<string, string> = {
+  pdf: "PDF",
+  document: "Documento",
+  presentation: "Presentación",
+  spreadsheet: "Hoja de cálculo",
+  video: "Video",
+  audio: "Audio",
+  image: "Imagen",
+  link: "Enlace",
+  archive: "Archivo comprimido",
+  file: "Archivo",
+  other: "Otro",
+};
+
+const RESOURCE_TYPE_COLORS: Record<string, string> = {
+  pdf: "bg-red-100 text-red-700",
+  document: "bg-blue-100 text-blue-700",
+  presentation: "bg-orange-100 text-orange-700",
+  spreadsheet: "bg-emerald-100 text-emerald-700",
+  video: "bg-purple-100 text-purple-700",
+  audio: "bg-pink-100 text-pink-700",
+  image: "bg-amber-100 text-amber-700",
+  link: "bg-green-100 text-green-700",
+  archive: "bg-neutral-200 text-neutral-700",
+  file: "bg-neutral-100 text-neutral-600",
+};
+
+function getTypeLabel(type: string | null): string {
+  const key = (type ?? "other").toLowerCase();
+  return RESOURCE_TYPE_LABELS[key] ?? type ?? "Otro";
 }
 
-function getResourceTypeLabel(resource: StudyResourceUI): string {
-  if (resource.fileType === "link" || resource.fileType === "url") return "Enlace";
-  if (resource.fileType) return resource.fileType.toUpperCase();
-  return "Archivo";
+function getTypeColor(type: string | null): string {
+  const key = (type ?? "other").toLowerCase();
+  return RESOURCE_TYPE_COLORS[key] ?? "bg-neutral-100 text-neutral-700";
 }
 
 export function ResourceCard({
   resource,
   onViewDetails,
   onDelete,
-  onEdit,
   isOwner = false,
 }: ResourceCardProps) {
-  const hasOgImage = resource.ogImage;
-  const hasTags = resource.tags && resource.tags.length > 0;
+  const typeLabel = getTypeLabel(resource.resourceType ?? resource.fileType);
+  const typeColor = getTypeColor(resource.resourceType ?? resource.fileType);
 
   return (
-    <div className="card-hover p-0 overflow-hidden">
-      {/* OG Image preview */}
-      {hasOgImage && (
-        <div className="w-full h-36 bg-neutral-100 overflow-hidden">
+    <div className="card-hover p-4">
+      {/* Open Graph Preview */}
+      {resource.resourceType === "link" && resource.ogImage && (
+        <div className="mb-3 rounded-lg overflow-hidden bg-neutral-100">
           <img
-            src={resource.ogImage!}
-            alt={resource.ogTitle || resource.title}
-            className="w-full h-full object-cover"
+            src={resource.ogImage}
+            alt={resource.ogTitle ?? resource.title}
+            className="w-full h-32 object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
+              (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
           />
         </div>
       )}
 
-      <div className="p-4">
-        {/* Header: icon + title */}
-        <div className="flex items-start gap-3 mb-2">
-          {!hasOgImage && (
-            <span className="text-2xl flex-shrink-0">{getFileIcon(resource.fileType)}</span>
+      {/* Header */}
+      <div className="flex items-start gap-3 mb-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-neutral-900 text-sm truncate">{resource.title}</h3>
+          {resource.ogTitle && resource.resourceType === "link" && resource.ogTitle !== resource.title && (
+            <p className="text-xs text-neutral-400 truncate">{resource.ogTitle}</p>
           )}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-neutral-900 text-sm truncate">
-              {resource.ogTitle || resource.title}
-            </h3>
-            <p className="text-xs text-neutral-500 truncate">
-              {resource.subject?.name || resource.subjectName}
-            </p>
-          </div>
+          <p className="text-xs text-neutral-500">{resource.subject?.name || resource.subjectName}</p>
         </div>
+      </div>
 
-        {/* Description */}
-        {(resource.description || resource.ogDescription) && (
-          <p className="text-sm text-neutral-600 mb-2 line-clamp-2">
-            {resource.ogDescription || resource.description}
-          </p>
-        )}
+      {/* Description */}
+      <p className="text-sm text-neutral-600 mb-3 line-clamp-2">
+        {resource.ogDescription ?? resource.description}
+      </p>
 
-        {/* Badges / Decorator icons */}
-        <div className="flex flex-wrap items-center gap-1.5 mb-3">
-          <Badge color="gray" variant="outline">
-            {getResourceTypeLabel(resource)}
-          </Badge>
-          {hasTags && (
-            <span
-              className="inline-flex items-center gap-0.5 text-xs text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded-full"
-              title={`${resource.tags!.length} etiqueta${resource.tags!.length !== 1 ? "s" : ""}`}
-            >
-              🏷️ {resource.tags!.length}
-            </span>
-          )}
-          {resource.ogImage && (
-            <span
-              className="inline-flex items-center gap-0.5 text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full"
-              title="Vista previa disponible"
-            >
-              🖼️
-            </span>
-          )}
-        </div>
+      {/* Open Graph description fallback */}
+      {resource.resourceType === "link" && resource.ogDescription && resource.description && (
+        <p className="text-xs text-neutral-400 mb-2 italic">
+          {resource.ogDescription}
+        </p>
+      )}
 
-        {/* Uploader */}
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-xs text-neutral-500 truncate">
-            👤 {resource.uploadedBy || resource.uploaderName || "Anónimo"}
-          </span>
-        </div>
+      {/* Footer */}
+      <div className="flex justify-between items-center mb-4">
+        <span className="text-xs text-neutral-500 truncate">
+          👤 {resource.uploadedBy || resource.uploaderName || "Anónimo"}
+        </span>
+        <span className={`text-xs font-medium px-2 py-0.5 rounded ${typeColor}`}>
+          {typeLabel}
+        </span>
+      </div>
 
-        {/* Actions */}
-        <div className="flex gap-2">
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => onViewDetails(resource.id)}
+          className="flex-1 px-3 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 transition-colors"
+        >
+          Ver recurso
+        </button>
+        {isOwner && onDelete && (
           <button
-            onClick={() => onViewDetails(resource.id)}
-            className="flex-1 px-3 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 transition-colors"
+            onClick={() => onDelete(resource.id)}
+            className="px-3 py-2 text-error-600 border-2 border-error-600 rounded-md text-sm font-medium hover:bg-error-600 hover:text-white transition-colors"
           >
-            Ver recurso
+            Eliminar
           </button>
-          {isOwner && onEdit && (
-            <button
-              onClick={() => onEdit(resource.id)}
-              className="px-3 py-2 text-primary-600 border-2 border-primary-600 rounded-md text-sm font-medium hover:bg-primary-600 hover:text-white transition-colors"
-            >
-              Editar
-            </button>
-          )}
-          {isOwner && onDelete && (
-            <button
-              onClick={() => onDelete(resource.id)}
-              className="px-3 py-2 text-error-600 border-2 border-error-600 rounded-md text-sm font-medium hover:bg-error-600 hover:text-white transition-colors"
-            >
-              Eliminar
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

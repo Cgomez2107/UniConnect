@@ -7,6 +7,7 @@ export class UpdateStudyResource {
   async execute(
     id: string,
     actorUserId: string,
+    isAdmin = false,
     payload: { title?: string; description?: string | null },
   ): Promise<StudyResource | null> {
     if (!id.trim()) {
@@ -24,6 +25,6 @@ export class UpdateStudyResource {
       throw new Error("Debes enviar al menos title o description.");
     }
 
-    return this.repository.updateById(id, actorUserId, payload);
+    return this.repository.updateById(id, actorUserId, isAdmin, payload);
   }
 }

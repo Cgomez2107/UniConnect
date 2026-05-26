@@ -1,22 +1,11 @@
-/**
- * app/recursos/index.tsx
- *
- * Pantalla: Biblioteca de recursos (US-V03)
- * - Lista en rejilla de recursos con soporte para Open Graph
- * - Filtro por materia y tipo de contenido
- * - Badges de decoradores (etiquetas, valoración, comentarios)
- * - Permisos: editar solo si owner o admin
- */
-
 import { Colors } from "@/constants/Colors"
-import { DIContainer } from "@/lib/services/di/container"
+import { useResources } from "@/hooks/application/useResources"
 import { useAuthStore } from "@/store/useAuthStore"
-import { router, useFocusEffect } from "expo-router"
-import { useCallback, useState } from "react"
+import { router } from "expo-router"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,202 +13,244 @@ import {
   View,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import type { StudyResource } from "@/types"
 
-const CONTENT_TYPES = ["todos", "pdf", "document", "video", "link", "image"] as const
-type ContentType = (typeof CONTENT_TYPES)[number]
+const TYPE_FILTERS = [
+  { value: "", label: "Todos" },
+  { value: "pdf", label: "PDF" },
+  { value: "document", label: "Documentos" },
+  { value: "video", label: "Videos" },
+  { value: "link", label: "Enlaces" },
+  { value: "image", label: "Imágenes" },
+]
 
-const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
-  todos: "Todos",
-  pdf: "PDF",
-  document: "Documento",
-  video: "Video",
-  link: "Enlace",
-  image: "Imagen",
+const FILE_ICONS: Record<string, string> = {
+  PDF: "📄",
+  DOCX: "📝",
+  DOC: "📝",
+  XLSX: "📊",
+  XLS: "📊",
+  PPTX: "📽️",
+  PPT: "📽️",
+  TXT: "📃",
+  JPG: "🖼️",
+  JPEG: "🖼️",
+  PNG: "🖼️",
 }
 
-function getFileIcon(fileType: string | null): string {
-  if (!fileType) return "📎"
-  if (fileType.includes("pdf")) return "📄"
-  if (fileType.includes("image")) return "🖼️"
-  if (fileType.includes("video")) return "🎬"
-  if (fileType.includes("link")) return "🔗"
-  return "📎"
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1) return "Ahora"
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d`
+  return `${Math.floor(days / 7)}sem`
 }
 
-export default function ResourcesList() {
+export default function ResourcesListScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
   const insets = useSafeAreaInsets()
-  const user = useAuthStore((s) => s.user)
+  const user = useAuthStore((s: any) => s.user)
+  const { data: resources, loading, error, listResources } = useResources()
+  const [selectedType, setSelectedType] = useState("")
+  const [activeTab, setActiveTab] = useState<"todos" | "mis-recursos">("todos")
 
-  const [resources, setResources] = useState<StudyResource[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [activeType, setActiveType] = useState<ContentType>("todos")
+  useEffect(() => {
+    listResources({
+      type: selectedType || undefined,
+    })
+  }, [selectedType])
 
-  const loadResources = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const container = DIContainer.getInstance()
-      const useCase = container.getGetStudyResourcesBySubject()
-      const result = await useCase.execute("")
-      setResources(result)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al cargar recursos")
-    } finally {
-      setLoading(false)
+  const filteredResources = useMemo(() => {
+    let items = resources || []
+    if (activeTab === "mis-recursos" && user?.id) {
+      items = items.filter((r) => r.user_id === user.id)
     }
+    return items
+  }, [resources, activeTab, user?.id])
+
+  const handleOpenResource = useCallback((item: any) => {
+    router.push(`/recurso/${item.id}`)
   }, [])
 
-  useFocusEffect(
-    useCallback(() => {
-      loadResources()
-    }, [loadResources]),
-  )
+  const renderItem = useCallback(
+    ({ item }: { item: any }) => {
+      const fileType = (item.resource_type ?? item.file_type ?? "").toUpperCase()
+      const icon = FILE_ICONS[fileType] ?? (item.resource_type === "link" ? "🔗" : "📎")
+      const authorName = item.profiles?.full_name ?? "Estudiante"
+      const subjectName = item.subjects?.name ?? ""
 
-  const filteredResources = resources.filter((r) => {
-    if (activeType === "todos") return true
-    const fileType = (r.file_type || "").toLowerCase()
-    return fileType.includes(activeType)
-  })
+      return (
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}
+          onPress={() => handleOpenResource(item)}
+          activeOpacity={0.92}
+        >
+          {/* Open Graph preview */}
+          {item.resource_type === "link" && item.og_image && (
+            <View style={styles.ogPreview}>
+              <Text style={styles.ogPlaceholder}>🔗 Vista previa del enlace</Text>
+            </View>
+          )}
 
-  const isOwner = (resource: StudyResource) => {
-    return user?.id === resource.user_id || user?.role === "admin"
-  }
-
-  const renderResource = ({ item }: { item: StudyResource }) => {
-    const hasOgImage = !!item.og_image
-    const icon = getFileIcon(item.file_type)
-
-    return (
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}
-        onPress={() => router.push(`/recurso/${item.id}`)}
-        activeOpacity={0.85}
-      >
-        {hasOgImage && (
-          <Image
-            source={{ uri: item.og_image! }}
-            style={styles.ogImage}
-            resizeMode="cover"
-          />
-        )}
-
-        <View style={styles.cardBody}>
           <View style={styles.cardHeader}>
-            {!hasOgImage && <Text style={styles.cardIcon}>{icon}</Text>}
-            <View style={styles.cardTitleArea}>
+            <View style={[styles.iconBox, { backgroundColor: C.primary + "15" }]}>
+              <Text style={styles.iconText}>{icon}</Text>
+            </View>
+            <View style={styles.cardHeaderInfo}>
               <Text style={[styles.cardTitle, { color: C.textPrimary }]} numberOfLines={2}>
-                {item.og_title || item.title}
+                {item.title}
               </Text>
-              {item.subjects?.name && (
-                <Text style={[styles.cardSubject, { color: C.textSecondary }]} numberOfLines={1}>
-                  {item.subjects.name}
+              {item.og_title && item.resource_type === "link" && item.og_title !== item.title && (
+                <Text style={[styles.ogTitle, { color: C.textSecondary }]} numberOfLines={1}>
+                  {item.og_title}
                 </Text>
               )}
             </View>
           </View>
 
-          {(item.description || item.og_description) && (
-            <Text style={[styles.cardDesc, { color: C.textSecondary }]} numberOfLines={2}>
-              {item.og_description || item.description}
-            </Text>
-          )}
-
-          <View style={styles.badges}>
-            <View style={[styles.typeBadge, { backgroundColor: C.primary + "15" }]}>
-              <Text style={[styles.typeBadgeText, { color: C.primary }]}>
-                {(item.file_type || "?").toUpperCase()}
-              </Text>
+          {subjectName ? (
+            <View style={[styles.subjectTag, { backgroundColor: C.primary + "12" }]}>
+              <Text style={[styles.subjectText, { color: C.primary }]}>{subjectName}</Text>
             </View>
-            {item.og_image && (
-              <Text style={styles.decoratorIcon}>🖼️</Text>
-            )}
-          </View>
+          ) : null}
 
           <View style={styles.cardFooter}>
-            <Text style={[styles.uploader, { color: C.textSecondary }]} numberOfLines={1}>
-              👤 {item.profiles?.full_name || "Anónimo"}
+            <Text style={[styles.meta, { color: C.textSecondary }]}>
+              {authorName} · {getTimeAgo(item.created_at)}
             </Text>
-            {isOwner(item) && (
-              <View style={[styles.ownerBadge, { borderColor: C.accent }]}>
-                <Text style={[styles.ownerBadgeText, { color: C.accent }]}>Tuyo</Text>
-              </View>
-            )}
+            <View style={[styles.typeBadge, { backgroundColor: C.border }]}>
+              <Text style={[styles.typeText, { color: C.textSecondary }]}>
+                {(item.resource_type ?? fileType) || "?"}
+              </Text>
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
-    )
-  }
+        </TouchableOpacity>
+      )
+    },
+    [C, handleOpenResource]
+  )
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background, paddingTop: insets.top }]}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: C.textPrimary }]}>Biblioteca</Text>
+        <Text style={[styles.title, { color: C.textPrimary }]}>Biblioteca de Recursos</Text>
         <TouchableOpacity
           style={[styles.uploadBtn, { backgroundColor: C.primary }]}
           onPress={() => router.push("/subir-recurso")}
+          activeOpacity={0.85}
         >
-          <Text style={[styles.uploadBtnText, { color: C.textOnPrimary }]}>+</Text>
+          <Text style={[styles.uploadBtnText, { color: C.textOnPrimary }]}>+ Subir</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tabs */}
+      <View style={[styles.tabRow, { borderBottomColor: C.border }]}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "todos" && { borderBottomColor: C.primary }]}
+          onPress={() => setActiveTab("todos")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              { color: activeTab === "todos" ? C.primary : C.textSecondary },
+            ]}
+          >
+            Todos
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "mis-recursos" && { borderBottomColor: C.primary }]}
+          onPress={() => setActiveTab("mis-recursos")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              { color: activeTab === "mis-recursos" ? C.primary : C.textSecondary },
+            ]}
+          >
+            Mis recursos
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Type filter */}
-      <View style={styles.filterRow}>
-        {CONTENT_TYPES.map((type) => (
+      <FlatList
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        data={TYPE_FILTERS}
+        keyExtractor={(item) => item.value}
+        contentContainerStyle={styles.filterList}
+        renderItem={({ item }) => (
           <TouchableOpacity
-            key={type}
             style={[
               styles.filterChip,
               {
-                backgroundColor: activeType === type ? C.primary : C.surface,
-                borderColor: activeType === type ? C.primary : C.border,
+                backgroundColor: selectedType === item.value ? C.primary : C.surface,
+                borderColor: selectedType === item.value ? C.primary : C.border,
               },
             ]}
-            onPress={() => setActiveType(type)}
+            onPress={() => setSelectedType(item.value)}
+            activeOpacity={0.75}
           >
             <Text
               style={[
                 styles.filterChipText,
-                { color: activeType === type ? C.textOnPrimary : C.textSecondary },
+                { color: selectedType === item.value ? C.textOnPrimary : C.textPrimary },
               ]}
             >
-              {CONTENT_TYPE_LABELS[type]}
+              {item.label}
             </Text>
           </TouchableOpacity>
-        ))}
-      </View>
+        )}
+      />
 
+      {/* List */}
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={C.primary} />
+          <Text style={[styles.loadingText, { color: C.textSecondary }]}>
+            Cargando recursos…
+          </Text>
         </View>
       ) : error ? (
         <View style={styles.centered}>
           <Text style={[styles.errorText, { color: C.error }]}>{error}</Text>
-          <TouchableOpacity style={[styles.retryBtn, { backgroundColor: C.primary }]} onPress={loadResources}>
-            <Text style={[styles.retryBtnText, { color: C.textOnPrimary }]}>Reintentar</Text>
+          <TouchableOpacity
+            style={[styles.retryBtn, { backgroundColor: C.primary }]}
+            onPress={() => listResources({ type: selectedType || undefined })}
+          >
+            <Text style={[styles.retryText, { color: C.textOnPrimary }]}>Reintentar</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={filteredResources}
-          renderItem={renderResource}
           keyExtractor={(item) => item.id}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
+          renderItem={renderItem}
           contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Text style={{ fontSize: 40, marginBottom: 8 }}>📂</Text>
+              <Text style={styles.emptyIcon}>📚</Text>
               <Text style={[styles.emptyText, { color: C.textSecondary }]}>
-                {activeType !== "todos"
-                  ? "No hay recursos de este tipo"
-                  : "No hay recursos disponibles"}
+                {selectedType
+                  ? `No hay recursos de tipo "${TYPE_FILTERS.find((t) => t.value === selectedType)?.label}"`
+                  : activeTab === "mis-recursos"
+                    ? "No has subido recursos todavía"
+                    : "No hay recursos disponibles"}
               </Text>
+              <TouchableOpacity
+                style={[styles.uploadBtn, { backgroundColor: C.primary }]}
+                onPress={() => router.push("/subir-recurso")}
+              >
+                <Text style={[styles.uploadBtnText, { color: C.textOnPrimary }]}>
+                  Subir el primer recurso
+                </Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -230,85 +261,102 @@ export default function ResourcesList() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
-  errorText: { fontSize: 14, textAlign: "center" },
-  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
-  retryBtnText: { fontSize: 14, fontWeight: "600" },
-  emptyText: { fontSize: 14, textAlign: "center" },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 12,
   },
   title: { fontSize: 22, fontWeight: "700" },
   uploadBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  uploadBtnText: { fontSize: 14, fontWeight: "600" },
+  tabRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    alignItems: "center",
+  },
+  tabText: { fontSize: 14, fontWeight: "600" },
+  filterList: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  filterChipText: { fontSize: 13, fontWeight: "500" },
+  list: { padding: 20, paddingBottom: 40 },
+  card: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+    gap: 8,
+  },
+  ogPreview: {
+    borderRadius: 8,
+    overflow: "hidden",
+    marginBottom: 4,
+    padding: 8,
+    backgroundColor: "rgba(0,0,0,0.05)",
+  },
+  ogPlaceholder: { fontSize: 13, textAlign: "center" },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  uploadBtnText: { fontSize: 22, fontWeight: "700", lineHeight: 24 },
-
-  filterRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 16,
-    gap: 6,
-    marginBottom: 12,
-  },
-  filterChip: {
+  iconText: { fontSize: 22 },
+  cardHeaderInfo: { flex: 1, gap: 2 },
+  cardTitle: { fontSize: 15, fontWeight: "600", lineHeight: 20 },
+  ogTitle: { fontSize: 12, lineHeight: 16 },
+  subjectTag: {
+    alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 6,
   },
-  filterChipText: { fontSize: 11, fontWeight: "600" },
-
-  list: { paddingHorizontal: 12, paddingBottom: 24 },
-  row: { gap: 10 },
-
-  card: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 10,
-    overflow: "hidden",
-  },
-  ogImage: { width: "100%", height: 90 },
-  cardBody: { padding: 10 },
-  cardHeader: { flexDirection: "row", gap: 6, marginBottom: 4 },
-  cardIcon: { fontSize: 20 },
-  cardTitleArea: { flex: 1 },
-  cardTitle: { fontSize: 13, fontWeight: "600", lineHeight: 17 },
-  cardSubject: { fontSize: 11, marginTop: 1 },
-  cardDesc: { fontSize: 11, lineHeight: 15, marginBottom: 6 },
-
-  badges: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    marginBottom: 6,
-    alignItems: "center",
-  },
-  typeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  typeBadgeText: { fontSize: 9, fontWeight: "700" },
-  decoratorIcon: { fontSize: 14 },
-
+  subjectText: { fontSize: 12, fontWeight: "600" },
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  uploader: { fontSize: 10, flex: 1 },
-  ownerBadge: {
-    borderWidth: 1,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+  meta: { fontSize: 12 },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 4,
   },
-  ownerBadgeText: { fontSize: 9, fontWeight: "600" },
+  typeText: { fontSize: 11, fontWeight: "700" },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
+  loadingText: { fontSize: 14, marginTop: 8 },
+  errorText: { fontSize: 14, textAlign: "center" },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 8 },
+  retryText: { fontSize: 14, fontWeight: "600" },
+  emptyIcon: { fontSize: 40, marginBottom: 4 },
+  emptyText: { fontSize: 14, textAlign: "center", lineHeight: 20 },
 })

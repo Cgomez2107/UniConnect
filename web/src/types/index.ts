@@ -243,14 +243,30 @@ export interface StudyResource {
   file_name: string;
   file_type: string | null;
   file_size_kb: number | null;
-  og_title?: string | null;
-  og_description?: string | null;
-  og_image?: string | null;
+  resource_type: string | null;
+  og_title: string | null;
+  og_image: string | null;
+  og_description: string | null;
   created_at: string;
   updated_at: string;
   // joins opcionales para enriquecimiento
   profiles?: { full_name: string; avatar_url: string | null };
   subjects?: { name: string };
+}
+
+export interface CreateStudyResourcePayload {
+  subjectId: string;
+  title: string;
+  description?: string;
+  fileUrl: string;
+  fileName: string;
+  fileType?: string;
+  fileSizeKb?: number;
+  programId?: string;
+  resourceType?: string;
+  ogTitle?: string;
+  ogImage?: string;
+  ogDescription?: string;
 }
 
 export interface CreateStudyResourcePayload {

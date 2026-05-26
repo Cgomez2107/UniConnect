@@ -12,6 +12,7 @@
     "test": "echo \"resources tests config scaffold\""
   },
   "dependencies": {
+    "open-graph-scraper": "^6.11.0",
     "pg": "^8.20.0"
   },
   "devDependencies": {

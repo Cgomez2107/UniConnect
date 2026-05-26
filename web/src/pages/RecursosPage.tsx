@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useAcademicFilter } from "@uniconnect/shared-hooks";
 import { deps } from "@/store/deps";
@@ -9,25 +9,23 @@ import { SubjectFilter } from "@/components/shared/SubjectFilter";
 import { ResourceCard } from "@/components/shared/ResourceCard";
 import { Button } from "@/components/ui/Button";
 
-const CONTENT_TYPES = ["todos", "pdf", "document", "video", "link", "image"] as const;
-type ContentType = (typeof CONTENT_TYPES)[number];
-
-const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
-  todos: "Todos",
-  pdf: "PDF",
-  document: "Documento",
-  video: "Video",
-  link: "Enlace",
-  image: "Imagen",
-};
+const TYPE_FILTERS = [
+  { value: "", label: "Todos" },
+  { value: "pdf", label: "PDF" },
+  { value: "document", label: "Documentos" },
+  { value: "video", label: "Videos" },
+  { value: "link", label: "Enlaces" },
+  { value: "image", label: "Imágenes" },
+];
 
 export function RecursosPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const { resources = [], isLoading = false, error = null, refresh } = useResources() as any;
   const filter = useAcademicFilter("recursos");
   const [activeTab, setActiveTab] = useState<"todos" | "mis-recursos">("todos");
-  const [activeType, setActiveType] = useState<ContentType>("todos");
+  const [selectedType, setSelectedType] = useState<string>(searchParams.get("type") ?? "");
 
   const fallbackSubjects = useMemo(
     () => ((user as any)?.studySubjects || []).map((s: any) => ({ id: s.id, name: s.name })),
@@ -39,8 +37,21 @@ export function RecursosPage() {
     void refresh({
       subjectId: filter.selectedSubjectId ?? undefined,
       userId: activeTab === "mis-recursos" ? user?.id : undefined,
+      type: selectedType || undefined,
     });
-  }, [activeTab, filter.selectedSubjectId, refresh, user?.id]);
+  }, [activeTab, filter.selectedSubjectId, refresh, user?.id, selectedType]);
+
+  const handleTypeFilter = (type: string) => {
+    setSelectedType(type);
+    setSearchParams((prev) => {
+      if (type) {
+        prev.set("type", type);
+      } else {
+        prev.delete("type");
+      }
+      return prev;
+    }, { replace: true });
+  };
 
   const filteredResources = useMemo(() => {
     let mapped = (resources || []).map((r: any) => ({
@@ -49,14 +60,8 @@ export function RecursosPage() {
       uploaderName: r.profiles?.fullName,
     }));
 
-    if (activeType !== "todos") {
-      mapped = mapped.filter(
-        (r: any) => (r.fileType || "").toLowerCase().includes(activeType),
-      );
-    }
-
     return mapped;
-  }, [resources, activeType]);
+  }, [resources]);
 
   const handleViewDetails = (id: string) => {
     navigate(`/recursos/${id}`);
@@ -73,16 +78,9 @@ export function RecursosPage() {
     }
   };
 
-  const handleEdit = useCallback(
-    (id: string) => {
-      navigate(`/recursos/${id}?editar=true`);
-    },
-    [navigate],
-  );
-
   return (
     <div className="min-h-screen bg-neutral-50 animate-fade-in">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-neutral-900 mb-2">
@@ -119,35 +117,31 @@ export function RecursosPage() {
 
         {/* Filters */}
         <div className="mb-6 space-y-4">
+          {/* Type filter buttons */}
+          <div className="flex flex-wrap gap-2">
+            {TYPE_FILTERS.map((tf) => (
+              <button
+                key={tf.value}
+                onClick={() => handleTypeFilter(tf.value)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+                  selectedType === tf.value
+                    ? "bg-primary-600 text-white border-primary-600"
+                    : "bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-100"
+                }`}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+
           <SubjectFilter
             subjects={userSubjects}
             selectedId={filter.selectedSubjectId}
             onSelect={filter.selectSubject}
             totalCount={resources.length}
           />
-
-          {/* Type filter */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mr-1">
-              Tipo:
-            </span>
-            {CONTENT_TYPES.map((type) => (
-              <button
-                key={type}
-                onClick={() => setActiveType(type)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  activeType === type
-                    ? "bg-primary-600 text-white border-primary-600"
-                    : "bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-100"
-                }`}
-              >
-                {CONTENT_TYPE_LABELS[type]}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex sm:justify-end">
-            <Button onClick={() => navigate("/subir-recurso")} className="w-full sm:w-auto">
+          <div className="flex justify-end">
+            <Button onClick={() => navigate("/subir-recurso")}>
               + Subir Recurso
             </Button>
           </div>
@@ -157,7 +151,7 @@ export function RecursosPage() {
         {isLoading && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-64 skeleton rounded-lg" />
+              <div key={i} className="h-28 skeleton rounded-lg" />
             ))}
           </div>
         )}
@@ -171,15 +165,14 @@ export function RecursosPage() {
 
         {/* Resources Grid */}
         {!isLoading && filteredResources.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredResources.map((resource: any) => (
               <ResourceCard
                 key={resource.id}
                 resource={resource}
                 onViewDetails={handleViewDetails}
                 onDelete={handleDelete}
-                onEdit={handleEdit}
-                isOwner={user?.id === resource.userId}
+                isOwner={user?.id === resource.uploaderUserId || user?.id === resource.user_id}
               />
             ))}
           </div>
@@ -189,11 +182,13 @@ export function RecursosPage() {
         {!isLoading && filteredResources.length === 0 && (
           <div className="text-center py-12">
             <p className="text-neutral-500 mb-4">
-              {filter.selectedSubjectId || activeType !== "todos"
-                ? "No hay recursos para esta combinación de filtros"
-                : activeTab === "mis-recursos"
-                  ? "No has subido recursos todavía"
-                  : "No hay recursos disponibles"}
+              {selectedType
+                ? `No hay recursos de tipo "${TYPE_FILTERS.find((t) => t.value === selectedType)?.label}"`
+                : filter.selectedSubjectId
+                  ? "No hay recursos para esta materia"
+                  : activeTab === "mis-recursos"
+                    ? "No has subido recursos todavía"
+                    : "No hay recursos disponibles"}
             </p>
             <Button onClick={() => navigate("/subir-recurso")}>
               Subir el primer recurso

@@ -10,7 +10,7 @@ export class DeleteStudyResource {
     private readonly storageCleaner?: StorageCleaner,
   ) {}
 
-  async execute(id: string, actorUserId: string): Promise<boolean> {
+  async execute(id: string, actorUserId: string, isAdmin = false): Promise<boolean> {
     if (!id.trim()) {
       throw new Error("id es obligatorio.");
     }
@@ -24,7 +24,7 @@ export class DeleteStudyResource {
       return false;
     }
 
-    const deleted = await this.repository.deleteById(id, actorUserId);
+    const deleted = await this.repository.deleteById(id, actorUserId, isAdmin);
     if (!deleted) {
       return false;
     }

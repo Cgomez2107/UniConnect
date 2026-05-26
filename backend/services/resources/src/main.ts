@@ -8,6 +8,7 @@ import { UpdateStudyResource } from "./application/use-cases/UpdateStudyResource
 import { ParseUrlMetadata } from "./application/use-cases/ParseUrlMetadata.js";
 import { loadResourcesEnv } from "./config/env.js";
 import type { IStudyResourceRepository } from "./domain/repositories/IStudyResourceRepository.js";
+import { OpenGraphExtractorService } from "./domain/services/OpenGraphExtractorService.js";
 import { InMemoryStudyResourceRepository } from "./infrastructure/database/InMemoryStudyResourceRepository.js";
 import { PostgresStudyResourceRepository } from "./infrastructure/database/PostgresStudyResourceRepository.js";
 import { Database } from "./infrastructure/database/Database.js";
@@ -91,7 +92,8 @@ function bootstrap(): void {
   const repository = createRepository(env, pool);
   const listStudyResources = new ListStudyResources(repository);
   const getStudyResourceById = new GetStudyResourceById(repository);
-  const createStudyResource = new CreateStudyResource(repository);
+  const ogExtractor = new OpenGraphExtractorService();
+  const createStudyResource = new CreateStudyResource(repository, ogExtractor);
   const updateStudyResource = new UpdateStudyResource(repository);
   const storageCleaner = new SupabaseStorageCleaner(env);
   const deleteStudyResource = new DeleteStudyResource(repository, storageCleaner);

@@ -203,20 +203,23 @@ export interface NotificationDTO {
 
 export interface StudyResourceDTO {
   id: string;
-  title: string;
-  description?: string;
-  type: string;
-  url: string;
-  uploader_user_id: string;
-  uploader?: UserDTO;
+  user_id: string;
+  program_id: string;
   subject_id: string;
-  subject?: SubjectDTO;
-  tags: string[];
-  view_count: number;
-  download_count: number;
-  is_public: boolean;
+  title: string;
+  description: string | null;
+  file_url: string;
+  file_name: string;
+  file_type: string | null;
+  file_size_kb: number | null;
+  resource_type: string | null;
+  og_title: string | null;
+  og_image: string | null;
+  og_description: string | null;
   created_at: string;
   updated_at: string;
+  profiles?: { full_name: string; avatar_url: string | null };
+  subjects?: { name: string };
 }
 
 // ============================================================================

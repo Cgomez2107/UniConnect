@@ -5,6 +5,7 @@ export interface ListStudyResourcesInput {
   readonly subjectId?: string;
   readonly userId?: string;
   readonly search?: string;
+  readonly resourceType?: string;
   readonly page: number;
   readonly pageSize: number;
 }
@@ -22,6 +23,7 @@ export class ListStudyResources {
       subjectId: input.subjectId,
       userId: input.userId,
       search: input.search,
+      resourceType: input.resourceType,
       page,
       pageSize,
     });

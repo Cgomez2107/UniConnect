@@ -37,6 +37,19 @@ export interface AdminUserUI {
   createdAt: string;
 }
 
+export interface PollOptionUI {
+  text: string;
+  votes: string[];
+}
+
+export interface PollDataUI {
+  question: string;
+  options: PollOptionUI[];
+  isOpen: boolean;
+  closesAt: string | null;
+  createdAt: string;
+}
+
 export interface MessageReactionUI {
   emoji: string;
   count: number;
@@ -66,6 +79,7 @@ export interface MessageUI {
   sender?: { fullName: string; avatarUrl: string | null };
   mentions?: MessageMentionUI[];
   reactions?: MessageReactionUI[];
+  poll?: PollDataUI | null;
 }
 
 export interface ConversationUI {
@@ -109,10 +123,10 @@ export interface StudyResourceUI {
   fileName: string;
   fileType: string | null;
   fileSizeKb: number | null;
-  ogTitle?: string | null;
-  ogDescription?: string | null;
-  ogImage?: string | null;
-  tags?: string[];
+  resourceType: string | null;
+  ogTitle: string | null;
+  ogImage: string | null;
+  ogDescription: string | null;
   createdAt: string;
   updatedAt: string;
   profiles?: { fullName: string; avatarUrl: string | null };
