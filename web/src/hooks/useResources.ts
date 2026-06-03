@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useCallback } from "react";
+import { useResourcesStore } from "@/store/useResourcesStore";
 import { deps } from "@/store/deps";
 
 interface Resource {
@@ -22,136 +23,46 @@ interface Resource {
   subjects?: { name: string };
 }
 
-interface UseResourcesState {
-  resources: Resource[];
-  isLoading: boolean;
-  error: string | null;
-}
-
-/**
- * Hook para gestionar recursos de estudio
- *
- * @returns {Object} Estado y métodos de recursos
- * @returns {Resource[]} resources - Lista de recursos
- * @returns {boolean} isLoading - Estado de carga
- * @returns {string|null} error - Mensaje de error
- * @returns {Function} loadResources - Carga los recursos
- * @returns {Function} uploadResource - Sube un nuevo recurso
- * @returns {Function} deleteResource - Elimina un recurso
- * @returns {Function} refresh - Recarga los recursos
- *
- * @example
- * const { resources, uploadResource, deleteResource } = useResources();
- * await loadResources(subjectId);
- * await uploadResource({ title: "Apuntes", file });
- */
 interface LoadResourcesOptions {
   subjectId?: string;
   userId?: string;
   type?: string;
 }
 
+/**
+ * Hook para gestionar recursos de estudio respaldado por un store global de Zustand
+ */
 export default function useResources() {
-  const [state, setState] = useState<UseResourcesState>({
-    resources: [],
-    isLoading: false,
-    error: null,
-  });
-  const latestRequestRef = useRef(0);
+  const store = useResourcesStore();
 
   const loadResources = useCallback(
     async (options?: LoadResourcesOptions) => {
-      const requestId = ++latestRequestRef.current;
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
-        const data = options?.userId
-          ? await deps.apiClients.resources.getMyResources(options.userId)
-          : await deps.apiClients.resources.list({
-              subjectId: options?.subjectId,
-              type: options?.type,
-            });
-        if (requestId !== latestRequestRef.current) return;
-
-        const resources = (data as any[]).map((r: any) => ({
-          id: r.id,
-          userId: r.uploaderUserId ?? r.userId,
-          programId: r.programId,
-          subjectId: r.subjectId,
-          title: r.title,
-          description: r.description ?? null,
-          fileUrl: r.url ?? r.fileUrl,
-          fileName: r.fileName ?? r.title,
-          fileType: r.fileType ?? r.type ?? null,
-          fileSizeKb: r.fileSizeKb ?? null,
-          resourceType: r.resourceType ?? r.fileType ?? null,
-          ogTitle: r.ogTitle ?? null,
-          ogImage: r.ogImage ?? null,
-          ogDescription: r.ogDescription ?? null,
-          createdAt: typeof r.createdAt === "string" ? r.createdAt : r.createdAt?.toISOString?.() ?? "",
-          updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : r.updatedAt?.toISOString?.() ?? "",
-          profiles: r.profiles ?? undefined,
-          subjects: r.subjects ?? undefined,
-        }));
-
-        setState({ resources, isLoading: false, error: null });
+        await store.loadResources(options);
       } catch (err) {
-        if (requestId !== latestRequestRef.current) return;
-        const errorMessage =
-          err instanceof Error ? err.message : "Error cargando recursos";
         console.error("Error loading resources:", err);
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: errorMessage,
-        }));
       }
     },
-    []
+    [store.loadResources]
   );
 
   const uploadResource = useCallback(
-    async (_data: FormData | Partial<Resource>) => {
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
-      try {
-        // Upload/create is handled by SubirRecursoPage flow with StorageService + ResourcesClient.create.
-        setState((prev) => ({ ...prev, isLoading: false }));
-        return null;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Error subiendo recurso";
-        console.error("Error uploading resource:", err);
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: errorMessage,
-        }));
-        throw err;
-      }
+    async (_data: any) => {
+      // Upload/create is handled by SubirRecursoPage flow
+      return null;
     },
     []
   );
 
   const deleteResource = useCallback(async (resourceId: string) => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       await deps.apiClients.resources.delete(resourceId);
-      setState((prev) => ({
-        ...prev,
-        resources: prev.resources.filter((r) => r.id !== resourceId),
-        isLoading: false,
-      }));
+      store.removeResource(resourceId);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Error eliminando recurso";
       console.error("Error deleting resource:", err);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage,
-      }));
       throw err;
     }
-  }, []);
+  }, [store.removeResource]);
 
   const refresh = useCallback(
     (options?: LoadResourcesOptions) => {
@@ -160,10 +71,32 @@ export default function useResources() {
     [loadResources]
   );
 
+  // Map the resources from the store to ensure backward compatibility with UI components
+  const mappedResources: Resource[] = store.resources.map((r: any) => ({
+    id: r.id,
+    userId: r.uploaderUserId ?? r.userId ?? "",
+    programId: r.programId ?? "",
+    subjectId: r.subjectId ?? "",
+    title: r.title ?? "",
+    description: r.description ?? null,
+    fileUrl: r.url ?? r.fileUrl ?? "",
+    fileName: r.fileName ?? r.title ?? "",
+    fileType: r.fileType ?? r.type ?? null,
+    fileSizeKb: r.fileSizeKb ?? null,
+    resourceType: r.resourceType ?? r.fileType ?? null,
+    ogTitle: r.ogTitle ?? null,
+    ogImage: r.ogImage ?? null,
+    ogDescription: r.ogDescription ?? null,
+    createdAt: typeof r.createdAt === "string" ? r.createdAt : r.createdAt?.toISOString?.() ?? "",
+    updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : r.updatedAt?.toISOString?.() ?? "",
+    profiles: r.profiles ?? undefined,
+    subjects: r.subjects ?? undefined,
+  }));
+
   return {
-    resources: state.resources,
-    isLoading: state.isLoading,
-    error: state.error,
+    resources: mappedResources,
+    isLoading: store.isLoading,
+    error: store.error,
     loadResources,
     uploadResource,
     deleteResource,

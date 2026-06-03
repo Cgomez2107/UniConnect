@@ -18,6 +18,8 @@ export function createNotificationStore(deps, subject = notificationSubject) {
         // Add notification
         addNotification(notification) {
             const current = get();
+            if (current.notifications.some((n) => n.id === notification.id))
+                return;
             set((state) => ({
                 notifications: [notification, ...state.notifications],
                 unreadCount: !notification.read ? state.unreadCount + 1 : state.unreadCount,

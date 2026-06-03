@@ -30,3 +30,9 @@ export { default as useAsync } from "./useAsync";
 export { usePostulationForm } from "./usePostulationForm";
 export { useEventSubscription } from "./useEventSubscription";
 export { useNewEventObserver } from "./useNewEventObserver";
+export { useGlobalSync } from "./useGlobalSync";
+export { useForumSync } from "./useForumSync";
+export { useEventsSync } from "./useEventsSync";
+
+
+

@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
-import eventsService from "@/lib/services/events.service";
+import { useCallback } from "react";
+import { useEventsStore } from "@/store/useEventsStore";
+import eventsService, { mapEvent } from "@/lib/services/events.service";
 import { CampusEventUI } from "@/types/ui";
 
 interface CreateEventPayload {
@@ -10,133 +11,65 @@ interface CreateEventPayload {
   location: string;
 }
 
-interface UseEventsState {
-  events: CampusEventUI[];
-  isLoading: boolean;
-  error: string | null;
-}
-
 /**
- * Hook para gestionar eventos del campus
- *
- * @returns {Object} Estado y métodos de eventos
- * @returns {Event[]} events - Lista de eventos
- * @returns {boolean} isLoading - Estado de carga
- * @returns {string|null} error - Mensaje de error
- * @returns {Function} loadEvents - Carga los eventos
- * @returns {Function} createEvent - Crea un nuevo evento
- * @returns {Function} updateEvent - Actualiza un evento
- * @returns {Function} deleteEvent - Elimina un evento
- * @returns {Function} refresh - Recarga los eventos
- *
- * @example
- * const { events, createEvent, loadEvents } = useEvents();
- * await loadEvents();
- * await createEvent({ title: "Charla", description: "...", startDate: "..." });
+ * Hook para gestionar eventos del campus respaldado por un store global de Zustand
  */
 export default function useEvents() {
-  const [state, setState] = useState<UseEventsState>({
-    events: [],
-    isLoading: false,
-    error: null,
-  });
+  const store = useEventsStore();
 
   const loadEvents = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const data = await eventsService.listEvents();
-      setState({ events: data as CampusEventUI[], isLoading: false, error: null });
+      await store.loadEvents();
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Error cargando eventos";
       console.error("Error loading events:", err);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage,
-      }));
     }
-  }, []);
+  }, [store.loadEvents]);
 
   const createEvent = useCallback(async (payload: CreateEventPayload) => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       const event = await eventsService.createEvent(payload as any);
-      setState((prev) => ({
-        ...prev,
-        events: [...prev.events, event as CampusEventUI],
-        isLoading: false,
-      }));
+      store.addEvent(event as any);
       return event;
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Error creando evento";
       console.error("Error creating event:", err);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage,
-      }));
       throw err;
     }
-  }, []);
+  }, [store.addEvent]);
 
   const updateEvent = useCallback(
     async (eventId: string, payload: Partial<CreateEventPayload>) => {
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
         const updated = await eventsService.updateEvent(eventId, payload as any);
-        setState((prev) => ({
-          ...prev,
-          events: prev.events.map((e) => (e.id === eventId ? updated as CampusEventUI : e)),
-          isLoading: false,
-        }));
+        store.updateEvent(updated as any);
         return updated;
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Error actualizando evento";
         console.error("Error updating event:", err);
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: errorMessage,
-        }));
         throw err;
       }
     },
-    []
+    [store.updateEvent]
   );
 
   const deleteEvent = useCallback(async (eventId: string) => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       await eventsService.deleteEvent(eventId);
-      setState((prev) => ({
-        ...prev,
-        events: prev.events.filter((e) => e.id !== eventId),
-        isLoading: false,
-      }));
+      store.removeEvent(eventId);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Error eliminando evento";
       console.error("Error deleting event:", err);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage,
-      }));
       throw err;
     }
-  }, []);
+  }, [store.removeEvent]);
 
   const refresh = useCallback(() => {
     return loadEvents();
   }, [loadEvents]);
 
+  const mappedEvents = store.events.map(mapEvent);
+
   return {
-    events: state.events,
-    isLoading: state.isLoading,
-    error: state.error,
+    events: mappedEvents,
+    isLoading: store.isLoading,
+    error: store.error,
     loadEvents,
     createEvent,
     updateEvent,

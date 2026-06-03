@@ -41,6 +41,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import { fetchNotifications } from "./lib/services/notifications.service";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
+import { useGlobalSync } from "./hooks/useGlobalSync";
 import "./App.css";
 
 function PrivateRoute({
@@ -90,6 +91,7 @@ function App() {
   }, [hydrate]);
 
   useRealtimeNotifications();
+  useGlobalSync();
 
   useEffect(() => {
     if (!isAuthenticated) return;

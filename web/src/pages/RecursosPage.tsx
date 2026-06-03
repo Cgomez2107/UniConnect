@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useAcademicFilter } from "@uniconnect/shared-hooks";
-import { deps } from "@/store/deps";
 import useResources from "@/hooks/useResources";
 import useSubjectOptions from "@/hooks/useSubjectOptions";
 import { SubjectFilter } from "@/components/shared/SubjectFilter";
@@ -22,7 +21,7 @@ export function RecursosPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
-  const { resources = [], isLoading = false, error = null, refresh } = useResources() as any;
+  const { resources = [], isLoading = false, error = null, refresh, deleteResource } = useResources() as any;
   const filter = useAcademicFilter("recursos");
   const [activeTab, setActiveTab] = useState<"todos" | "mis-recursos">("todos");
   const [selectedType, setSelectedType] = useState<string>(searchParams.get("type") ?? "");
@@ -70,8 +69,7 @@ export function RecursosPage() {
   const handleDelete = async (id: string) => {
     if (confirm("¿Deseas eliminar este recurso?")) {
       try {
-        await deps.apiClients.resources.delete(id);
-        refresh();
+        await deleteResource(id);
       } catch (err) {
         console.error("Error deleting resource:", err);
       }

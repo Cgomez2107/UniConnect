@@ -7,7 +7,7 @@ export interface ForumQuestion {
   authorId: string;
   title: string;
   body: string;
-  status: "active" | "solved";
+  status: "active" | "solved" | "closed";
   answerCount: number;
   voteCount: number;
   userVote?: "upvote" | "downvote" | null;
@@ -20,7 +20,7 @@ export interface ForumQuestionSummary {
   subjectId: string;
   authorId: string;
   title: string;
-  status: "active" | "solved";
+  status: "active" | "solved" | "closed";
   answerCount: number;
   voteCount: number;
   createdAt: string;

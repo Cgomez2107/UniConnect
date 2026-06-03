@@ -5,6 +5,7 @@ import profilesService from "@/lib/services/profiles.service";
 import resourcesService from "@/lib/services/resources.service";
 import { uploadResourceFile } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
+import { useResourcesStore } from "@/store/useResourcesStore";
 import type { UserProgram } from "@/types";
 
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -50,6 +51,7 @@ function formatSize(bytes: number): string {
 export function SubirRecursoPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const addResource = useResourcesStore((s) => s.addResource);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -155,7 +157,7 @@ export function SubirRecursoPage() {
         resourceType = "link";
       }
 
-      await resourcesService.uploadResource({
+      const uploaded = await resourcesService.uploadResource({
         subjectId: selectedSubjectId,
         title: title.trim(),
         description: description.trim() || undefined,
@@ -167,6 +169,9 @@ export function SubirRecursoPage() {
         programId,
         resourceType: uploadMode === "file" ? "file" : resourceType,
       });
+
+      // Inject into global store for immediate visibility across the app
+      if (uploaded) addResource(uploaded as any);
 
       navigate("/recursos");
     } catch (err: any) {

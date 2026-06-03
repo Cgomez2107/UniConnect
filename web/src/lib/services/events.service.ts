@@ -5,7 +5,7 @@
 import { deps } from "@/store/deps";
 import type { CampusEventUI } from "@/types/ui";
 
-function mapEvent(e: any): CampusEventUI {
+export function mapEvent(e: any): CampusEventUI {
   return {
     id: e.id,
     title: e.title,

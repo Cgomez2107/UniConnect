@@ -14,6 +14,10 @@ export interface StoreDeps {
     auth: AuthClient;
     messaging: BaseMessagingClient;
     messagingRealtime: RealtimeChatDecorator;
+    studyGroups?: any;
+    resources?: any;
+    events?: any;
+    forum?: any;
   };
   storage: IStorageAdapter;
   logger?: Logger;

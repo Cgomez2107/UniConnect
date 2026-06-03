@@ -1,12 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle, MessageSquare } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useForumStore } from "@/store/useForumStore";
 import { forumService } from "@/lib/forum/forum.service";
 import { ordenarRespuestas } from "@/lib/forum/orderingLogic";
 import { AnswerItem } from "@/components/forum/AnswerItem";
 import { AnswerForm } from "@/components/forum/AnswerForm";
-import type { ForumQuestion, ForumAnswer } from "@uniconnect/shared-api";
+import type { ForumAnswer } from "@uniconnect/shared-api";
+import { useForumSync } from "@/hooks";
 
 export function ForumQuestionPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,29 +16,24 @@ export function ForumQuestionPage() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin";
 
-  const [question, setQuestion] = useState<ForumQuestion | null>(null);
-  const [answers, setAnswers] = useState<ForumAnswer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [questionUserVote, setQuestionUserVote] = useState<"upvote" | "downvote" | null>(null);
+  // Subscribe to real-time events for this question
+  useForumSync(null, id || null);
 
-  const loadQuestion = async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const detail = await forumService.getQuestionDetail(id);
-      setQuestion(detail.question);
-      setAnswers(detail.answers);
-      setQuestionUserVote(detail.question.userVote ?? null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al cargar la pregunta.");
-    } finally {
-      setLoading(false);
+  // Consume from global store
+  const loadQuestionDetail = useForumStore((s) => s.loadQuestionDetail);
+  const question = useForumStore((s) => s.activeQuestion);
+  const answers = useForumStore((s) => s.answers);
+  const isLoading = useForumStore((s) => s.isLoading);
+  const error = useForumStore((s) => s.error);
+  const updateQuestion = useForumStore((s) => s.updateQuestion);
+  const updateAnswer = useForumStore((s) => s.updateAnswer);
+  const addAnswer = useForumStore((s) => s.addAnswer);
+
+  useEffect(() => {
+    if (id) {
+      loadQuestionDetail(id);
     }
-  };
-
-  useEffect(() => { loadQuestion(); }, [id]);
+  }, [id, loadQuestionDetail]);
 
   const handleVote = async (targetId: string, targetType: "question" | "answer") => {
     try {
@@ -46,19 +43,16 @@ export function ForumQuestionPage() {
         voteType: "upvote",
       });
       if (targetType === "question" && question) {
-        setQuestion({ ...question, voteCount: result.voteCount });
-        setQuestionUserVote((prev) => (prev === "upvote" ? null : "upvote"));
+        updateQuestion({ ...question, voteCount: result.voteCount } as any);
       } else {
-        setAnswers((prev) =>
-          prev.map((a) => {
-            if (a.id !== targetId) return a;
-            const userVote = a.userVote === "upvote" ? null : "upvote" as const;
-            return { ...a, voteCount: result.voteCount, userVote };
-          })
-        );
+        const target = answers.find((a) => a.id === targetId);
+        if (target) {
+          const newUserVote = target.userVote === "upvote" ? null : ("upvote" as const);
+          updateAnswer({ ...target, voteCount: result.voteCount, userVote: newUserVote } as any);
+        }
       }
     } catch {
-      // handled by service
+      // error handled by service
     }
   };
 
@@ -70,7 +64,8 @@ export function ForumQuestionPage() {
     if (!id) return;
     try {
       await forumService.markAsSolution(id, answerId);
-      await loadQuestion();
+      // Reload detail to get accurate solution state from backend
+      await loadQuestionDetail(id);
     } catch {
       // handled
     }
@@ -80,7 +75,7 @@ export function ForumQuestionPage() {
     if (!id) return;
     try {
       await forumService.pinAnswer(id, answerId);
-      await loadQuestion();
+      await loadQuestionDetail(id);
     } catch {
       // handled
     }
@@ -89,19 +84,23 @@ export function ForumQuestionPage() {
   const handleSubmitAnswer = async (body: string) => {
     if (!id) return;
     const newAnswer = await forumService.createAnswer(id, { body });
-    setAnswers((prev) => [...prev, newAnswer]);
+    // Optimistic inject — Supabase Realtime will also fire, but addAnswer deduplicates
+    addAnswer(newAnswer as any);
   };
 
-  const orderedAnswers = useMemo(
-    () => ordenarRespuestas(answers.map((a) => ({
-      ...a,
-      isPinned: a.isPinned ?? false,
-      isSolution: a.isSolution ?? false,
-    }))),
-    [answers],
+  const normalizedAnswers: ForumAnswer[] = answers.map((a) => ({
+    ...a,
+    isPinned: a.isPinned ?? false,
+    isSolution: a.isSolution ?? false,
+  }));
+
+  const orderedAnswers: ForumAnswer[] = useMemo(
+    () => ordenarRespuestas(normalizedAnswers),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [answers]
   );
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-50 animate-fade-in">
         <div className="max-w-3xl mx-auto px-4 py-8">
@@ -148,13 +147,20 @@ export function ForumQuestionPage() {
             <button
               onClick={() => handleVote(question.id, "question")}
               className={`p-1.5 rounded-full transition-all ${
-                questionUserVote === "upvote"
+                question.userVote === "upvote"
                   ? "bg-primary-100 text-primary-600"
                   : "text-neutral-400 hover:text-primary-500 hover:bg-neutral-100"
               }`}
               aria-label="Votar"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill={questionUserVote === "upvote" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill={question.userVote === "upvote" ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M18 15l-6-6-6 6" />
               </svg>
             </button>
