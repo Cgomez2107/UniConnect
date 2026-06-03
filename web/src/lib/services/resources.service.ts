@@ -51,12 +51,36 @@ const resourcesService = {
     programId?: string;
     resourceType?: string;
   }) {
-    const resource = await deps.apiClients.resources.create(payload);
+    const createPayload: any = {
+      subjectId: payload.subjectId,
+      title: payload.title,
+      description: payload.description,
+      fileType: payload.fileType,
+      fileSizeKb: payload.fileSizeKb,
+      programId: payload.programId,
+      resourceType: payload.resourceType,
+    };
+
+    if (payload.url) {
+      createPayload.url = payload.url;
+      createPayload.fileUrl = payload.url;
+      createPayload.fileName = payload.fileName ?? payload.url;
+    } else if (payload.fileUrl) {
+      createPayload.fileUrl = payload.fileUrl;
+      createPayload.fileName = payload.fileName ?? payload.fileUrl;
+    }
+
+    const resource = await deps.apiClients.resources.create(createPayload);
     return mapResource(resource);
   },
 
   async deleteResource(id: string) {
     await deps.apiClients.resources.delete(id);
+  },
+
+  async updateResource(id: string, payload: { title?: string; description?: string | null }) {
+    const resource = await deps.apiClients.resources.update(id, payload);
+    return mapResource(resource);
   },
 };
 

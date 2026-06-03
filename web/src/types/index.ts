@@ -276,17 +276,6 @@ export interface CreateStudyResourcePayload {
   ogDescription?: string;
 }
 
-export interface CreateStudyResourcePayload {
-  subjectId: string;
-  title: string;
-  description?: string;
-  fileUrl: string;
-  fileName: string;
-  fileType?: string;
-  fileSizeKb?: number;
-  programId?: string;
-}
-
 // ============================================================================
 // BÚSQUEDA DE COMPAÑEROS
 // ============================================================================

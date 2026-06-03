@@ -15,6 +15,19 @@ interface StudySessionUI {
   cancelledAt?: string | null;
 }
 
+function mapSessionDTOtoUI(dto: any): StudySessionUI {
+  return {
+    id: dto.id,
+    groupId: dto.groupId ?? dto.group_id ?? "",
+    title: dto.title,
+    description: dto.description ?? "",
+    startTime: dto.startTime ?? dto.start_time ?? "",
+    endTime: dto.endTime ?? dto.end_time ?? "",
+    rrule: dto.rrule ?? null,
+    cancelledAt: dto.cancelledAt ?? dto.cancelled_at ?? null,
+  };
+}
+
 const DAY_NAMES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const MONTH_NAMES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -64,7 +77,7 @@ export function StudyCalendarPage() {
             startOfMonth,
             endOfMonth,
           );
-          allSessions.push(...groupSessions);
+          allSessions.push(...groupSessions.map(mapSessionDTOtoUI));
         } catch {
           // skip groups without sessions
         }

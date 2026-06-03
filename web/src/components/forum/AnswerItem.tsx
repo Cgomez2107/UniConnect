@@ -10,7 +10,7 @@ interface AnswerItemProps {
   createdAt: string;
   currentUserId?: string;
   isAdmin: boolean;
-  userVote?: "upvote" | null;
+  userVote?: "upvote" | "downvote" | null;
   onVote: (answerId: string) => Promise<void>;
   onMarkSolution: (answerId: string) => Promise<void>;
   onPinAnswer?: (answerId: string) => Promise<void>;

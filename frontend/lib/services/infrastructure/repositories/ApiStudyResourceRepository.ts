@@ -72,6 +72,11 @@ function mapResource(raw: ApiResource): StudyResource {
 }
 
 export class ApiStudyResourceRepository implements IStudyResourceRepository {
+  async getAll(): Promise<StudyResource[]> {
+    const data = await fetchApi<ApiResource[]>("/resources");
+    return (data ?? []).map(mapResource);
+  }
+
   async getById(id: string): Promise<StudyResource | null> {
     try {
       const data = await fetchApi<ApiResource>(`/resources/${id}`);
@@ -117,6 +122,10 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
       file_name: string;
       file_type?: string;
       file_size_kb?: number;
+      resource_type?: string;
+      og_title?: string | null;
+      og_description?: string | null;
+      og_image?: string | null;
     },
   ): Promise<StudyResource> {
     void userId;
@@ -132,7 +141,10 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
         fileName: payload.file_name,
         fileType: payload.file_type,
         fileSizeKb: payload.file_size_kb,
-        resourceType: (payload as any).resource_type ?? undefined,
+        resourceType: payload.resource_type,
+        ogTitle: payload.og_title,
+        ogDescription: payload.og_description,
+        ogImage: payload.og_image,
       }),
     });
 
