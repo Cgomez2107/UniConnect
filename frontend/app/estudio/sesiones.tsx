@@ -329,7 +329,7 @@ export default function StudySessionsScreen() {
               Cancelar sesión
             </Text>
             <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 20 }}>
-              ¿Estás seguro de cancelar "{selectedSession?.title}"? Esta acción
+              ¿Estás seguro de cancelar &quot;{selectedSession?.title}&quot;? Esta acción
               solo afecta a esta sesión, no al resto de la serie.
             </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>

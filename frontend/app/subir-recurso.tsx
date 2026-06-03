@@ -21,7 +21,6 @@ import { useUploadResourceForm } from "@/hooks/application/useUploadResourceForm
 import { DIContainer } from "@/lib/services/di/container"
 import { useAuthStore } from "@/store/useAuthStore"
 import { router } from "expo-router"
-import { useColorScheme } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import {
   ActivityIndicator,
@@ -32,6 +31,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native"
 import { useState } from "react"
 

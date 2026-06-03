@@ -79,7 +79,10 @@ const resourcesService = {
   },
 
   async updateResource(id: string, payload: { title?: string; description?: string | null }) {
-    const resource = await deps.apiClients.resources.update(id, payload);
+    const resource = await deps.apiClients.resources.update(id, {
+      title: payload.title,
+      description: payload.description ?? undefined,
+    });
     return mapResource(resource);
   },
 };
