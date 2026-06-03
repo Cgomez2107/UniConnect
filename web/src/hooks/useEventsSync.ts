@@ -24,7 +24,8 @@ export function useEventsSync() {
     const maxAttempts = 5;
 
     const connect = () => {
-      const token = localStorage.getItem("accessToken");
+      const raw = localStorage.getItem("uniconnect-auth-session");
+      const token = raw ? (JSON.parse(raw)?.state?.accessToken ?? null) : null;
       if (!token) return;
 
       const ws = new WebSocket(`${WS_URL}/ws?token=${token}`);
