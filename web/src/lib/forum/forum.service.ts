@@ -47,4 +47,8 @@ export const forumService = {
   async markAsSolution(questionId: string, answerId: string): Promise<void> {
     return forumClient.markAsSolution(questionId, { answerId });
   },
+
+  async pinAnswer(questionId: string, answerId: string): Promise<void> {
+    return forumClient.pinAnswer(questionId, answerId);
+  },
 };

@@ -13,11 +13,16 @@ export interface CreateStudyResourcePayload {
   subjectId: string;
   title: string;
   description?: string;
-  fileUrl: string;
-  fileName: string;
+  url?: string;
+  fileUrl?: string;
+  fileName?: string;
   fileType?: string;
   fileSizeKb?: number;
   programId?: string;
+  resourceType?: string;
+  ogTitle?: string;
+  ogImage?: string;
+  ogDescription?: string;
 }
 
 export interface UpdateStudyResourcePayload {
@@ -30,6 +35,7 @@ export interface ListResourcesFilters {
   programId?: string;
   userId?: string;
   search?: string;
+  type?: string;
   page?: number;
   perPage?: number;
 }
@@ -47,6 +53,7 @@ export class ResourcesClient extends BaseClient {
         ...(filters?.subjectId !== undefined && { subjectId: filters.subjectId }),
         ...(filters?.userId !== undefined && { userId: filters.userId }),
         ...(filters?.search !== undefined && { search: filters.search }),
+        ...(filters?.type !== undefined && { type: filters.type }),
         ...(filters?.programId !== undefined && { program_id: filters.programId }),
         ...(filters?.page !== undefined && { page: filters.page }),
         ...(filters?.perPage !== undefined && { limit: filters.perPage }),
@@ -79,11 +86,16 @@ export class ResourcesClient extends BaseClient {
         subjectId: payload.subjectId,
         title: payload.title,
         description: payload.description,
+        url: payload.url,
         fileUrl: payload.fileUrl,
         fileName: payload.fileName,
         fileType: payload.fileType,
         fileSizeKb: payload.fileSizeKb,
         programId: payload.programId,
+        resourceType: payload.resourceType,
+        ogTitle: payload.ogTitle,
+        ogImage: payload.ogImage,
+        ogDescription: payload.ogDescription,
       },
     });
     return mapStudyResourceDtoToDomain(response.data);

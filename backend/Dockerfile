@@ -55,6 +55,9 @@ FROM node:22-alpine AS runner
 
 ENV NODE_ENV=production
 
+ARG COMMIT_SHA
+ENV COMMIT_SHA=$COMMIT_SHA
+
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 

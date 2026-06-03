@@ -15,6 +15,8 @@ export interface StudyRequest {
   readonly facultyName?: string;
   readonly applicationsCount?: number;
   readonly hasPendingTransfer?: boolean;
+  readonly pendingTransferId?: string;
+  readonly pendingTransferToUserId?: string;
   readonly author?: {
     readonly fullName: string;
     readonly avatarUrl: string | null;

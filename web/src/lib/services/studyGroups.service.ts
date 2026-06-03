@@ -73,8 +73,8 @@ const studyGroupsService = {
     return deps.apiClients.studyGroups.rejectTransfer(transferId);
   },
 
-  async cancelMyApplication(requestId: string) {
-    return deps.apiClients.studyGroups.cancel(requestId);
+  async cancelMyApplication(applicationId: string) {
+    return deps.apiClients.studyGroups.cancelMyApplication(applicationId);
   },
 
   async getGroupMessages(groupId: string) {
@@ -86,13 +86,14 @@ const studyGroupsService = {
     return result.data?.data ?? result.data;
   },
 
-  async sendGroupMessage(groupId: string, content: string, options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string; mentions?: { userId: string; name: string }[] }) {
+  async sendGroupMessage(groupId: string, content: string, options?: { replyToMessageId?: string; mediaUrl?: string; mediaType?: string; mentions?: { userId: string; name: string }[]; poll?: any }) {
     return deps.apiClients.studyGroups.sendMessage(groupId, {
       content,
       ...(options?.replyToMessageId && { replyToMessageId: options.replyToMessageId }),
       ...(options?.mediaUrl && { mediaUrl: options.mediaUrl }),
       ...(options?.mediaType && { mediaType: options.mediaType }),
       ...(options?.mentions && { mentions: options.mentions }),
+      ...(options?.poll && { poll: options.poll }),
     });
   },
 };

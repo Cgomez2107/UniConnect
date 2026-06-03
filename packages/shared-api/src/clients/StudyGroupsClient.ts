@@ -33,6 +33,13 @@ export interface SendGroupMessagePayload {
   mediaUrl?: string;
   mediaType?: string;
   mentions?: { userId: string; name: string }[];
+  poll?: {
+    question: string;
+    options: (string | { text: string; votes?: string[] })[];
+    isOpen: boolean;
+    closesAt: string | null;
+    createdAt: string;
+  };
 }
 
 export interface ListApplicationsParams {
@@ -151,6 +158,13 @@ export class StudyGroupsClient extends BaseClient {
     });
   }
 
+  async cancelMyApplication(applicationId: string): Promise<void> {
+    await this.transport.request({
+      method: "POST",
+      url: `/study-groups/applications/${applicationId}/cancel`,
+    });
+  }
+
   async requestTransfer(groupId: string, targetUserId: string): Promise<{ id: string }> {
     const response = await this.transport.request<{ id: string }>({
       method: "POST",
@@ -189,6 +203,7 @@ export class StudyGroupsClient extends BaseClient {
     if (payload.mediaUrl) body.mediaUrl = payload.mediaUrl;
     if (payload.mediaType) body.mediaType = payload.mediaType;
     if (payload.mentions) body.mentions = payload.mentions;
+    if (payload.poll) body.poll = payload.poll;
 
     const response = await this.transport.request<MessageDTO>({
       method: "POST",

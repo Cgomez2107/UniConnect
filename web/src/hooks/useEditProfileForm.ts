@@ -65,6 +65,7 @@ export default function useEditProfileForm() {
 
   const [availablePrograms, setAvailablePrograms] = useState<Program[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
+  const [subjectNameMap, setSubjectNameMap] = useState<Record<string, string>>({});
   const [subjectSearch, setSubjectSearch] = useState("");
 
   const initialProgramId = useRef("");
@@ -100,14 +101,22 @@ export default function useEditProfileForm() {
           bio: profileData?.bio || "",
           semester: profileData?.semester ? String(profileData.semester) : "",
           avatarPreview: profileData?.avatarUrl || user?.profileImage || "",
-          selectedProgramId: primaryProgram?.programId || "",
+          selectedProgramId: primaryProgram?.id || "",
           selectedSubjectIds: currentSubjects,
         }));
 
-        initialProgramId.current = primaryProgram?.programId || "";
+        initialProgramId.current = primaryProgram?.id || "";
         initialSubjectIds.current = currentSubjects;
 
         setAvailablePrograms(allPrograms);
+
+        const nameMap: Record<string, string> = {};
+        for (const s of subjectsData) {
+          if (s.subjectId && s.subject?.name) {
+            nameMap[s.subjectId] = s.subject.name;
+          }
+        }
+        setSubjectNameMap(nameMap);
       } catch (err) {
         if (!cancelled) setError("Error cargando datos del formulario");
       } finally {
@@ -338,6 +347,7 @@ export default function useEditProfileForm() {
     isFormValid,
     availablePrograms,
     availableSubjects: filteredSubjects,
+    subjectNameMap,
     subjectSearch,
     setSubjectSearch,
     programChangeConfirm,

@@ -14,6 +14,7 @@ export class ResourcesClient extends BaseClient {
                 ...(filters?.subjectId !== undefined && { subjectId: filters.subjectId }),
                 ...(filters?.userId !== undefined && { userId: filters.userId }),
                 ...(filters?.search !== undefined && { search: filters.search }),
+                ...(filters?.type !== undefined && { type: filters.type }),
                 ...(filters?.programId !== undefined && { program_id: filters.programId }),
                 ...(filters?.page !== undefined && { page: filters.page }),
                 ...(filters?.perPage !== undefined && { limit: filters.perPage }),
@@ -47,6 +48,10 @@ export class ResourcesClient extends BaseClient {
                 fileType: payload.fileType,
                 fileSizeKb: payload.fileSizeKb,
                 programId: payload.programId,
+                resourceType: payload.resourceType,
+                ogTitle: payload.ogTitle,
+                ogImage: payload.ogImage,
+                ogDescription: payload.ogDescription,
             },
         });
         return mapStudyResourceDtoToDomain(response.data);

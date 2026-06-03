@@ -68,10 +68,18 @@ export function useForumQuestion(questionId?: string) {
   const castVote = async (targetType: "question" | "answer", targetId: string) => {
     const result = await container.getVoteForum().execute(targetType, targetId, "upvote");
     if (targetType === "question" && question) {
-      setQuestion({ ...question, vote_count: result.voteCount });
+      setQuestion({
+        ...question,
+        vote_count: result.voteCount,
+        user_vote: question.user_vote === "upvote" ? null : "upvote" as const,
+      });
     } else {
       setAnswers((prev) =>
-        prev.map((a) => (a.id === targetId ? { ...a, vote_count: result.voteCount } : a))
+        prev.map((a) => {
+          if (a.id !== targetId) return a;
+          const userVote = a.user_vote === "upvote" ? null : "upvote" as const;
+          return { ...a, vote_count: result.voteCount, user_vote: userVote };
+        })
       );
     }
   };
@@ -82,13 +90,22 @@ export function useForumQuestion(questionId?: string) {
     await loadDetail();
   };
 
-  const orderedAnswers = useMemo(() => {
-    return [...answers].sort((a, b) => {
+  const pinAnswer = async (answerId: string) => {
+    if (!questionId) return;
+    await container.getPinForumAnswer().execute(questionId, answerId);
+    await loadDetail();
+  };
+
+  const orderedAnswers = useMemo(() =>
+    [...answers].sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
       if (a.is_solution && !b.is_solution) return -1;
       if (!a.is_solution && b.is_solution) return 1;
       return b.vote_count - a.vote_count;
-    });
-  }, [answers]);
+    }),
+    [answers],
+  );
 
   return {
     question,
@@ -98,6 +115,7 @@ export function useForumQuestion(questionId?: string) {
     createAnswer,
     castVote,
     markAsSolution,
+    pinAnswer,
     refresh: loadDetail,
   };
 }

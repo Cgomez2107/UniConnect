@@ -35,9 +35,11 @@ function makeAnswer(overrides?: Partial<ForumAnswer>): ForumAnswer {
     id: ANSWER_ID,
     questionId: QUESTION_ID,
     authorId: USER_C,
+    authorName: 'User C',
     body: "La respuesta es 42.",
     voteCount: 1,
     isSolution: false,
+    isPinned: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -65,6 +67,7 @@ describe("V05 — MarcarComoSolucion", () => {
       create: jest.fn<any>(),
       findById: jest.fn<any>(),
       findByQuestion: jest.fn<any>(),
+      pinAnswer: jest.fn<any>(),
       markAsSolution: jest.fn<any>(),
     };
 

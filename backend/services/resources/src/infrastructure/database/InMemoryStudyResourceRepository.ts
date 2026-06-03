@@ -83,7 +83,6 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
     if (!existing) {
       return null;
     }
-
     const updated: StudyResource = {
       ...existing,
       title: payload.title?.trim() ? payload.title.trim() : existing.title,
@@ -99,7 +98,6 @@ export class InMemoryStudyResourceRepository implements IStudyResourceRepository
     if (!this.resources.has(id)) {
       return false;
     }
-
     this.resources.delete(id);
     return true;
   }

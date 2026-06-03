@@ -244,7 +244,9 @@ export function GroupDetailPage() {
   const currentMember = members.find((m) => m.userId === user?.id);
   const isAuthor = currentMember?.role === "autor";
 
-  const groupState: GroupState = solicitud.status === "cerrada"
+  const groupState: GroupState = acceptTransferSuccess
+    ? "TransferenciaAceptada"
+    : solicitud.status === "cerrada"
     ? "Disuelto"
     : solicitud.status === "expirada"
       ? "Bloqueado"

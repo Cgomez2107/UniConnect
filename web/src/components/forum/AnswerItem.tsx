@@ -1,17 +1,19 @@
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Pin } from "lucide-react";
 
 interface AnswerItemProps {
   id: string;
   authorName: string;
   body: string;
   voteCount: number;
+  isPinned: boolean;
   isSolution: boolean;
   createdAt: string;
   currentUserId?: string;
   isAdmin: boolean;
-  userVote?: "upvote" | null;
+  userVote?: "upvote" | "downvote" | null;
   onVote: (answerId: string) => Promise<void>;
   onMarkSolution: (answerId: string) => Promise<void>;
+  onPinAnswer?: (answerId: string) => Promise<void>;
 }
 
 export function AnswerItem({
@@ -19,6 +21,7 @@ export function AnswerItem({
   authorName,
   body,
   voteCount,
+  isPinned,
   isSolution,
   createdAt,
   currentUserId,
@@ -26,11 +29,14 @@ export function AnswerItem({
   userVote,
   onVote,
   onMarkSolution,
+  onPinAnswer,
 }: AnswerItemProps) {
   return (
     <div
       className={`rounded-lg border p-4 transition-all ${
-        isSolution
+        isPinned
+          ? "border-yellow-300 bg-yellow-50"
+          : isSolution
           ? "border-green-300 bg-green-50"
           : "border-neutral-200 bg-white"
       }`}
@@ -68,19 +74,35 @@ export function AnswerItem({
                 year: "numeric",
               })}
             </span>
+            {isPinned && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold bg-yellow-100 text-yellow-700 rounded-full">
+                <Pin size={10} />
+                Respuesta del Profesor
+              </span>
+            )}
             {isSolution && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold bg-green-100 text-green-700 rounded-full">
                 <CheckCircle size={10} />
                 Solución
               </span>
             )}
-            {isAdmin && !isSolution && (
-              <button
-                onClick={() => onMarkSolution(id)}
-                className="ml-auto text-[10px] font-semibold text-primary-600 hover:text-primary-700"
-              >
-                Marcar como solución
-              </button>
+            {isAdmin && !isSolution && !isPinned && (
+              <>
+                <button
+                  onClick={() => onMarkSolution(id)}
+                  className="ml-auto text-[10px] font-semibold text-primary-600 hover:text-primary-700"
+                >
+                  Marcar como solución
+                </button>
+                {onPinAnswer && (
+                  <button
+                    onClick={() => onPinAnswer(id)}
+                    className="text-[10px] font-semibold text-yellow-600 hover:text-yellow-700"
+                  >
+                    Fijar respuesta
+                  </button>
+                )}
+              </>
             )}
           </div>
           <p className="text-sm text-neutral-700 whitespace-pre-wrap break-words">

@@ -11,7 +11,7 @@ import type { UpdateResourceDto } from "../dto/UpdateResourceDto.js";
 import type { ResourceCardResponse } from "../dto/ResourceCardResponse.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
-import type { z } from "zod";
+import { checkEditPermission } from "../middlewares/ResourceEditGuard.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 import { sendData, sendJson, sendError } from "../../../../../../shared/http/sendJson.js";
 
@@ -23,12 +23,12 @@ function toCardResponse(resource: StudyResource): ResourceCardResponse {
       description: resource.description ?? null,
       createdAt: resource.createdAt,
       updatedAt: resource.updatedAt,
-      author: resource.profiles
+      profiles: resource.profiles
         ? { fullName: resource.profiles.fullName, avatarUrl: resource.profiles.avatarUrl }
-        : null,
-      subject: resource.subjects
+        : undefined,
+      subjects: resource.subjects
         ? { name: resource.subjects.name }
-        : null,
+        : undefined,
       type: "link",
       url: resource.url ?? null,
       ogTitle: resource.ogTitle ?? null,
@@ -43,12 +43,12 @@ function toCardResponse(resource: StudyResource): ResourceCardResponse {
     description: resource.description ?? null,
     createdAt: resource.createdAt,
     updatedAt: resource.updatedAt,
-    author: resource.profiles
+    profiles: resource.profiles
       ? { fullName: resource.profiles.fullName, avatarUrl: resource.profiles.avatarUrl }
-      : null,
-    subject: resource.subjects
+      : undefined,
+    subjects: resource.subjects
       ? { name: resource.subjects.name }
-      : null,
+      : undefined,
     type: "file",
     fileUrl: resource.fileUrl ?? null,
     fileName: resource.fileName ?? null,
@@ -80,17 +80,16 @@ export class ResourcesController {
       const page = pageRaw ? Math.max(0, Number(pageRaw) - 1) : 0;
       const pageSize = limitRaw ? Math.min(50, Math.max(1, Number(limitRaw))) : 10;
 
-      const resourceTypeRaw = requestUrl.searchParams.get("resourceType");
-      const resourceType = resourceTypeRaw === "file" || resourceTypeRaw === "link" ? resourceTypeRaw : undefined;
+      const resourceType = requestUrl.searchParams.get("type") || undefined;
 
-      const result = await this.listStudyResources.execute({
+            const result = await this.listStudyResources.execute({
         subjectId: requestUrl.searchParams.get("subjectId") ?? undefined,
         userId: requestUrl.searchParams.get("userId") ?? undefined,
         search: requestUrl.searchParams.get("search") ?? undefined,
         resourceType,
         page,
         pageSize,
-      });
+            });
 
       sendData(res, 200, toCardArray(result.rows), { total: result.total, page, pageSize });
     } catch (error) {
@@ -164,12 +163,8 @@ export class ResourcesController {
 
       const body = (req as any).__validatedBody ?? await readJsonBody<CreateResourceDto>(req);
 
-      const resourceType = body.resourceType || (body.url ? "link" : "file");
-
-      if (resourceType !== "file" && resourceType !== "link") {
-        sendError(res, 400, "resourceType debe ser 'file' o 'link'.");
-        return;
-      }
+      const rawType = body.resourceType || (body.url ? "link" : "file");
+      const resourceType = body.url ? "link" : rawType;
 
       const created = await this.createStudyResource.execute({
         actorUserId,
@@ -194,13 +189,13 @@ export class ResourcesController {
 
   async delete(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
     try {
-      const actorUserId = getActorUserId(req);
-      if (!actorUserId) {
+      const permission = checkEditPermission(req);
+      if (!permission) {
         sendError(res, 401, "Token de autenticación requerido.");
         return;
       }
 
-      const deleted = await this.deleteStudyResource.execute(id, actorUserId);
+      const deleted = await this.deleteStudyResource.execute(id, permission.actorUserId, permission.isAdmin);
 
       if (!deleted) {
         sendError(res, 404, "Recurso no encontrado.");
@@ -216,14 +211,14 @@ export class ResourcesController {
 
   async update(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
     try {
-      const actorUserId = getActorUserId(req);
-      if (!actorUserId) {
+      const permission = checkEditPermission(req);
+      if (!permission) {
         sendError(res, 401, "Token de autenticación requerido.");
         return;
       }
 
       const body = await readJsonBody<UpdateResourceDto>(req);
-      const updated = await this.updateStudyResource.execute(id, actorUserId, {
+      const updated = await this.updateStudyResource.execute(id, permission.actorUserId, permission.isAdmin, {
         title: body.title,
         description: body.description,
       });

@@ -45,10 +45,23 @@ export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
       return [subjectId];
     }
 
-    return undefined;
+    return [];
   }, [subjectIdsKey, subjectId]);
 
   const loadPage = useCallback(async (pageToLoad: number, reset = false) => {
+    if (!effectiveSubjectIds.length) {
+      setState((prev) => ({
+        ...prev,
+        requests: [],
+        applications: [],
+        isLoading: false,
+        isLoadingMore: false,
+        error: null,
+        hasMore: false,
+      }));
+      return;
+    }
+
     setState((prev) => ({
       ...prev,
       isLoading: reset ? true : prev.isLoading,
@@ -58,17 +71,15 @@ export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
 
     try {
       let apps: StudyApplication[] = [];
-      const pages = effectiveSubjectIds?.length
-        ? await Promise.all(
-            effectiveSubjectIds.map((id) =>
-              studyGroupsService.listStudyGroups({
-                subjectId: id,
-                page: pageToLoad,
-                limit: PAGE_SIZE,
-              }),
-            ),
-          )
-        : [await studyGroupsService.listStudyGroups({ page: pageToLoad, limit: PAGE_SIZE })];
+      const pages = await Promise.all(
+        effectiveSubjectIds.map((id) =>
+          studyGroupsService.listStudyGroups({
+            subjectId: id,
+            page: pageToLoad,
+            limit: PAGE_SIZE,
+          }),
+        ),
+      );
 
       const data = pages.flat();
 

@@ -4,8 +4,7 @@
   "tasks": {
     "typecheck": {
       "dependsOn": ["^typecheck"],
-      "outputs": ["dist/**"],
-      "cache": false
+      "outputs": []
     },
     "build": {
       "dependsOn": ["^build"],
@@ -13,10 +12,18 @@
     },
     "lint": {
       "dependsOn": ["^lint"],
-      "cache": false
+      "outputs": []
     },
     "test": {
-      "dependsOn": ["^test"],
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:contracts": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
     "dev": {

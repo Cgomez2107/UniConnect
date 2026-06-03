@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import resourcesService from "@/lib/services/resources.service";
+import { useAuthStore } from "@/store/useAuthStore";
 
 function formatFileSize(kb: number | null | undefined): string {
   if (kb == null) return "";
@@ -37,9 +38,18 @@ function getFileIcon(fileType: string | null): string {
 export function RecursoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const user = useAuthStore((s) => s.user);
+  const isEditMode = searchParams.get("editar") === "true";
+
   const [resource, setResource] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -48,7 +58,11 @@ export function RecursoDetallePage() {
       try {
         setLoading(true);
         const data = await resourcesService.getResourceById(id);
-        if (!cancelled) setResource(data);
+        if (!cancelled) {
+          setResource(data);
+          setEditTitle(data?.title || "");
+          setEditDescription(data?.description || "");
+        }
       } catch (err: any) {
         if (!cancelled) {
           if (err?.response?.status === 404) {
@@ -72,10 +86,37 @@ export function RecursoDetallePage() {
   const fileSizeKb = resource?.fileSizeKb ?? resource?.file_size_kb;
   const createdAt = resource?.createdAt || resource?.created_at;
 
+  const isOwner = user?.id === resource?.userId || user?.id === resource?.uploaderUserId || user?.role === "admin";
+
+  const handleSave = async () => {
+    if (!id || !editTitle.trim()) {
+      setSaveError("El título es obligatorio.");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const updated = await resourcesService.updateResource(id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+      });
+      setResource(updated);
+      navigate(`/recursos/${id}`, { replace: true });
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message || err.message || "Error al guardar.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate(`/recursos/${id}`, { replace: true });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-50 animate-fade-in">
-        <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
           <div className="space-y-4">
             <div className="h-8 w-48 skeleton rounded" />
             <div className="h-4 w-32 skeleton rounded" />
@@ -89,7 +130,7 @@ export function RecursoDetallePage() {
   if (fetchError) {
     return (
       <div className="min-h-screen bg-neutral-50 animate-fade-in">
-        <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
           <div className="bg-error-50 border border-error-200 rounded-lg p-4 text-error-700">
             {fetchError}
           </div>
@@ -104,7 +145,7 @@ export function RecursoDetallePage() {
   if (!resource) {
     return (
       <div className="min-h-screen bg-neutral-50 animate-fade-in">
-        <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
           <div className="bg-warning-50 border border-warning-200 rounded-lg p-4 text-warning-700">
             Recurso no encontrado.
           </div>
@@ -116,9 +157,78 @@ export function RecursoDetallePage() {
     );
   }
 
+  if (isEditMode && isOwner) {
+    return (
+      <div className="min-h-screen bg-neutral-50 animate-fade-in">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+          <button
+            onClick={handleCancel}
+            className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700 mb-6 transition-colors"
+          >
+            ← Cancelar
+          </button>
+
+          <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <div className="p-4 sm:p-6">
+              <h1 className="text-lg sm:text-xl font-bold text-neutral-900 mb-6">
+                Editar recurso
+              </h1>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-neutral-700 mb-1">
+                    Título *
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    maxLength={200}
+                    className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-neutral-700 mb-1">
+                    Descripción
+                  </label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    maxLength={2000}
+                    rows={4}
+                    className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              {saveError && (
+                <p className="mt-4 text-sm text-error-600">{saveError}</p>
+              )}
+
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={saving || !editTitle.trim()}
+                  className="w-full sm:w-auto"
+                >
+                  {saving ? "Guardando…" : "Guardar cambios"}
+                </Button>
+                <Button variant="secondary" onClick={handleCancel} className="w-full sm:w-auto">
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 animate-fade-in">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <button
           onClick={() => navigate("/recursos")}
           className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700 mb-6 transition-colors"
@@ -127,12 +237,12 @@ export function RecursoDetallePage() {
         </button>
 
         <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-start justify-between mb-6">
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-3xl">{getFileIcon(fileType)}</span>
-                  <h1 className="text-xl font-bold text-neutral-900 truncate">
+                  <span className="text-3xl flex-shrink-0">{getFileIcon(fileType)}</span>
+                  <h1 className="text-lg sm:text-xl font-bold text-neutral-900 break-words">
                     {resource.title}
                   </h1>
                 </div>
@@ -164,7 +274,7 @@ export function RecursoDetallePage() {
             )}
 
             <div className="border-t border-neutral-100 pt-4 mb-6">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-neutral-400">Archivo</span>
                   <p className="text-neutral-700 font-medium truncate">{fileName || "Sin nombre"}</p>
@@ -180,19 +290,29 @@ export function RecursoDetallePage() {
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="primary"
                 onClick={() => {
                   if (fileUrl) window.open(fileUrl, "_blank", "noopener,noreferrer");
                 }}
                 disabled={!fileUrl}
+                className="w-full sm:w-auto"
               >
                 {fileUrl ? "Ver archivo" : "Archivo no disponible"}
               </Button>
-              <Button variant="secondary" onClick={() => navigate("/recursos")}>
+              <Button variant="secondary" onClick={() => navigate("/recursos")} className="w-full sm:w-auto">
                 Volver
               </Button>
+              {isOwner && (
+                <Button
+                  variant="secondary"
+                  onClick={() => navigate(`/recursos/${id}?editar=true`)}
+                  className="w-full sm:w-auto"
+                >
+                  ✏️ Editar
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { NotificationDecorator } from "./NotificationDecorator.js";
 export interface Accion {
   label: string;
   endpoint: string;
+  method?: "GET" | "POST" | "PUT" | "DELETE";
 }
 
 export class ActionDecorator extends NotificationDecorator {
@@ -14,7 +15,7 @@ export class ActionDecorator extends NotificationDecorator {
     if (!accion.label || !accion.endpoint) {
       throw new Error("La acción debe tener un label y un endpoint no vacíos.");
     }
-    this.accion = accion;
+    this.accion = { label: accion.label, endpoint: accion.endpoint, ...(accion.method ? { method: accion.method } : {}) };
   }
 
   getAccion(): Accion {

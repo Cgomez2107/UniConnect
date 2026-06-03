@@ -17,8 +17,8 @@
       "dependsOn": ["^typecheck"]
     },
     "test": {
-      "dependsOn": ["^test"],
-      "outputs": ["coverage/**"]
+      "dependsOn": ["^build"],
+      "outputs": []
     },
     "academic-qna:build": {
       "dependsOn": ["^build"],

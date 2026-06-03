@@ -8,6 +8,7 @@ export * from "./schemas/event.schema.js";
 export * from "./schemas/notification.schema.js";
 export * from "./schemas/notification-preference.schema.js";
 export * from "./schemas/forum.schema.js";
+export * from "./schemas/study-session.schema.js";
 export * from "./api/_base.contract.js";
 export * from "./api/auth.contract.js";
 export * from "./api/study-group.contract.js";
@@ -22,6 +23,7 @@ export type { LoginResponseDTO, OAuthSignInUrlResponseDTO, OAuthCallbackResponse
 export type { SessionData, LoginResponse, OAuthSignInUrlResponse, OAuthCallbackResponse, DirectMessage, GroupConversation } from "./domain.js";
 export * from "./lib/mappers.js";
 export * from "./lib/errors.js";
+export * from "./decorators/index.js";
 export * from "./validation/MessageValidationErrors.js";
 export * from "./validation/ValidationResult.js";
 export type { paths, components, operations } from "./generated/api.js";

@@ -1,5 +1,5 @@
 import { MessageValidator, type ValidationMetadata } from "./MessageValidator.js";
-import { MediaError } from "../../../libs/errors/MediaError.js";
+import type { ResultadoValidacion } from "./ResultadoValidacion.js";
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -23,26 +23,28 @@ const ALLOWED_MIME_TYPES = [
 const MAX_FILENAME_LENGTH = 200;
 
 export class MediaValidator extends MessageValidator {
-  async validate(content: string, metadata?: ValidationMetadata): Promise<void> {
+  protected async validar(content: string, metadata?: ValidationMetadata): Promise<ResultadoValidacion> {
     if (metadata?.mediaUrl) {
       const mimeType = metadata.mediaType ?? "application/octet-stream";
 
       if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-        throw new MediaError(
-          `Tipo de archivo no soportado: ${mimeType}. Permitidos: ${ALLOWED_MIME_TYPES.join(", ")}`,
-          "unsupported_type",
-        );
+        return {
+          valido: false,
+          codigoError: "MediaError",
+          mensajeError: `Tipo de archivo no soportado: ${mimeType}. Permitidos: ${ALLOWED_MIME_TYPES.join(", ")}`,
+        };
       }
 
       const filename = metadata.mediaFilename ?? "archivo";
       if (filename.length > MAX_FILENAME_LENGTH) {
-        throw new MediaError(
-          `Nombre de archivo demasiado largo. Máximo ${MAX_FILENAME_LENGTH} caracteres.`,
-          "filename_too_long",
-        );
+        return {
+          valido: false,
+          codigoError: "MediaError",
+          mensajeError: `Nombre de archivo demasiado largo. Máximo ${MAX_FILENAME_LENGTH} caracteres.`,
+        };
       }
     }
 
-    await this.executeNext(content, metadata);
+    return { valido: true };
   }
 }

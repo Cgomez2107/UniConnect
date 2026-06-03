@@ -27,10 +27,10 @@ export declare const ProfileSchema: z.ZodObject<{
     updatedAt: string;
     profileImageUrl?: string | undefined;
     bio?: string | undefined;
-    program?: string | undefined;
     phone?: string | undefined;
     institution?: string | undefined;
     faculty?: string | undefined;
+    program?: string | undefined;
     subjects?: string[] | undefined;
 }, {
     email: string;
@@ -43,10 +43,10 @@ export declare const ProfileSchema: z.ZodObject<{
     updatedAt: string;
     profileImageUrl?: string | undefined;
     bio?: string | undefined;
-    program?: string | undefined;
     phone?: string | undefined;
     institution?: string | undefined;
     faculty?: string | undefined;
+    program?: string | undefined;
     subjects?: string[] | undefined;
 }>;
 export declare const ProfileDTOSchema: z.ZodObject<{
@@ -77,10 +77,10 @@ export declare const ProfileDTOSchema: z.ZodObject<{
     updated_at: string;
     bio?: string | undefined;
     profile_image_url?: string | undefined;
-    program?: string | undefined;
     phone?: string | undefined;
     institution?: string | undefined;
     faculty?: string | undefined;
+    program?: string | undefined;
     subjects?: string[] | undefined;
 }, {
     email: string;
@@ -93,10 +93,10 @@ export declare const ProfileDTOSchema: z.ZodObject<{
     updated_at: string;
     bio?: string | undefined;
     profile_image_url?: string | undefined;
-    program?: string | undefined;
     phone?: string | undefined;
     institution?: string | undefined;
     faculty?: string | undefined;
+    program?: string | undefined;
     subjects?: string[] | undefined;
 }>;
 export declare const FacultySchema: z.ZodObject<{

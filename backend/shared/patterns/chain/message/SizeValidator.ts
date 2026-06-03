@@ -1,4 +1,5 @@
 import { MessageValidator, type ValidationMetadata } from "./MessageValidator.js";
+import type { ResultadoValidacion } from "./ResultadoValidacion.js";
 import { SizeError } from "../../../libs/errors/SizeError.js";
 
 export class SizeValidator extends MessageValidator {
@@ -6,21 +7,21 @@ export class SizeValidator extends MessageValidator {
     super();
   }
 
-  async validate(content: string, metadata?: ValidationMetadata): Promise<void> {
+  protected async validar(content: string, metadata?: ValidationMetadata): Promise<ResultadoValidacion> {
     const trimmed = content.trim();
 
     if (!trimmed && !metadata?.mediaUrl) {
-      throw new SizeError("Debes enviar texto o una imagen.", "empty");
+      return { valido: false, codigoError: "SizeError", mensajeError: "Debes enviar texto o una imagen." };
     }
 
     if (trimmed.length > this.maxLength) {
-      throw new SizeError(
-        `Mensaje demasiado largo. Máximo ${this.maxLength} caracteres.`,
-        "max_length",
-        this.maxLength,
-      );
+      return {
+        valido: false,
+        codigoError: "SizeError",
+        mensajeError: `Mensaje demasiado largo. Máximo ${this.maxLength} caracteres.`,
+      };
     }
 
-    await this.executeNext(trimmed, metadata);
+    return { valido: true };
   }
 }

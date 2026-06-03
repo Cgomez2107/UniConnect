@@ -6,6 +6,7 @@ import { MarcarComoSolucion } from "../../../application/use-cases/MarcarComoSol
 import { ListQuestions } from "../../../application/use-cases/ListQuestions.js";
 import { GetQuestionDetail } from "../../../application/use-cases/GetQuestionDetail.js";
 import { ListAnswers } from "../../../application/use-cases/ListAnswers.js";
+import { PinAnswer } from "../../../application/use-cases/PinAnswer.js";
 import { getActorUserId } from "./getActorUserId.js";
 import { readJsonBody } from "./readJsonBody.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
@@ -41,6 +42,7 @@ export class ForumController {
     private readonly listQuestionsUseCase: ListQuestions,
     private readonly getQuestionDetailUseCase: GetQuestionDetail,
     private readonly listAnswersUseCase: ListAnswers,
+    private readonly pinAnswerUseCase: PinAnswer,
   ) {}
 
   async createQuestion(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -99,7 +101,7 @@ export class ForumController {
         return;
       }
 
-      const detail = await this.getQuestionDetailUseCase.execute(id);
+      const detail = await this.getQuestionDetailUseCase.execute(id, actorUserId);
       sendData(res, 200, detail);
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
@@ -188,6 +190,27 @@ export class ForumController {
       });
 
       sendData(res, 200, { message: "Respuesta marcada como solución." });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async pinAnswer(req: IncomingMessage, res: ServerResponse, questionId: string, answerId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      await this.pinAnswerUseCase.execute({
+        questionId,
+        answerId,
+        userId: actorUserId,
+      });
+
+      sendData(res, 200, { success: true });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

@@ -12,6 +12,7 @@ function mapQuestionFromApi(raw: any): ForumQuestion {
     status: raw.status,
     answer_count: raw.answer_count ?? raw.answerCount ?? 0,
     vote_count: raw.vote_count ?? raw.voteCount ?? 0,
+    user_vote: raw.user_vote ?? raw.userVote ?? null,
     created_at: raw.created_at ?? raw.createdAt,
     updated_at: raw.updated_at ?? raw.updatedAt,
   };
@@ -36,9 +37,12 @@ function mapAnswerFromApi(raw: any): ForumAnswer {
     id: raw.id,
     question_id: raw.question_id ?? raw.questionId,
     author_id: raw.author_id ?? raw.authorId,
+    author_name: raw.author_name ?? raw.authorName ?? raw.author_id ?? raw.authorId,
     body: raw.body,
     vote_count: raw.vote_count ?? raw.voteCount ?? 0,
     is_solution: raw.is_solution ?? raw.isSolution ?? false,
+    is_pinned: raw.is_pinned ?? raw.isPinned ?? false,
+    user_vote: raw.user_vote ?? raw.userVote ?? null,
     created_at: raw.created_at ?? raw.createdAt,
     updated_at: raw.updated_at ?? raw.updatedAt,
   };
@@ -105,6 +109,12 @@ export class ApiForumRepository implements IForumRepository {
     await fetchApi(`/forum/questions/${questionId}/solution`, {
       method: "POST",
       body: JSON.stringify({ answerId }),
+    });
+  }
+
+  async pinAnswer(questionId: string, answerId: string): Promise<void> {
+    await fetchApi(`/forum/questions/${questionId}/answers/${answerId}/pin`, {
+      method: "PATCH",
     });
   }
 }

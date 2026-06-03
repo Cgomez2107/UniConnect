@@ -1,5 +1,5 @@
 export interface CreateResourceDto {
-  readonly resourceType?: 'file' | 'link';
+  readonly resourceType?: string;
   readonly programId?: string;
   readonly subjectId?: string;
   readonly title?: string;
@@ -9,4 +9,7 @@ export interface CreateResourceDto {
   readonly fileName?: string;
   readonly fileType?: string;
   readonly fileSizeKb?: number;
+  readonly ogTitle?: string | null;
+  readonly ogDescription?: string | null;
+  readonly ogImage?: string | null;
 }

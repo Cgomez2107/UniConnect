@@ -16,6 +16,16 @@ export interface SendGroupMessagePayload {
         userId: string;
         name: string;
     }[];
+    poll?: {
+        question: string;
+        options: (string | {
+            text: string;
+            votes?: string[];
+        })[];
+        isOpen: boolean;
+        closesAt: string | null;
+        createdAt: string;
+    };
 }
 export interface ListApplicationsParams {
     status?: "pendiente" | "aceptada" | "rechazada";
@@ -40,6 +50,7 @@ export declare class StudyGroupsClient extends BaseClient {
     reviewApplication(applicationId: string, status: "aceptada" | "rechazada"): Promise<void>;
     leave(groupId: string): Promise<void>;
     cancel(groupId: string): Promise<void>;
+    cancelMyApplication(applicationId: string): Promise<void>;
     requestTransfer(groupId: string, targetUserId: string): Promise<{
         id: string;
     }>;

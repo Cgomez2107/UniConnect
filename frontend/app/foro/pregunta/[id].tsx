@@ -15,7 +15,7 @@ export default function QuestionDetailScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin";
-  const { question, answers, loading, error, createAnswer, castVote, markAsSolution, refresh } = useForumQuestion(id);
+  const { question, answers, loading, error, createAnswer, castVote, markAsSolution, pinAnswer, refresh } = useForumQuestion(id);
   const [answerBody, setAnswerBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,6 +44,13 @@ export default function QuestionDetailScreen() {
     Alert.alert("Marcar como solución", "¿Confirmas que esta respuesta es la solución?", [
       { text: "Cancelar", style: "cancel" },
       { text: "Confirmar", onPress: () => markAsSolution(answerId).catch(() => {}) },
+    ]);
+  };
+
+  const handlePinAnswer = (answerId: string) => {
+    Alert.alert("Fijar respuesta", "¿Fijar esta respuesta como respuesta del profesor?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Fijar", onPress: () => pinAnswer(answerId).catch(() => {}) },
     ]);
   };
 
@@ -81,7 +88,11 @@ export default function QuestionDetailScreen() {
           <View style={[styles.questionCard, { backgroundColor: C.surface, borderColor: C.border }]}>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <TouchableOpacity onPress={() => handleVote("question", question.id)} style={styles.voteCol}>
-                <Ionicons name="chevron-up" size={24} color={C.tabIconDefault} />
+                <Ionicons
+                  name="chevron-up"
+                  size={24}
+                  color={question.user_vote === "upvote" ? C.primary : C.tabIconDefault}
+                />
                 <Text style={[styles.voteCount, { color: C.text }]}>{question.vote_count}</Text>
               </TouchableOpacity>
               <View style={{ flex: 1 }}>
@@ -123,27 +134,57 @@ export default function QuestionDetailScreen() {
           </View>
         )}
         renderItem={({ item }) => (
-          <View style={[styles.answerCard, { backgroundColor: C.surface, borderColor: C.border }]}>
+          <View
+            style={[
+              styles.answerCard,
+              {
+                backgroundColor: item.is_pinned ? "#fefce8" : C.surface,
+                borderColor: item.is_pinned ? "#fde047" : C.border,
+              },
+            ]}
+          >
             <View style={{ flexDirection: "row", gap: 12 }}>
               <TouchableOpacity onPress={() => handleVote("answer", item.id)} style={styles.voteCol}>
-                <Ionicons name="chevron-up" size={20} color={C.tabIconDefault} />
+                <Ionicons
+                  name="chevron-up"
+                  size={20}
+                  color={item.user_vote === "upvote" ? C.primary : C.tabIconDefault}
+                />
                 <Text style={[styles.voteCountSm, { color: C.text }]}>{item.vote_count}</Text>
               </TouchableOpacity>
               <View style={{ flex: 1 }}>
-                {item.is_solution && (
-                  <View style={styles.solvedBadge}>
-                    <Ionicons name="checkmark-circle" size={12} color="#16a34a" />
-                    <Text style={styles.solvedText}>Solución</Text>
-                  </View>
-                )}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                  <Text style={[styles.authorName, { color: C.textSecondary }]}>{item.author_name}</Text>
+                  {item.is_pinned && (
+                    <View style={styles.pinnedBadge}>
+                      <Ionicons name="pin" size={10} color="#ca8a04" />
+                      <Text style={styles.pinnedText}>Respuesta del Profesor</Text>
+                    </View>
+                  )}
+                  {item.is_solution && (
+                    <View style={styles.solvedBadge}>
+                      <Ionicons name="checkmark-circle" size={12} color="#16a34a" />
+                      <Text style={styles.solvedText}>Solución</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={[styles.answerBody, { color: C.textSecondary }]}>{item.body}</Text>
-                {isAdmin && !item.is_solution && (
-                  <TouchableOpacity onPress={() => handleMarkSolution(item.id)} style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 12, color: C.primary, fontWeight: "600" }}>
-                      Marcar como solución
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+                  {isAdmin && !item.is_solution && !item.is_pinned && (
+                    <>
+                      <TouchableOpacity onPress={() => handleMarkSolution(item.id)}>
+                        <Text style={{ fontSize: 12, color: C.primary, fontWeight: "600" }}>
+                          Marcar como solución
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handlePinAnswer(item.id)}>
+                        <Text style={{ fontSize: 12, color: "#ca8a04", fontWeight: "600" }}>
+                          Fijar respuesta
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
               </View>
             </View>
           </View>
@@ -162,6 +203,17 @@ const styles = StyleSheet.create({
   voteCol: { alignItems: "center", minWidth: 32 },
   voteCount: { fontSize: 14, fontWeight: "700" },
   voteCountSm: { fontSize: 12, fontWeight: "700" },
+  pinnedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#fef9c3",
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  pinnedText: { fontSize: 10, fontWeight: "600", color: "#ca8a04" },
   solvedBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -173,6 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   solvedText: { fontSize: 10, fontWeight: "600", color: "#16a34a" },
+  authorName: { fontSize: 12, fontWeight: "500" },
   meta: { flexDirection: "row", gap: 8, marginTop: 12 },
   metaText: { fontSize: 12 },
   answerCard: { padding: 14, borderRadius: 12, borderWidth: 1 },

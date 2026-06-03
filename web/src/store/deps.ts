@@ -10,6 +10,7 @@ import {
   NotificationsClient,
   AdminClient,
   ForumClient,
+  StudySessionsClient,
 } from "@uniconnect/shared-api";
 import { WebStorageAdapter, ConsoleLogger } from "@uniconnect/shared-state";
 import { getWsUrl } from "@/lib/wsUrl";
@@ -95,6 +96,7 @@ const eventsClient = new EventsClient(transport);
 const notificationsClient = new NotificationsClient(transport);
 const adminClient = new AdminClient(transport);
 const forumClient = new ForumClient(transport);
+const studySessionsClient = new StudySessionsClient(transport);
 
 const storageAdapter = new WebStorageAdapter(window.localStorage);
 const logger = new ConsoleLogger();
@@ -111,6 +113,7 @@ export const deps = {
     notifications: notificationsClient,
     admin: adminClient,
     forum: forumClient,
+    studySessions: studySessionsClient,
   },
   transport,
   storage: storageAdapter,

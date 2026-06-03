@@ -18,6 +18,8 @@ export class InMemoryNotificationRepository implements INotificationRepository {
     title: string;
     body: string;
     payload: Record<string, unknown> | null;
+    priority?: "normal" | "urgente" | "critica";
+    action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
   }): Promise<string> {
     const created: UserNotification = {
       id: crypto.randomUUID(),
@@ -28,6 +30,8 @@ export class InMemoryNotificationRepository implements INotificationRepository {
       payload: input.payload,
       createdAt: new Date().toISOString(),
       readAt: null,
+      priority: input.priority,
+      action: input.action,
     };
 
     this.notifications.unshift(created);

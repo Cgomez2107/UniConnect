@@ -37,6 +37,8 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+**/.turbo/
+
 app-examples/
 
 openspec/*
@@ -52,7 +54,11 @@ skills-lock.json
 
 test-results/
 playwright-report/
+# Turbo cache logs
 .turbo/
+
+# Temp test files
+*%TEMP%*
 
 # Windows reserved device names
 nul

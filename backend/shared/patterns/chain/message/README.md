@@ -6,36 +6,34 @@
 classDiagram
     class MessageValidator {
         # next: MessageValidator
-        + setNext(validator) MessageValidator
-        + setSiguiente(handler) MessageValidator
-        + validate(content, metadata) Promise~void~
+        + setSiguiente(handler) this
         + manejar(mensaje, metadata) Promise~ResultadoValidacion~
-        # executeNext(content, metadata) Promise~void~
+        # validar(mensaje, metadata) Promise~ResultadoValidacion~
     }
     <<abstract>> MessageValidator
 
     class SizeValidator {
         - maxLength: number
-        + validate(content, metadata) Promise~void~
+        # validar(mensaje, metadata) Promise~ResultadoValidacion~
     }
 
     class ContentValidator {
         - forbiddenPatterns: RegExp[]
-        + validate(content, metadata) Promise~void~
+        # validar(mensaje, metadata) Promise~ResultadoValidacion~
     }
 
     class MediaValidator {
-        + validate(content, metadata) Promise~void~
+        # validar(mensaje, metadata) Promise~ResultadoValidacion~
     }
 
     class PermissionValidator {
         - permissionRepo: IGroupPermissionRepository
-        + validate(content, metadata) Promise~void~
+        # validar(mensaje, metadata) Promise~ResultadoValidacion~
     }
 
     class MentionResolver {
         - adminResolver: IAdminResolver
-        + validate(content, metadata) Promise~void~
+        # validar(mensaje, metadata) Promise~ResultadoValidacion~
     }
 
     class ValidatorFactory {
@@ -46,6 +44,7 @@ classDiagram
         + valido: boolean
         + codigoError?: string
         + mensajeError?: string
+        + contenidoModificado?: string
     }
 
     MessageValidator <|-- SizeValidator
@@ -78,25 +77,26 @@ sequenceDiagram
     Cliente->>SZ: manejar(mensaje, metadata)
 
     SZ->>SZ: validar longitud
-    Note over SZ: OK
-    SZ->>CV: executeNext (validate)
+    Note over SZ: valido: true
+    SZ->>CV: next.manejar(mensaje, metadata)
 
     CV->>CV: validar palabras prohibidas
-    Note over CV: OK
-    CV->>MV: executeNext (validate)
+    Note over CV: valido: true
+    CV->>MV: next.manejar(mensaje, metadata)
 
     MV->>MV: validar tipo media
-    Note over MV: OK
-    MV->>PV: executeNext (validate)
+    Note over MV: valido: true
+    MV->>PV: next.manejar(mensaje, metadata)
 
     PV->>PV: validar permisos
-    Note over PV: OK
-    PV->>MR: executeNext (validate)
+    Note over PV: valido: true
+    PV->>MR: next.manejar(mensaje, metadata)
 
     MR->>MR: resolver @admin
-    Note over MR: OK
-    MR-->>Cliente: ok (void)
+    Note over MR: valido: true, contenidoModificado: "@userId"
+    MR-->>SZ: ResultadoValidacion { valido: true }
 
+    SZ-->>Cliente: ResultadoValidacion { valido: true }
     Cliente->>CS: notificar(mensaje decorado)
     CS-->>Usuario: mensaje publicado
 ```
@@ -114,18 +114,28 @@ sequenceDiagram
     Cliente->>SZ: manejar(mensaje, metadata)
 
     SZ->>SZ: validar longitud
-    Note over SZ: OK
-    SZ->>CV: executeNext (validate)
+    Note over SZ: valido: true
+    SZ->>CV: next.manejar(mensaje, metadata)
 
     CV->>CV: validar palabras prohibidas
-    Note over CV: FALLA - detecta "spam"
-    CV-->>Cliente: lanza ContentError
-
-    Cliente->>Cliente: manejar() captura el error
-    Note over Cliente: retorna ResultadoValidacion{ valido: false, codigoError: "ContentError", mensajeError: "..." }
+    Note over CV: valido: false — detecta "spam"
+    CV-->>SZ: ResultadoValidacion { valido: false, codigoError: "ContentError" }
+    SZ-->>Cliente: ResultadoValidacion { valido: false, codigoError: "ContentError", mensajeError: "..." }
 
     Cliente-->>Usuario: error: mensaje rechazado
 ```
+
+## Principios del patrón
+
+1. **Interfaz única**: Solo `manejar()` es público. Cada handler implementa `validar()` como método protegido que retorna `ResultadoValidacion`.
+
+2. **Composición oculta**: `setSiguiente()` retorna `this` (no el siguiente handler), ocultando la estructura interna de la cadena.
+
+3. **Cortocircuito**: Si `validar()` retorna `{ valido: false }`, la cadena se corta inmediatamente sin invocar al siguiente handler.
+
+4. **Contenido modificado**: Los handlers pueden retornar `contenidoModificado` (ej: `MentionResolver` resuelve `@admin` → `@userId`), que se propaga al siguiente handler.
+
+5. **Punto único de composición**: `ValidatorFactory.createChain()` es el único lugar donde se construye la cadena.
 
 ## Estructura de Archivos
 
@@ -139,6 +149,8 @@ backend/shared/patterns/chain/message/
 ├── MentionResolver.ts         # Resuelve menciones @admin
 ├── ValidatorFactory.ts        # Punto único de composición
 ├── ResultadoValidacion.ts     # Tipo de retorno de manejar()
+├── ValidationErrorHandler.ts  # Middleware para error handling
+├── ValidationErrorMapper.ts   # Mapeo de errores a HTTP
 ├── index.ts                   # Barril de exportaciones
 ├── README.md                  # Este archivo
 └── __tests__/

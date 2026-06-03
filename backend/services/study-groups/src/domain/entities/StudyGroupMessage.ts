@@ -12,4 +12,14 @@ export interface StudyGroupMessage {
   readonly mediaFilename?: string | null;
   readonly mentions?: any[] | null;
   readonly reactions?: any[] | null;
+  readonly poll?: {
+    readonly question: string;
+    readonly options: ReadonlyArray<{
+      readonly text: string;
+      readonly votes: readonly string[];
+    }>;
+    readonly isOpen: boolean;
+    readonly closesAt: string | null;
+    readonly createdAt: string;
+  } | null;
 }

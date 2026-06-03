@@ -32,11 +32,13 @@ export function CrearEventoPage() {
 
     setSaving(true);
     try {
+      const isoDate = new Date(form.eventDate).toISOString();
       await eventsService.createEvent({
         title: form.title.trim(),
-        description: form.description.trim(),
-        eventDate: new Date(form.eventDate).toISOString(),
-        location: form.location.trim() || undefined,
+        description: form.description.trim() || "Sin descripción",
+        startAt: isoDate,
+        endAt: isoDate,
+        location: form.location.trim() || "Por definir",
         category: form.category,
       });
       success("Evento creado exitosamente");
@@ -126,7 +128,7 @@ export function CrearEventoPage() {
             <select
               name="category"
               value={form.category}
-              onChange={handleChange}
+              onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="academico">Académico</option>

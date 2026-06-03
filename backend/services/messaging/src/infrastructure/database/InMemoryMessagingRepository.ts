@@ -176,6 +176,7 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
       createdAt: new Date().toISOString(),
       readAt: null,
       reactions: [],
+      poll: input.poll ?? null,
       sender: {
         fullName: "Usuario",
         avatarUrl: null,
@@ -329,6 +330,66 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
 
     this.messages.set(messageId, { ...message, reactions: updated });
     return { conversationId: message.conversationId, reactions: updated };
+  }
+
+  async voteInPoll(messageId: string, userId: string, optionIndex: number) {
+    const message = this.messages.get(messageId);
+    if (!message) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    if (!message.poll) {
+      throw new Error("Este mensaje no contiene una encuesta.");
+    }
+
+    if (!message.poll.isOpen) {
+      throw new Error("La encuesta ya está cerrada.");
+    }
+
+    if (optionIndex < 0 || optionIndex >= message.poll.options.length) {
+      throw new Error("Opción inválida.");
+    }
+
+    const alreadyVoted = message.poll.options.some((opt) =>
+      opt.votes.includes(userId),
+    );
+    if (alreadyVoted) {
+      throw new Error("Ya has votado en esta encuesta.");
+    }
+
+    const updatedOptions = message.poll.options.map((opt, i) => {
+      if (i === optionIndex) {
+        return { ...opt, votes: [...opt.votes, userId] };
+      }
+      return opt;
+    });
+
+    const updatedPoll = {
+      ...message.poll,
+      options: updatedOptions,
+    };
+
+    this.messages.set(messageId, { ...message, poll: updatedPoll });
+    return { conversationId: message.conversationId, poll: updatedPoll };
+  }
+
+  async closePoll(messageId: string) {
+    const message = this.messages.get(messageId);
+    if (!message) {
+      throw new Error("Mensaje no encontrado.");
+    }
+
+    if (!message.poll) {
+      throw new Error("Este mensaje no contiene una encuesta.");
+    }
+
+    const updatedPoll = {
+      ...message.poll,
+      isOpen: false,
+    };
+
+    this.messages.set(messageId, { ...message, poll: updatedPoll });
+    return { conversationId: message.conversationId, poll: updatedPoll };
   }
 
   private calculateResults(pollId: string, config: StoredPollConfig): {

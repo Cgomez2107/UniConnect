@@ -66,6 +66,7 @@ export const API_ENDPOINTS = {
   APPLICATIONS_LIST: "/study-groups/applications",
   APPLICATIONS_BY_ID: (id: string) => `/study-groups/applications/${id}`,
   APPLICATIONS_REVIEW: (id: string) => `/study-groups/applications/${id}/review`,
+  APPLICATIONS_CANCEL: (id: string) => `/study-groups/applications/${id}/cancel`,
   APPLICATIONS_CREATE: "/study-groups/applications",
 
   // ========================================================================

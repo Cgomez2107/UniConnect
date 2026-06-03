@@ -55,4 +55,5 @@ export interface IAuthRepository {
   onAuthStateChange(callback: AuthStateChangeCallback): {
     data: { subscription: { unsubscribe: () => void } }
   }
+  validateInstitutionalAccess(): Promise<boolean>
 }

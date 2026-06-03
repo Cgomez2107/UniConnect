@@ -10,6 +10,10 @@ export interface CreateStudyResourcePayload {
     fileType?: string;
     fileSizeKb?: number;
     programId?: string;
+    resourceType?: string;
+    ogTitle?: string;
+    ogImage?: string;
+    ogDescription?: string;
 }
 export interface UpdateStudyResourcePayload {
     title?: string;
@@ -20,6 +24,7 @@ export interface ListResourcesFilters {
     programId?: string;
     userId?: string;
     search?: string;
+    type?: string;
     page?: number;
     perPage?: number;
 }

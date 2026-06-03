@@ -37,6 +37,7 @@ export declare const CreateQuestionResponseSchema: z.ZodObject<{
         status: z.ZodEnum<["active", "solved", "closed"]>;
         answerCount: z.ZodNumber;
         voteCount: z.ZodNumber;
+        userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
@@ -50,6 +51,7 @@ export declare const CreateQuestionResponseSchema: z.ZodObject<{
         body: string;
         answerCount: number;
         voteCount: number;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }, {
         status: "active" | "solved" | "closed";
         createdAt: string;
@@ -61,6 +63,7 @@ export declare const CreateQuestionResponseSchema: z.ZodObject<{
         body: string;
         answerCount: number;
         voteCount: number;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -74,6 +77,7 @@ export declare const CreateQuestionResponseSchema: z.ZodObject<{
         body: string;
         answerCount: number;
         voteCount: number;
+        userVote?: "upvote" | "downvote" | null | undefined;
     };
 }, {
     data: {
@@ -87,6 +91,7 @@ export declare const CreateQuestionResponseSchema: z.ZodObject<{
         body: string;
         answerCount: number;
         voteCount: number;
+        userVote?: "upvote" | "downvote" | null | undefined;
     };
 }>;
 export declare const CreateQuestionContract: ApiContract<typeof CreateQuestionRequestSchema, typeof CreateQuestionResponseSchema>;
@@ -226,6 +231,7 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             status: z.ZodEnum<["active", "solved", "closed"]>;
             answerCount: z.ZodNumber;
             voteCount: z.ZodNumber;
+            userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
             createdAt: z.ZodString;
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
@@ -239,6 +245,7 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             answerCount: number;
             voteCount: number;
+            userVote?: "upvote" | "downvote" | null | undefined;
         }, {
             status: "active" | "solved" | "closed";
             createdAt: string;
@@ -250,14 +257,18 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             answerCount: number;
             voteCount: number;
+            userVote?: "upvote" | "downvote" | null | undefined;
         }>;
         answers: z.ZodArray<z.ZodObject<{
             id: z.ZodString;
             questionId: z.ZodString;
             authorId: z.ZodString;
+            authorName: z.ZodString;
             body: z.ZodString;
             voteCount: z.ZodNumber;
-            isSolution: z.ZodBoolean;
+            isSolution: z.ZodDefault<z.ZodBoolean>;
+            isPinned: z.ZodDefault<z.ZodBoolean>;
+            userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
             createdAt: z.ZodString;
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
@@ -268,7 +279,10 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             voteCount: number;
             questionId: string;
+            authorName: string;
             isSolution: boolean;
+            isPinned: boolean;
+            userVote?: "upvote" | "downvote" | null | undefined;
         }, {
             createdAt: string;
             updatedAt: string;
@@ -277,7 +291,10 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             voteCount: number;
             questionId: string;
-            isSolution: boolean;
+            authorName: string;
+            userVote?: "upvote" | "downvote" | null | undefined;
+            isSolution?: boolean | undefined;
+            isPinned?: boolean | undefined;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
         question: {
@@ -291,6 +308,7 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             answerCount: number;
             voteCount: number;
+            userVote?: "upvote" | "downvote" | null | undefined;
         };
         answers: {
             createdAt: string;
@@ -300,7 +318,10 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             voteCount: number;
             questionId: string;
+            authorName: string;
             isSolution: boolean;
+            isPinned: boolean;
+            userVote?: "upvote" | "downvote" | null | undefined;
         }[];
     }, {
         question: {
@@ -314,6 +335,7 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             answerCount: number;
             voteCount: number;
+            userVote?: "upvote" | "downvote" | null | undefined;
         };
         answers: {
             createdAt: string;
@@ -323,7 +345,10 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             voteCount: number;
             questionId: string;
-            isSolution: boolean;
+            authorName: string;
+            userVote?: "upvote" | "downvote" | null | undefined;
+            isSolution?: boolean | undefined;
+            isPinned?: boolean | undefined;
         }[];
     }>;
 }, "strip", z.ZodTypeAny, {
@@ -339,6 +364,7 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             answerCount: number;
             voteCount: number;
+            userVote?: "upvote" | "downvote" | null | undefined;
         };
         answers: {
             createdAt: string;
@@ -348,7 +374,10 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             voteCount: number;
             questionId: string;
+            authorName: string;
             isSolution: boolean;
+            isPinned: boolean;
+            userVote?: "upvote" | "downvote" | null | undefined;
         }[];
     };
 }, {
@@ -364,6 +393,7 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             answerCount: number;
             voteCount: number;
+            userVote?: "upvote" | "downvote" | null | undefined;
         };
         answers: {
             createdAt: string;
@@ -373,7 +403,10 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             body: string;
             voteCount: number;
             questionId: string;
-            isSolution: boolean;
+            authorName: string;
+            userVote?: "upvote" | "downvote" | null | undefined;
+            isSolution?: boolean | undefined;
+            isPinned?: boolean | undefined;
         }[];
     };
 }>;
@@ -413,9 +446,12 @@ export declare const CreateAnswerResponseSchema: z.ZodObject<{
         id: z.ZodString;
         questionId: z.ZodString;
         authorId: z.ZodString;
+        authorName: z.ZodString;
         body: z.ZodString;
         voteCount: z.ZodNumber;
-        isSolution: z.ZodBoolean;
+        isSolution: z.ZodDefault<z.ZodBoolean>;
+        isPinned: z.ZodDefault<z.ZodBoolean>;
+        userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
@@ -426,7 +462,10 @@ export declare const CreateAnswerResponseSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
+        authorName: string;
         isSolution: boolean;
+        isPinned: boolean;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -435,7 +474,10 @@ export declare const CreateAnswerResponseSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
-        isSolution: boolean;
+        authorName: string;
+        userVote?: "upvote" | "downvote" | null | undefined;
+        isSolution?: boolean | undefined;
+        isPinned?: boolean | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -446,7 +488,10 @@ export declare const CreateAnswerResponseSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
+        authorName: string;
         isSolution: boolean;
+        isPinned: boolean;
+        userVote?: "upvote" | "downvote" | null | undefined;
     };
 }, {
     data: {
@@ -457,7 +502,10 @@ export declare const CreateAnswerResponseSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
-        isSolution: boolean;
+        authorName: string;
+        userVote?: "upvote" | "downvote" | null | undefined;
+        isSolution?: boolean | undefined;
+        isPinned?: boolean | undefined;
     };
 }>;
 export declare const CreateAnswerContract: ApiContract<typeof CreateAnswerRequestSchema, typeof CreateAnswerResponseSchema>;
@@ -483,9 +531,12 @@ export declare const ListAnswersResponseSchema: z.ZodObject<{
         id: z.ZodString;
         questionId: z.ZodString;
         authorId: z.ZodString;
+        authorName: z.ZodString;
         body: z.ZodString;
         voteCount: z.ZodNumber;
-        isSolution: z.ZodBoolean;
+        isSolution: z.ZodDefault<z.ZodBoolean>;
+        isPinned: z.ZodDefault<z.ZodBoolean>;
+        userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
@@ -496,7 +547,10 @@ export declare const ListAnswersResponseSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
+        authorName: string;
         isSolution: boolean;
+        isPinned: boolean;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -505,7 +559,10 @@ export declare const ListAnswersResponseSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
-        isSolution: boolean;
+        authorName: string;
+        userVote?: "upvote" | "downvote" | null | undefined;
+        isSolution?: boolean | undefined;
+        isPinned?: boolean | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -516,7 +573,10 @@ export declare const ListAnswersResponseSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
+        authorName: string;
         isSolution: boolean;
+        isPinned: boolean;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }[];
 }, {
     data: {
@@ -527,7 +587,10 @@ export declare const ListAnswersResponseSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
-        isSolution: boolean;
+        authorName: string;
+        userVote?: "upvote" | "downvote" | null | undefined;
+        isSolution?: boolean | undefined;
+        isPinned?: boolean | undefined;
     }[];
 }>;
 export declare const ListAnswersContract: ApiContract<typeof ListAnswersRequestSchema, typeof ListAnswersResponseSchema>;
@@ -632,10 +695,42 @@ export type GetQuestionDetailRequest = z.infer<typeof GetQuestionDetailRequestSc
 export type GetQuestionDetailResponse = z.infer<typeof GetQuestionDetailResponseSchema>;
 export type CreateAnswerRequest = z.infer<typeof CreateAnswerRequestSchema>;
 export type CreateAnswerResponse = z.infer<typeof CreateAnswerResponseSchema>;
-export type ListAnswersRequest = z.infer<typeof ListAnswersRequestSchema>;
-export type ListAnswersResponse = z.infer<typeof ListAnswersResponseSchema>;
-export type MarkSolutionRequest = z.infer<typeof MarkSolutionRequestSchema>;
-export type MarkSolutionResponse = z.infer<typeof MarkSolutionResponseSchema>;
 export type CastVoteRequest = z.infer<typeof CastVoteRequestSchema>;
 export type CastVoteResponse = z.infer<typeof CastVoteResponseSchema>;
+export type MarkSolutionRequest = z.infer<typeof MarkSolutionRequestSchema>;
+export type MarkSolutionResponse = z.infer<typeof MarkSolutionResponseSchema>;
+export declare const PinAnswerRequestSchema: z.ZodObject<{
+    params: z.ZodObject<{
+        questionId: z.ZodString;
+        answerId: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        questionId: string;
+        answerId: string;
+    }, {
+        questionId: string;
+        answerId: string;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    params: {
+        questionId: string;
+        answerId: string;
+    };
+}, {
+    params: {
+        questionId: string;
+        answerId: string;
+    };
+}>;
+export declare const PinAnswerResponseSchema: z.ZodObject<{
+    success: z.ZodLiteral<true>;
+}, "strip", z.ZodTypeAny, {
+    success: true;
+}, {
+    success: true;
+}>;
+export declare const PinAnswerContract: ApiContract<typeof PinAnswerRequestSchema, typeof PinAnswerResponseSchema>;
+export type ListAnswersRequest = z.infer<typeof ListAnswersRequestSchema>;
+export type ListAnswersResponse = z.infer<typeof ListAnswersResponseSchema>;
+export type PinAnswerRequest = z.infer<typeof PinAnswerRequestSchema>;
+export type PinAnswerResponse = z.infer<typeof PinAnswerResponseSchema>;
 //# sourceMappingURL=forum.contract.d.ts.map

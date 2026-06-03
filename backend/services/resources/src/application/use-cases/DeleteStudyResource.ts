@@ -14,7 +14,7 @@ export class DeleteStudyResource {
     private readonly storageCleaner?: StorageCleaner,
   ) {}
 
-  async execute(id: string, actorUserId: string): Promise<boolean> {
+  async execute(id: string, actorUserId: string, isAdmin = false): Promise<boolean> {
     if (!id.trim()) {
       throw new ValidationError("id es obligatorio.");
     }

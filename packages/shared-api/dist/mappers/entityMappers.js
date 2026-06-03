@@ -41,6 +41,10 @@ export function mapAuthProfileDomainToDto(domain) {
  */
 export function mapMessageDtoToDomain(dto) {
     const camelCased = snakeToCamel(dto);
+    if (camelCased['pollData'] !== undefined) {
+        camelCased['poll'] = camelCased['pollData'];
+        delete camelCased['pollData'];
+    }
     return parseStringDatesToObjects(camelCased);
 }
 // ============================================================================

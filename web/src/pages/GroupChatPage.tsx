@@ -4,6 +4,8 @@ import useAuth from "@/hooks/useAuth";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MentionInput } from "@/components/chat/MentionInput";
 import { Avatar } from "@/components/ui/Avatar";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
+import type { GroupState } from "@/types";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { snakeToCamel } from "@uniconnect/shared-api";
@@ -13,6 +15,7 @@ import type { MentionData, ReactionData } from "@/chat/models/IMessage";
 import { isForbiddenContent } from "@/hooks/useMessageValidation";
 import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 import { getWsUrl } from "@/lib/wsUrl";
+import { apiClient } from "@/lib/api/client";
 
 function transformMentions(mentions?: any[]): MentionData[] | undefined {
   if (!mentions || mentions.length === 0) return undefined;
@@ -48,6 +51,7 @@ export function GroupChatPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [groupName, setGroupName] = useState("");
+  const [groupState, setGroupState] = useState<GroupState>("Activo");
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -80,6 +84,16 @@ export function GroupChatPage() {
         setMessages((msgs || []).reverse());
         setMembers(membersData || []);
         setGroupName(groupData?.name || "Chat del grupo");
+        const groupStatus = (groupData as any)?.status as string;
+        const hasPendingTransfer = !!(groupData as any)?.hasPendingTransfer;
+        const computedState: GroupState = groupStatus === "cerrada"
+          ? "Disuelto"
+          : groupStatus === "expirada"
+            ? "Bloqueado"
+            : hasPendingTransfer
+              ? "PendienteTransferencia"
+              : "Activo";
+        setGroupState(computedState);
       } catch (err) {
         console.error("Error loading group chat:", err);
       } finally {
@@ -142,6 +156,7 @@ export function GroupChatPage() {
 
           if (data.event === "new_group_message") {
             const mappedMsg = snakeToCamel(payload);
+            console.log("[DEBUG] WS new_group_message:", JSON.stringify({ id: mappedMsg.id, hasPoll: !!mappedMsg.poll, pollKeys: mappedMsg.poll ? Object.keys(mappedMsg.poll) : null, content: mappedMsg.content }));
             mappedMsg.mentions = transformMentions(mappedMsg.mentions);
             mappedMsg.reactions = transformReactions(mappedMsg.reactions);
             if (pendingTempIds.current.size > 0 && pendingTempIds.current.has(mappedMsg.id)) return;
@@ -186,6 +201,7 @@ export function GroupChatPage() {
   useChatObserver(id ?? null, (newMsg) => {
     const transformed = {
       ...newMsg,
+      poll: newMsg.pollData ?? newMsg.poll ?? null,
       mentions: transformMentions(newMsg.mentions),
       reactions: transformReactions(newMsg.reactions),
     };
@@ -208,7 +224,7 @@ export function GroupChatPage() {
     return { url: result.url, type: file.type };
   };
 
-  const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string }) => {
+  const handleSend = async (content: string, mentions: { userId: string; name: string }[], options?: { mediaUrl?: string; mediaType?: string; poll?: any }) => {
     if (!content.trim() || !id) return;
 
     const tempId = `temp-${Date.now()}`;
@@ -226,6 +242,7 @@ export function GroupChatPage() {
       reply_preview: replyingTo?.content || null,
       media_url: options?.mediaUrl || null,
       media_type: options?.mediaType || null,
+      poll: options?.poll || null,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -239,8 +256,10 @@ export function GroupChatPage() {
         mentions,
         mediaUrl: options?.mediaUrl,
         mediaType: options?.mediaType,
+        poll: options?.poll,
       });
       pendingTempIds.current.delete(tempId);
+      console.log("[DEBUG] sendMessage response:", JSON.stringify({ id: msg.id, hasPoll: !!msg.poll, pollKeys: msg.poll ? Object.keys(msg.poll) : null, content: msg.content }));
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) {
           return prev.filter((m) => m.id !== tempId);
@@ -290,6 +309,30 @@ export function GroupChatPage() {
       setMessages((prev) =>
         prev.map((m) => (m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m))
       );
+    }
+  };
+
+  const handleVote = async (messageId: string, optionIndex: number) => {
+    try {
+      const response = await apiClient.post(
+        `/study-groups/${id}/messages/${messageId}/polls/vote`,
+        { optionIndex },
+      );
+      const data = response.data?.data || response.data;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, poll: data.poll ?? data.poll_data ?? data }
+            : m,
+        ),
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err.message;
+      if (typeof msg === "string" && msg.toLowerCase().includes("cerrada")) {
+        alert("Esta encuesta está cerrada");
+      } else {
+        console.error("Error al votar:", msg);
+      }
     }
   };
 
@@ -385,6 +428,7 @@ export function GroupChatPage() {
   };
 
   const memberNameMap = new Map(members.map((m) => [m.userId, m.fullName || "Usuario"]));
+  const voterMap = Object.fromEntries(memberNameMap);
 
   const enhancedMessages = messages.map((msg) => ({
     ...msg,
@@ -425,10 +469,11 @@ export function GroupChatPage() {
           </svg>
         </button>
         <Avatar name={groupName} size="sm" />
-        <div className="flex-1">
-          <h1 className="text-base font-bold text-neutral-900">{groupName}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-bold text-neutral-900 truncate">{groupName}</h1>
           <p className="text-xs text-neutral-500">{members.length} miembros</p>
         </div>
+        <GroupStateBadge state={groupState} size="small" />
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
@@ -458,6 +503,8 @@ export function GroupChatPage() {
                   previousSenderSame={index > 0 && enhancedMessages[index - 1].senderId === msg.senderId}
                   onRetry={handleRetry}
                   onReply={(m) => setReplyingTo(m)}
+                  onVote={handleVote}
+                  voterMap={voterMap}
                   onToggleReaction={async (messageId, emoji) => {
                     try {
                       const result = await studyGroupsService.toggleReaction(id!, messageId, emoji);

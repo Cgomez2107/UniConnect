@@ -3,15 +3,45 @@ import { UuidSchema, DateStringSchema, UrlSchema } from "./_common.schema.js";
 import { UserSchema, UserDTOSchema } from "./auth.schema.js";
 
 export const ConversationTypeEnum = z.enum(["direct", "group"]);
-export const MessageTypeEnum = z.enum(["text", "file", "mention", "reaction"]);
+export const MessageTypeEnum = z.enum(["text", "file", "mention", "reaction", "poll"]);
+
+export const PollOptionSchema = z.object({
+  text: z.string().min(1).max(500),
+  votes: z.array(z.string().uuid()),
+});
+
+export const PollOptionDTOSchema = z.object({
+  text: z.string().min(1).max(500),
+  votes: z.array(z.string().uuid()),
+});
+
+export const PollDataSchema = z.object({
+  question: z.string().min(1).max(500),
+  options: z.array(PollOptionSchema).min(2).max(20),
+  isOpen: z.boolean(),
+  closesAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+});
+
+export const PollDataDTOSchema = z.object({
+  question: z.string().min(1).max(500),
+  options: z.array(PollOptionDTOSchema).min(2).max(20),
+  is_open: z.boolean(),
+  closes_at: z.string().datetime().nullable(),
+  created_at: z.string().datetime(),
+});
+
+export const PollVoteRequestSchema = z.object({
+  optionIndex: z.number().int().min(0),
+});
 
 export const MessageDecorationSchema = z.object({
-  type: z.enum(["mention", "file", "reaction"]),
+  type: z.enum(["mention", "file", "reaction", "poll"]),
   data: z.record(z.any()),
 });
 
 export const MessageDecorationDTOSchema = z.object({
-  type: z.enum(["mention", "file", "reaction"]),
+  type: z.enum(["mention", "file", "reaction", "poll"]),
   data: z.record(z.any()),
 });
 
@@ -59,6 +89,7 @@ export const MessageSchema = z.object({
   decorations: z.array(MessageDecorationSchema).optional(),
   attachments: z.array(MessageAttachmentSchema).optional(),
   reactions: z.array(MessageReactionSchema).optional(),
+  poll: PollDataSchema.nullable().optional(),
   isEdited: z.boolean(),
   editedAt: DateStringSchema.optional(),
   createdAt: DateStringSchema,
@@ -75,6 +106,7 @@ export const MessageDTOSchema = z.object({
   decorations: z.array(MessageDecorationDTOSchema).optional(),
   attachments: z.array(MessageAttachmentDTOSchema).optional(),
   reactions: z.array(MessageReactionDTOSchema).optional(),
+  poll_data: PollDataDTOSchema.nullable().optional(),
   is_edited: z.boolean(),
   edited_at: DateStringSchema.optional(),
   created_at: DateStringSchema,

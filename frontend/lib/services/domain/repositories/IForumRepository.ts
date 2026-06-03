@@ -8,4 +8,5 @@ export interface IForumRepository {
   listAnswers(questionId: string): Promise<ForumAnswer[]>;
   castVote(payload: ForumVotePayload): Promise<{ voteCount: number }>;
   markAsSolution(questionId: string, answerId: string): Promise<void>;
+  pinAnswer(questionId: string, answerId: string): Promise<void>;
 }

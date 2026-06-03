@@ -16,7 +16,7 @@ export default function useNotifications() {
         type: toastType as any,
         title: message,
         read: false,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         description: message,
       });
     },

@@ -127,18 +127,32 @@ export interface MessageDTO {
   sender_id: string;
   sender?: UserDTO;
   content: string;
-  type: "text" | "file" | "mention" | "reaction";
+  type: "text" | "file" | "mention" | "reaction" | "poll";
   decorations?: MessageDecorationDTO[];
   attachments?: MessageAttachmentDTO[];
   reactions?: MessageReactionDTO[];
+  poll?: PollDataDTO | null;
   is_edited: boolean;
   edited_at?: string;
   created_at: string;
   updated_at: string;
 }
 
+export interface PollOptionDTO {
+  text: string;
+  votes: string[];
+}
+
+export interface PollDataDTO {
+  question: string;
+  options: PollOptionDTO[];
+  is_open: boolean;
+  closes_at: string | null;
+  created_at: string;
+}
+
 export interface MessageDecorationDTO {
-  type: "mention" | "file" | "reaction";
+  type: "mention" | "file" | "reaction" | "poll";
   data: Record<string, any>;
 }
 
@@ -203,20 +217,23 @@ export interface NotificationDTO {
 
 export interface StudyResourceDTO {
   id: string;
-  title: string;
-  description?: string;
-  type: string;
-  url: string;
-  uploader_user_id: string;
-  uploader?: UserDTO;
+  user_id: string;
+  program_id: string;
   subject_id: string;
-  subject?: SubjectDTO;
-  tags: string[];
-  view_count: number;
-  download_count: number;
-  is_public: boolean;
+  title: string;
+  description: string | null;
+  file_url: string;
+  file_name: string;
+  file_type: string | null;
+  file_size_kb: number | null;
+  resource_type: string | null;
+  og_title: string | null;
+  og_image: string | null;
+  og_description: string | null;
   created_at: string;
   updated_at: string;
+  profiles?: { full_name: string; avatar_url: string | null };
+  subjects?: { name: string };
 }
 
 // ============================================================================

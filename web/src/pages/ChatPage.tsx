@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { apiClient } from "@/lib/api/client";
@@ -14,6 +14,7 @@ import { useConversationsStore } from "@/store/useConversationsStore";
 import { isForbiddenContent } from "@/hooks/useMessageValidation";
 import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 import { getWsUrl } from "@/lib/wsUrl";
+import type { PollDataUI } from "@/types/ui";
 
 interface Message {
   id: string;
@@ -29,6 +30,7 @@ interface Message {
   mediaType?: string | null;
   mediaFilename?: string | null;
   reactions?: { emoji: string; userId: string }[];
+  poll?: PollDataUI | null;
 }
 
 interface Conversation {
@@ -104,6 +106,7 @@ export const ChatPage: React.FC = () => {
         mediaUrl: m.media_url || m.mediaUrl || null,
         mediaType: m.media_type || m.mediaType || null,
         reactions: m.reactions || [],
+        poll: m.poll ?? null,
       })));
     } catch (error) {
       console.error("Error fetching conversation:", error);
@@ -112,15 +115,17 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
+  const reconnectRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const connectWs = useCallback(() => {
+    if (wsRef.current) {
+      try { wsRef.current.close(); } catch {}
+      wsRef.current = null;
     }
 
-    fetchConversation();
+    const token = useAuthStore.getState().accessToken || localStorage.getItem("accessToken");
+    if (!token) return;
 
-    const token = localStorage.getItem("accessToken");
     const ws = new WebSocket(`${getWsUrl()}/ws?token=${token}`);
     wsRef.current = ws;
 
@@ -129,10 +134,8 @@ export const ChatPage: React.FC = () => {
     };
 
     ws.onmessage = (event) => {
-      console.log("[ChatPage WS] raw event type:", typeof event.data, "len:", event.data?.length);
       try {
         const data = JSON.parse(event.data);
-        console.log("[ChatPage WS] parsed event:", data.event, Object.keys(data));
         const payload = data.payload || data;
 
         if (data.event === "new_message") {
@@ -142,15 +145,26 @@ export const ChatPage: React.FC = () => {
             if (prev.some((m) => m.id === mappedMsg.id)) return prev;
             return [...prev, { ...mappedMsg, clientStatus: "sent" }];
           });
+        } else if (data.event === "poll_updated") {
+          const { messageId, poll } = payload;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, poll } : m
+            )
+          );
+        } else if (data.event === "poll_closed") {
+          const { messageId } = payload;
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id !== messageId || !m.poll) return m;
+              return { ...m, poll: { ...m.poll, isOpen: false } };
+            })
+          );
         } else if (data.event === "reaction_updated") {
-          console.log("[ChatPage WS] reaction_updated ENTERED");
           const { messageId, reactions } = payload;
           setMessages((prev) => {
             const found = prev.find((m) => m.id === messageId);
-            if (!found) {
-              console.warn("[ChatPage WS] message not found", messageId);
-              return prev;
-            }
+            if (!found) return prev;
             return prev.map((m) =>
               m.id === messageId ? { ...m, reactions: reactions || [] } : m
             );
@@ -175,25 +189,43 @@ export const ChatPage: React.FC = () => {
       }
     };
 
-    return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "unsubscribe", conversationId }));
-        ws.close();
-      } else if (ws.readyState === WebSocket.CONNECTING) {
-        ws.onopen = () => ws.close();
-        ws.onerror = () => ws.close();
-      } else {
-        ws.close();
-      }
-      wsRef.current = null;
+    ws.onclose = () => {
+      reconnectRef.current = setTimeout(() => connectWs(), 3000);
     };
-  }, [conversationId, user, navigate]);
+    ws.onerror = () => {
+      ws.close();
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    fetchConversation();
+    connectWs();
+
+    return () => {
+      if (reconnectRef.current) clearTimeout(reconnectRef.current);
+      if (wsRef.current) {
+        try {
+          if (wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: "unsubscribe", conversationId }));
+          }
+        } catch {}
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [conversationId, user, navigate, connectWs]);
 
   const handleSendMessage = async (
     content: string,
-    mentions: { userId: string; name: string }[] = []
+    mentions: { userId: string; name: string }[] = [],
+    options?: { mediaUrl?: string; mediaType?: string; poll?: PollDataUI }
   ) => {
-    if (!content.trim()) return;
+    if (!content.trim() && !options?.poll) return;
 
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: Message = {
@@ -207,6 +239,7 @@ export const ChatPage: React.FC = () => {
       replyToMessageId: replyingTo?.id || null,
       replyPreview: replyingTo?.content || null,
       reactions: [],
+      poll: options?.poll || null,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -215,16 +248,26 @@ export const ChatPage: React.FC = () => {
     pendingTempIds.current.add(tempId);
     setIsSending(true);
 
+    const payload: Record<string, unknown> = {
+      conversationId,
+      content: content.trim(),
+      replyToMessageId: replyTo?.id || undefined,
+    };
+
+    if (options?.mediaUrl) {
+      payload.mediaUrl = options.mediaUrl;
+      payload.mediaType = options.mediaType;
+    }
+
+    if (options?.poll) {
+      payload.poll = options.poll;
+    }
+
     try {
-      const response = await apiClient.post("/messages", {
-        conversationId,
-        content: optimisticMsg.content,
-        replyToMessageId: replyTo?.id || undefined,
-      });
+      const response = await apiClient.post("/messages", payload);
       const msg = response.data?.data || response.data;
       pendingTempIds.current.delete(tempId);
       setMessages((prev) => {
-        // If WS already delivered this message, just remove the temp entry
         if (prev.some((m) => m.id === msg.id)) {
           return prev.filter((m) => m.id !== tempId);
         }
@@ -445,6 +488,22 @@ export const ChatPage: React.FC = () => {
               }
               onRetry={handleRetry}
               onReply={(m) => setReplyingTo(m)}
+              onVote={async (messageId, optionIndex) => {
+                try {
+                  const response = await apiClient.post(
+                    `/messages/${messageId}/polls/vote`,
+                    { optionIndex },
+                  );
+                  const data = response.data?.data || response.data;
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === messageId ? { ...m, poll: data.poll } : m
+                    )
+                  );
+                } catch (err) {
+                  console.error("Error voting:", err);
+                }
+              }}
               onToggleReaction={async (messageId, emoji) => {
                 const result = await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
                 const data = result.data?.data || result.data;

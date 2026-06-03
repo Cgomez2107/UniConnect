@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse as NodeServerResponse } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer, WebSocket } from "ws";
 
 import type { GatewayEnv } from "../shared/config/env.js";
@@ -17,6 +18,10 @@ const PUBLIC_PATHS = new Set([
 const conversationRooms = new Map<string, Set<WebSocket>>();
 const studyGroupRooms = new Map<string, Set<WebSocket>>();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const DEPLOYED_AT = new Date().toISOString();
+
 function getAppVersion(): string {
   try {
     const packageJsonPath = join(process.cwd(), "package.json");
@@ -25,6 +30,15 @@ function getAppVersion(): string {
   } catch {
     return "0.0.0";
   }
+}
+
+function getHealthPayload(version: string) {
+  return {
+    status: "ok",
+    version,
+    commit: process.env.COMMIT_SHA ?? "unknown",
+    deployedAt: DEPLOYED_AT,
+  };
 }
 
 const OPENAPI_SPEC_PATH = resolve(
@@ -353,6 +367,27 @@ function onStudygroupsResponse(
       reactions,
     });
   }
+
+  const pollVoteMatch = info.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/polls\/vote$/);
+  if (info.method === "POST" && pollVoteMatch && info.status === 200) {
+    const groupId = pollVoteMatch[1];
+    const messageId = pollVoteMatch[2];
+    const rawBody = (() => {
+      try {
+        const parsed = JSON.parse(info.body);
+        return parsed?.data || parsed;
+      } catch {
+        return info.body;
+      }
+    })();
+    const poll = (rawBody as any)?.poll ?? rawBody;
+    broadcastToStudyGroup(groupId, "poll_updated", {
+      messageId,
+      userId: jwtPayload.sub,
+      optionIndex: (rawBody as any)?.optionIndex,
+      poll,
+    });
+  }
 }
 
 function onMessagingResponse(
@@ -406,6 +441,30 @@ function onMessagingResponse(
         reactions,
       });
       console.log(JSON.stringify({ service: "gateway", level: "info", message: "reaction_updated broadcasted", conversationId, messageId }));
+    }
+  }
+
+  const pollVoteMatch = info.pathname.match(/^\/api\/v1\/messages\/([^/]+)\/polls\/vote$/);
+  if (info.method === "POST" && pollVoteMatch && info.status === 200) {
+    const messageId = pollVoteMatch[1];
+    const rawBody = (() => {
+      try {
+        const parsed = JSON.parse(info.body);
+        return parsed?.data || parsed;
+      } catch {
+        return info.body;
+      }
+    })();
+    const conversationId = (rawBody as any)?.conversation_id;
+    const poll = (rawBody as any)?.poll ?? rawBody;
+    if (conversationId) {
+      broadcastToConversation(conversationId, "poll_updated", {
+        messageId,
+        userId: jwtPayload.sub,
+        optionIndex: (rawBody as any)?.optionIndex,
+        poll,
+      });
+      console.log(JSON.stringify({ service: "gateway", level: "info", message: "poll_updated broadcasted", conversationId, messageId }));
     }
   }
 }
@@ -475,10 +534,7 @@ async function handleRequest(
   // 4. Health endpoint (no auth)
   // ──────────────────────────────────────────────────────────────────────────
   if (req.method === "GET" && requestUrl.pathname === "/health") {
-    sendJson(res, 200, {
-      status: "ok",
-      version: appVersion,
-    });
+    sendJson(res, 200, getHealthPayload(appVersion));
     return;
   }
 
@@ -510,6 +566,10 @@ async function handleRequest(
 
   if (payload.sub) {
     req.headers["x-user-id"] = payload.sub;
+  }
+
+  if (payload.role) {
+    req.headers["x-user-role"] = payload.role;
   }
 
   if (isStudyGroupsRoute(requestUrl.pathname)) {

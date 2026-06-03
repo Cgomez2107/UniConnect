@@ -8,6 +8,7 @@ test.describe("C3 - Group limit per subject", () => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+    await loginPage.waitForNavigation();
     await expect(page).toHaveURL(/.*\/solicitudes/);
   });
 
@@ -33,7 +34,7 @@ test.describe("C3 - Group limit per subject", () => {
     });
     expect(token).toBeTruthy();
 
-    const gatewayUrl = "http://localhost:3000";
+    const gatewayUrl = process.env.E2E_GATEWAY_URL || "http://localhost:3000";
 
     for (let i = 0; i < 3; i++) {
       const response = await page.request.post(`${gatewayUrl}/api/v1/study-groups`, {

@@ -1,42 +1,64 @@
 import { z } from "zod";
-import { UuidSchema, DateStringSchema, UrlSchema } from "./_common.schema.js";
-import { UserSchema, UserDTOSchema } from "./auth.schema.js";
-import { SubjectSchema, SubjectDTOSchema } from "./user.schema.js";
+import { UuidSchema, DateStringSchema } from "./_common.schema.js";
 
 export const ResourceTypeEnum = z.enum(["pdf", "document", "video", "link", "image", "other"]);
 
 export const StudyResourceSchema = z.object({
   id: UuidSchema,
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  type: z.string(),
-  url: UrlSchema,
-  uploaderUserId: UuidSchema,
-  uploader: UserSchema.optional(),
+  userId: UuidSchema,
+  programId: UuidSchema,
   subjectId: UuidSchema,
-  subject: SubjectSchema.optional(),
-  tags: z.array(z.string().max(50)),
-  viewCount: z.number().int().nonnegative(),
-  downloadCount: z.number().int().nonnegative(),
-  isPublic: z.boolean(),
+  title: z.string().min(1).max(200),
+  description: z.string().nullable(),
+  fileUrl: z.string(),
+  fileName: z.string(),
+  fileType: z.string().nullable(),
+  fileSizeKb: z.number().int().nullable(),
+  resourceType: z.string().nullable(),
+  ogTitle: z.string().nullable(),
+  ogImage: z.string().nullable(),
+  ogDescription: z.string().nullable(),
   createdAt: DateStringSchema,
   updatedAt: DateStringSchema,
+  profiles: z
+    .object({
+      fullName: z.string(),
+      avatarUrl: z.string().nullable(),
+    })
+    .optional(),
+  subjects: z
+    .object({
+      name: z.string(),
+    })
+    .optional(),
 });
 
 export const StudyResourceDTOSchema = z.object({
   id: UuidSchema,
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  type: z.string(),
-  url: UrlSchema,
-  uploader_user_id: UuidSchema,
-  uploader: UserDTOSchema.optional(),
+  user_id: UuidSchema,
+  program_id: UuidSchema,
   subject_id: UuidSchema,
-  subject: SubjectDTOSchema.optional(),
-  tags: z.array(z.string().max(50)),
-  view_count: z.number().int().nonnegative(),
-  download_count: z.number().int().nonnegative(),
-  is_public: z.boolean(),
+  title: z.string().min(1).max(200),
+  description: z.string().nullable(),
+  file_url: z.string(),
+  file_name: z.string(),
+  file_type: z.string().nullable(),
+  file_size_kb: z.number().int().nullable(),
+  resource_type: z.string().nullable(),
+  og_title: z.string().nullable(),
+  og_image: z.string().nullable(),
+  og_description: z.string().nullable(),
   created_at: DateStringSchema,
   updated_at: DateStringSchema,
+  profiles: z
+    .object({
+      full_name: z.string(),
+      avatar_url: z.string().nullable(),
+    })
+    .optional(),
+  subjects: z
+    .object({
+      name: z.string(),
+    })
+    .optional(),
 });

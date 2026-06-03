@@ -102,6 +102,19 @@ export class RealtimeObserver implements IChatObserver {
         });
         break;
 
+      case "PollVote":
+        await this.realtimeService.broadcast(channel, {
+          type: "poll_updated",
+          data: {
+            messageId: event.messageId,
+            conversationId: event.conversationId,
+            optionIndex: event.optionIndex,
+            userId: event.userId,
+            poll: event.poll,
+          },
+        });
+        break;
+
       case "POLL_VOTE_REGISTERED":
         await this.realtimeService.broadcast(channel, {
           type: "POLL_VOTE_REGISTERED",
@@ -113,6 +126,16 @@ export class RealtimeObserver implements IChatObserver {
             results: event.results,
             totalVotes: event.totalVotes,
             timestamp: event.timestamp.toISOString(),
+          },
+        });
+        break;
+
+      case "PollClosed":
+        await this.realtimeService.broadcast(channel, {
+          type: "poll_closed",
+          data: {
+            messageId: event.messageId,
+            conversationId: event.conversationId,
           },
         });
         break;

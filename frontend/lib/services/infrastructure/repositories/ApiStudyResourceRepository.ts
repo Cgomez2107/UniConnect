@@ -1,6 +1,6 @@
 import { fetchApi } from "@/lib/api/httpClient";
 import type { StudyResource } from "@/types";
-import type { IStudyResourceRepository } from "../../domain/repositories/IStudyResourceRepository";
+import type { IStudyResourceRepository, ListResourcesFilters } from "../../domain/repositories/IStudyResourceRepository";
 
 interface ApiResource {
   id: string;
@@ -20,6 +20,14 @@ interface ApiResource {
   file_type?: string | null;
   fileSizeKb?: number | null;
   file_size_kb?: number | null;
+  resourceType?: string | null;
+  resource_type?: string | null;
+  ogTitle?: string | null;
+  og_title?: string | null;
+  ogImage?: string | null;
+  og_image?: string | null;
+  ogDescription?: string | null;
+  og_description?: string | null;
   createdAt?: string;
   created_at?: string;
   updatedAt?: string;
@@ -47,6 +55,10 @@ function mapResource(raw: ApiResource): StudyResource {
     file_name: raw.fileName ?? raw.file_name ?? "",
     file_type: raw.fileType ?? raw.file_type ?? null,
     file_size_kb: raw.fileSizeKb ?? raw.file_size_kb ?? null,
+    resource_type: raw.resourceType ?? raw.resource_type ?? null,
+    og_title: raw.ogTitle ?? raw.og_title ?? null,
+    og_image: raw.ogImage ?? raw.og_image ?? null,
+    og_description: raw.ogDescription ?? raw.og_description ?? null,
     created_at: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
     updated_at: raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
     profiles: raw.profiles
@@ -60,6 +72,11 @@ function mapResource(raw: ApiResource): StudyResource {
 }
 
 export class ApiStudyResourceRepository implements IStudyResourceRepository {
+  async getAll(): Promise<StudyResource[]> {
+    const data = await fetchApi<ApiResource[]>("/resources");
+    return (data ?? []).map(mapResource);
+  }
+
   async getById(id: string): Promise<StudyResource | null> {
     try {
       const data = await fetchApi<ApiResource>(`/resources/${id}`);
@@ -84,6 +101,16 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
     return (data ?? []).map(mapResource);
   }
 
+  async list(filters?: ListResourcesFilters): Promise<StudyResource[]> {
+    const params = new URLSearchParams();
+    if (filters?.subjectId) params.set("subjectId", filters.subjectId);
+    if (filters?.userId) params.set("userId", filters.userId);
+    if (filters?.type) params.set("type", filters.type);
+    const qs = params.toString();
+    const data = await fetchApi<ApiResource[]>(`/resources${qs ? `?${qs}` : ""}`);
+    return (data ?? []).map(mapResource);
+  }
+
   async create(
     userId: string,
     programId: string,
@@ -95,6 +122,10 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
       file_name: string;
       file_type?: string;
       file_size_kb?: number;
+      resource_type?: string;
+      og_title?: string | null;
+      og_description?: string | null;
+      og_image?: string | null;
     },
   ): Promise<StudyResource> {
     void userId;
@@ -110,6 +141,10 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
         fileName: payload.file_name,
         fileType: payload.file_type,
         fileSizeKb: payload.file_size_kb,
+        resourceType: payload.resource_type,
+        ogTitle: payload.og_title,
+        ogDescription: payload.og_description,
+        ogImage: payload.og_image,
       }),
     });
 

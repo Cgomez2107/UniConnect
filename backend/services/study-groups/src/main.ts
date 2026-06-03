@@ -1,5 +1,6 @@
 import { ApplyToStudyRequest } from "./application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "./application/use-cases/AcceptAdminTransfer.js";
+import { CancelMyApplication } from "./application/use-cases/CancelMyApplication.js";
 import { CancelStudyRequest } from "./application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "./application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById.js";
@@ -17,6 +18,7 @@ import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransf
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "./application/use-cases/CreateStudyGroupMessage.js";
 import { ToggleStudyGroupMessageReaction } from "./application/use-cases/ToggleStudyGroupMessageReaction.js";
+import { VoteInPoll } from "./application/use-cases/VoteInPoll.js";
 import { CreateStudySession } from "./application/use-cases/CreateStudySession.js";
 import { CancelStudySession } from "./application/use-cases/CancelStudySession.js";
 import { UpdateAvailability } from "./application/use-cases/UpdateAvailability.js";
@@ -56,10 +58,14 @@ import { PostgresSessionAttendeeRepository } from "./infrastructure/database/Pos
 import { PostgresPreferenceRepository } from "./infrastructure/database/PostgresPreferenceRepository.js";
 import { ChatSystemMessageObserver } from "./domain/events/observers/ChatSystemMessageObserver.js";
 import { StudyGroupsController } from "./interfaces/http/controllers/StudyGroupsController.js";
+import { StudySessionsController } from "./interfaces/http/controllers/StudySessionsController.js";
+import { CreateStudySessionSeries } from "./application/use-cases/CreateStudySessionSeries.js";
+import { ListStudySessions } from "./application/use-cases/ListStudySessions.js";
 import { handleStudyGroupsRoutes } from "./interfaces/http/routes/studyGroupsRoutes.js";
 import type { IStudyRequestRepository } from "./domain/repositories/IStudyRequestRepository.js";
 import { Database } from "./infrastructure/database/Database.js";
 import type { Pool } from "pg";
+import { SessionAvailabilityObserver } from "./domain/events/observers/SessionAvailabilityObserver.js";
 
 import { NotificationService } from "../../../shared/patterns/strategy/NotificationService.js";
 import type { INotificationPreferenceRepository } from "../../../shared/patterns/strategy/INotificationPreferenceRepository.js";
@@ -83,6 +89,9 @@ import {
   type IRealtimeService as IGroupRealtimeService,
   type IIdempotencyStore as IGroupIdempotencyStore,
 } from "../../messaging/src/domain/events/index.js";
+import { PollTimerService } from "../../messaging/src/domain/services/PollTimerService.js";
+import type { PollClosedEvent } from "../../messaging/src/domain/events/index.js";
+import { createGroupChannel } from "../../messaging/src/domain/events/index.js";
 
 interface Repositories {
   studyRequest: IStudyRequestRepository;
@@ -254,6 +263,13 @@ function bootstrap(): void {
   const persistenceObserver = new PersistenceObserver(adminTransferRepository);
   subject.subscribe(persistenceObserver);
 
+  const sessionAvailabilityObserver = realtimeGateway
+    ? new SessionAvailabilityObserver(realtimeGateway, memberRepository)
+    : null;
+  if (sessionAvailabilityObserver) {
+    subject.subscribe(sessionAvailabilityObserver);
+  }
+
   if (pool) {
     const chatSystemMessageObserver = new ChatSystemMessageObserver(pool);
     subject.subscribe(chatSystemMessageObserver);
@@ -339,6 +355,28 @@ function bootstrap(): void {
   const listMembersByRequest = new ListMembersByRequest(memberRepository);
   const listApplicationsByRequest = new ListApplicationsByRequest(applicationRepository);
   const listStudyGroupMessages = new ListStudyGroupMessages(messageRepository);
+  const pollTimerService = new PollTimerService();
+
+  const onClosePoll = async (messageId: string) => {
+    try {
+      const result = await messageRepository.closePoll(messageId);
+      const channel = createGroupChannel(result.requestId);
+      groupChatSubject.subscribe(channel, realtimeObserver);
+
+      const event: PollClosedEvent = {
+        type: "PollClosed",
+        version: "1.0",
+        timestamp: new Date(),
+        messageId,
+        conversationId: result.requestId,
+      };
+
+      await groupChatSubject.emit(channel, event);
+    } catch (error) {
+      console.error(`[main] Error closing poll ${messageId}:`, error);
+    }
+  };
+
   const createStudyGroupMessage = new CreateStudyGroupMessage(
     messageRepository,
     groupChatSubject,
@@ -347,6 +385,8 @@ function bootstrap(): void {
     groupChatNotificationObserver,
     groupPermissionRepo,
     groupPermissionRepo,
+    pollTimerService,
+    onClosePoll,
   );
   const listUserNotifications = new ListUserNotifications(notificationRepository);
   const applyToStudyRequest = new ApplyToStudyRequest(
@@ -374,6 +414,7 @@ function bootstrap(): void {
   const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
+  const cancelMyApplicationUC = new CancelMyApplication(applicationRepository);
   const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
   const markAllNotificationsAsRead = new MarkAllNotificationsAsRead(notificationRepository);
   const createStudySessionUC = new CreateStudySession(
@@ -399,6 +440,11 @@ function bootstrap(): void {
   );
   const scheduler = new SessionScheduler(sessionRepos.session, notificationService);
   scheduler.start();
+  const voteInPoll = new VoteInPoll(
+    messageRepository,
+    groupChatSubject,
+    realtimeObserver,
+  );
   const controller = new StudyGroupsController(
     listOpenStudyRequests,
     getStudyRequestById,
@@ -417,7 +463,9 @@ function bootstrap(): void {
     listMyStudyRequestsUC,
     listMyApplicationsUC,
     cancelStudyRequestUC,
+    cancelMyApplicationUC,
     toggleStudyGroupMessageReaction,
+    voteInPoll,
     markAllNotificationsAsRead,
     preferenceService,
     createStudySessionUC,
@@ -425,7 +473,18 @@ function bootstrap(): void {
     updateAvailabilityUC,
     listSessionsByGroupUC,
   );
-  const server = createStudyGroupsServer(controller);
+  const createStudySessionSeriesUC = new CreateStudySessionSeries(
+    sessionRepos.session,
+    memberRepository,
+    subject,
+  );
+  const listStudySessionsUC = new ListStudySessions(sessionRepos.session);
+  const sessionsController = new StudySessionsController(
+    createStudySessionSeriesUC,
+    cancelStudySessionUC,
+    listStudySessionsUC,
+  );
+  const server = createStudyGroupsServer(controller, sessionsController);
 
   (server as any).listen({ port: env.port, host: "::" }, () => {
     console.log(

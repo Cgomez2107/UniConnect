@@ -11,6 +11,9 @@ import { MarkConversationAsRead } from "./application/use-cases/MarkConversation
 import { SendMessage } from "./application/use-cases/SendMessage.js";
 import { ToggleReaction } from "./application/use-cases/ToggleReaction.js";
 import { TouchConversation } from "./application/use-cases/TouchConversation.js";
+import { VoteInPoll } from "./application/use-cases/VoteInPoll.js";
+import { PollTimerService } from "./domain/services/PollTimerService.js";
+import { createDMChannel, type PollClosedEvent } from "./domain/events/index.js";
 import { CreatePollUseCase } from "./application/use-cases/CreatePollUseCase.js";
 import { CastVoteUseCase } from "./application/use-cases/CastVoteUseCase.js";
 import { GetPollResultsUseCase } from "./application/use-cases/GetPollResultsUseCase.js";
@@ -157,16 +160,53 @@ function bootstrap(): void {
 	const getMessageById = new GetMessageById(repository);
 	const listMessages = new ListMessages(repository);
 	const getUnreadCount = new GetUnreadCount(repository);
-	const sendMessage = new SendMessage(
-		repository,
-		chatSubject,
-		realtimeObserver,
-		idempotencyObserver,
-		chatNotificationObserver,
-	);
-	const markMessageAsRead = new MarkMessageAsRead(repository);
+  const pollTimerService = new PollTimerService();
+
+  const onClosePoll = async (messageId: string) => {
+    try {
+      const result = await repository.closePoll(messageId);
+      const conversation = await repository.getConversationById(
+        result.conversationId,
+        "",
+      );
+      if (conversation) {
+        const channel = createDMChannel(
+          conversation.participantA,
+          conversation.participantB,
+        );
+        chatSubject.subscribe(channel, realtimeObserver);
+
+        const event: PollClosedEvent = {
+          type: "PollClosed",
+          version: "1.0",
+          timestamp: new Date(),
+          messageId,
+          conversationId: result.conversationId,
+        };
+
+        await chatSubject.emit(channel, event);
+      }
+    } catch (error) {
+      console.error(
+        `[main] Error closing poll ${messageId}:`,
+        error,
+      );
+    }
+  };
+
+  const sendMessage = new SendMessage(
+    repository,
+    chatSubject,
+    realtimeObserver,
+    idempotencyObserver,
+    chatNotificationObserver,
+    pollTimerService,
+    onClosePoll,
+  );
+  const markMessageAsRead = new MarkMessageAsRead(repository);
   const markConversationAsRead = new MarkConversationAsRead(repository);
   const toggleReaction = new ToggleReaction(repository, chatSubject, realtimeObserver);
+  const voteInPoll = new VoteInPoll(repository, chatSubject, realtimeObserver);
 
   const createPollUseCase = new CreatePollUseCase(repository);
   const castVoteUseCase = new CastVoteUseCase(repository, chatSubject);
@@ -186,6 +226,7 @@ function bootstrap(): void {
     markMessageAsRead,
     markConversationAsRead,
     toggleReaction,
+    voteInPoll,
   );
 
 	const server = createServer((req, res) => {
@@ -230,9 +271,10 @@ function bootstrap(): void {
 
 		try {
 			pollScheduler.stop();
+			pollTimerService.clearAll();
 			chatSubject.clear();
 
-			if (realtimeGateway) {
+      if (realtimeGateway) {
 				realtimeGateway.dispose();
 			}
 

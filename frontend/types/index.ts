@@ -134,6 +134,7 @@ export interface StudyRequest {
   // campos derivados (feed)
   faculty_name?: string;
   subject_name?: string;
+  hasPendingTransfer?: boolean;
 }
 
 export interface CreateStudyRequestPayload {
@@ -165,6 +166,19 @@ export interface Reaction {
   user_id: string;
 }
 
+export interface PollOption {
+  text: string;
+  votes: string[];
+}
+
+export interface PollData {
+  question: string;
+  options: PollOption[];
+  is_open: boolean;
+  closes_at: string | null;
+  created_at: string;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -180,6 +194,7 @@ export interface Message {
   created_at: string;
   read_at: string | null;
   reactions?: Reaction[];
+  poll_data?: PollData | null;
   mentions?: { userId: string; displayName: string }[];
   // join
   sender?: { full_name: string; avatar_url: string | null };
@@ -220,6 +235,10 @@ export interface StudyResource {
   file_name: string;
   file_type: string | null; // PDF, DOCX, XLSX, etc.
   file_size_kb: number | null;
+  resource_type: string | null;
+  og_title: string | null;
+  og_image: string | null;
+  og_description: string | null;
   created_at: string;
   updated_at: string;
   // joins opcionales para enriquecimiento
@@ -421,6 +440,7 @@ export interface ForumQuestion {
   status: "active" | "solved";
   answer_count: number;
   vote_count: number;
+  user_vote?: "upvote" | "downvote" | null;
   created_at: string;
   updated_at: string;
 }
@@ -441,9 +461,12 @@ export interface ForumAnswer {
   id: string;
   question_id: string;
   author_id: string;
+  author_name: string;
   body: string;
   vote_count: number;
   is_solution: boolean;
+  is_pinned: boolean;
+  user_vote?: "upvote" | "downvote" | null;
   created_at: string;
   updated_at: string;
 }

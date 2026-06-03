@@ -599,12 +599,12 @@ export declare const Post_auth_signup_RequestBodySchema: z.ZodObject<{
     fullName: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     email: string;
-    password: string;
     fullName: string;
+    password: string;
 }, {
     email: string;
-    password: string;
     fullName: string;
+    password: string;
 }>;
 export declare const Post_auth_signup_201ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -1006,9 +1006,9 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1022,9 +1022,9 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1047,9 +1047,9 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1068,9 +1068,9 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1134,9 +1134,9 @@ export declare const Post_events_201ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1150,9 +1150,9 @@ export declare const Post_events_201ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1168,9 +1168,9 @@ export declare const Post_events_201ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1186,9 +1186,9 @@ export declare const Post_events_201ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1221,9 +1221,9 @@ export declare const Get_events_id_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1237,9 +1237,9 @@ export declare const Get_events_id_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1255,9 +1255,9 @@ export declare const Get_events_id_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1273,9 +1273,9 @@ export declare const Get_events_id_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1333,9 +1333,9 @@ export declare const Put_events_id_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1349,9 +1349,9 @@ export declare const Put_events_id_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1367,9 +1367,9 @@ export declare const Put_events_id_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -1385,9 +1385,9 @@ export declare const Put_events_id_200ResponseSchema: z.ZodObject<{
         updatedAt: string;
         id: string;
         title: string;
+        category: string;
         startAt: string;
         organizerId: string;
-        category: string;
         status?: string | undefined;
         description?: string | undefined;
         location?: string | undefined;
@@ -2436,14 +2436,14 @@ export declare const Patch_students_me_RequestBodySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     bio?: string | undefined;
     avatar_url?: string | undefined;
-    semester?: number | undefined;
     full_name?: string | undefined;
+    semester?: number | undefined;
     phone_number?: string | undefined;
 }, {
     bio?: string | undefined;
     avatar_url?: string | undefined;
-    semester?: number | undefined;
     full_name?: string | undefined;
+    semester?: number | undefined;
     phone_number?: string | undefined;
 }>;
 export declare const Patch_students_me_200ResponseSchema: z.ZodObject<{
@@ -3425,11 +3425,11 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -3440,11 +3440,11 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>, "many">;
     meta: z.ZodObject<{
         total: z.ZodNumber;
@@ -3464,11 +3464,11 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }[];
     meta: {
         total: number;
@@ -3484,11 +3484,11 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }[];
     meta: {
         total: number;
@@ -3511,22 +3511,22 @@ export declare const Post_resources_RequestBodySchema: z.ZodObject<{
     programId?: string | undefined;
     subjectId?: string | undefined;
     url?: string | undefined;
-    resourceType?: "file" | "link" | undefined;
     fileUrl?: string | undefined;
     fileName?: string | undefined;
     fileType?: string | undefined;
     fileSizeKb?: number | undefined;
+    resourceType?: "file" | "link" | undefined;
 }, {
     title: string;
     description?: string | undefined;
     programId?: string | undefined;
     subjectId?: string | undefined;
     url?: string | undefined;
-    resourceType?: "file" | "link" | undefined;
     fileUrl?: string | undefined;
     fileName?: string | undefined;
     fileType?: string | undefined;
     fileSizeKb?: number | undefined;
+    resourceType?: "file" | "link" | undefined;
 }>;
 export declare const Post_resources_201ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -3554,11 +3554,11 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -3569,11 +3569,11 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -3586,11 +3586,11 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }, {
     data: {
@@ -3603,11 +3603,11 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }>;
 export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
@@ -3636,11 +3636,11 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -3651,11 +3651,11 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -3668,11 +3668,11 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }, {
     data: {
@@ -3685,11 +3685,11 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }>;
 export declare const Put_resources_id_RequestBodySchema: z.ZodObject<{
@@ -3728,11 +3728,11 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -3743,11 +3743,11 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
@@ -3760,11 +3760,11 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }, {
     data: {
@@ -3777,11 +3777,11 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         programId?: string | undefined;
         subjectId?: string | undefined;
         url?: string | undefined;
-        resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
+        resourceType?: "file" | "link" | undefined;
     };
 }>;
 export declare const Get_study_groups_200ResponseSchema: z.ZodObject<{

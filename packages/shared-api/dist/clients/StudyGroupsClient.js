@@ -95,6 +95,12 @@ export class StudyGroupsClient extends BaseClient {
             url: `/study-groups/${groupId}/cancel`,
         });
     }
+    async cancelMyApplication(applicationId) {
+        await this.transport.request({
+            method: "POST",
+            url: `/study-groups/applications/${applicationId}/cancel`,
+        });
+    }
     async requestTransfer(groupId, targetUserId) {
         const response = await this.transport.request({
             method: "POST",
@@ -133,6 +139,8 @@ export class StudyGroupsClient extends BaseClient {
             body.mediaType = payload.mediaType;
         if (payload.mentions)
             body.mentions = payload.mentions;
+        if (payload.poll)
+            body.poll = payload.poll;
         const response = await this.transport.request({
             method: "POST",
             url: `/study-groups/${groupId}/messages`,

@@ -106,24 +106,24 @@ export declare const RegisterRequestSchema: z.ZodObject<{
         fullName: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         email: string;
-        password: string;
         fullName: string;
+        password: string;
     }, {
         email: string;
-        password: string;
         fullName: string;
+        password: string;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
         email: string;
-        password: string;
         fullName: string;
+        password: string;
     };
 }, {
     body: {
         email: string;
-        password: string;
         fullName: string;
+        password: string;
     };
 }>;
 export declare const RefreshTokenRequestSchema: z.ZodObject<{

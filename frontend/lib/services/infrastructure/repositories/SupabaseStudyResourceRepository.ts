@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase"
 import { apiDelete, apiGet } from "@/lib/api/client"
-import type { IStudyResourceRepository } from "../../domain/repositories/IStudyResourceRepository"
+import type { IStudyResourceRepository, ListResourcesFilters } from "../../domain/repositories/IStudyResourceRepository"
 import type { StudyResource } from "@/types"
 
 /**
@@ -8,6 +8,32 @@ import type { StudyResource } from "@/types"
  * Handles database operations for study resources (US-006).
  */
 export class SupabaseStudyResourceRepository implements IStudyResourceRepository {
+  async getAll(): Promise<StudyResource[]> {
+    const { data, error } = await supabase
+      .from("study_resources")
+      .select("*, profiles ( full_name, avatar_url )")
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return (data ?? []) as StudyResource[]
+  }
+
+  async list(filters?: ListResourcesFilters): Promise<StudyResource[]> {
+    let query = supabase
+      .from("study_resources")
+      .select("*, profiles ( full_name, avatar_url )")
+      .order("created_at", { ascending: false })
+
+    if (filters?.type) {
+      query = query.eq("resource_type", filters.type)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+    return (data ?? []) as StudyResource[]
+  }
+
   async getById(id: string): Promise<StudyResource | null> {
     const { data, error } = await supabase
       .from("study_resources")
@@ -40,7 +66,7 @@ export class SupabaseStudyResourceRepository implements IStudyResourceRepository
   async create(
     userId: string,
     programId: string,
-    payload: { subject_id: string; title: string; description?: string; file_url: string; file_name: string; file_type?: string; file_size_kb?: number }
+    payload: { subject_id: string; title: string; description?: string; file_url: string; file_name: string; file_type?: string; file_size_kb?: number; resource_type?: string; og_title?: string | null; og_description?: string | null; og_image?: string | null }
   ): Promise<StudyResource> {
     const { data, error } = await supabase
       .from("study_resources")
@@ -53,7 +79,11 @@ export class SupabaseStudyResourceRepository implements IStudyResourceRepository
         file_url: payload.file_url,
         file_name: payload.file_name,
         file_type: payload.file_type ?? null,
+        resource_type: payload.resource_type ?? payload.file_type ?? null,
         file_size_kb: payload.file_size_kb ?? null,
+        og_title: payload.og_title ?? null,
+        og_description: payload.og_description ?? null,
+        og_image: payload.og_image ?? null,
       })
       .select("*, profiles ( full_name, avatar_url )")
       .single()

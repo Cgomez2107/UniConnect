@@ -19,6 +19,7 @@ export type Prioridad = "normal" | "urgente" | "critica";
 export interface Accion {
   label: string;
   endpoint: string;
+  method?: "GET" | "POST" | "PUT" | "DELETE";
 }
 
 export interface NotificationData {

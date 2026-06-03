@@ -56,6 +56,7 @@ import { GetStudyResourcesByUser } from "../domain/use-cases/resources/GetStudyR
 import { GetStudyResourceById } from "../domain/use-cases/resources/GetStudyResourceById";
 import { UpdateStudyResource } from "../domain/use-cases/resources/UpdateStudyResource";
 import { DeleteStudyResource } from "../domain/use-cases/resources/DeleteStudyResource";
+import { ListStudyResources } from "../domain/use-cases/resources/ListStudyResources";
 import { GetConversations } from "../domain/use-cases/messaging/GetConversations";
 import { GetMessages } from "../domain/use-cases/messaging/GetMessages";
 import { SendMessage } from "../domain/use-cases/messaging/SendMessage";
@@ -84,6 +85,7 @@ import { GetForumQuestionDetail } from "../domain/use-cases/forum/GetForumQuesti
 import { CreateForumAnswer } from "../domain/use-cases/forum/CreateForumAnswer";
 import { VoteForum } from "../domain/use-cases/forum/VoteForum";
 import { MarkForumSolution } from "../domain/use-cases/forum/MarkForumSolution";
+import { PinForumAnswer } from "../domain/use-cases/forum/PinForumAnswer";
 import { GetProfileByUserId } from "../domain/use-cases/profile/GetProfileByUserId";
 import { GetMyPrograms } from "../domain/use-cases/profile/GetMyPrograms";
 import { GetMySubjects } from "../domain/use-cases/profile/GetMySubjects";
@@ -156,6 +158,7 @@ export class DIContainer {
   private getStudyResourceById?: GetStudyResourceById;
   private updateStudyResource?: UpdateStudyResource;
   private deleteStudyResource?: DeleteStudyResource;
+  private listStudyResources?: ListStudyResources;
   private getConversations?: GetConversations;
   private getMessages?: GetMessages;
   private sendMessage?: SendMessage;
@@ -492,6 +495,13 @@ export class DIContainer {
     return this.deleteStudyResource;
   }
 
+  getListStudyResources(): ListStudyResources {
+    if (!this.listStudyResources) {
+      this.listStudyResources = new ListStudyResources(this.getStudyResourceRepository());
+    }
+    return this.listStudyResources;
+  }
+
   getGetConversations(): GetConversations {
     if (!this.getConversations) {
       this.getConversations = new GetConversations(this.getConversationRepository());
@@ -732,6 +742,7 @@ export class DIContainer {
   private createForumAnswer?: CreateForumAnswer;
   private voteForum?: VoteForum;
   private markForumSolution?: MarkForumSolution;
+  private pinForumAnswer?: PinForumAnswer;
 
   getForumRepository(): IForumRepository {
     if (!this.forumRepo) {
@@ -780,5 +791,12 @@ export class DIContainer {
       this.markForumSolution = new MarkForumSolution(this.getForumRepository());
     }
     return this.markForumSolution;
+  }
+
+  getPinForumAnswer(): PinForumAnswer {
+    if (!this.pinForumAnswer) {
+      this.pinForumAnswer = new PinForumAnswer(this.getForumRepository());
+    }
+    return this.pinForumAnswer;
   }
 }

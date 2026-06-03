@@ -1,13 +1,17 @@
 import { createServer } from "node:http";
 import type { ServerResponse } from "node:http";
 import type { StudyGroupsController } from "../interfaces/http/controllers/StudyGroupsController.js";
+import type { StudySessionsController } from "../interfaces/http/controllers/StudySessionsController.js";
 import { handleStudyGroupsRoutes } from "../interfaces/http/routes/studyGroupsRoutes.js";
 
 function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message });
 }
 
-export function createStudyGroupsServer(controller: StudyGroupsController) {
+export function createStudyGroupsServer(
+  controller: StudyGroupsController,
+  sessionsController?: StudySessionsController,
+) {
   return createServer((req, res) => {
     const resp = res as ServerResponse & { setHeader(name: string, value: string): void };
     const originHeader = req.headers.origin;
@@ -24,7 +28,7 @@ export function createStudyGroupsServer(controller: StudyGroupsController) {
     }
 
     void (async () => {
-      const handled = await handleStudyGroupsRoutes(req, res, controller);
+      const handled = await handleStudyGroupsRoutes(req, res, controller, sessionsController);
       if (!handled) {
         res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
         res.end(sendJsonError(404, "Route not found"));

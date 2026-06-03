@@ -1,4 +1,5 @@
 import { MessageValidator, type ValidationMetadata } from "./MessageValidator.js";
+import type { ResultadoValidacion } from "./ResultadoValidacion.js";
 
 export interface IAdminResolver {
   getCurrentAdminId(requestId: string): Promise<string | null>;
@@ -9,17 +10,16 @@ export class MentionResolver extends MessageValidator {
     super();
   }
 
-  async validate(content: string, metadata?: ValidationMetadata): Promise<void> {
+  protected async validar(content: string, metadata?: ValidationMetadata): Promise<ResultadoValidacion> {
     if (metadata?.isGroup && metadata.requestId && content.includes("@admin")) {
       const adminId = await this.adminResolver.getCurrentAdminId(metadata.requestId);
 
       if (adminId) {
         const resolved = content.replace(/@admin\b/g, `@${adminId}`);
-        await this.executeNext(resolved, metadata);
-        return;
+        return { valido: true, contenidoModificado: resolved };
       }
     }
 
-    await this.executeNext(content, metadata);
+    return { valido: true };
   }
 }

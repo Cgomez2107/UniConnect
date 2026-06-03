@@ -4,7 +4,7 @@ export interface ListStudyResourcesFilters {
   readonly subjectId?: string;
   readonly userId?: string;
   readonly search?: string;
-  readonly resourceType?: 'file' | 'link';
+  readonly resourceType?: string;
   readonly page: number;
   readonly pageSize: number;
 }

@@ -26,8 +26,12 @@ function decodeJWT(token: string): any {
  */
 export function OAuthCallbackPage() {
   const navigate = useNavigate();
+  const processedRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (processedRef.current) return;
+    processedRef.current = true;
+
     const processCallback = async () => {
       try {
         // Extraer tokens del hash (Supabase los devuelve así)
@@ -86,8 +90,8 @@ export function OAuthCallbackPage() {
                     profileImageUrl: undefined,
                     isVerified: true,
                     isOnboarded: false,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
                   },
                   accessToken: data.accessToken,
                   refreshToken: data.refreshToken,

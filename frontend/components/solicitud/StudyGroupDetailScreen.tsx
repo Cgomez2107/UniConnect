@@ -9,6 +9,7 @@ import { RequestDetailActionBar } from "@/components/solicitud/RequestDetailActi
 import { RequestDetailContent } from "@/components/solicitud/RequestDetailContent";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { GroupContext } from "@/lib/patterns/state";
+import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
 import { Colors } from "@/constants/Colors";
 import { useRequestDetail } from "@/hooks/application/useRequestDetail";
 import { useMessaging } from "@/hooks/application/useMessaging";
@@ -62,6 +63,7 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [selectedMentions, setSelectedMentions] = useState<{userId: string; displayName: string}[]>([]);
+  const [transferAcceptedState, setTransferAcceptedState] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const {
@@ -112,6 +114,14 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
   }, [canAccessChat, activeTab]);
 
   const groupTitle = useMemo(() => request?.title ?? "Grupo de estudio", [request?.title]);
+
+  const groupState = useMemo(() => {
+    if (transferAcceptedState) return "TransferenciaAceptada";
+    if (request?.status === "cerrada") return "Disuelto";
+    if (request?.status === "expirada") return "Bloqueado";
+    if (request?.hasPendingTransfer) return "PendienteTransferencia";
+    return "Activo";
+  }, [request?.status, request?.hasPendingTransfer, transferAcceptedState]);
 
   const formatTime = (value: string) =>
     new Date(value).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -331,6 +341,7 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 8,
         }}
       >
         <TouchableOpacity
@@ -342,15 +353,18 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
             borderRadius: 12,
             alignItems: "center",
             justifyContent: "center",
+            flexShrink: 0,
           }}
           activeOpacity={0.75}
         >
           <Text style={{ color: "#111827", fontSize: 18, fontWeight: "700" }}>←</Text>
         </TouchableOpacity>
-        <Text style={{ color: "#111827", fontSize: 18, fontWeight: "700" }} numberOfLines={1}>
-          {groupTitle}
-        </Text>
-        <View style={{ width: 40 }} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: "#111827", fontSize: 18, fontWeight: "700" }} numberOfLines={1}>
+            {groupTitle}
+          </Text>
+        </View>
+        <GroupStateBadge state={groupState} size="small" />
       </View>
 
       <View

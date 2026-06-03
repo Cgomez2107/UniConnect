@@ -141,6 +141,23 @@ export interface AvailabilityUpdatedEvent {
 }
 
 /**
+ * Evento: Sesión de estudio creada
+ */
+export interface SessionCreatedEvent {
+  readonly type: "SESSION_CREATED";
+  readonly version: "1.0";
+  readonly timestamp: Date;
+  readonly sessionId: string;
+  readonly groupId: string;
+  readonly title: string;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly createdBy: string;
+  readonly isRecurring: boolean;
+  readonly seriesId?: string | null;
+}
+
+/**
  * Evento: Sesión de estudio cancelada
  */
 export interface SessionCancelledEvent {
@@ -152,6 +169,8 @@ export interface SessionCancelledEvent {
   readonly title: string;
   readonly groupName: string;
   readonly attendeeIds: string[];
+  readonly groupId?: string;
+  readonly cancelledBy?: string;
 }
 
 /**
@@ -166,6 +185,7 @@ export type StudyGroupEvent =
   | AdminTransferRejectedEvent
   | AdminTransferCompletedEvent
   | AdminRoleLeftEvent
+  | SessionCreatedEvent
   | AvailabilityUpdatedEvent
   | SessionCancelledEvent;
 

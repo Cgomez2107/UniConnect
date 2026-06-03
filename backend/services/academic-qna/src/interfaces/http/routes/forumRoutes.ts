@@ -60,6 +60,7 @@ export async function handleForumRoutes(
   const questionsListMatch = req.method === "GET" && requestUrl.pathname === "/api/v1/forum/questions";
   const questionsDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)$/);
   const answersMatch = requestUrl.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)\/answers$/);
+  const pinMatch = requestUrl.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)\/answers\/([^/]+)\/pin$/);
   const solutionMatch = requestUrl.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)\/solution$/);
   const votesMatch = req.method === "POST" && requestUrl.pathname === "/api/v1/forum/votes";
 
@@ -116,6 +117,11 @@ export async function handleForumRoutes(
     const valid = await validateBody(req, res, CastVoteContract.request.shape.body);
     if (!valid) return true;
     await controller.castVote(req, res);
+    return true;
+  }
+
+  if (req.method === "PATCH" && pinMatch) {
+    await controller.pinAnswer(req, res, pinMatch[1], pinMatch[2]);
     return true;
   }
 

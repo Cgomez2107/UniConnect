@@ -88,7 +88,7 @@ export class NotificationMapper {
             groupName: event.groupName,
           },
           "normal",
-          { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.requestId}` },
+          { label: "Ver grupo", endpoint: `/study-groups/${event.requestId}`, method: "GET" },
         )];
 
       case "MEMBER_REJECTED":
@@ -117,7 +117,7 @@ export class NotificationMapper {
             oldAdminId: event.oldAdminId,
           },
           "urgente",
-          { label: "Revisar solicitud", endpoint: `/api/v1/study-groups/transfers/${event.transferId}/accept` },
+          { label: "Revisar solicitud", endpoint: `/study-groups/transfers/${event.transferId}/accept`, method: "POST" },
         )];
 
       case "ADMIN_TRANSFER_ACCEPTED":
@@ -131,8 +131,8 @@ export class NotificationMapper {
             groupId: event.groupId,
             newAdminId: event.newAdminId,
           },
-          "normal",
-          { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.groupId}` },
+          "urgente",
+          { label: "Ver grupo", endpoint: `/study-groups/${event.groupId}`, method: "GET" },
         )];
 
       case "ADMIN_TRANSFER_REJECTED":
@@ -161,7 +161,7 @@ export class NotificationMapper {
             oldAdminId: event.oldAdminId,
           },
           "urgente",
-          { label: "Ver grupo", endpoint: `/api/v1/study-groups/${event.groupId}` },
+          { label: "Ver grupo", endpoint: `/study-groups/${event.groupId}`, method: "GET" },
         )];
 
       case "ADMIN_ROLE_LEFT":
@@ -191,8 +191,8 @@ export class NotificationMapper {
           "normal",
         )];
 
-      case "SESSION_CANCELLED":
-        return event.attendeeIds.map(attendeeId =>
+      case "SESSION_CANCELLED": {
+        const attendeeNotifications = event.attendeeIds.map(attendeeId =>
           buildNotificacion(
             attendeeId,
             "sesion_cancelada",
@@ -206,6 +206,37 @@ export class NotificationMapper {
             "urgente",
           ),
         );
+
+        if (event.cancelledBy) {
+          attendeeNotifications.push(buildNotificacion(
+            event.cancelledBy,
+            "study_session_cancelled",
+            event.title,
+            "Se ha cancelado una sesión de estudio.",
+            {
+              sessionId: event.sessionId,
+              groupId: event.groupId,
+            },
+            "normal",
+          ));
+        }
+
+        return attendeeNotifications;
+      }
+
+      case "SESSION_CREATED":
+        return [buildNotificacion(
+          event.createdBy,
+          "study_session_created",
+          event.title,
+          "Se ha creado una nueva sesión de estudio.",
+          {
+            sessionId: event.sessionId,
+            groupId: event.groupId,
+            startTime: event.startTime,
+          },
+          "normal",
+        )];
 
       default: {
         const _exhaustive: never = event;

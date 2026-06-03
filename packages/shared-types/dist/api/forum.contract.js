@@ -123,4 +123,19 @@ export const CastVoteContract = {
     request: CastVoteRequestSchema,
     response: CastVoteResponseSchema,
 };
+export const PinAnswerRequestSchema = z.object({
+    params: z.object({
+        questionId: UuidSchema,
+        answerId: UuidSchema,
+    }),
+});
+export const PinAnswerResponseSchema = z.object({
+    success: z.literal(true),
+});
+export const PinAnswerContract = {
+    method: "PATCH",
+    path: "/api/v1/forum/questions/:questionId/answers/:answerId/pin",
+    request: PinAnswerRequestSchema,
+    response: PinAnswerResponseSchema,
+};
 //# sourceMappingURL=forum.contract.js.map

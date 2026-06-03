@@ -10,7 +10,7 @@ interface StudyResourceRow {
   user_id: string;
   program_id: string;
   subject_id: string;
-  resource_type: string;
+  resource_type: string | null;
   title: string;
   description: string | null;
   url: string | null;
@@ -30,9 +30,8 @@ interface StudyResourceRow {
   full_count?: string | number;
 }
 
-function parseResourceType(value: string): 'file' | 'link' {
-  if (value === 'file' || value === 'link') return value;
-  throw new Error(`Invalid resource_type: ${value}`);
+function parseResourceType(value: string | null): string {
+  return value ?? "file";
 }
 
 function mapStudyResource(row: StudyResourceRow): StudyResource {
@@ -86,14 +85,15 @@ export class PostgresStudyResourceRepository implements IStudyResourceRepository
       conditions.push(`sr.user_id = $${values.length}`);
     }
 
+    if (filters.resourceType) {
+      values.push(filters.resourceType);
+      values.push(filters.resourceType);
+      conditions.push(`(sr.resource_type = $${values.length - 1} OR (sr.resource_type = 'file' AND LOWER(sr.file_type) = $${values.length}))`);
+    }
+
     if (filters.search) {
       values.push(`%${filters.search}%`);
       conditions.push(`(sr.title ILIKE $${values.length} OR COALESCE(sr.description, '') ILIKE $${values.length})`);
-    }
-
-    if (filters.resourceType) {
-      values.push(filters.resourceType);
-      conditions.push(`sr.resource_type = $${values.length}`);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";

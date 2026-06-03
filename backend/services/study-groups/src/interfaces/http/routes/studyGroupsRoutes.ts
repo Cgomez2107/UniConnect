@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type { StudyGroupsController } from "../controllers/StudyGroupsController.js";
+import type { StudySessionsController } from "../controllers/StudySessionsController.js";
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   const body = JSON.stringify(payload);
@@ -16,6 +17,7 @@ export async function handleStudyGroupsRoutes(
   req: IncomingMessage,
   res: ServerResponse,
   controller: StudyGroupsController,
+  sessionsController?: StudySessionsController,
 ): Promise<boolean> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   const detailMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)$/);
@@ -23,10 +25,12 @@ export async function handleStudyGroupsRoutes(
   const applicationsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/applications$/);
   const messagesMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages$/);
   const messageReactionsMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/reactions$/);
+  const messagePollVoteMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/messages\/([^/]+)\/polls\/vote$/);
   const applyMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/apply$/);
   const leaveMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/leave$/);
   const cancelMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/cancel$/);
   const reviewMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/applications\/([^/]+)\/review$/);
+  const cancelApplicationMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/applications\/([^/]+)\/cancel$/);
   const transferMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/([^/]+)\/transfer$/);
   const transferAcceptMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/accept$/);
   const transferRejectMatch = requestUrl.pathname.match(/^\/api\/v1\/study-groups\/transfers\/([^/]+)\/reject$/);
@@ -129,6 +133,11 @@ export async function handleStudyGroupsRoutes(
     return true;
   }
 
+  if (req.method === "POST" && cancelApplicationMatch) {
+    await controller.cancelMyApplication(req, res, cancelApplicationMatch[1]);
+    return true;
+  }
+
   if (req.method === "POST" && transferMatch) {
     await controller.requestTransfer(req, res, transferMatch[1]);
     return true;
@@ -146,6 +155,11 @@ export async function handleStudyGroupsRoutes(
 
   if (req.method === "POST" && messageReactionsMatch) {
     await controller.toggleMessageReaction(req, res, messageReactionsMatch[2]);
+    return true;
+  }
+
+  if (req.method === "POST" && messagePollVoteMatch) {
+    await controller.voteInPollHandler(req, res, messagePollVoteMatch[2]);
     return true;
   }
 
@@ -172,6 +186,33 @@ export async function handleStudyGroupsRoutes(
   if (req.method === "GET" && sessionAttendeesMatch) {
     await controller.listSessionAttendees(req, res, sessionAttendeesMatch[2]);
     return true;
+  }
+
+  if (sessionsController) {
+    const seriesMatch = requestUrl.pathname.match(
+      /^\/api\/v1\/study-groups\/([^/]+)\/sessions\/series$/,
+    );
+    const listMatch = requestUrl.pathname.match(
+      /^\/api\/v1\/study-groups\/([^/]+)\/sessions$/,
+    );
+    const cancelSessionMatch = requestUrl.pathname.match(
+      /^\/api\/v1\/study-groups\/sessions\/([^/]+)$/,
+    );
+
+    if (req.method === "POST" && seriesMatch) {
+      await sessionsController.handleCreateSeries(req, res, seriesMatch[1]);
+      return true;
+    }
+
+    if (req.method === "GET" && listMatch) {
+      await sessionsController.handleListByGroup(req, res, listMatch[1]);
+      return true;
+    }
+
+    if (req.method === "DELETE" && cancelSessionMatch) {
+      await sessionsController.handleCancel(req, res, cancelSessionMatch[1]);
+      return true;
+    }
   }
 
   return false;

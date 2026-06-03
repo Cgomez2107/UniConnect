@@ -36,10 +36,11 @@ import DirectorioPage from "./pages/DirectorioPage";
 import { StudyGroupsMobilePage } from "./pages/StudyGroupsMobilePage";
 import { ForumPage } from "./pages/ForumPage";
 import { ForumQuestionPage } from "./pages/ForumQuestionPage";
+import { StudyCalendarPage } from "./pages/StudyCalendarPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
 import { fetchNotifications } from "./lib/services/notifications.service";
-import { useNotificationWebSocket } from "./hooks/useNotificationWebSocket";
+import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import "./App.css";
 
 function PrivateRoute({
@@ -88,7 +89,7 @@ function App() {
     })();
   }, [hydrate]);
 
-  useNotificationWebSocket();
+  useRealtimeNotifications();
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -169,6 +170,7 @@ function App() {
           <Route path="/ui/study-groups" element={<StudyGroupsMobilePage />} />
           <Route path="/forum" element={<ForumPage />} />
           <Route path="/forum/pregunta/:id" element={<ForumQuestionPage />} />
+          <Route path="/calendario-estudio" element={<StudyCalendarPage />} />
         </Route>
         <Route
           path="/"

@@ -3,6 +3,19 @@ export interface Reaction {
   userId: string;
 }
 
+export interface PollOption {
+  text: string;
+  votes: string[];
+}
+
+export interface PollData {
+  question: string;
+  options: PollOption[];
+  isOpen: boolean;
+  closesAt: string | null;
+  createdAt: string;
+}
+
 export interface Message {
   readonly id: string;
   readonly conversationId: string;
@@ -16,6 +29,7 @@ export interface Message {
   readonly createdAt: string;
   readonly readAt: string | null;
   readonly reactions: Reaction[];
+  readonly poll: PollData | null;
   readonly sender: {
     readonly fullName: string;
     readonly avatarUrl: string | null;
@@ -31,4 +45,5 @@ export interface CreateMessageInput {
   readonly mediaFilename?: string;
   readonly replyToMessageId?: string;
   readonly replyPreview?: string;
+  readonly poll?: PollData;
 }

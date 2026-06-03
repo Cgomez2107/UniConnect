@@ -3,6 +3,7 @@ import { z, ZodError } from "zod";
 
 import { ApplyToStudyRequest } from "../../../application/use-cases/ApplyToStudyRequest.js";
 import { AcceptAdminTransfer } from "../../../application/use-cases/AcceptAdminTransfer.js";
+import { CancelMyApplication } from "../../../application/use-cases/CancelMyApplication.js";
 import { CancelStudyRequest } from "../../../application/use-cases/CancelStudyRequest.js";
 import { CreateStudyRequest } from "../../../application/use-cases/CreateStudyRequest.js";
 import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequestById.js";
@@ -20,6 +21,7 @@ import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdmi
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
 import { CreateStudyGroupMessage } from "../../../application/use-cases/CreateStudyGroupMessage.js";
 import { ToggleStudyGroupMessageReaction } from "../../../application/use-cases/ToggleStudyGroupMessageReaction.js";
+import { VoteInPoll } from "../../../application/use-cases/VoteInPoll.js";
 import { CreateStudySession } from "../../../application/use-cases/CreateStudySession.js";
 import { CancelStudySession } from "../../../application/use-cases/CancelStudySession.js";
 import { UpdateAvailability } from "../../../application/use-cases/UpdateAvailability.js";
@@ -82,7 +84,9 @@ export class StudyGroupsController {
     private readonly listMyStudyRequestsUC: ListMyStudyRequests,
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
+    private readonly cancelMyApplicationUC: CancelMyApplication,
     private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
+    private readonly voteInPoll: VoteInPoll,
     private readonly markAllNotificationsAsRead: MarkAllNotificationsAsRead,
     private readonly preferenceService: PreferenceService,
     private readonly createStudySessionUC: CreateStudySession,
@@ -250,7 +254,8 @@ export class StudyGroupsController {
         mediaUrl: body.mediaUrl,
         mediaType: body.mediaType,
         mediaFilename: body.mediaFilename,
-        mentions: body.mentions
+        mentions: body.mentions,
+        poll: body.poll,
       });
 
       sendData(res, 201, created);
@@ -567,6 +572,56 @@ export class StudyGroupsController {
     }
   }
 
+  async voteInPollHandler(
+    req: IncomingMessage,
+    res: ServerResponse,
+    messageId: string,
+  ): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Token de autenticacion requerido.");
+        return;
+      }
+
+      const body = await readJsonBody<{ optionIndex: number }>(req);
+      if (body.optionIndex === undefined || body.optionIndex < 0) {
+        sendError(res, 400, "El campo 'optionIndex' es requerido y debe ser >= 0.");
+        return;
+      }
+
+      const { requestId, poll } = await this.voteInPoll.execute(
+        messageId,
+        actorUserId,
+        body.optionIndex,
+      );
+
+      sendData(res, 200, {
+        request_id: requestId,
+        message_id: messageId,
+        poll,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes("cerrada")) {
+          sendError(res, 403, error.message);
+          return;
+        }
+        if (msg.includes("no encontrado") || msg.includes("no contiene")) {
+          sendError(res, 404, error.message);
+          return;
+        }
+        if (msg.includes("inválida") || msg.includes("opción")) {
+          sendError(res, 400, error.message);
+          return;
+        }
+      }
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async leaveAdmin(
     req: IncomingMessage,
     res: ServerResponse,
@@ -635,8 +690,28 @@ export class StudyGroupsController {
     }
 
     try {
-      const updated = await this.cancelStudyRequestUC.execute(requestId);
+      const updated = await this.cancelStudyRequestUC.execute(requestId, actorUserId);
       sendData(res, 200, updated);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async cancelMyApplication(
+    req: IncomingMessage,
+    res: ServerResponse,
+    applicationId: string,
+  ): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Token de autenticacion requerido.");
+      return;
+    }
+
+    try {
+      await this.cancelMyApplicationUC.execute(applicationId, actorUserId);
+      sendData(res, 200, { message: "Postulación cancelada correctamente." });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

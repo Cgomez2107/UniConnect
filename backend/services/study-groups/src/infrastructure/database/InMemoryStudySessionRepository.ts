@@ -1,14 +1,16 @@
+import { randomUUID } from "node:crypto";
 import type { StudySession } from "../../domain/entities/StudySession.js";
 import type { IStudySessionRepository, ListSessionsFilters, CreateStudySessionInput } from "../../domain/repositories/IStudySessionRepository.js";
 
 export class InMemoryStudySessionRepository implements IStudySessionRepository {
   private sessions: Map<string, StudySession> = new Map();
   private attendeeUserIds: Map<string, string[]> = new Map();
+  private groupMembers: Map<string, string[]> = new Map();
 
   async create(input: CreateStudySessionInput): Promise<StudySession> {
     const now = new Date().toISOString();
     const entity: StudySession = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       seriesId: input.seriesId,
       requestId: input.requestId,
       title: input.title,
@@ -43,10 +45,12 @@ export class InMemoryStudySessionRepository implements IStudySessionRepository {
     let results = Array.from(this.sessions.values()).filter(s => s.requestId === requestId);
 
     if (filters?.from) {
-      results = results.filter(s => s.startTime >= filters.from!);
+      const from = filters.from;
+      results = results.filter(s => s.startTime >= from);
     }
     if (filters?.to) {
-      results = results.filter(s => s.startTime <= filters.to!);
+      const to = filters.to;
+      results = results.filter(s => s.startTime <= to);
     }
     if (filters?.status) {
       results = results.filter(s => s.status === filters.status);
@@ -95,6 +99,4 @@ export class InMemoryStudySessionRepository implements IStudySessionRepository {
   setGroupMembers(requestId: string, userIds: string[]): void {
     this.groupMembers.set(requestId, userIds);
   }
-
-  private groupMembers: Map<string, string[]> = new Map();
 }

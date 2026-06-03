@@ -11,6 +11,7 @@
 import { Colors } from "@/constants/Colors";
 import type { Message } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
+import { PollMessageItem } from "./PollMessageItem";
 import { Audio, type AVPlaybackStatus } from "expo-av";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
@@ -20,9 +21,11 @@ import { transformRawMessage } from "@/chat/utils/messageFactory";
 interface Props {
   message: Message;
   isOwn: boolean;
+  currentUserId?: string;
   onReply: (message: Message) => void;
   onRetry: (message: Message) => void;
   onOpenMedia: (url: string) => void;
+  onVote?: (messageId: string, optionIndex: number) => void;
 }
 
 function formatTime(iso: string): string {
@@ -71,9 +74,11 @@ function isAudioMessage(message: Message): boolean {
 export const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
+  currentUserId,
   onReply,
   onRetry,
   onOpenMedia,
+  onVote,
 }: Props) {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
@@ -250,6 +255,15 @@ export const MessageBubble = memo(function MessageBubble({
         <View style={styles.decoratorWrap}>
           {decoratedMessage.render(decoratorContext)}
         </View>
+
+        {message.poll_data && (
+          <PollMessageItem
+            poll={message.poll_data}
+            currentUserId={currentUserId}
+            senderId={message.sender_id}
+            onVote={(optionIndex) => onVote?.(message.id, optionIndex)}
+          />
+        )}
 
         {/* Meta: hora + estado de lectura */}
         <View style={styles.meta}>

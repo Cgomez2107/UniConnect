@@ -2,7 +2,7 @@ import type { ForumAnswer } from '../../domain/entities/ForumAnswer.js';
 import type { IForumAnswerRepository } from '../../domain/repositories/IForumAnswerRepository.js';
 import type { IForumQuestionRepository } from '../../domain/repositories/IForumQuestionRepository.js';
 import type { IEnrollmentRepository } from '../../domain/repositories/IEnrollmentRepository.js';
-import { ForumValidatorFactory } from '../validation/ForumValidatorFactory.js';
+import { ForumQuestionCoRFactory } from '../validation/ForumQuestionCoRFactory.js';
 import { NotFoundError } from '../../../../../shared/libs/errors/NotFoundError.js';
 
 export interface CreateAnswerInput {
@@ -29,7 +29,7 @@ export class CreateAnswer {
       throw new NotFoundError('La pregunta no está activa.');
     }
 
-    const chain = ForumValidatorFactory.createPublicationChain();
+    const chain = ForumQuestionCoRFactory.createPublicationChain();
 
     await chain.validate({
       userId: input.userId,
@@ -41,9 +41,11 @@ export class CreateAnswer {
     const answer = await this.answerRepo.create({
       questionId: input.questionId,
       authorId: input.userId,
+      authorName: '',
       body: input.body,
       voteCount: 0,
       isSolution: false,
+      isPinned: false,
     });
 
     await this.questionRepo.incrementAnswerCount(input.questionId);

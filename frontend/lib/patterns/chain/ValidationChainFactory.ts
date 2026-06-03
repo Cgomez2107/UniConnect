@@ -12,14 +12,14 @@ export class ValidationChainFactory {
     maxMentions?: number,
     permissionRepo?: IGroupPermissionRepository,
   ): BaseValidator {
-    let head: BaseValidator = new SizeValidator(maxLength ?? 5000);
-    let current = head;
+    const head: BaseValidator = new SizeValidator(maxLength ?? 5000);
+    let current: BaseValidator = head;
 
-    current = current.setNext(new ContentValidator(forbiddenWords));
-    current = current.setNext(new MentionValidator(maxMentions ?? 10));
+    current = current.setNext(new ContentValidator(forbiddenWords)) as BaseValidator;
+    current = current.setNext(new MentionValidator(maxMentions ?? 10)) as BaseValidator;
 
     if (permissionRepo) {
-      current = current.setNext(new PermissionValidator(permissionRepo));
+      current = current.setNext(new PermissionValidator(permissionRepo)) as BaseValidator;
     }
 
     return head;

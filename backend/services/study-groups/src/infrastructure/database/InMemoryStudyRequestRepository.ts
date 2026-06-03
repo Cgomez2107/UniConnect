@@ -18,7 +18,7 @@ export class InMemoryStudyRequestRepository implements IStudyRequestRepository, 
   listByAuthorId(authorId: string): Promise<StudyRequest[]> {
     throw new Error("Method not implemented.");
   }
-  cancel(id: string): Promise<StudyRequest> {
+  cancel(id: string, actorUserId: string): Promise<StudyRequest> {
     throw new Error("Method not implemented.");
   }
   private readonly requests: StudyRequest[] = [

@@ -27,6 +27,20 @@ interface ApiMessage {
   created_at?: string;
   readAt?: string | null;
   read_at?: string | null;
+  poll?: {
+    question: string;
+    options: Array<{ text: string; votes: string[] }>;
+    is_open: boolean;
+    closes_at: string | null;
+    created_at: string;
+  } | null;
+  poll_data?: {
+    question: string;
+    options: Array<{ text: string; votes: string[] }>;
+    is_open: boolean;
+    closes_at: string | null;
+    created_at: string;
+  } | null;
   sender?: {
     fullName?: string;
     full_name?: string;
@@ -58,6 +72,7 @@ function mapMessage(raw: ApiMessage): Message {
     created_at: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
     read_at: raw.readAt ?? raw.read_at ?? null,
     reactions: parseReactions(raw.reactions),
+    poll_data: raw.poll ?? raw.poll_data ?? null,
     sender: raw.sender
       ? {
           full_name: raw.sender.fullName ?? raw.sender.full_name ?? "Usuario",

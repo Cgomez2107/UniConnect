@@ -5,6 +5,7 @@ import { buildDecoratedMessage } from "@/chat/models/messageFactory.js";
 import type { IRenderContext } from "@/chat/models/IMessage.js";
 import type { FileData } from "@/chat/models/IMessage.js";
 import { ReactionBar } from "./ReactionBar";
+import { PollMessage } from "./PollMessage";
 interface MessageBubbleProps {
   message: MessageUI;
   currentUser: UserSessionUI | null;
@@ -12,6 +13,8 @@ interface MessageBubbleProps {
   onReply?: (message: MessageUI) => void;
   onRetry?: (message: MessageUI) => void;
   onToggleReaction?: (messageId: string, emoji: string) => void;
+  onVote?: (messageId: string, optionIndex: number) => void;
+  voterMap?: Record<string, string>;
 }
 
 export function MessageBubble({
@@ -21,6 +24,8 @@ export function MessageBubble({
   onReply,
   onRetry,
   onToggleReaction,
+  onVote,
+  voterMap,
 }: MessageBubbleProps) {
   const navigate = useNavigate();
   const isOwn = currentUser?.id === message.senderId;
@@ -51,10 +56,11 @@ export function MessageBubble({
         mediaFilename: message.mediaFilename,
         mentions: message.mentions,
         reactions: message.reactions,
+        poll: message.poll,
       }),
     [message.id, message.content, message.senderId, message.createdAt,
      message.mediaUrl, message.mediaType, message.mediaFilename,
-     message.mentions, message.reactions],
+     message.mentions, message.reactions, message.poll],
   );
 
   return (
@@ -86,6 +92,14 @@ export function MessageBubble({
           <div className="text-sm whitespace-pre-wrap break-words">
             {decoratedMessage.render(decoratorContext)}
           </div>
+          {message.poll && (
+            <PollMessage
+              poll={message.poll}
+              currentUserId={currentUser?.id}
+              onVote={(optionIndex) => onVote?.(message.id, optionIndex)}
+              voterMap={voterMap}
+            />
+          )}
           <div className={`flex items-center justify-end gap-1 mt-1`}>
             <span className={`text-xs ${isOwn ? "text-primary-200" : "text-neutral-500"}`}>
               {new Date(message.createdAt).toLocaleTimeString("es-CO", {

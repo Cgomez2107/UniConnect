@@ -9,8 +9,10 @@ import { createGroupChannel } from "../../../../messaging/src/domain/events/inde
 import {
   BaseMessage,
   MentionDecorator,
+  PollDecorator,
   extractMentionsFromContent,
 } from "../../../../messaging/src/domain/decorators/index.js";
+import { PollTimerService } from "../../../../messaging/src/domain/services/PollTimerService.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 import { ValidatorFactory, type IGroupPermissionRepository, type IAdminResolver } from "../../../../../shared/patterns/chain/message/index.js";
 
@@ -22,6 +24,13 @@ export interface CreateStudyGroupMessageInput {
   readonly mediaType?: string;
   readonly mediaFilename?: string;
   readonly mentions?: any[];
+  readonly poll?: {
+    readonly question: string;
+    readonly options: readonly (string | { readonly text: string; readonly votes?: readonly string[] })[];
+    readonly isOpen: boolean;
+    readonly closesAt: string | null;
+    readonly createdAt: string;
+  };
 }
 
 export class CreateStudyGroupMessage {
@@ -35,6 +44,8 @@ export class CreateStudyGroupMessage {
     private readonly chatNotificationObserver: IChatObserver | null,
     permissionRepo: IGroupPermissionRepository,
     adminResolver: IAdminResolver,
+    private readonly pollTimerService: PollTimerService,
+    private readonly onClosePoll: (messageId: string) => Promise<void>,
   ) {
     this.validator = ValidatorFactory.createChain(5000, undefined, permissionRepo, adminResolver);
   }
@@ -44,7 +55,7 @@ export class CreateStudyGroupMessage {
 
     const content = input.content ?? "";
 
-    await this.validator.validate(content, {
+    const validationResult = await this.validator.manejar(content, {
       mediaUrl: input.mediaUrl?.trim() || undefined,
       mediaType: input.mediaType?.trim() || undefined,
       mediaFilename: input.mediaFilename?.trim() || undefined,
@@ -53,6 +64,12 @@ export class CreateStudyGroupMessage {
       isGroup: true,
     });
 
+    if (!validationResult.valido) {
+      throw new Error(validationResult.mensajeError ?? "Error de validación");
+    }
+
+    const finalContent = validationResult.contenidoModificado ?? content;
+
     const finalMentions = (input.mentions && input.mentions.length > 0)
       ? input.mentions
       : extractMentionsFromContent(content);
@@ -60,11 +77,18 @@ export class CreateStudyGroupMessage {
     const created = await this.repository.create({
       requestId,
       actorUserId: input.actorUserId,
-      content,
+      content: finalContent,
       mentions: finalMentions,
       mediaUrl: input.mediaUrl,
       mediaType: input.mediaType,
       mediaFilename: input.mediaFilename,
+      poll: input.poll ? {
+        question: input.poll.question,
+        options: input.poll.options.map(normalizePollOption),
+        isOpen: input.poll.isOpen,
+        closesAt: input.poll.closesAt,
+        createdAt: input.poll.createdAt,
+      } : undefined,
     });
 
     const channel = createGroupChannel(requestId);
@@ -94,8 +118,23 @@ export class CreateStudyGroupMessage {
       console.error("[CreateStudyGroupMessage] Error emitiendo evento:", error);
     });
 
+    if (input.poll?.closesAt) {
+      this.pollTimerService.schedule(
+        created.id,
+        new Date(input.poll.closesAt),
+        this.onClosePoll,
+      );
+    }
+
     return created;
   }
+}
+
+function normalizePollOption(o: string | { text: string; votes?: readonly string[] }): { text: string; votes: string[] } {
+  if (typeof o === "string") {
+    return { text: o, votes: [] };
+  }
+  return { text: o.text, votes: [...(o.votes ?? [])] };
 }
 
 function buildDecoratedPayload(message: StudyGroupMessage): Record<string, unknown> {
@@ -109,6 +148,16 @@ function buildDecoratedPayload(message: StudyGroupMessage): Record<string, unkno
   const mentions = extractMentionsFromContent(message.content);
   if (mentions.length > 0) {
     decorated = new MentionDecorator(decorated, mentions);
+  }
+
+  if (message.poll) {
+    decorated = new PollDecorator(decorated, {
+      question: message.poll.question,
+      options: message.poll.options.map((o) => normalizePollOption(o)),
+      isOpen: message.poll.isOpen,
+      closesAt: message.poll.closesAt,
+      createdAt: message.poll.createdAt,
+    });
   }
 
   return {

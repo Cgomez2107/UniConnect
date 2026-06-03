@@ -12,6 +12,19 @@ export interface ReactionData {
   users: string[];
 }
 
+export interface PollOptionData {
+  text: string;
+  votes: string[];
+}
+
+export interface PollData {
+  question: string;
+  options: PollOptionData[];
+  isOpen: boolean;
+  closesAt: string | null;
+  createdAt: string;
+}
+
 export interface FileData {
   url: string;
   mimeType: string;

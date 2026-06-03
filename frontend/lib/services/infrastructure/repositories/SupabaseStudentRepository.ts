@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase"
-import type { StudentPublicProfile, StudentSearchResult } from "@/types"
+import type { StudentPublicProfile, StudentSearchResult, PerfilCompleto } from "@/types"
 import type { IStudentRepository } from "../../domain/repositories/IStudentRepository"
 
 const DEFAULT_PAGE_SIZE = 20
@@ -89,5 +89,48 @@ export class SupabaseStudentRepository implements IStudentRepository {
       faculty_name: facultyName,
       shared_subjects: sharedSubjects,
     }
+  }
+
+  async getDecoratedProfile(studentId: string): Promise<PerfilCompleto | null> {
+    const profile = await this.getPublicProfile(studentId, studentId);
+    if (!profile) return null;
+
+    const { data: indicadoresData } = await supabase
+      .from("v_student_indicadores")
+      .select("*")
+      .eq("user_id", studentId)
+      .single();
+
+    const { data: insigniasData } = await supabase
+      .from("user_badges")
+      .select("id, nombre, descripcion, icono_url, fecha_obtenida")
+      .eq("user_id", studentId);
+
+    const indicadores = indicadoresData
+      ? {
+          gruposBajoAdministracion: (indicadoresData as any).grupos_bajo_administracion ?? 0,
+          gruposParticipa: (indicadoresData as any).grupos_participa ?? 0,
+          mensajesEnviados: (indicadoresData as any).mensajes_enviados ?? 0,
+        }
+      : { gruposBajoAdministracion: 0, gruposParticipa: 0, mensajesEnviados: 0 };
+
+    const insignias: { id: string; nombre: string; descripcion: string; iconoUrl: string; fechaObtenida: string }[] =
+      (insigniasData ?? []).map((row: any) => ({
+        id: row.id,
+        nombre: row.nombre,
+        descripcion: row.descripcion,
+        iconoUrl: row.icono_url,
+        fechaObtenida: row.fecha_obtenida,
+      }));
+
+    return {
+      id: profile.id,
+      nombre: profile.full_name,
+      carrera: profile.program_name ?? "",
+      semestre: profile.semester ?? 1,
+      asignaturasActivas: (profile.shared_subjects ?? []).map((s: any) => ({ id: s.id, nombre: s.name ?? s.nombre ?? "" })),
+      indicadores,
+      insignias,
+    };
   }
 }

@@ -22,6 +22,7 @@ export function EditProfilePage() {
     subjectSearch,
     setSubjectSearch,
     programChangeConfirm,
+    subjectNameMap,
     bioRemaining,
     handleSemesterChange,
     handleNameChange,
@@ -207,12 +208,12 @@ export function EditProfilePage() {
                         key={subjectId}
                         className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-200 rounded-full text-sm"
                       >
-                        {subject?.name || subjectId}
+                        {subject?.name || subjectNameMap[subjectId] || subjectId}
                         <button
                           type="button"
                           onClick={() => handleToggleSubject(subjectId)}
                           className="ml-1 text-primary-500 hover:text-primary-700 dark:text-primary-300 dark:hover:text-primary-100 focus:outline-none"
-                          aria-label={`Remover ${subject?.name || subjectId}`}
+                          aria-label={`Remover ${subject?.name || subjectNameMap[subjectId] || subjectId}`}
                         >
                           ✕
                         </button>

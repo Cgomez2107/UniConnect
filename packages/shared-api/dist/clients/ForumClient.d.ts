@@ -9,6 +9,7 @@ export interface ForumQuestion {
     status: "active" | "solved";
     answerCount: number;
     voteCount: number;
+    userVote?: "upvote" | "downvote" | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -27,9 +28,12 @@ export interface ForumAnswer {
     id: string;
     questionId: string;
     authorId: string;
+    authorName: string;
     body: string;
     voteCount: number;
     isSolution: boolean;
+    isPinned: boolean;
+    userVote?: "upvote" | "downvote" | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -64,5 +68,6 @@ export declare class ForumClient extends BaseClient {
         voteCount: number;
     }>;
     markAsSolution(questionId: string, data: MarkSolutionPayload): Promise<void>;
+    pinAnswer(questionId: string, answerId: string): Promise<void>;
 }
 //# sourceMappingURL=ForumClient.d.ts.map

@@ -16,4 +16,6 @@ export { ForumClient } from "./ForumClient.js";
 export type { ForumQuestion, ForumQuestionSummary, ForumAnswer, CreateQuestionPayload, CreateAnswerPayload, CastVotePayload, MarkSolutionPayload, } from "./ForumClient.js";
 export { AdminClient } from "./AdminClient.js";
 export type { AdminUser, AdminRequest, AdminResource, AdminEvent, AdminMetrics, } from "./AdminClient.js";
+export { StudySessionsClient } from "./StudySessionsClient.js";
+export type { CreateSeriesPayload, } from "./StudySessionsClient.js";
 //# sourceMappingURL=index.d.ts.map

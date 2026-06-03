@@ -1,0 +1,106 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, integration/pre-deploy]
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "backend/**"
+      - ".github/workflows/e2e.yml"
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9.12.0"
+
+jobs:
+  e2e-web:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      E2E_BASE_URL: "https://uniconnect-dashboard-web.fly.dev"
+      E2E_GATEWAY_URL: "https://uniconnect-backend-grupo-2.fly.dev"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared-types
+        run: pnpm build
+        working-directory: packages/shared-types
+
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: web
+
+      - name: Create test user in staging
+        run: |
+          echo "Creating test user in staging..."
+          SIGNUP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ env.E2E_GATEWAY_URL }}/api/v1/auth/signup" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${{ secrets.TEST_USER_EMAIL || 'estudiante.prueba@ucaldas.edu.co' }}\",\"password\":\"${{ secrets.TEST_USER_PASSWORD || 'Test1234' }}\",\"fullName\":\"Usuario Test E2E\"}")
+          
+          HTTP_CODE=$(echo "$SIGNUP_RESPONSE" | tail -n1)
+          BODY=$(echo "$SIGNUP_RESPONSE" | sed '$d')
+          
+          echo "Signup response: $BODY"
+          echo "HTTP code: $HTTP_CODE"
+          
+          # 201 = created, 409 = already exists (both OK)
+          if [ "$HTTP_CODE" != "201" ] && [ "$HTTP_CODE" != "409" ]; then
+            echo "Warning: Signup returned $HTTP_CODE, but continuing with tests..."
+          fi
+        working-directory: web
+
+      - name: Run E2E tests against staging
+        run: pnpm test:e2e --reporter=list
+        working-directory: web
+        env:
+          E2E_BASE_URL: ${{ env.E2E_BASE_URL }}
+          E2E_GATEWAY_URL: ${{ env.E2E_GATEWAY_URL }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL || 'estudiante.prueba@ucaldas.edu.co' }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD || 'Test1234' }}
+          DEBUG: pw:api
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 14
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: web/test-results/
+          retention-days: 14

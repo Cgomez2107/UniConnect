@@ -11,6 +11,7 @@ export declare const ForumQuestionSchema: z.ZodObject<{
     status: z.ZodEnum<["active", "solved", "closed"]>;
     answerCount: z.ZodNumber;
     voteCount: z.ZodNumber;
+    userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -24,6 +25,7 @@ export declare const ForumQuestionSchema: z.ZodObject<{
     body: string;
     answerCount: number;
     voteCount: number;
+    userVote?: "upvote" | "downvote" | null | undefined;
 }, {
     status: "active" | "solved" | "closed";
     createdAt: string;
@@ -35,6 +37,7 @@ export declare const ForumQuestionSchema: z.ZodObject<{
     body: string;
     answerCount: number;
     voteCount: number;
+    userVote?: "upvote" | "downvote" | null | undefined;
 }>;
 export declare const ForumQuestionSummarySchema: z.ZodObject<{
     id: z.ZodString;
@@ -71,9 +74,12 @@ export declare const ForumAnswerSchema: z.ZodObject<{
     id: z.ZodString;
     questionId: z.ZodString;
     authorId: z.ZodString;
+    authorName: z.ZodString;
     body: z.ZodString;
     voteCount: z.ZodNumber;
-    isSolution: z.ZodBoolean;
+    isSolution: z.ZodDefault<z.ZodBoolean>;
+    isPinned: z.ZodDefault<z.ZodBoolean>;
+    userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -84,7 +90,10 @@ export declare const ForumAnswerSchema: z.ZodObject<{
     body: string;
     voteCount: number;
     questionId: string;
+    authorName: string;
     isSolution: boolean;
+    isPinned: boolean;
+    userVote?: "upvote" | "downvote" | null | undefined;
 }, {
     createdAt: string;
     updatedAt: string;
@@ -93,7 +102,10 @@ export declare const ForumAnswerSchema: z.ZodObject<{
     body: string;
     voteCount: number;
     questionId: string;
-    isSolution: boolean;
+    authorName: string;
+    userVote?: "upvote" | "downvote" | null | undefined;
+    isSolution?: boolean | undefined;
+    isPinned?: boolean | undefined;
 }>;
 export declare const ForumVoteSchema: z.ZodObject<{
     id: z.ZodString;
@@ -163,6 +175,7 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         status: z.ZodEnum<["active", "solved", "closed"]>;
         answerCount: z.ZodNumber;
         voteCount: z.ZodNumber;
+        userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
@@ -176,6 +189,7 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         body: string;
         answerCount: number;
         voteCount: number;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }, {
         status: "active" | "solved" | "closed";
         createdAt: string;
@@ -187,14 +201,18 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         body: string;
         answerCount: number;
         voteCount: number;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }>;
     answers: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         questionId: z.ZodString;
         authorId: z.ZodString;
+        authorName: z.ZodString;
         body: z.ZodString;
         voteCount: z.ZodNumber;
-        isSolution: z.ZodBoolean;
+        isSolution: z.ZodDefault<z.ZodBoolean>;
+        isPinned: z.ZodDefault<z.ZodBoolean>;
+        userVote: z.ZodOptional<z.ZodNullable<z.ZodEnum<["upvote", "downvote"]>>>;
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
@@ -205,7 +223,10 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
+        authorName: string;
         isSolution: boolean;
+        isPinned: boolean;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }, {
         createdAt: string;
         updatedAt: string;
@@ -214,7 +235,10 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
-        isSolution: boolean;
+        authorName: string;
+        userVote?: "upvote" | "downvote" | null | undefined;
+        isSolution?: boolean | undefined;
+        isPinned?: boolean | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     question: {
@@ -228,6 +252,7 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         body: string;
         answerCount: number;
         voteCount: number;
+        userVote?: "upvote" | "downvote" | null | undefined;
     };
     answers: {
         createdAt: string;
@@ -237,7 +262,10 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
+        authorName: string;
         isSolution: boolean;
+        isPinned: boolean;
+        userVote?: "upvote" | "downvote" | null | undefined;
     }[];
 }, {
     question: {
@@ -251,6 +279,7 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         body: string;
         answerCount: number;
         voteCount: number;
+        userVote?: "upvote" | "downvote" | null | undefined;
     };
     answers: {
         createdAt: string;
@@ -260,7 +289,10 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         body: string;
         voteCount: number;
         questionId: string;
-        isSolution: boolean;
+        authorName: string;
+        userVote?: "upvote" | "downvote" | null | undefined;
+        isSolution?: boolean | undefined;
+        isPinned?: boolean | undefined;
     }[];
 }>;
 export type ForumQuestion = z.infer<typeof ForumQuestionSchema>;
@@ -340,9 +372,11 @@ export declare const ForumAnswerDTOSchema: z.ZodObject<{
     id: z.ZodString;
     question_id: z.ZodString;
     author_id: z.ZodString;
+    author_name: z.ZodString;
     body: z.ZodString;
     vote_count: z.ZodNumber;
-    is_solution: z.ZodBoolean;
+    is_solution: z.ZodDefault<z.ZodBoolean>;
+    is_pinned: z.ZodDefault<z.ZodBoolean>;
     created_at: z.ZodString;
     updated_at: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -353,7 +387,9 @@ export declare const ForumAnswerDTOSchema: z.ZodObject<{
     author_id: string;
     vote_count: number;
     question_id: string;
+    author_name: string;
     is_solution: boolean;
+    is_pinned: boolean;
 }, {
     id: string;
     created_at: string;
@@ -362,7 +398,9 @@ export declare const ForumAnswerDTOSchema: z.ZodObject<{
     author_id: string;
     vote_count: number;
     question_id: string;
-    is_solution: boolean;
+    author_name: string;
+    is_solution?: boolean | undefined;
+    is_pinned?: boolean | undefined;
 }>;
 export declare const ForumVoteDTOSchema: z.ZodObject<{
     id: z.ZodString;

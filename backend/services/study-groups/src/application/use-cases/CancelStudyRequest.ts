@@ -5,8 +5,9 @@ import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 export class CancelStudyRequest {
   constructor(private readonly repository: IStudyRequestRepository) {}
 
-  async execute(id: string): Promise<StudyRequest> {
+  async execute(id: string, actorUserId: string): Promise<StudyRequest> {
     const normalizedId = requireTrimmed(id, "studyRequestId");
-    return this.repository.cancel(normalizedId);
+    const normalizedUserId = requireTrimmed(actorUserId, "actorUserId");
+    return this.repository.cancel(normalizedId, normalizedUserId);
   }
 }

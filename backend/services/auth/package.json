@@ -15,7 +15,8 @@
   "dependencies": {
     "@uniconnect/shared-types": "file:../../../packages/shared-types",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

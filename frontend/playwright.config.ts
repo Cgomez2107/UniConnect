@@ -11,10 +11,10 @@ export default defineConfig({
   ...(process.env.CI
     ? {
         webServer: {
-          command: "pnpm web -- --port 8081 --non-interactive",
+          command: "npx serve dist-web -l 8081 -s",
           url: baseURL,
           reuseExistingServer: false,
-          timeout: 120_000,
+          timeout: 60_000,
         },
       }
     : {}),

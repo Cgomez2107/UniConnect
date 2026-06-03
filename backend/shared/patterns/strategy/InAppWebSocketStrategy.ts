@@ -12,6 +12,8 @@ export interface INotificationPersistenceRepository {
     title: string;
     body: string;
     payload: Record<string, unknown> | null;
+    priority?: "normal" | "urgente" | "critica";
+    action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
   }): Promise<string>;
 }
 
@@ -25,13 +27,16 @@ export class InAppWebSocketStrategy implements INotificationStrategy {
 
   async enviar(notificacion: NotificacionDTO): Promise<ResultadoEnvio> {
     try {
+      let notificationId: string | undefined;
       if (this.notificationRepository) {
-        await this.notificationRepository.create({
+        notificationId = await this.notificationRepository.create({
           userId: notificacion.userId,
           type: notificacion.type,
           title: notificacion.title,
           body: notificacion.body,
           payload: notificacion.payload,
+          priority: notificacion.priority,
+          action: notificacion.action,
         });
       }
 
@@ -39,8 +44,11 @@ export class InAppWebSocketStrategy implements INotificationStrategy {
         notificacion.userId,
         notificacion.type,
         {
+          id: notificationId,
           title: notificacion.title,
           body: notificacion.body,
+          priority: notificacion.priority,
+          action: notificacion.action,
           ...(notificacion.payload ?? {}),
         },
       );

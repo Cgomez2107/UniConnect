@@ -7,7 +7,7 @@ export interface CreateStudyResourceCommand {
   readonly actorUserId: string;
   readonly programId: string;
   readonly subjectId: string;
-  readonly resourceType: 'file' | 'link';
+  readonly resourceType: string;
   readonly title: string;
   readonly description?: string;
   readonly url?: string;
@@ -15,12 +15,15 @@ export interface CreateStudyResourceCommand {
   readonly fileName?: string;
   readonly fileType?: string;
   readonly fileSizeKb?: number;
+  readonly ogTitle?: string;
+  readonly ogImage?: string;
+  readonly ogDescription?: string;
 }
 
 export class CreateStudyResource {
   constructor(
     private readonly repository: IStudyResourceRepository,
-    private readonly openGraphService?: IOpenGraphService,
+  private readonly openGraphService?: IOpenGraphService,
   ) {}
 
   async execute(command: CreateStudyResourceCommand): Promise<StudyResource> {
@@ -60,11 +63,11 @@ export class CreateStudyResource {
         }
       }
 
-      return this.repository.create({
+      return     this.repository.create({
         userId: command.actorUserId,
         programId: command.programId.trim(),
         subjectId: command.subjectId.trim(),
-        resourceType: 'link',
+        resourceType: command.resourceType,
         title: command.title.trim(),
         description: command.description?.trim(),
         url: command.url.trim(),
@@ -87,13 +90,16 @@ export class CreateStudyResource {
       userId: command.actorUserId,
       programId: command.programId.trim(),
       subjectId: command.subjectId.trim(),
-      resourceType: 'file',
+      resourceType: command.resourceType,
       title: command.title.trim(),
       description: command.description?.trim(),
       fileUrl: command.fileUrl.trim(),
       fileName: command.fileName.trim(),
       fileType: command.fileType?.trim(),
       fileSizeKb: command.fileSizeKb,
+      ogTitle: command.ogTitle?.trim(),
+      ogImage: command.ogImage?.trim(),
+      ogDescription: command.ogDescription?.trim(),
     });
   }
 }

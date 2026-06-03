@@ -138,7 +138,7 @@ export interface StudyApplication {
 // ============================================================================
 
 export type ConversationType = "direct" | "group";
-export type MessageType = "text" | "file" | "mention" | "reaction";
+export type MessageType = "text" | "file" | "mention" | "reaction" | "poll";
 
 export interface Message {
   id: string;
@@ -150,14 +150,28 @@ export interface Message {
   decorations?: MessageDecoration[];
   attachments?: MessageAttachment[];
   reactions?: MessageReaction[];
+  poll?: PollData | null;
   isEdited: boolean;
   editedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
+export interface PollOption {
+  text: string;
+  votes: string[];
+}
+
+export interface PollData {
+  question: string;
+  options: PollOption[];
+  isOpen: boolean;
+  closesAt: string | null;
+  createdAt: string;
+}
+
 export interface MessageDecoration {
-  type: "mention" | "file" | "reaction";
+  type: "mention" | "file" | "reaction" | "poll";
   data: Record<string, any>;
 }
 
@@ -227,6 +241,8 @@ export interface Notification {
   read: boolean;
   data?: Record<string, any>;
   createdAt: Date;
+  priority?: "normal" | "urgente" | "critica";
+  action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
 }
 
 // ============================================================================
@@ -235,20 +251,23 @@ export interface Notification {
 
 export interface StudyResource {
   id: string;
-  title: string;
-  description?: string;
-  type: string;
-  url: string;
-  uploaderUserId: string;
-  uploader?: User;
+  userId: string;
+  programId: string;
   subjectId: string;
-  subject?: Subject;
-  tags: string[];
-  viewCount: number;
-  downloadCount: number;
-  isPublic: boolean;
+  title: string;
+  description: string | null;
+  fileUrl: string;
+  fileName: string;
+  fileType: string | null;
+  fileSizeKb: number | null;
+  resourceType: string | null;
+  ogTitle: string | null;
+  ogImage: string | null;
+  ogDescription: string | null;
   createdAt: Date;
   updatedAt: Date;
+  profiles?: { fullName: string; avatarUrl: string | null };
+  subjects?: { name: string };
 }
 
 // ============================================================================

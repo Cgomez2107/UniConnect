@@ -14,6 +14,7 @@ export class UpdateStudyResource {
   async execute(
     id: string,
     actorUserId: string,
+    isAdmin = false,
     payload: { title?: string; description?: string | null },
   ): Promise<StudyResource> {
     if (!id.trim()) {

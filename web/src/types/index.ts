@@ -201,6 +201,13 @@ export interface Message {
   client_error?: string | null;
   created_at: string;
   read_at: string | null;
+  poll_data?: {
+    question: string;
+    options: Array<{ text: string; votes: string[] }>;
+    is_open: boolean;
+    closes_at: string | null;
+    created_at: string;
+  } | null;
   // join
   sender?: { full_name: string; avatar_url: string | null };
 }
@@ -243,6 +250,10 @@ export interface StudyResource {
   file_name: string;
   file_type: string | null;
   file_size_kb: number | null;
+  resource_type: string | null;
+  og_title: string | null;
+  og_image: string | null;
+  og_description: string | null;
   created_at: string;
   updated_at: string;
   // joins opcionales para enriquecimiento
@@ -259,6 +270,10 @@ export interface CreateStudyResourcePayload {
   fileType?: string;
   fileSizeKb?: number;
   programId?: string;
+  resourceType?: string;
+  ogTitle?: string;
+  ogImage?: string;
+  ogDescription?: string;
 }
 
 // ============================================================================

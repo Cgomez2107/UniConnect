@@ -8,4 +8,5 @@ export { EventsClient } from "./EventsClient.js";
 export { NotificationsClient } from "./NotificationsClient.js";
 export { ForumClient } from "./ForumClient.js";
 export { AdminClient } from "./AdminClient.js";
+export { StudySessionsClient } from "./StudySessionsClient.js";
 //# sourceMappingURL=index.js.map

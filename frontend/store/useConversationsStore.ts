@@ -1,7 +1,7 @@
 import type { Conversation } from "@/types";
 import { zustandPlatformStorage } from "@/lib/storage/zustandStorage";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware.js";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 interface ConversationsStoreState {
   conversations: Conversation[];
@@ -29,7 +29,9 @@ export const useConversationsStore = create<ConversationsStoreState>()(
           console.warn("[useConversationsStore] Error during hydration", error);
         }
 
-        state?.setHasHydrated(true);
+        if (state && typeof (state as any).setHasHydrated === "function") {
+          (state as any).setHasHydrated(true);
+        }
       },
     },
   ),

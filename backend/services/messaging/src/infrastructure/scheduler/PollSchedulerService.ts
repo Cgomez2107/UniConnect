@@ -1,6 +1,6 @@
 import type { IMessagingRepository } from "../../domain/repositories/IMessagingRepository.js";
 import type { ChatSubject } from "../../domain/events/ChatSubject.js";
-import type { PollClosedEvent } from "../../domain/events/ChatEvents.js";
+import type { PollClosedStatusEvent } from "../../domain/events/ChatEvents.js";
 import { createGroupChannel } from "../../domain/events/ChatEvents.js";
 
 export class PollSchedulerService {
@@ -47,7 +47,7 @@ export class PollSchedulerService {
         const groupId = await this.repository.getPollGroupId(pollId);
         const channel = createGroupChannel(groupId);
 
-        const event: PollClosedEvent = {
+        const event: PollClosedStatusEvent = {
           type: "POLL_CLOSED",
           version: "1.0",
           timestamp: new Date(),

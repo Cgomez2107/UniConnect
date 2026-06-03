@@ -6,14 +6,16 @@ export async function fetchNotifications() {
     const apiNotifications = await deps.apiClients.notifications.list();
     const store = useNotificationStore.getState();
 
-    const apiIds = new Set(apiNotifications.map((n) => n.id));
+    const seen = new Set<string>();
+    const deduped: typeof apiNotifications = [];
+    for (const n of apiNotifications) {
+      if (!seen.has(n.id)) {
+        seen.add(n.id);
+        deduped.push(n);
+      }
+    }
 
-    const localOnly = store.notifications.filter(
-      (n) => n.id.startsWith("event-") && !apiIds.has(n.id),
-    );
-
-    const merged = [...apiNotifications, ...localOnly];
-    store.setNotifications(merged);
+    store.setNotifications(deduped);
   } catch (err) {
     console.error("Error fetching notifications:", err);
   }

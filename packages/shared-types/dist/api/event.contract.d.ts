@@ -6,6 +6,7 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         description: z.ZodString;
         eventDate: z.ZodString;
         location: z.ZodOptional<z.ZodString>;
+        category: z.ZodDefault<z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>>;
         capacity: z.ZodOptional<z.ZodNumber>;
         isOnline: z.ZodDefault<z.ZodBoolean>;
         eventUrl: z.ZodOptional<z.ZodString>;
@@ -14,42 +15,46 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         description: string;
         title: string;
         eventDate: string;
+        category: "academico" | "cultural" | "deportivo" | "otro";
         isOnline: boolean;
-        tags?: string[] | undefined;
         location?: string | undefined;
         capacity?: number | undefined;
         eventUrl?: string | undefined;
+        tags?: string[] | undefined;
     }, {
         description: string;
         title: string;
         eventDate: string;
-        tags?: string[] | undefined;
         location?: string | undefined;
+        category?: "academico" | "cultural" | "deportivo" | "otro" | undefined;
         capacity?: number | undefined;
         isOnline?: boolean | undefined;
         eventUrl?: string | undefined;
+        tags?: string[] | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
         description: string;
         title: string;
         eventDate: string;
+        category: "academico" | "cultural" | "deportivo" | "otro";
         isOnline: boolean;
-        tags?: string[] | undefined;
         location?: string | undefined;
         capacity?: number | undefined;
         eventUrl?: string | undefined;
+        tags?: string[] | undefined;
     };
 }, {
     body: {
         description: string;
         title: string;
         eventDate: string;
-        tags?: string[] | undefined;
         location?: string | undefined;
+        category?: "academico" | "cultural" | "deportivo" | "otro" | undefined;
         capacity?: number | undefined;
         isOnline?: boolean | undefined;
         eventUrl?: string | undefined;
+        tags?: string[] | undefined;
     };
 }>;
 export declare const CreateEventResponseSchema: z.ZodObject<{
@@ -59,6 +64,7 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         description: z.ZodString;
         eventDate: z.ZodString;
         location: z.ZodOptional<z.ZodString>;
+        category: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
         creatorId: z.ZodString;
         creator: z.ZodOptional<z.ZodObject<{
             id: z.ZodString;
@@ -104,11 +110,12 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         id: string;
         description: string;
         title: string;
-        tags: string[];
         eventDate: string;
+        category: "academico" | "cultural" | "deportivo" | "otro";
         creatorId: string;
         attendeeCount: number;
         isOnline: boolean;
+        tags: string[];
         location?: string | undefined;
         creator?: {
             email: string;
@@ -129,11 +136,12 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         id: string;
         description: string;
         title: string;
-        tags: string[];
         eventDate: string;
+        category: "academico" | "cultural" | "deportivo" | "otro";
         creatorId: string;
         attendeeCount: number;
         isOnline: boolean;
+        tags: string[];
         location?: string | undefined;
         creator?: {
             email: string;
@@ -156,11 +164,12 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         id: string;
         description: string;
         title: string;
-        tags: string[];
         eventDate: string;
+        category: "academico" | "cultural" | "deportivo" | "otro";
         creatorId: string;
         attendeeCount: number;
         isOnline: boolean;
+        tags: string[];
         location?: string | undefined;
         creator?: {
             email: string;
@@ -183,11 +192,12 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         id: string;
         description: string;
         title: string;
-        tags: string[];
         eventDate: string;
+        category: "academico" | "cultural" | "deportivo" | "otro";
         creatorId: string;
         attendeeCount: number;
         isOnline: boolean;
+        tags: string[];
         location?: string | undefined;
         creator?: {
             email: string;

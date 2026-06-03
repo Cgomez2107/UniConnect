@@ -55,6 +55,8 @@ function mapMessage(msg: any): MessageUI {
     createdAt: msg.createdAt?.toISOString?.() ?? msg.createdAt,
     readAt: msg.readAt?.toISOString?.() ?? msg.readAt ?? null,
     reactions: groupReactions(flat),
+    mentions: msg.mentions ?? undefined,
+    poll: msg.poll ?? null,
     sender: msg.sender
       ? { fullName: msg.sender.fullName, avatarUrl: msg.sender.avatarUrl ?? null }
       : undefined,

@@ -17,6 +17,10 @@ function mapResource(r: any): StudyResourceUI {
     fileName: r.fileName ?? r.file_name ?? "",
     fileType: r.fileType ?? r.file_type ?? null,
     fileSizeKb: r.fileSizeKb ?? r.file_size_kb ?? null,
+    resourceType: r.resourceType ?? r.resource_type ?? r.fileType ?? null,
+    ogTitle: r.ogTitle ?? r.og_title ?? null,
+    ogImage: r.ogImage ?? r.og_image ?? null,
+    ogDescription: r.ogDescription ?? r.og_description ?? null,
     createdAt: r.createdAt?.toISOString?.() ?? r.created_at ?? r.createdAt,
     updatedAt: r.updatedAt?.toISOString?.() ?? r.updated_at ?? r.updatedAt,
     profiles: r.profiles ?? undefined,
@@ -39,18 +43,47 @@ const resourcesService = {
     subjectId: string;
     title: string;
     description?: string;
-    fileUrl: string;
-    fileName: string;
+    url?: string;
+    fileUrl?: string;
+    fileName?: string;
     fileType?: string;
     fileSizeKb?: number;
     programId?: string;
+    resourceType?: string;
   }) {
-    const resource = await deps.apiClients.resources.create(payload);
+    const createPayload: any = {
+      subjectId: payload.subjectId,
+      title: payload.title,
+      description: payload.description,
+      fileType: payload.fileType,
+      fileSizeKb: payload.fileSizeKb,
+      programId: payload.programId,
+      resourceType: payload.resourceType,
+    };
+
+    if (payload.url) {
+      createPayload.url = payload.url;
+      createPayload.fileUrl = payload.url;
+      createPayload.fileName = payload.fileName ?? payload.url;
+    } else if (payload.fileUrl) {
+      createPayload.fileUrl = payload.fileUrl;
+      createPayload.fileName = payload.fileName ?? payload.fileUrl;
+    }
+
+    const resource = await deps.apiClients.resources.create(createPayload);
     return mapResource(resource);
   },
 
   async deleteResource(id: string) {
     await deps.apiClients.resources.delete(id);
+  },
+
+  async updateResource(id: string, payload: { title?: string; description?: string | null }) {
+    const resource = await deps.apiClients.resources.update(id, {
+      title: payload.title,
+      description: payload.description ?? undefined,
+    });
+    return mapResource(resource);
   },
 };
 

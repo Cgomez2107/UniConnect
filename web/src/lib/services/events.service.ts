@@ -10,13 +10,13 @@ function mapEvent(e: any): CampusEventUI {
     id: e.id,
     title: e.title,
     description: e.description ?? null,
-    eventDate: e.eventDate?.toISOString?.() ?? e.eventDate ?? e.event_date,
+    eventDate: e.startAt ?? e.eventDate?.toISOString?.() ?? e.eventDate ?? e.event_date,
     location: e.location ?? null,
     category: e.category ?? "academico",
     imageUrl: e.imageUrl ?? e.image_url ?? null,
     createdBy: e.createdBy ?? e.created_by ?? null,
-    createdAt: e.createdAt?.toISOString?.() ?? e.createdAt,
-    updatedAt: e.updatedAt?.toISOString?.() ?? e.updatedAt,
+    createdAt: e.createdAt?.toISOString?.() ?? e.createdAt ?? e.created_at,
+    updatedAt: e.updatedAt?.toISOString?.() ?? e.updatedAt ?? e.updated_at,
     creator: e.creator ? { fullName: e.creator.fullName ?? e.creator.full_name } : null,
   };
 }
@@ -35,13 +35,17 @@ const eventsService = {
   async createEvent(data: {
     title: string;
     description?: string;
-    eventDate: string;
+    startAt: string;
+    endAt?: string;
     location?: string;
     category?: string;
   }) {
     const event = await deps.apiClients.events.create({
-      ...data,
-      eventDate: data.eventDate,
+      title: data.title,
+      description: data.description,
+      eventDate: data.startAt,
+      location: data.location,
+      category: data.category,
     });
     return mapEvent(event);
   },

@@ -52,3 +52,8 @@ export type {
   AdminEvent,
   AdminMetrics,
 } from "./AdminClient.js";
+
+export { StudySessionsClient } from "./StudySessionsClient.js";
+export type {
+  CreateSeriesPayload,
+} from "./StudySessionsClient.js";

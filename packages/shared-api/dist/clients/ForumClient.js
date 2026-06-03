@@ -58,5 +58,11 @@ export class ForumClient extends BaseClient {
             body: data,
         });
     }
+    async pinAnswer(questionId, answerId) {
+        await this.transport.request({
+            method: "PATCH",
+            url: `/forum/questions/${questionId}/answers/${answerId}/pin`,
+        });
+    }
 }
 //# sourceMappingURL=ForumClient.js.map

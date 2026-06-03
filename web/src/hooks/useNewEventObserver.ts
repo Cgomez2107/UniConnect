@@ -41,7 +41,7 @@ export function useNewEventObserver(subscribedCategories: string[]) {
             title: `Nuevo evento ${label}`,
             description: newEvent.title || "Nuevo evento disponible",
             read: false,
-            createdAt: new Date(),
+            createdAt: new Date().toISOString(),
             data: { eventId: newEvent.id, category },
           });
         },

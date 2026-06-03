@@ -2,270 +2,168 @@ import { z } from "zod";
 export declare const ResourceTypeEnum: z.ZodEnum<["pdf", "document", "video", "link", "image", "other"]>;
 export declare const StudyResourceSchema: z.ZodObject<{
     id: z.ZodString;
-    title: z.ZodString;
-    description: z.ZodOptional<z.ZodString>;
-    type: z.ZodString;
-    url: z.ZodString;
-    uploaderUserId: z.ZodString;
-    uploader: z.ZodOptional<z.ZodObject<{
-        id: z.ZodString;
-        email: z.ZodString;
-        firstName: z.ZodString;
-        lastName: z.ZodString;
-        role: z.ZodEnum<["estudiante", "admin"]>;
-        profileImageUrl: z.ZodOptional<z.ZodString>;
-        isVerified: z.ZodBoolean;
-        createdAt: z.ZodString;
-        updatedAt: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        email: string;
-        createdAt: string;
-        updatedAt: string;
-        id: string;
-        firstName: string;
-        lastName: string;
-        role: "estudiante" | "admin";
-        isVerified: boolean;
-        profileImageUrl?: string | undefined;
-    }, {
-        email: string;
-        createdAt: string;
-        updatedAt: string;
-        id: string;
-        firstName: string;
-        lastName: string;
-        role: "estudiante" | "admin";
-        isVerified: boolean;
-        profileImageUrl?: string | undefined;
-    }>>;
+    userId: z.ZodString;
+    programId: z.ZodString;
     subjectId: z.ZodString;
-    subject: z.ZodOptional<z.ZodObject<{
-        id: z.ZodString;
-        name: z.ZodString;
-        programId: z.ZodString;
-        code: z.ZodString;
-        description: z.ZodOptional<z.ZodString>;
-        credits: z.ZodOptional<z.ZodNumber>;
-    }, "strip", z.ZodTypeAny, {
-        code: string;
-        id: string;
-        name: string;
-        programId: string;
-        description?: string | undefined;
-        credits?: number | undefined;
-    }, {
-        code: string;
-        id: string;
-        name: string;
-        programId: string;
-        description?: string | undefined;
-        credits?: number | undefined;
-    }>>;
-    tags: z.ZodArray<z.ZodString, "many">;
-    viewCount: z.ZodNumber;
-    downloadCount: z.ZodNumber;
-    isPublic: z.ZodBoolean;
+    title: z.ZodString;
+    description: z.ZodNullable<z.ZodString>;
+    fileUrl: z.ZodString;
+    fileName: z.ZodString;
+    fileType: z.ZodNullable<z.ZodString>;
+    fileSizeKb: z.ZodNullable<z.ZodNumber>;
+    resourceType: z.ZodNullable<z.ZodString>;
+    ogTitle: z.ZodNullable<z.ZodString>;
+    ogImage: z.ZodNullable<z.ZodString>;
+    ogDescription: z.ZodNullable<z.ZodString>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
+    profiles: z.ZodOptional<z.ZodObject<{
+        fullName: z.ZodString;
+        avatarUrl: z.ZodNullable<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        avatarUrl: string | null;
+        fullName: string;
+    }, {
+        avatarUrl: string | null;
+        fullName: string;
+    }>>;
+    subjects: z.ZodOptional<z.ZodObject<{
+        name: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        name: string;
+    }, {
+        name: string;
+    }>>;
 }, "strip", z.ZodTypeAny, {
-    type: string;
     createdAt: string;
     updatedAt: string;
     id: string;
+    description: string | null;
+    programId: string;
+    userId: string;
     subjectId: string;
-    url: string;
     title: string;
-    uploaderUserId: string;
-    tags: string[];
-    viewCount: number;
-    downloadCount: number;
-    isPublic: boolean;
-    description?: string | undefined;
-    subject?: {
-        code: string;
-        id: string;
+    fileUrl: string;
+    fileName: string;
+    fileType: string | null;
+    fileSizeKb: number | null;
+    resourceType: string | null;
+    ogTitle: string | null;
+    ogImage: string | null;
+    ogDescription: string | null;
+    subjects?: {
         name: string;
-        programId: string;
-        description?: string | undefined;
-        credits?: number | undefined;
     } | undefined;
-    uploader?: {
-        email: string;
-        createdAt: string;
-        updatedAt: string;
-        id: string;
-        firstName: string;
-        lastName: string;
-        role: "estudiante" | "admin";
-        isVerified: boolean;
-        profileImageUrl?: string | undefined;
+    profiles?: {
+        avatarUrl: string | null;
+        fullName: string;
     } | undefined;
 }, {
-    type: string;
     createdAt: string;
     updatedAt: string;
     id: string;
+    description: string | null;
+    programId: string;
+    userId: string;
     subjectId: string;
-    url: string;
     title: string;
-    uploaderUserId: string;
-    tags: string[];
-    viewCount: number;
-    downloadCount: number;
-    isPublic: boolean;
-    description?: string | undefined;
-    subject?: {
-        code: string;
-        id: string;
+    fileUrl: string;
+    fileName: string;
+    fileType: string | null;
+    fileSizeKb: number | null;
+    resourceType: string | null;
+    ogTitle: string | null;
+    ogImage: string | null;
+    ogDescription: string | null;
+    subjects?: {
         name: string;
-        programId: string;
-        description?: string | undefined;
-        credits?: number | undefined;
     } | undefined;
-    uploader?: {
-        email: string;
-        createdAt: string;
-        updatedAt: string;
-        id: string;
-        firstName: string;
-        lastName: string;
-        role: "estudiante" | "admin";
-        isVerified: boolean;
-        profileImageUrl?: string | undefined;
+    profiles?: {
+        avatarUrl: string | null;
+        fullName: string;
     } | undefined;
 }>;
 export declare const StudyResourceDTOSchema: z.ZodObject<{
     id: z.ZodString;
-    title: z.ZodString;
-    description: z.ZodOptional<z.ZodString>;
-    type: z.ZodString;
-    url: z.ZodString;
-    uploader_user_id: z.ZodString;
-    uploader: z.ZodOptional<z.ZodObject<{
-        id: z.ZodString;
-        email: z.ZodString;
-        first_name: z.ZodString;
-        last_name: z.ZodString;
-        role: z.ZodEnum<["estudiante", "admin"]>;
-        profile_image_url: z.ZodOptional<z.ZodString>;
-        is_verified: z.ZodBoolean;
-        created_at: z.ZodString;
-        updated_at: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        email: string;
-        id: string;
-        role: "estudiante" | "admin";
-        first_name: string;
-        last_name: string;
-        is_verified: boolean;
-        created_at: string;
-        updated_at: string;
-        profile_image_url?: string | undefined;
-    }, {
-        email: string;
-        id: string;
-        role: "estudiante" | "admin";
-        first_name: string;
-        last_name: string;
-        is_verified: boolean;
-        created_at: string;
-        updated_at: string;
-        profile_image_url?: string | undefined;
-    }>>;
+    user_id: z.ZodString;
+    program_id: z.ZodString;
     subject_id: z.ZodString;
-    subject: z.ZodOptional<z.ZodObject<{
-        id: z.ZodString;
-        name: z.ZodString;
-        program_id: z.ZodString;
-        code: z.ZodString;
-        description: z.ZodOptional<z.ZodString>;
-        credits: z.ZodOptional<z.ZodNumber>;
-    }, "strip", z.ZodTypeAny, {
-        code: string;
-        id: string;
-        name: string;
-        program_id: string;
-        description?: string | undefined;
-        credits?: number | undefined;
-    }, {
-        code: string;
-        id: string;
-        name: string;
-        program_id: string;
-        description?: string | undefined;
-        credits?: number | undefined;
-    }>>;
-    tags: z.ZodArray<z.ZodString, "many">;
-    view_count: z.ZodNumber;
-    download_count: z.ZodNumber;
-    is_public: z.ZodBoolean;
+    title: z.ZodString;
+    description: z.ZodNullable<z.ZodString>;
+    file_url: z.ZodString;
+    file_name: z.ZodString;
+    file_type: z.ZodNullable<z.ZodString>;
+    file_size_kb: z.ZodNullable<z.ZodNumber>;
+    resource_type: z.ZodNullable<z.ZodString>;
+    og_title: z.ZodNullable<z.ZodString>;
+    og_image: z.ZodNullable<z.ZodString>;
+    og_description: z.ZodNullable<z.ZodString>;
     created_at: z.ZodString;
     updated_at: z.ZodString;
+    profiles: z.ZodOptional<z.ZodObject<{
+        full_name: z.ZodString;
+        avatar_url: z.ZodNullable<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        avatar_url: string | null;
+        full_name: string;
+    }, {
+        avatar_url: string | null;
+        full_name: string;
+    }>>;
+    subjects: z.ZodOptional<z.ZodObject<{
+        name: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        name: string;
+    }, {
+        name: string;
+    }>>;
 }, "strip", z.ZodTypeAny, {
-    type: string;
     id: string;
     created_at: string;
     updated_at: string;
+    description: string | null;
+    program_id: string;
+    user_id: string;
     subject_id: string;
-    url: string;
     title: string;
-    tags: string[];
-    uploader_user_id: string;
-    view_count: number;
-    download_count: number;
-    is_public: boolean;
-    description?: string | undefined;
-    subject?: {
-        code: string;
-        id: string;
+    file_url: string;
+    file_name: string;
+    file_type: string | null;
+    file_size_kb: number | null;
+    resource_type: string | null;
+    og_title: string | null;
+    og_image: string | null;
+    og_description: string | null;
+    subjects?: {
         name: string;
-        program_id: string;
-        description?: string | undefined;
-        credits?: number | undefined;
     } | undefined;
-    uploader?: {
-        email: string;
-        id: string;
-        role: "estudiante" | "admin";
-        first_name: string;
-        last_name: string;
-        is_verified: boolean;
-        created_at: string;
-        updated_at: string;
-        profile_image_url?: string | undefined;
+    profiles?: {
+        avatar_url: string | null;
+        full_name: string;
     } | undefined;
 }, {
-    type: string;
     id: string;
     created_at: string;
     updated_at: string;
+    description: string | null;
+    program_id: string;
+    user_id: string;
     subject_id: string;
-    url: string;
     title: string;
-    tags: string[];
-    uploader_user_id: string;
-    view_count: number;
-    download_count: number;
-    is_public: boolean;
-    description?: string | undefined;
-    subject?: {
-        code: string;
-        id: string;
+    file_url: string;
+    file_name: string;
+    file_type: string | null;
+    file_size_kb: number | null;
+    resource_type: string | null;
+    og_title: string | null;
+    og_image: string | null;
+    og_description: string | null;
+    subjects?: {
         name: string;
-        program_id: string;
-        description?: string | undefined;
-        credits?: number | undefined;
     } | undefined;
-    uploader?: {
-        email: string;
-        id: string;
-        role: "estudiante" | "admin";
-        first_name: string;
-        last_name: string;
-        is_verified: boolean;
-        created_at: string;
-        updated_at: string;
-        profile_image_url?: string | undefined;
+    profiles?: {
+        avatar_url: string | null;
+        full_name: string;
     } | undefined;
 }>;
 //# sourceMappingURL=resource.schema.d.ts.map

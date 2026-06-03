@@ -97,6 +97,7 @@ export default function ChatScreen() {
     retryMessage,
     handleMarkAsRead,
     subscribeToConversation,
+    voteInPoll,
   } = useMessaging();
 
   const conversationIdValue = typeof conversationId === "string" ? conversationId : "";
@@ -278,13 +279,19 @@ export default function ChatScreen() {
         <MessageBubble
           message={item.message}
           isOwn={item.message.sender_id === user?.id}
+          currentUserId={user?.id}
           onReply={handleReply}
           onRetry={handleRetry}
           onOpenMedia={openMediaViewer}
+          onVote={(messageId, optionIndex) => {
+            voteInPoll(messageId, optionIndex).catch((err) =>
+              console.error("vote error:", err),
+            );
+          }}
         />
       );
     },
-    [C.surface, C.textSecondary, user?.id, handleReply, handleRetry, openMediaViewer],
+    [C.surface, C.textSecondary, user?.id, handleReply, handleRetry, openMediaViewer, voteInPoll],
   );
 
   return (

@@ -101,15 +101,15 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
                 profileImageUrl?: string | undefined;
             }>>;
             content: z.ZodString;
-            type: z.ZodEnum<["text", "file", "mention", "reaction"]>;
+            type: z.ZodEnum<["text", "file", "mention", "reaction", "poll"]>;
             decorations: z.ZodOptional<z.ZodArray<z.ZodObject<{
-                type: z.ZodEnum<["mention", "file", "reaction"]>;
+                type: z.ZodEnum<["mention", "file", "reaction", "poll"]>;
                 data: z.ZodRecord<z.ZodString, z.ZodAny>;
             }, "strip", z.ZodTypeAny, {
-                type: "file" | "mention" | "reaction";
+                type: "file" | "mention" | "reaction" | "poll";
                 data: Record<string, any>;
             }, {
-                type: "file" | "mention" | "reaction";
+                type: "file" | "mention" | "reaction" | "poll";
                 data: Record<string, any>;
             }>, "many">>;
             attachments: z.ZodOptional<z.ZodArray<z.ZodObject<{
@@ -203,12 +203,46 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
                     profileImageUrl?: string | undefined;
                 } | undefined;
             }>, "many">>;
+            poll: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+                question: z.ZodString;
+                options: z.ZodArray<z.ZodObject<{
+                    text: z.ZodString;
+                    votes: z.ZodArray<z.ZodString, "many">;
+                }, "strip", z.ZodTypeAny, {
+                    text: string;
+                    votes: string[];
+                }, {
+                    text: string;
+                    votes: string[];
+                }>, "many">;
+                isOpen: z.ZodBoolean;
+                closesAt: z.ZodNullable<z.ZodString>;
+                createdAt: z.ZodString;
+            }, "strip", z.ZodTypeAny, {
+                options: {
+                    text: string;
+                    votes: string[];
+                }[];
+                createdAt: string;
+                question: string;
+                isOpen: boolean;
+                closesAt: string | null;
+            }, {
+                options: {
+                    text: string;
+                    votes: string[];
+                }[];
+                createdAt: string;
+                question: string;
+                isOpen: boolean;
+                closesAt: string | null;
+            }>>>;
             isEdited: z.ZodBoolean;
             editedAt: z.ZodOptional<z.ZodString>;
             createdAt: z.ZodString;
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
-            type: "text" | "file" | "mention" | "reaction";
+            type: "text" | "file" | "mention" | "reaction" | "poll";
             createdAt: string;
             updatedAt: string;
             id: string;
@@ -216,6 +250,16 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
             senderId: string;
             content: string;
             isEdited: boolean;
+            poll?: {
+                options: {
+                    text: string;
+                    votes: string[];
+                }[];
+                createdAt: string;
+                question: string;
+                isOpen: boolean;
+                closesAt: string | null;
+            } | null | undefined;
             sender?: {
                 email: string;
                 createdAt: string;
@@ -228,7 +272,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
                 profileImageUrl?: string | undefined;
             } | undefined;
             decorations?: {
-                type: "file" | "mention" | "reaction";
+                type: "file" | "mention" | "reaction" | "poll";
                 data: Record<string, any>;
             }[] | undefined;
             attachments?: {
@@ -258,7 +302,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
             }[] | undefined;
             editedAt?: string | undefined;
         }, {
-            type: "text" | "file" | "mention" | "reaction";
+            type: "text" | "file" | "mention" | "reaction" | "poll";
             createdAt: string;
             updatedAt: string;
             id: string;
@@ -266,6 +310,16 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
             senderId: string;
             content: string;
             isEdited: boolean;
+            poll?: {
+                options: {
+                    text: string;
+                    votes: string[];
+                }[];
+                createdAt: string;
+                question: string;
+                isOpen: boolean;
+                closesAt: string | null;
+            } | null | undefined;
             sender?: {
                 email: string;
                 createdAt: string;
@@ -278,7 +332,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
                 profileImageUrl?: string | undefined;
             } | undefined;
             decorations?: {
-                type: "file" | "mention" | "reaction";
+                type: "file" | "mention" | "reaction" | "poll";
                 data: Record<string, any>;
             }[] | undefined;
             attachments?: {
@@ -335,7 +389,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
         description?: string | undefined;
         avatarUrl?: string | undefined;
         lastMessage?: {
-            type: "text" | "file" | "mention" | "reaction";
+            type: "text" | "file" | "mention" | "reaction" | "poll";
             createdAt: string;
             updatedAt: string;
             id: string;
@@ -343,6 +397,16 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
             senderId: string;
             content: string;
             isEdited: boolean;
+            poll?: {
+                options: {
+                    text: string;
+                    votes: string[];
+                }[];
+                createdAt: string;
+                question: string;
+                isOpen: boolean;
+                closesAt: string | null;
+            } | null | undefined;
             sender?: {
                 email: string;
                 createdAt: string;
@@ -355,7 +419,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
                 profileImageUrl?: string | undefined;
             } | undefined;
             decorations?: {
-                type: "file" | "mention" | "reaction";
+                type: "file" | "mention" | "reaction" | "poll";
                 data: Record<string, any>;
             }[] | undefined;
             attachments?: {
@@ -408,7 +472,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
         description?: string | undefined;
         avatarUrl?: string | undefined;
         lastMessage?: {
-            type: "text" | "file" | "mention" | "reaction";
+            type: "text" | "file" | "mention" | "reaction" | "poll";
             createdAt: string;
             updatedAt: string;
             id: string;
@@ -416,6 +480,16 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
             senderId: string;
             content: string;
             isEdited: boolean;
+            poll?: {
+                options: {
+                    text: string;
+                    votes: string[];
+                }[];
+                createdAt: string;
+                question: string;
+                isOpen: boolean;
+                closesAt: string | null;
+            } | null | undefined;
             sender?: {
                 email: string;
                 createdAt: string;
@@ -428,7 +502,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
                 profileImageUrl?: string | undefined;
             } | undefined;
             decorations?: {
-                type: "file" | "mention" | "reaction";
+                type: "file" | "mention" | "reaction" | "poll";
                 data: Record<string, any>;
             }[] | undefined;
             attachments?: {
@@ -483,7 +557,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
         description?: string | undefined;
         avatarUrl?: string | undefined;
         lastMessage?: {
-            type: "text" | "file" | "mention" | "reaction";
+            type: "text" | "file" | "mention" | "reaction" | "poll";
             createdAt: string;
             updatedAt: string;
             id: string;
@@ -491,6 +565,16 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
             senderId: string;
             content: string;
             isEdited: boolean;
+            poll?: {
+                options: {
+                    text: string;
+                    votes: string[];
+                }[];
+                createdAt: string;
+                question: string;
+                isOpen: boolean;
+                closesAt: string | null;
+            } | null | undefined;
             sender?: {
                 email: string;
                 createdAt: string;
@@ -503,7 +587,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
                 profileImageUrl?: string | undefined;
             } | undefined;
             decorations?: {
-                type: "file" | "mention" | "reaction";
+                type: "file" | "mention" | "reaction" | "poll";
                 data: Record<string, any>;
             }[] | undefined;
             attachments?: {
@@ -558,7 +642,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
         description?: string | undefined;
         avatarUrl?: string | undefined;
         lastMessage?: {
-            type: "text" | "file" | "mention" | "reaction";
+            type: "text" | "file" | "mention" | "reaction" | "poll";
             createdAt: string;
             updatedAt: string;
             id: string;
@@ -566,6 +650,16 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
             senderId: string;
             content: string;
             isEdited: boolean;
+            poll?: {
+                options: {
+                    text: string;
+                    votes: string[];
+                }[];
+                createdAt: string;
+                question: string;
+                isOpen: boolean;
+                closesAt: string | null;
+            } | null | undefined;
             sender?: {
                 email: string;
                 createdAt: string;
@@ -578,7 +672,7 @@ export declare const CreateConversationResponseSchema: z.ZodObject<{
                 profileImageUrl?: string | undefined;
             } | undefined;
             decorations?: {
-                type: "file" | "mention" | "reaction";
+                type: "file" | "mention" | "reaction" | "poll";
                 data: Record<string, any>;
             }[] | undefined;
             attachments?: {
@@ -615,27 +709,101 @@ export declare const SendMessageRequestSchema: z.ZodObject<{
     body: z.ZodObject<{
         conversationId: z.ZodString;
         content: z.ZodString;
-        type: z.ZodDefault<z.ZodEnum<["text", "file", "mention", "reaction"]>>;
+        type: z.ZodDefault<z.ZodEnum<["text", "file", "mention", "reaction", "poll"]>>;
+        poll: z.ZodOptional<z.ZodObject<{
+            question: z.ZodString;
+            options: z.ZodArray<z.ZodObject<{
+                text: z.ZodString;
+                votes: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString, "many">>>;
+            }, "strip", z.ZodTypeAny, {
+                text: string;
+                votes: string[];
+            }, {
+                text: string;
+                votes?: string[] | undefined;
+            }>, "many">;
+            isOpen: z.ZodBoolean;
+            closesAt: z.ZodNullable<z.ZodString>;
+            createdAt: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        }, {
+            options: {
+                text: string;
+                votes?: string[] | undefined;
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        }>>;
     }, "strip", z.ZodTypeAny, {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         conversationId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | undefined;
     }, {
         conversationId: string;
         content: string;
-        type?: "text" | "file" | "mention" | "reaction" | undefined;
+        poll?: {
+            options: {
+                text: string;
+                votes?: string[] | undefined;
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | undefined;
+        type?: "text" | "file" | "mention" | "reaction" | "poll" | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         conversationId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | undefined;
     };
 }, {
     body: {
         conversationId: string;
         content: string;
-        type?: "text" | "file" | "mention" | "reaction" | undefined;
+        poll?: {
+            options: {
+                text: string;
+                votes?: string[] | undefined;
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | undefined;
+        type?: "text" | "file" | "mention" | "reaction" | "poll" | undefined;
     };
 }>;
 export declare const SendMessageResponseSchema: z.ZodObject<{
@@ -644,40 +812,114 @@ export declare const SendMessageResponseSchema: z.ZodObject<{
         conversationId: z.ZodString;
         senderId: z.ZodString;
         content: z.ZodString;
-        type: z.ZodEnum<["text", "file", "mention", "reaction"]>;
+        type: z.ZodEnum<["text", "file", "mention", "reaction", "poll"]>;
+        poll: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            question: z.ZodString;
+            options: z.ZodArray<z.ZodObject<{
+                text: z.ZodString;
+                votes: z.ZodArray<z.ZodString, "many">;
+            }, "strip", z.ZodTypeAny, {
+                text: string;
+                votes: string[];
+            }, {
+                text: string;
+                votes: string[];
+            }>, "many">;
+            isOpen: z.ZodBoolean;
+            closesAt: z.ZodNullable<z.ZodString>;
+            createdAt: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        }, {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        }>>>;
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         createdAt: string;
         id: string;
         conversationId: string;
         senderId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | null | undefined;
     }, {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         createdAt: string;
         id: string;
         conversationId: string;
         senderId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | null | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     message: {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         createdAt: string;
         id: string;
         conversationId: string;
         senderId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | null | undefined;
     };
 }, {
     message: {
-        type: "text" | "file" | "mention" | "reaction";
+        type: "text" | "file" | "mention" | "reaction" | "poll";
         createdAt: string;
         id: string;
         conversationId: string;
         senderId: string;
         content: string;
+        poll?: {
+            options: {
+                text: string;
+                votes: string[];
+            }[];
+            createdAt: string;
+            question: string;
+            isOpen: boolean;
+            closesAt: string | null;
+        } | null | undefined;
     };
 }>;
 export declare const CreateConversationContract: ApiContract<typeof CreateConversationRequestSchema, typeof CreateConversationResponseSchema>;
