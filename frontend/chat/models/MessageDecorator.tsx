@@ -8,6 +8,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { PollMessageItem } from '@/components/chat/PollMessageItem';
+import type { PollData } from '@/types';
 
 // 1. Interfaz IMessage siguiendo el contrato del Backend
 export interface IMessage {
@@ -182,6 +184,35 @@ export class ReactionMessageDecorator extends MessageDecorator {
             </View>
           ))}
         </View>
+      </View>
+    );
+  }
+}
+
+// Criterio 2, 4, 5: Encuestas en Chat Grupal
+export class PollMessageDecorator extends MessageDecorator {
+  constructor(
+    message: IMessage,
+    private poll: PollData,
+    private onVote?: (optionIndex: number) => void
+  ) {
+    super(message);
+  }
+
+  override getMetadata() {
+    return { ...this.message.getMetadata(), poll: this.poll };
+  }
+
+  override render(context?: { currentUserId?: string }): React.JSX.Element {
+    return (
+      <View key="decorator-poll">
+        {this.message.render(context)}
+        <PollMessageItem
+          poll={this.poll}
+          currentUserId={context?.currentUserId}
+          senderId={this.senderId}
+          onVote={(optionIndex) => this.onVote?.(optionIndex)}
+        />
       </View>
     );
   }

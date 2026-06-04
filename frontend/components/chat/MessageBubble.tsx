@@ -25,7 +25,7 @@ interface Props {
   onReply: (message: Message) => void;
   onRetry: (message: Message) => void;
   onOpenMedia: (url: string) => void;
-  onVote?: (messageId: string, optionIndex: number) => void;
+  onVote?: (messageId: string, optionIndex: number) => Promise<void>;
 }
 
 function formatTime(iso: string): string {
@@ -85,8 +85,14 @@ export const MessageBubble = memo(function MessageBubble({
 
   // ── Decorator pattern (US-D01) ─────────────────────────────────
   const decoratedMessage = useMemo(
-    () => transformRawMessage(message),
-    [message],
+    () => transformRawMessage(message, (optionIndex) => {
+      if (onVote) {
+        onVote(message.id, optionIndex).catch((err: Error) =>
+          console.error("vote error:", err),
+        );
+      }
+    }),
+    [message, onVote],
   )
 
   const decoratorContext = useMemo(

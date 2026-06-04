@@ -52,7 +52,8 @@ export function MemberChatView({
     loading: loadingData,
     sendingMessage,
     handleSendMessage,
-    leaveGroup
+    leaveGroup,
+    voteInPoll
   } = useStudyGroupDashboard({ requestId });
 
   const userId = useAuthStore((s) => s.user?.id ?? "");
@@ -261,7 +262,11 @@ export function MemberChatView({
                     </div>
 
                     {(() => {
-                      const decoratedMessage = transformRawMessage(msg);
+                      const decoratedMessage = transformRawMessage(msg, (optionIndex) => {
+                        voteInPoll(msg.id, optionIndex).catch((err) =>
+                          console.error("vote error:", err),
+                        );
+                      });
                       return (
                         <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
                           isOwnMessage 

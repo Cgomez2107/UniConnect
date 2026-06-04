@@ -85,6 +85,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     requestAdminTransfer,
     handleReviewApplication,
     updateDescription,
+    voteInPoll,
   } = useStudyGroupDashboard({ requestId });
 
   const [activeTab, setActiveTab] = useState<"pendientes" | "aceptadas" | "rechazadas">("pendientes");
@@ -392,7 +393,11 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                   ]}
                 >
                   {(() => {
-                    const decoratedMessage = transformRawMessage(msg);
+                    const decoratedMessage = transformRawMessage(msg, (optionIndex) => {
+                      voteInPoll(msg.id, optionIndex).catch((err) =>
+                        console.error("vote error:", err),
+                      );
+                    });
                     return (
                       <View style={styles.messageContent}>
                         {decoratedMessage.render({ currentUserId: userId })}

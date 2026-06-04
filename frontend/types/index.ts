@@ -169,6 +169,7 @@ export interface Reaction {
 export interface PollOption {
   text: string;
   votes: string[];
+  percentage?: string;
 }
 
 export interface PollData {

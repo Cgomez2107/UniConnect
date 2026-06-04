@@ -616,6 +616,11 @@ export class StudyGroupsController {
           sendError(res, 400, error.message);
           return;
         }
+        // Criterio 5: Manejo específico para voto duplicado
+        if (msg.includes("ya has registrado") || msg.includes("ya registro")) {
+          sendError(res, 400, error.message);
+          return;
+        }
       }
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
