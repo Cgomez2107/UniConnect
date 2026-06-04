@@ -483,6 +483,7 @@ function bootstrap(): void {
     createStudySessionSeriesUC,
     cancelStudySessionUC,
     listStudySessionsUC,
+    updateAvailabilityUC,
   );
   const server = createStudyGroupsServer(controller, sessionsController);
 

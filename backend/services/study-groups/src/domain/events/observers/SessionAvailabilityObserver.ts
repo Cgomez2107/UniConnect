@@ -31,6 +31,11 @@ export class SessionAvailabilityObserver implements IObserver {
           title: event.title,
         });
         break;
+
+      case "AVAILABILITY_UPDATED":
+        // Criterio 7: Notificar al organizador cuando un participante actualiza su disponibilidad
+        await this.notifyOrganizer(event);
+        break;
     }
   }
 
@@ -64,6 +69,44 @@ export class SessionAvailabilityObserver implements IObserver {
           error: "Failed to broadcast to group members",
           groupId,
           eventName,
+          errorMessage: (err as Error).message,
+        }),
+      );
+    }
+  }
+
+  private async notifyOrganizer(event: any): Promise<void> {
+    try {
+      const statusText = event.status === "confirmed" ? "ha confirmado" : "ha declinado";
+      const payload = {
+        sessionId: event.sessionId,
+        requestId: event.requestId,
+        userId: event.userId,
+        userName: event.userName,
+        status: event.status,
+        groupName: event.groupName,
+        message: `${event.userName} ${statusText} su asistencia a la sesión de estudio.`,
+      };
+
+      await this.socketGateway
+        .emitToUser(event.organizerId, "study-session:availability-updated", payload)
+        .catch(err => {
+          console.error(
+            JSON.stringify({
+              observer: this.name,
+              error: "Failed to notify organizer",
+              organizerId: event.organizerId,
+              sessionId: event.sessionId,
+              errorMessage: (err as Error).message,
+            }),
+          );
+        });
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          observer: this.name,
+          error: "Failed to notify organizer",
+          sessionId: event.sessionId,
           errorMessage: (err as Error).message,
         }),
       );

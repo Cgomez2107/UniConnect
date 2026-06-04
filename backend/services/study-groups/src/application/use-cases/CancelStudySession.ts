@@ -29,8 +29,8 @@ export class CancelStudySession {
       throw new NotFoundError("Study group not found.");
     }
 
-    if (group.adminId !== actorUserId) {
-      throw new AuthorizationError("Only the group author or an admin can cancel sessions.");
+    if (session.createdBy !== actorUserId) {
+      throw new AuthorizationError("Only the session creator can cancel sessions.");
     }
 
     if (session.status === "cancelled") {

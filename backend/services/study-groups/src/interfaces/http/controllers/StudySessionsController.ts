@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { CreateStudySessionSeries } from "../../../application/use-cases/CreateStudySessionSeries.js";
 import type { CancelStudySession } from "../../../application/use-cases/CancelStudySession.js";
 import type { ListStudySessions } from "../../../application/use-cases/ListStudySessions.js";
+import type { UpdateAvailability } from "../../../application/use-cases/UpdateAvailability.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
@@ -11,6 +12,7 @@ export class StudySessionsController {
     private readonly seriesUseCase: CreateStudySessionSeries,
     private readonly cancelSessionUseCase: CancelStudySession,
     private readonly listSessionsUseCase: ListStudySessions,
+    private readonly updateAvailabilityUseCase: UpdateAvailability,
   ) {}
 
   async handleCreateSeries(req: IncomingMessage, res: ServerResponse, groupId: string): Promise<void> {
@@ -76,6 +78,48 @@ export class StudySessionsController {
         sendError(res, 404, message);
       } else if (message.includes("already cancelled")) {
         sendError(res, 409, message);
+      } else {
+        sendError(res, 400, message);
+      }
+    }
+  }
+
+  async handleUpdateAvailability(req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Authentication required");
+        return;
+      }
+
+      const body = await readJsonBody(req) as { status?: string; userName?: string };
+      if (!body || !body.status) {
+        sendError(res, 400, "Status is required (confirmed or declined)");
+        return;
+      }
+
+      if (body.status !== "confirmed" && body.status !== "declined") {
+        sendError(res, 400, "Status must be either 'confirmed' or 'declined'");
+        return;
+      }
+
+      // Use userName from body or default to "Usuario"
+      const userName = body.userName || "Usuario";
+
+      const attendee = await this.updateAvailabilityUseCase.execute(
+        sessionId,
+        actorUserId,
+        userName,
+        body.status as "confirmed" | "declined",
+      );
+
+      sendData(res, 200, attendee);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update availability";
+      if (message.includes("not found")) {
+        sendError(res, 404, message);
+      } else if (message.includes("not a member")) {
+        sendError(res, 403, message);
       } else {
         sendError(res, 400, message);
       }

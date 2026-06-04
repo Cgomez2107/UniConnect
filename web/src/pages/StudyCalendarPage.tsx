@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { deps } from "@/store/deps";
 import { Button } from "@/components/ui/Button";
-import { CreateSessionModal } from "@/components/sessions/CreateSessionModal";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface StudySessionUI {
   id: string;
@@ -12,7 +12,8 @@ interface StudySessionUI {
   startTime: string;
   endTime: string;
   rrule?: string | null;
-  cancelledAt?: string | null;
+  status?: "scheduled" | "cancelled";
+  createdBy?: string;
 }
 
 function mapSessionDTOtoUI(dto: any): StudySessionUI {
@@ -24,7 +25,8 @@ function mapSessionDTOtoUI(dto: any): StudySessionUI {
     startTime: dto.startTime ?? dto.start_time ?? "",
     endTime: dto.endTime ?? dto.end_time ?? "",
     rrule: dto.rrule ?? null,
-    cancelledAt: dto.cancelledAt ?? dto.cancelled_at ?? null,
+    status: dto.status ?? (dto.cancelledAt || dto.cancelled_at ? "cancelled" : "scheduled"),
+    createdBy: dto.createdBy ?? dto.created_by ?? undefined,
   };
 }
 
@@ -37,13 +39,14 @@ const MONTH_NAMES = [
 export function StudyCalendarPage() {
   const [searchParams] = useSearchParams();
   const urlGroupId = searchParams.get("groupId");
+  const user = useAuthStore((s) => s.user);
 
   const [sessions, setSessions] = useState<StudySessionUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState<StudySessionUI | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [updatingAvailability, setUpdatingAvailability] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -56,32 +59,23 @@ export function StudyCalendarPage() {
       const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
       const allSessions: StudySessionUI[] = [];
 
-      const studyGroupsClient = deps.apiClients.studyGroups;
-      const groupsResponse = await studyGroupsClient.listMyStudyRequests();
-      const groups = Array.isArray(groupsResponse) ? groupsResponse : [];
-
-      const groupIds = new Set<string>();
-
-      for (const group of groups) {
-        groupIds.add((group as any).id);
+      if (!urlGroupId) {
+        setSessions([]);
+        setLoading(false);
+        return;
       }
 
-      if (urlGroupId && !groupIds.has(urlGroupId)) {
-        groupIds.add(urlGroupId);
+      try {
+        const groupSessions = await deps.apiClients.studySessions.listByGroup(
+          urlGroupId,
+          startOfMonth,
+          endOfMonth,
+        );
+        allSessions.push(...groupSessions.map(mapSessionDTOtoUI));
+      } catch (err) {
+        setError("Error al cargar sesiones del grupo");
       }
 
-      for (const gid of groupIds) {
-        try {
-          const groupSessions = await deps.apiClients.studySessions.listByGroup(
-            gid,
-            startOfMonth,
-            endOfMonth,
-          );
-          allSessions.push(...groupSessions.map(mapSessionDTOtoUI));
-        } catch {
-          // skip groups without sessions
-        }
-      }
       setSessions(allSessions);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar sesiones");
@@ -104,6 +98,36 @@ export function StudyCalendarPage() {
     }
   };
 
+  const handleUpdateAvailability = async (sessionId: string, status: "confirmed" | "declined") => {
+    if (!user) return;
+    setUpdatingAvailability(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      const userName = `${user.firstName} ${user.lastName}`.trim();
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1"}/study-groups/sessions/${sessionId}/availability`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ status, userName }),
+        },
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al actualizar disponibilidad");
+      }
+      // Refresh sessions to get updated attendee info
+      await loadSessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar disponibilidad");
+    } finally {
+      setUpdatingAvailability(false);
+    }
+  };
+
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
@@ -113,7 +137,7 @@ export function StudyCalendarPage() {
 
   const getSessionsForDay = (day: number) => {
     const dateStr = new Date(year, month, day).toISOString().slice(0, 10);
-    return sessions.filter(s => s.startTime.slice(0, 10) === dateStr && !s.cancelledAt);
+    return sessions.filter(s => s.startTime.slice(0, 10) === dateStr && s.status !== "cancelled");
   };
 
   const calendarDays: (number | null)[] = [];
@@ -134,9 +158,6 @@ export function StudyCalendarPage() {
           <h1 className="text-2xl font-bold text-neutral-900">
             Calendario de Estudio
           </h1>
-          <Button variant="primary" onClick={() => setShowCreateModal(true)}>
-            + Crear sesión
-          </Button>
         </div>
 
         {error && (
@@ -238,6 +259,27 @@ export function StudyCalendarPage() {
                   <p><span className="font-medium">Recurrente:</span> Semanal</p>
                 )}
               </div>
+              <div className="space-y-2 mb-4">
+                <p className="text-sm font-medium text-neutral-700">Tu asistencia:</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="primary"
+                    onClick={() => handleUpdateAvailability(selectedSession.id, "confirmed")}
+                    disabled={updatingAvailability}
+                    className="flex-1"
+                  >
+                    {updatingAvailability ? "Actualizando..." : "Confirmar"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleUpdateAvailability(selectedSession.id, "declined")}
+                    disabled={updatingAvailability}
+                    className="flex-1"
+                  >
+                    {updatingAvailability ? "Actualizando..." : "Declinar"}
+                  </Button>
+                </div>
+              </div>
               <div className="flex gap-3">
                 <Button
                   variant="secondary"
@@ -246,13 +288,15 @@ export function StudyCalendarPage() {
                 >
                   Cerrar
                 </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => handleCancel(selectedSession.id)}
-                  className="flex-1"
-                >
-                  Cancelar Sesión
-                </Button>
+                {selectedSession.createdBy === user?.id && (
+                  <Button
+                    variant="danger"
+                    onClick={() => handleCancel(selectedSession.id)}
+                    className="flex-1"
+                  >
+                    Cancelar Sesión
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -264,12 +308,6 @@ export function StudyCalendarPage() {
             <p className="text-sm mt-1">Crea una serie recurrente desde tu grupo de estudio</p>
           </div>
         )}
-
-        <CreateSessionModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onCreated={loadSessions}
-        />
       </div>
     </div>
   );

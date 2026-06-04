@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { fetchApi } from "@/lib/api/httpClient";
+import { deps } from "@/store/deps";
 
 export interface StudySession {
   id: string;
@@ -22,6 +22,21 @@ export interface SessionAttendee {
   avatarUrl?: string | null;
 }
 
+// Map from StudySessionDTO to StudySession
+function mapSessionDTOtoUI(dto: any): StudySession {
+  return {
+    id: dto.id,
+    groupId: dto.request_id || dto.groupId,
+    title: dto.title,
+    description: dto.description || "",
+    startTime: dto.start_time || dto.startTime,
+    endTime: dto.end_time || dto.endTime,
+    rrule: dto.rrule || null,
+    parentSeriesId: dto.parent_series_id || dto.parentSeriesId || null,
+    cancelledAt: dto.cancelled_at || dto.cancelledAt || null,
+  };
+}
+
 export function useStudySessions() {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [loading, setLoading] = useState(false);
@@ -32,13 +47,12 @@ export function useStudySessions() {
       setLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams();
-        if (from) params.set("from", from);
-        if (to) params.set("to", to);
-        const qs = params.toString();
-        const endpoint = `/study-groups/${groupId}/sessions${qs ? `?${qs}` : ""}`;
-        const data = await fetchApi<StudySession[]>(endpoint);
-        setSessions(data ?? []);
+        const data = await deps.apiClients.studySessions.listByGroup(
+          groupId,
+          from || "",
+          to || "",
+        );
+        setSessions(data.map(mapSessionDTOtoUI));
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Error al cargar sesiones";
@@ -53,9 +67,7 @@ export function useStudySessions() {
 
   const cancelSession = useCallback(async (sessionId: string) => {
     try {
-      await fetchApi(`/study-groups/sessions/${sessionId}`, {
-        method: "DELETE",
-      });
+      await deps.apiClients.studySessions.cancel(sessionId);
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
       return true;
     } catch (err) {
@@ -79,14 +91,8 @@ export function useStudySessions() {
       },
     ) => {
       try {
-        const data = await fetchApi<StudySession[]>(
-          `/study-groups/${groupId}/sessions/series`,
-          {
-            method: "POST",
-            body: JSON.stringify(payload),
-          },
-        );
-        setSessions((prev) => [...prev, ...(data ?? [])]);
+        const data = await deps.apiClients.studySessions.createSeries(groupId, payload);
+        setSessions((prev) => [...prev, ...(data.map(mapSessionDTOtoUI) ?? [])]);
         return data;
       } catch (err) {
         const message =
@@ -101,13 +107,24 @@ export function useStudySessions() {
   const updateAvailability = useCallback(
     async (sessionId: string, status: "confirmed" | "declined", userName?: string) => {
       try {
-        const attendee = await fetchApi<SessionAttendee>(
-          `/study-groups/sessions/${sessionId}/availability`,
+        // Use direct fetch since updateAvailability might not be in the client yet
+        const token = localStorage.getItem("accessToken");
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1"}/study-groups/sessions/${sessionId}/availability`,
           {
             method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token && { Authorization: `Bearer ${token}` }),
+            },
             body: JSON.stringify({ status, userName }),
           },
         );
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Error al actualizar disponibilidad");
+        }
+        const attendee = await response.json();
         return attendee;
       } catch (err) {
         const message =

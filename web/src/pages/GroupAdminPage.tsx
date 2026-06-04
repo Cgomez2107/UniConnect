@@ -881,9 +881,14 @@ export function GroupDashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           {isMember && (
-            <Button variant="primary" size="sm" onClick={() => setShowSessionModal(true)}>
-              Programar sesiones
-            </Button>
+            <>
+              <Button variant="secondary" size="sm" onClick={() => navigate(`/calendario-estudio?groupId=${id}`)}>
+                Ver calendario
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => setShowSessionModal(true)}>
+                Programar sesiones
+              </Button>
+            </>
           )}
           {isAuthor && perms?.canTransfer && (
             <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>
