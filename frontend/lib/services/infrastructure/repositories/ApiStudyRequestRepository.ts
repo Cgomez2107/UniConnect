@@ -43,7 +43,7 @@ export class ApiStudyRequestRepository implements IStudyRequestRepository {
         params.set("limit", pageSize.toString());
 
         const data = await fetchApi<StudyRequest[]>(
-            `/study-groups?${params.toString()}`,
+            `/api/v1/study-groups?${params.toString()}`,
         );
 
         return (data ?? []).map(mapStudyRequestFromApi);
@@ -51,7 +51,7 @@ export class ApiStudyRequestRepository implements IStudyRequestRepository {
 
     async getById(id: string): Promise<StudyRequest | null> {
         try {
-            const data = await fetchApi<StudyRequest>(`/study-groups/${id}`);
+            const data = await fetchApi<StudyRequest>(`/api/v1/study-groups/${id}`);
             return data ? mapStudyRequestFromApi(data) : null;
         } catch (error) {
             if (error instanceof Error && error.message.toLowerCase().includes("not found")) {
@@ -70,7 +70,7 @@ export class ApiStudyRequestRepository implements IStudyRequestRepository {
             max_members: number;
         },
     ): Promise<StudyRequest> {
-        const data = await fetchApi<StudyRequest>("/study-groups", {
+        const data = await fetchApi<StudyRequest>("/api/v1/study-groups", {
             method: "POST",
             body: JSON.stringify({
                 subjectId: payload.subject_id,
