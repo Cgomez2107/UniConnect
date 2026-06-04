@@ -706,7 +706,12 @@ function onForumResponse(
       }
       broadcastToForumQuestion(payload.targetId, "question_vote_updated", payload);
     } else if (payload?.targetType === "answer") {
-      broadcastToForumQuestion(payload.questionId, "answer_vote_updated", payload);
+      const questionId = payload.questionId;
+      if (!questionId) {
+        console.log(JSON.stringify({ service: "gateway", level: "warn", message: "answer vote missing questionId", payload }));
+        return;
+      }
+      broadcastToForumQuestion(questionId, "answer_vote_updated", payload);
     }
     return;
   }

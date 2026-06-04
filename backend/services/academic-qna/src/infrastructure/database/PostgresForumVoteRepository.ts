@@ -63,7 +63,7 @@ export class PostgresForumVoteRepository implements IForumVoteRepository {
     return result.rows[0] ? mapVote(result.rows[0]) : null;
   }
 
-  async upsertAndGetDelta(targetType: VoteTargetType, targetId: string, voterId: string, voteType: VoteType): Promise<number> {
+  async upsertAndGetDelta(targetType: VoteTargetType, targetId: string, voterId: string, voteType: VoteType): Promise<{ voteCount: number; userVote: VoteType | null }> {
     const upsertResult = await this.pool.query<{ action: string }>(
       `
       WITH deleted AS (
@@ -91,32 +91,40 @@ export class PostgresForumVoteRepository implements IForumVoteRepository {
     const action = upsertResult.rows[0]?.action ?? 'none';
 
     let delta: number;
+    let userVote: VoteType | null;
     switch (action) {
       case 'deleted':
         delta = voteType === 'upvote' ? -1 : 1;
+        userVote = null;
         break;
       case 'new':
         delta = voteType === 'upvote' ? 1 : -1;
+        userVote = voteType;
         break;
       case 'switch':
         delta = voteType === 'upvote' ? 2 : -2;
+        userVote = voteType;
         break;
       default:
         delta = 0;
+        userVote = null;
     }
 
+    let voteCount: number;
     if (targetType === 'question') {
       const updateResult = await this.pool.query<{ vote_count: number }>(
         `UPDATE forum_questions SET vote_count = vote_count + $1 WHERE id = $2 RETURNING vote_count`,
         [delta, targetId],
       );
-      return updateResult.rows[0]?.vote_count ?? 0;
+      voteCount = updateResult.rows[0]?.vote_count ?? 0;
     } else {
       const updateResult = await this.pool.query<{ vote_count: number }>(
         `UPDATE forum_answers SET vote_count = vote_count + $1 WHERE id = $2 RETURNING vote_count`,
         [delta, targetId],
       );
-      return updateResult.rows[0]?.vote_count ?? 0;
+      voteCount = updateResult.rows[0]?.vote_count ?? 0;
     }
+
+    return { voteCount, userVote };
   }
 }

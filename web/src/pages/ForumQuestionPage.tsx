@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, MessageSquare } from "lucide-react";
+import { ArrowLeft, CheckCircle, MessageSquare, ThumbsUp } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useForumStore } from "@/store/useForumStore";
 import { forumService } from "@/lib/forum/forum.service";
@@ -29,6 +29,8 @@ export function ForumQuestionPage() {
   const updateAnswer = useForumStore((s) => s.updateAnswer);
   const addAnswer = useForumStore((s) => s.addAnswer);
 
+  const isQuestionAuthor = question?.authorId === user?.id;
+
   useEffect(() => {
     if (id) {
       loadQuestionDetail(id);
@@ -43,12 +45,11 @@ export function ForumQuestionPage() {
         voteType: "upvote",
       });
       if (targetType === "question" && question) {
-        updateQuestion({ ...question, voteCount: result.voteCount } as any);
+        updateQuestion({ ...question, voteCount: result.voteCount, userVote: result.userVote } as any);
       } else {
         const target = answers.find((a) => a.id === targetId);
         if (target) {
-          const newUserVote = target.userVote === "upvote" ? null : ("upvote" as const);
-          updateAnswer({ ...target, voteCount: result.voteCount, userVote: newUserVote } as any);
+          updateAnswer({ ...target, voteCount: result.voteCount, userVote: result.userVote } as any);
         }
       }
     } catch {
@@ -153,16 +154,7 @@ export function ForumQuestionPage() {
               }`}
               aria-label="Votar"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill={question.userVote === "upvote" ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M18 15l-6-6-6 6" />
-              </svg>
+              <ThumbsUp size={20} fill={question.userVote === "upvote" ? "currentColor" : "none"} />
             </button>
 
             <div className="flex-1 min-w-0">
@@ -208,6 +200,7 @@ export function ForumQuestionPage() {
               createdAt={answer.createdAt}
               currentUserId={user?.id}
               isAdmin={isAdmin}
+              isQuestionAuthor={isQuestionAuthor}
               userVote={answer.userVote ?? null}
               onVote={handleAnswerVote}
               onMarkSolution={handleMarkSolution}

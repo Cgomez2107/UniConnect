@@ -75,6 +75,7 @@ export function useForumSync(
                 store.updateQuestion({
                   ...store.activeQuestion,
                   voteCount: data.payload.voteCount,
+                  userVote: data.payload.userVote,
                 });
               } else {
                 const subject = subjectId || store.activeQuestion?.subjectId;
@@ -85,6 +86,7 @@ export function useForumSync(
                     store.updateQuestion({
                       ...found,
                       voteCount: data.payload.voteCount,
+                      userVote: data.payload.userVote,
                     });
                   }
                 }
@@ -98,6 +100,7 @@ export function useForumSync(
                 store.updateAnswer({
                   ...foundAnswer,
                   voteCount: data.payload.voteCount,
+                  userVote: data.payload.userVote,
                 });
               }
               break;
