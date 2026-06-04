@@ -87,6 +87,7 @@ function getActionRoute(n: NotificacionData): string | null {
     case "miembro_aceptado":
       return `/grupo/${data?.groupId ?? data?.requestId}`;
     default:
+      if (data?.eventId) return `/eventos/${data.eventId}`;
       if (data?.groupId) return `/grupo/${data?.groupId}`;
       if (data?.requestId) return `/solicitud/${data?.requestId}`;
       return null;
@@ -99,6 +100,7 @@ export default function BellDropdown() {
   const ref = useRef<HTMLDivElement>(null);
   const notifications = useNotificationStore((s) => s.notifications) as unknown as NotificacionData[];
   const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const markAsRead = useNotificationStore((s) => s.markAsRead);
   const storeMarkAllAsRead = useNotificationStore((s) => s.markAllAsRead);
 
   useEffect(() => {
@@ -121,7 +123,7 @@ export default function BellDropdown() {
           ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
         },
       });
-      storeMarkAllAsRead();
+      markAsRead(n.id);
     } catch {
       console.error("Error marking notification as read:", n.id);
     }
@@ -242,7 +244,9 @@ export default function BellDropdown() {
                             }}
                             className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                           >
-                            {isTransfer(n.type)
+                            {n.data?.eventId
+                              ? "Ver evento →"
+                              : isTransfer(n.type)
                               ? "Revisar solicitud →"
                               : n.type === "solicitud_ingreso"
                               ? "Ver solicitud →"

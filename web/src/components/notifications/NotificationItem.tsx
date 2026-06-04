@@ -73,6 +73,7 @@ function getActionRoute(n: NotificacionData): string | null {
     case "miembro_aceptado":
       return `/grupo/${data?.groupId ?? data?.requestId}`;
     default:
+      if (data?.eventId) return `/eventos/${data.eventId}`;
       if (data?.groupId) return `/grupo/${data?.groupId}`;
       if (data?.requestId) return `/solicitud/${data?.requestId}`;
       return null;
@@ -83,6 +84,7 @@ function getActionLabel(n: NotificacionData): string | null {
   if (n.action?.label) return n.action.label;
   const route = getActionRoute(n);
   if (!route) return null;
+  if (n.data?.eventId) return "Ver evento →";
   if (isTransfer(n.type)) return "Revisar solicitud →";
   if (n.type === "solicitud_ingreso") return "Ver solicitud →";
   return "Ver grupo →";

@@ -329,6 +329,7 @@ export class StudyGroupsController {
         "transferencia_admin_rechazada",
         "transferencia_admin_transferida",
         "admin_role_left",
+        "nuevo_evento",
       ] as const;
 
       const labels: Record<string, string> = {
@@ -340,9 +341,10 @@ export class StudyGroupsController {
         transferencia_admin_rechazada: "Transferencia de admin rechazada",
         transferencia_admin_transferida: "Admin transferido",
         admin_role_left: "Admin renunció",
+        nuevo_evento: "Nuevo evento universitario",
       };
 
-      const preferences = await Promise.all(
+      const results = await Promise.allSettled(
         eventTypes.map(async (eventType) => {
           const canales = await this.preferenceService.getCanalesActivos(actorUserId, eventType);
           const channels: Record<string, boolean> = {
@@ -353,6 +355,10 @@ export class StudyGroupsController {
           return { eventType, label: labels[eventType] ?? eventType, channels };
         }),
       );
+
+      const preferences = results
+        .filter((r): r is PromiseFulfilledResult<{ eventType: string; label: string; channels: Record<string, boolean> }> => r.status === "fulfilled")
+        .map((r) => r.value);
 
       sendJson(res, 200, { preferences: preferences ?? [] });
     } catch (error) {
