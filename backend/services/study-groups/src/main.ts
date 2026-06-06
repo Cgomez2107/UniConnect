@@ -484,6 +484,7 @@ function bootstrap(): void {
     cancelStudySessionUC,
     listStudySessionsUC,
     updateAvailabilityUC,
+    listSessionsByGroupUC,
   );
   const server = createStudyGroupsServer(controller, sessionsController);
 

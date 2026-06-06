@@ -6,6 +6,7 @@ interface ResourceCardProps {
   resource: StudyResourceUI;
   onViewDetails: (id: string) => void;
   onDelete?: (id: string) => void;
+  onEdit?: (id: string) => void;
   isOwner?: boolean;
 }
 
@@ -50,6 +51,7 @@ export function ResourceCard({
   resource,
   onViewDetails,
   onDelete,
+  onEdit,
   isOwner = false,
 }: ResourceCardProps) {
   const typeLabel = getTypeLabel(resource.resourceType ?? resource.fileType);
@@ -104,6 +106,27 @@ export function ResourceCard({
         </span>
       </div>
 
+      {/* Active Decorators */}
+      {resource.activeDecorators && resource.activeDecorators.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {resource.activeDecorators.includes("openGraph") && (
+            <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
+              📄 Open Graph
+            </span>
+          )}
+          {resource.activeDecorators.includes("rating") && (
+            <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
+              ⭐ Valoración
+            </span>
+          )}
+          {resource.activeDecorators.includes("comments") && (
+            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+              💬 Comentarios
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex gap-2">
         <button
@@ -112,6 +135,15 @@ export function ResourceCard({
         >
           Ver recurso
         </button>
+        {isOwner && onEdit && (
+          <button
+            onClick={() => onEdit(resource.id)}
+            className="px-3 py-2 bg-neutral-200 text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-300 transition-colors"
+            title="Editar recurso"
+          >
+            ✏️
+          </button>
+        )}
         {isOwner && onDelete && (
           <button
             onClick={() => onDelete(resource.id)}

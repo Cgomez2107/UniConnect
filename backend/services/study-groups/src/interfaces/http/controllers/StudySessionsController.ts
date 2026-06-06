@@ -3,6 +3,7 @@ import type { CreateStudySessionSeries } from "../../../application/use-cases/Cr
 import type { CancelStudySession } from "../../../application/use-cases/CancelStudySession.js";
 import type { ListStudySessions } from "../../../application/use-cases/ListStudySessions.js";
 import type { UpdateAvailability } from "../../../application/use-cases/UpdateAvailability.js";
+import type { ListSessionsByGroup } from "../../../application/use-cases/ListSessionsByGroup.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
@@ -13,6 +14,7 @@ export class StudySessionsController {
     private readonly cancelSessionUseCase: CancelStudySession,
     private readonly listSessionsUseCase: ListStudySessions,
     private readonly updateAvailabilityUseCase: UpdateAvailability,
+    private readonly listSessionsByGroupUseCase: ListSessionsByGroup,
   ) {}
 
   async handleCreateSeries(req: IncomingMessage, res: ServerResponse, groupId: string): Promise<void> {
@@ -38,6 +40,7 @@ export class StudySessionsController {
         endTime: String(body.endTime || ""),
         rrule: body.rrule ? String(body.rrule) : undefined,
         weekCount: typeof body.weekCount === "number" ? body.weekCount : 8,
+        remindAt: body.remindAt ? String(body.remindAt) : undefined,
       };
 
       const sessions = await this.seriesUseCase.execute(input);
@@ -123,6 +126,22 @@ export class StudySessionsController {
       } else {
         sendError(res, 400, message);
       }
+    }
+  }
+
+  async handleListAttendees(req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+    try {
+      const actorUserId = getActorUserId(req);
+      if (!actorUserId) {
+        sendError(res, 401, "Authentication required");
+        return;
+      }
+
+      const attendees = await this.listSessionsByGroupUseCase.listAttendees(sessionId);
+      sendData(res, 200, attendees);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to list attendees";
+      sendError(res, 400, message);
     }
   }
 }

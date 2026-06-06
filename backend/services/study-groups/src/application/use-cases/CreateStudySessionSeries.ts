@@ -12,6 +12,7 @@ export interface CreateSeriesInput {
   readonly endTime: string;
   readonly rrule?: string;
   readonly weekCount: number;
+  readonly remindAt?: string;
 }
 
 export class CreateStudySessionSeries {
@@ -48,7 +49,7 @@ export class CreateStudySessionSeries {
       startTime: input.startTime,
       endTime: input.endTime,
       location: null,
-      remindAt: null,
+      remindAt: input.remindAt || null,
       createdBy: input.actorUserId,
     });
     sessions.push(series);
@@ -58,6 +59,9 @@ export class CreateStudySessionSeries {
       for (let i = 1; i < weekCount; i++) {
         const weekStart = new Date(startDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
         const weekEnd = new Date(weekStart.getTime() + durationMs);
+        const childRemindAt = input.remindAt
+          ? new Date(weekStart.getTime() - (startDate.getTime() - new Date(input.remindAt).getTime())).toISOString()
+          : null;
         const child = await this.repository.create({
           seriesId: series.id,
           requestId: input.requestId,
@@ -66,7 +70,7 @@ export class CreateStudySessionSeries {
           startTime: weekStart.toISOString(),
           endTime: weekEnd.toISOString(),
           location: null,
-          remindAt: null,
+          remindAt: childRemindAt,
           createdBy: input.actorUserId,
         });
         sessions.push(child);
@@ -74,7 +78,8 @@ export class CreateStudySessionSeries {
     }
 
     if (this.subject) {
-      await Promise.all(
+      // Emit notifications asynchronously (fire and forget) to not block session creation
+      Promise.all(
         sessions.map(session =>
           this.subject!.emit({
             type: "SESSION_CREATED",
@@ -90,7 +95,7 @@ export class CreateStudySessionSeries {
             seriesId: session.seriesId,
           }),
         ),
-      );
+      ).catch(err => console.error("Failed to emit session created event:", err));
     }
 
     return sessions;

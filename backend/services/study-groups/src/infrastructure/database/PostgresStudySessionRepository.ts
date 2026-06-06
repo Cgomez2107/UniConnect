@@ -111,7 +111,7 @@ export class PostgresStudySessionRepository implements IStudySessionRepository {
   async findPendingReminders(): Promise<StudySession[]> {
     const result = await this.pool.query<StudySessionRow>(
       `SELECT * FROM study_sessions
-       WHERE reminder_sent_at IS NULL AND cancelled_at IS NULL AND start_time <= NOW() + interval '15 minutes'
+       WHERE reminder_sent_at IS NULL AND cancelled_at IS NULL AND remind_at IS NOT NULL AND remind_at <= NOW()
        FOR UPDATE SKIP LOCKED`,
     );
     return result.rows.map(mapSession);
@@ -126,7 +126,7 @@ export class PostgresStudySessionRepository implements IStudySessionRepository {
 
   async listAttendeeUserIds(sessionId: string): Promise<string[]> {
     const result = await this.pool.query<{ user_id: string }>(
-      `SELECT user_id FROM session_attendees WHERE session_id = $1 AND status IN ('pending', 'confirmed')`,
+      `SELECT user_id FROM session_attendees WHERE session_id = $1 AND status = 'confirmed'`,
       [sessionId],
     );
     return result.rows.map(r => r.user_id);

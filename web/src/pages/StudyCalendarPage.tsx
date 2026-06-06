@@ -47,6 +47,8 @@ export function StudyCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedSession, setSelectedSession] = useState<StudySessionUI | null>(null);
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
+  const [sessionAttendees, setSessionAttendees] = useState<any[]>([]);
+  const [loadingAttendees, setLoadingAttendees] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -98,29 +100,29 @@ export function StudyCalendarPage() {
     }
   };
 
+  const loadSessionAttendees = async (sessionId: string) => {
+    setLoadingAttendees(true);
+    try {
+      const attendees = await deps.apiClients.studySessions.listSessionAttendees(sessionId);
+      console.log("Loaded attendees:", attendees);
+      console.log("Current user ID:", user?.id);
+      setSessionAttendees(attendees);
+    } catch (err) {
+      console.error("Error loading session attendees:", err);
+      setSessionAttendees([]);
+    } finally {
+      setLoadingAttendees(false);
+    }
+  };
+
   const handleUpdateAvailability = async (sessionId: string, status: "confirmed" | "declined") => {
     if (!user) return;
     setUpdatingAvailability(true);
     try {
-      const token = localStorage.getItem("accessToken");
       const userName = `${user.firstName} ${user.lastName}`.trim();
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1"}/study-groups/sessions/${sessionId}/availability`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify({ status, userName }),
-        },
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error al actualizar disponibilidad");
-      }
-      // Refresh sessions to get updated attendee info
-      await loadSessions();
+      await deps.apiClients.studySessions.updateAvailability(sessionId, { status, userName });
+      // Refresh attendees to get updated info
+      await loadSessionAttendees(sessionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al actualizar disponibilidad");
     } finally {
@@ -136,8 +138,13 @@ export function StudyCalendarPage() {
   const daysInPrevMonth = new Date(year, month, 0).getDate();
 
   const getSessionsForDay = (day: number) => {
-    const dateStr = new Date(year, month, day).toISOString().slice(0, 10);
-    return sessions.filter(s => s.startTime.slice(0, 10) === dateStr && s.status !== "cancelled");
+    const dayDate = new Date(year, month, day);
+    const startOfDay = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate());
+    const endOfDay = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate() + 1);
+    return sessions.filter(s => {
+      const sessionDate = new Date(s.startTime);
+      return sessionDate >= startOfDay && sessionDate < endOfDay && s.status !== "cancelled";
+    });
   };
 
   const calendarDays: (number | null)[] = [];
@@ -221,7 +228,10 @@ export function StudyCalendarPage() {
                     {daySessions.slice(0, 3).map(session => (
                       <button
                         key={session.id}
-                        onClick={() => setSelectedSession(session)}
+                        onClick={() => {
+                          setSelectedSession(session);
+                          loadSessionAttendees(session.id);
+                        }}
                         className="w-full text-left text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 truncate hover:bg-blue-200 transition-colors"
                       >
                         {session.title}
@@ -260,6 +270,20 @@ export function StudyCalendarPage() {
                 )}
               </div>
               <div className="space-y-2 mb-4">
+                <p className="text-sm font-medium text-neutral-700">Confirmados: {sessionAttendees.filter(a => a.status === "confirmed").length}</p>
+                <p className="text-sm text-neutral-600">
+                  Tu estado: {
+                    (() => {
+                      const userAttendee = sessionAttendees.find(a => a.userId === user?.id);
+                      if (!userAttendee) return "Pendiente";
+                      if (userAttendee.status === "confirmed") return "Confirmado";
+                      if (userAttendee.status === "declined") return "Declinado";
+                      return "Pendiente";
+                    })()
+                  }
+                </p>
+              </div>
+              <div className="space-y-2 mb-4">
                 <p className="text-sm font-medium text-neutral-700">Tu asistencia:</p>
                 <div className="flex gap-2">
                   <Button
@@ -273,7 +297,10 @@ export function StudyCalendarPage() {
                   <Button
                     variant="secondary"
                     onClick={() => handleUpdateAvailability(selectedSession.id, "declined")}
-                    disabled={updatingAvailability}
+                    disabled={updatingAvailability || (() => {
+                      const userAttendee = sessionAttendees.find(a => a.userId === user?.id);
+                      return !userAttendee || userAttendee.status !== "confirmed";
+                    })()}
                     className="flex-1"
                   >
                     {updatingAvailability ? "Actualizando..." : "Declinar"}

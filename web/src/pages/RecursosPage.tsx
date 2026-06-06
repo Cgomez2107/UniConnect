@@ -66,6 +66,10 @@ export function RecursosPage() {
     navigate(`/recursos/${id}`);
   };
 
+  const handleEdit = (id: string) => {
+    navigate(`/recursos/${id}?editar=true`);
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm("¿Deseas eliminar este recurso?")) {
       try {
@@ -169,6 +173,7 @@ export function RecursosPage() {
                 key={resource.id}
                 resource={resource}
                 onViewDetails={handleViewDetails}
+                onEdit={handleEdit}
                 onDelete={handleDelete}
                 isOwner={user?.id === resource.uploaderUserId || user?.id === resource.user_id}
               />

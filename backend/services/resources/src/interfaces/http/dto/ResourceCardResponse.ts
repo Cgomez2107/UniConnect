@@ -31,6 +31,7 @@ interface BaseResourceCardFields {
   readonly updatedAt: string;
   readonly profiles: ResourceAuthor | undefined;
   readonly subjects: ResourceSubject | undefined;
+  readonly activeDecorators: readonly string[];
 }
 
 export type ResourceCardResponse = BaseResourceCardFields & (FileResourceFields | LinkResourceFields);

@@ -6,6 +6,7 @@ import { GetStudyResourceById } from "../../../application/use-cases/GetStudyRes
 import { ListStudyResources } from "../../../application/use-cases/ListStudyResources.js";
 import { UpdateStudyResource } from "../../../application/use-cases/UpdateStudyResource.js";
 import type { StudyResource } from "../../../domain/entities/StudyResource.js";
+import type { IPermissionValidator } from "../../../domain/services/IPermissionValidator.js";
 import type { CreateResourceDto } from "../dto/CreateResourceDto.js";
 import type { UpdateResourceDto } from "../dto/UpdateResourceDto.js";
 import type { ResourceCardResponse } from "../dto/ResourceCardResponse.js";
@@ -16,6 +17,15 @@ import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHt
 import { sendData, sendJson, sendError } from "../../../../../../shared/http/sendJson.js";
 
 function toCardResponse(resource: StudyResource): ResourceCardResponse {
+  // Determine which decorators are active based on resource data
+  const activeDecorators: string[] = [];
+  if (resource.resourceType === "link" && (resource.ogTitle || resource.ogDescription || resource.ogImage)) {
+    activeDecorators.push("openGraph");
+  }
+  // Add other decorators when data is available
+  // if (resource.rating) activeDecorators.push("rating");
+  // if (resource.comments) activeDecorators.push("comments");
+
   if (resource.resourceType === "link") {
     return {
       id: resource.id,
@@ -29,6 +39,7 @@ function toCardResponse(resource: StudyResource): ResourceCardResponse {
       subjects: resource.subjects
         ? { name: resource.subjects.name }
         : undefined,
+      activeDecorators,
       type: "link",
       url: resource.url ?? null,
       ogTitle: resource.ogTitle ?? null,
@@ -49,6 +60,7 @@ function toCardResponse(resource: StudyResource): ResourceCardResponse {
     subjects: resource.subjects
       ? { name: resource.subjects.name }
       : undefined,
+    activeDecorators,
     type: "file",
     fileUrl: resource.fileUrl ?? null,
     fileName: resource.fileName ?? null,
@@ -68,6 +80,7 @@ export class ResourcesController {
     private readonly createStudyResource: CreateStudyResource,
     private readonly updateStudyResource: UpdateStudyResource,
     private readonly deleteStudyResource: DeleteStudyResource,
+    private readonly permissionValidator: IPermissionValidator,
   ) {}
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -106,6 +119,15 @@ export class ResourcesController {
         sendError(res, 404, "Recurso no encontrado.");
         return;
       }
+
+      console.log(`[ResourcesController] Resource data:`, JSON.stringify({
+        id: result.id,
+        resourceType: result.resourceType,
+        url: result.url,
+        ogTitle: result.ogTitle,
+        ogDescription: result.ogDescription,
+        ogImage: result.ogImage,
+      }));
 
       sendData(res, 200, toCardResponse(result));
     } catch (error) {
@@ -189,7 +211,7 @@ export class ResourcesController {
 
   async delete(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
     try {
-      const permission = checkEditPermission(req);
+      const permission = await checkEditPermission(req, id, this.permissionValidator);
       if (!permission) {
         sendError(res, 401, "Token de autenticación requerido.");
         return;
@@ -211,7 +233,7 @@ export class ResourcesController {
 
   async update(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
     try {
-      const permission = checkEditPermission(req);
+      const permission = await checkEditPermission(req, id, this.permissionValidator);
       if (!permission) {
         sendError(res, 401, "Token de autenticación requerido.");
         return;

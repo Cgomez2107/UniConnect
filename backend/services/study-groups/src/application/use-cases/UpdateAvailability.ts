@@ -41,7 +41,8 @@ export class UpdateAvailability {
 
     const attendee = await this.attendeeRepository.upsert(sessionId, userId, status);
 
-    await this.subject.emit({
+    // Emit notifications asynchronously (fire and forget) to not block availability update
+    this.subject.emit({
       type: "AVAILABILITY_UPDATED",
       version: "1.0",
       timestamp: new Date(),
@@ -52,7 +53,7 @@ export class UpdateAvailability {
       status: status as "confirmed" | "declined",
       groupName: group.groupName ?? "",
       organizerId: group.adminId,
-    });
+    }).catch(err => console.error("Failed to emit availability updated event:", err));
 
     return attendee;
   }

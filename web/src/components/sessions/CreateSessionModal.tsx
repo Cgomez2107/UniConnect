@@ -26,6 +26,7 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [durationMinutes, setDurationMinutes] = useState(60);
+  const [reminderMinutes, setReminderMinutes] = useState(30);
   const [isRecurring, setIsRecurring] = useState(false);
   const [weekCount, setWeekCount] = useState(8);
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +55,7 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
     setStartDate("");
     setStartTime("");
     setDurationMinutes(60);
+    setReminderMinutes(30);
     setIsRecurring(false);
     setWeekCount(8);
     setSubjectFilter("");
@@ -96,6 +98,8 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
   }, [isOpen]);
 
   const handleSubmit = async () => {
+    if (submitting) return; // Prevent double submission
+
     setError(null);
     if (!groupId) { setError("Selecciona un grupo"); return; }
     if (!title.trim()) { setError("El título es obligatorio"); return; }
@@ -113,7 +117,10 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
       return;
     }
 
-    if (submitting) return; // Prevent double submission
+    // Calculate remindAt if reminderMinutes is set
+    const remindAt = reminderMinutes > 0
+      ? new Date(startDateTime.getTime() - reminderMinutes * 60 * 1000).toISOString()
+      : undefined;
 
     setSubmitting(true);
     try {
@@ -122,6 +129,7 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
         description: description.trim(),
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
+        remindAt,
         ...(isRecurring ? { rrule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA,SU", weekCount } : {}),
       });
       setSuccess(true);
@@ -231,6 +239,20 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
             className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
           <p className="text-xs text-neutral-500 mt-1">Mínimo 15 minutos, máximo 8 horas</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Recordatorio (minutos antes)</label>
+          <input
+            type="number"
+            value={reminderMinutes}
+            onChange={(e) => setReminderMinutes(Number(e.target.value))}
+            min={0}
+            max={1440}
+            step={5}
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p className="text-xs text-neutral-500 mt-1">0 para sin recordatorio, máximo 24 horas</p>
         </div>
 
         <div className="flex items-center gap-3">

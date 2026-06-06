@@ -805,7 +805,15 @@ async function handleRequest(
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 7. JWT authentication for all other API routes
+  // 7. Public GET endpoints for resources (list and detail)
+  // ──────────────────────────────────────────────────────────────────────────
+  if (isResourcesRoute(requestUrl.pathname) && req.method === "GET") {
+    await proxyRequest(req, res, env.resourcesBaseUrl);
+    return;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 8. JWT authentication for all other API routes
   // ──────────────────────────────────────────────────────────────────────────
   const payload = jwtMiddleware.authenticate(req, res);
   if (!payload) {

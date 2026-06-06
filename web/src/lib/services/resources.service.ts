@@ -63,8 +63,6 @@ const resourcesService = {
 
     if (payload.url) {
       createPayload.url = payload.url;
-      createPayload.fileUrl = payload.url;
-      createPayload.fileName = payload.fileName ?? payload.url;
     } else if (payload.fileUrl) {
       createPayload.fileUrl = payload.fileUrl;
       createPayload.fileName = payload.fileName ?? payload.fileUrl;
