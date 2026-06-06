@@ -13,7 +13,7 @@ import { ListMembersByRequest } from "./application/use-cases/ListMembersByReque
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "./application/use-cases/ListMyStudyRequests.js";
 import { ListMyApplications } from "./application/use-cases/ListMyApplications.js";
-import { LeaveAdminRole } from "./application/use-cases/LeaveAdminRole.js";
+import { LeaveStudyGroup } from "./application/use-cases/LeaveStudyGroup.js";
 import { RejectAdminTransfer } from "./application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
@@ -297,6 +297,18 @@ function bootstrap(): void {
         return {};
       }
     },
+    async getFullName(userId: string) {
+      if (!pool) return null;
+      try {
+        const result = await pool.query<{ full_name: string | null }>(
+          `SELECT full_name FROM profiles WHERE id = $1`,
+          [userId],
+        );
+        return result.rows[0]?.full_name ?? null;
+      } catch {
+        return null;
+      }
+    },
   };
 
   const groupChatNotificationObserver = new GroupChatNotificationObserver(
@@ -395,6 +407,7 @@ function bootstrap(): void {
     repository,
     studyGroupRepository,
     subject,
+    userRepository ?? groupUserRepository,
     membershipService,
   );
   const reviewApplication = new ReviewApplication(
@@ -411,7 +424,7 @@ function bootstrap(): void {
   );
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
-  const leaveAdminRole = new LeaveAdminRole(studyGroupRepository, subject);
+  const leaveStudyGroupUseCase = new LeaveStudyGroup(studyGroupRepository, memberRepository, applicationRepository, subject);
   const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
@@ -437,6 +450,7 @@ function bootstrap(): void {
     sessionRepos.session,
     studyGroupRepository,
     subject,
+    userRepository ?? groupUserRepository,
   );
   const listSessionsByGroupUC = new ListSessionsByGroup(
     sessionRepos.session,
@@ -463,7 +477,7 @@ function bootstrap(): void {
     requestAdminTransfer,
     acceptAdminTransfer,
     rejectAdminTransfer,
-    leaveAdminRole,
+    leaveStudyGroupUseCase,
     listMyStudyRequestsUC,
     listMyApplicationsUC,
     cancelStudyRequestUC,

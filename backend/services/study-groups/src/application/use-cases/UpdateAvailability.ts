@@ -3,6 +3,7 @@ import type { ISessionAttendeeRepository } from "../../domain/repositories/ISess
 import type { IStudySessionRepository } from "../../domain/repositories/IStudySessionRepository.js";
 import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
 import type { ISubject } from "../../domain/events/observers/ISubject.js";
+import type { IUserRepository } from "../../../../../shared/patterns/strategy/IUserRepository.js";
 import { NotFoundError, AuthorizationError } from "../../../../../shared/libs/errors/index.js";
 
 export class UpdateAvailability {
@@ -11,6 +12,7 @@ export class UpdateAvailability {
     private readonly sessionRepository: IStudySessionRepository,
     private readonly studyGroupRepository: IStudyGroupRepository,
     private readonly subject: ISubject,
+    private readonly userRepository: IUserRepository,
   ) {}
 
   async execute(
@@ -37,6 +39,11 @@ export class UpdateAvailability {
     const isMember = await this.sessionRepository.isGroupMember(session.requestId, userId);
     if (!isMember) {
       throw new AuthorizationError("You are not a member of this group.");
+    }
+
+    if (!userName || userName === "Usuario") {
+      const fullName = await this.userRepository.getFullName(userId);
+      userName = fullName ?? "Usuario";
     }
 
     const attendee = await this.attendeeRepository.upsert(sessionId, userId, status);

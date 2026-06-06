@@ -16,7 +16,7 @@ import { ListMembersByRequest } from "../../../application/use-cases/ListMembers
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "../../../application/use-cases/ListMyStudyRequests.js";
 import { ListMyApplications } from "../../../application/use-cases/ListMyApplications.js";
-import { LeaveAdminRole } from "../../../application/use-cases/LeaveAdminRole.js";
+import { LeaveStudyGroup } from "../../../application/use-cases/LeaveStudyGroup.js";
 import { RejectAdminTransfer } from "../../../application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
@@ -81,7 +81,7 @@ export class StudyGroupsController {
     private readonly requestAdminTransfer: RequestAdminTransfer,
     private readonly acceptAdminTransfer: AcceptAdminTransfer,
     private readonly rejectAdminTransfer: RejectAdminTransfer,
-    private readonly leaveAdminRole: LeaveAdminRole,
+    private readonly leaveStudyGroup: LeaveStudyGroup,
     private readonly listMyStudyRequestsUC: ListMyStudyRequests,
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
@@ -645,7 +645,7 @@ export class StudyGroupsController {
     }
   }
 
-  async leaveAdmin(
+  async leaveGroup(
     req: IncomingMessage,
     res: ServerResponse,
     requestId: string,
@@ -657,12 +657,12 @@ export class StudyGroupsController {
     }
 
     try {
-      await this.leaveAdminRole.execute({
+      await this.leaveStudyGroup.execute({
         requestId,
         actorUserId,
       });
 
-      sendData(res, 200, { message: "Salida de administracion registrada." });
+      sendData(res, 200, { message: "Salida del grupo registrada." });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -852,7 +852,7 @@ export class StudyGroupsController {
       const result = await this.updateAvailabilityUC.execute(
         sessionId,
         actorUserId,
-        "",
+        body.userName ?? "",
         body.status,
       );
       sendData(res, 200, result);

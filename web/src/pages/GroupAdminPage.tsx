@@ -474,7 +474,7 @@ export function GroupDashboardPage() {
         .map((a: any) => ({
           ...a,
           applicantId: a.userId || a.applicantId,
-          applicantName: resolveName(a.userId || a.applicantId, a.user?.fullName || null),
+          applicantName: resolveName(a.userId || a.applicantId, a.user?.fullName || a.applicantName || null),
           applicantAvatar: a.user?.avatarUrl || resolveAvatar(a.userId || a.applicantId),
           message: a.message || "",
           createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,

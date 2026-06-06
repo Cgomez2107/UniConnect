@@ -106,13 +106,10 @@ export class StudySessionsController {
         return;
       }
 
-      // Use userName from body or default to "Usuario"
-      const userName = body.userName || "Usuario";
-
       const attendee = await this.updateAvailabilityUseCase.execute(
         sessionId,
         actorUserId,
-        userName,
+        body.userName ?? "",
         body.status as "confirmed" | "declined",
       );
 

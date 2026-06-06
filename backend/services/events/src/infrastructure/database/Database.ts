@@ -19,9 +19,9 @@ export class Database {
       user: env.dbUser,
       password: env.dbPassword,
       ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      max: 3,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 2000,
     });
 
     this.pool.on("error", (err) => {

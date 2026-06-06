@@ -127,7 +127,7 @@ export async function handleStudyGroupsRoutes(
   }
 
   if (req.method === "POST" && leaveMatch) {
-    await controller.leaveAdmin(req, res, leaveMatch[1]);
+    await controller.leaveGroup(req, res, leaveMatch[1]);
     return true;
   }
 

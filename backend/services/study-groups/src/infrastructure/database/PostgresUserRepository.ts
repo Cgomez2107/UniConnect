@@ -19,4 +19,12 @@ export class PostgresUserRepository implements IUserRepository {
       pushToken: result.rows[0].push_token as string | undefined,
     };
   }
+
+  async getFullName(userId: string): Promise<string | null> {
+    const result = await this.pool.query<{ full_name: string | null }>(
+      `SELECT full_name FROM profiles WHERE id = $1`,
+      [userId],
+    );
+    return result.rows[0]?.full_name ?? null;
+  }
 }
