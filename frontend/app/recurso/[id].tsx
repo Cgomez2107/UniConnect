@@ -18,6 +18,7 @@ import { router, useLocalSearchParams } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import {
   ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -100,9 +101,15 @@ export default function RecursoDetailScreen() {
     onDeleted: () => router.back(),
   })
 
-  // ── Abrir archivo ───────────────────────────────────────────────────────
+  // ── Detección de tipo ──────────────────────────────────────────────────
+  const isLink = resource?.type === "link" || resource?.resource_type === "link";
+  const linkUrl = resource?.url;
+
+  // ── Abrir archivo / enlace ──────────────────────────────────────────────
   const handleOpen = () => {
-    if (resource?.file_url) {
+    if (isLink && linkUrl) {
+      Linking.openURL(linkUrl);
+    } else if (resource?.file_url) {
       router.push({
         pathname: "/viewer",
         params: {
@@ -151,8 +158,8 @@ export default function RecursoDetailScreen() {
   }
 
   // ── Datos derivados ─────────────────────────────────────────────────────
-  const fileType = resource.file_type?.toUpperCase() ?? "?"
-  const icon = FILE_ICONS[fileType] ?? "📎"
+  const fileType = isLink ? "ENLACE" : (resource.file_type?.toUpperCase() ?? "?")
+  const icon = isLink ? "🔗" : (FILE_ICONS[fileType] ?? "📎")
   const authorName = resource.profiles?.full_name ?? "Estudiante"
   const subjectName = resource.subjects?.name ?? ""
   const initials = getInitials(authorName)
@@ -249,27 +256,40 @@ export default function RecursoDetailScreen() {
           </Text>
         )}
 
-        {/* ── Detalles del archivo ────────────────────────────────── */}
-        <Text style={[styles.sectionLabel, { color: C.textSecondary }]}>Detalles del archivo</Text>
+        {/* ── Detalles del archivo / enlace ────────────────────────── */}
+        <Text style={[styles.sectionLabel, { color: C.textSecondary }]}>
+          {isLink ? "Detalles del enlace" : "Detalles del archivo"}
+        </Text>
         <View style={[styles.detailsCard, { backgroundColor: C.surface, borderColor: C.border }]}>
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: C.textSecondary }]}>Nombre</Text>
-            <Text style={[styles.detailValue, { color: C.textPrimary }]} numberOfLines={1}>
-              {resource.file_name}
-            </Text>
-          </View>
-          <View style={[styles.detailSeparator, { backgroundColor: C.border }]} />
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: C.textSecondary }]}>Formato</Text>
-            <Text style={[styles.detailValue, { color: C.textPrimary }]}>{fileType}</Text>
-          </View>
-          <View style={[styles.detailSeparator, { backgroundColor: C.border }]} />
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: C.textSecondary }]}>Tamaño</Text>
-            <Text style={[styles.detailValue, { color: C.textPrimary }]}>
-              {formatSize(resource.file_size_kb)}
-            </Text>
-          </View>
+          {isLink ? (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: C.textSecondary }]}>URL</Text>
+              <Text style={[styles.detailValue, { color: C.textPrimary }]} numberOfLines={2}>
+                {linkUrl || "—"}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailLabel, { color: C.textSecondary }]}>Nombre</Text>
+                <Text style={[styles.detailValue, { color: C.textPrimary }]} numberOfLines={1}>
+                  {resource.file_name}
+                </Text>
+              </View>
+              <View style={[styles.detailSeparator, { backgroundColor: C.border }]} />
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailLabel, { color: C.textSecondary }]}>Formato</Text>
+                <Text style={[styles.detailValue, { color: C.textPrimary }]}>{fileType}</Text>
+              </View>
+              <View style={[styles.detailSeparator, { backgroundColor: C.border }]} />
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailLabel, { color: C.textSecondary }]}>Tamaño</Text>
+                <Text style={[styles.detailValue, { color: C.textPrimary }]}>
+                  {formatSize(resource.file_size_kb)}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* ── Botones de acción ───────────────────────────────────── */}
@@ -283,22 +303,24 @@ export default function RecursoDetailScreen() {
                 activeOpacity={0.85}
               >
                 <Text style={[styles.primaryBtnText, { color: C.textOnPrimary }]}>
-                  📂 Abrir
+                  {isLink ? "🔗 Abrir enlace" : "📂 Abrir"}
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.secondaryBtn, { borderColor: C.primary }]}
-                onPress={handleDownload}
-                disabled={downloading}
-                activeOpacity={0.85}
-              >
-                {downloading ? (
-                  <ActivityIndicator size="small" color={C.primary} />
-                ) : (
-                  <Text style={[styles.secondaryBtnText, { color: C.primary }]}>⬇️ Descargar</Text>
-                )}
-              </TouchableOpacity>
+              {!isLink && (
+                <TouchableOpacity
+                  style={[styles.secondaryBtn, { borderColor: C.primary }]}
+                  onPress={handleDownload}
+                  disabled={downloading}
+                  activeOpacity={0.85}
+                >
+                  {downloading ? (
+                    <ActivityIndicator size="small" color={C.primary} />
+                  ) : (
+                    <Text style={[styles.secondaryBtnText, { color: C.primary }]}>⬇️ Descargar</Text>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           )}
 

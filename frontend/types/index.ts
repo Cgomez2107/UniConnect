@@ -232,6 +232,8 @@ export interface StudyResource {
   subject_id: string;
   title: string;
   description: string | null;
+  type: string;
+  url: string;
   file_url: string;
   file_name: string;
   file_type: string | null; // PDF, DOCX, XLSX, etc.
