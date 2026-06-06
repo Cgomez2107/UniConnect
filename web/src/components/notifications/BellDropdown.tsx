@@ -14,6 +14,7 @@ interface NotificacionData {
   type: string;
   title: string;
   description: string;
+  body?: string;
   read: boolean;
   createdAt: string;
   priority?: Prioridad;
@@ -185,14 +186,15 @@ export default function BellDropdown() {
                 No hay notificaciones
               </div>
             ) : (
-              recent.map((n) => {
+              recent.map((n, index) => {
                 const priority = n.priority ?? "normal";
                 const styles = PRIORITY_STYLES[priority] ?? PRIORITY_STYLES.normal;
                 const route = getActionRoute(n);
+                const desc = n.description ?? n.body;
 
                 return (
                   <div
-                    key={n.id}
+                    key={n.id ?? `bell-notification-${index}`}
                     className={`card p-4 flex items-start gap-3 border-l-4 ${styles.border} ${!n.read ? styles.bg : ""} hover:bg-neutral-50 dark:hover:bg-neutral-700/30 transition-colors cursor-pointer`}
                     onClick={() => {
                       handleMarkRead(n);
@@ -224,9 +226,9 @@ export default function BellDropdown() {
                           </span>
                         )}
                       </div>
-                      {n.description && (
+                      {desc && (
                         <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-0.5 break-words">
-                          {n.description}
+                          {desc}
                         </p>
                       )}
                       <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">

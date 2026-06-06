@@ -78,6 +78,12 @@ export class CreateStudySessionSeries {
     }
 
     if (this.subject) {
+      // Fetch group members once for the entire series
+      const members = await this.memberRepository.findByGroup(sessions[0]?.requestId ?? input.requestId);
+      const memberIds = members.map(m => m.userId);
+      // We need the group name; infer it from the session title or fallback
+      const groupName = sessions[0]?.title ?? input.title;
+
       // Emit notifications asynchronously (fire and forget) to not block session creation
       Promise.all(
         sessions.map(session =>
@@ -91,6 +97,8 @@ export class CreateStudySessionSeries {
             startTime: session.startTime,
             endTime: session.endTime,
             createdBy: session.createdBy,
+            groupName,
+            memberIds,
             isRecurring: !!input.rrule,
             seriesId: session.seriesId,
           }),

@@ -7,6 +7,7 @@ interface NotificacionData {
   type: string;
   title: string;
   description?: string;
+  body?: string;
   read: boolean;
   createdAt: string;
   data?: Record<string, any>;
@@ -97,6 +98,8 @@ export function NotificationItem({ notificacion: n }: Props) {
   const route = getActionRoute(n);
   const label = getActionLabel(n);
 
+  const desc = n.description ?? n.body;
+
   return (
     <div
       className={`card p-4 flex items-start gap-3 border-l-4 ${styles.border} ${!n.read ? styles.bg : ""}`}
@@ -126,9 +129,9 @@ export function NotificationItem({ notificacion: n }: Props) {
             </span>
           )}
         </div>
-        {n.description && (
+        {desc && (
           <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-0.5 break-words">
-            {n.description}
+            {desc}
           </p>
         )}
         <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">

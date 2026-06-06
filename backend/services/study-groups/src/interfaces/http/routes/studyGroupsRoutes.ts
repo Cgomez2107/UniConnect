@@ -68,6 +68,14 @@ export async function handleStudyGroupsRoutes(
     return true;
   }
 
+  if (req.method === "PUT") {
+    const matchRead = requestUrl.pathname.match(/^\/api\/v1\/notifications\/([^/]+)\/read$/);
+    if (matchRead) {
+      await controller.markNotificationRead(req, res, matchRead[1]);
+      return true;
+    }
+  }
+
   if (req.method === "PUT" && requestUrl.pathname === "/api/v1/notifications/read-all") {
     await controller.markNotificationsRead(req, res);
     return true;

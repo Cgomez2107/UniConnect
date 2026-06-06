@@ -52,7 +52,7 @@ export class UpdateAvailability {
       userName,
       status: status as "confirmed" | "declined",
       groupName: group.groupName ?? "",
-      organizerId: group.adminId,
+      organizerId: session.createdBy,
     }).catch(err => console.error("Failed to emit availability updated event:", err));
 
     return attendee;

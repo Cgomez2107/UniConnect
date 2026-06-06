@@ -10,6 +10,7 @@ import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequ
 import { ListApplicationsByRequest } from "../../../application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "../../../application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "../../../application/use-cases/ListUserNotifications.js";
+import { MarkNotificationAsRead } from "../../../application/use-cases/MarkNotificationAsRead.js";
 import { MarkAllNotificationsAsRead } from "../../../application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
@@ -87,6 +88,7 @@ export class StudyGroupsController {
     private readonly cancelMyApplicationUC: CancelMyApplication,
     private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
     private readonly voteInPoll: VoteInPoll,
+    private readonly markNotificationAsRead: MarkNotificationAsRead,
     private readonly markAllNotificationsAsRead: MarkAllNotificationsAsRead,
     private readonly preferenceService: PreferenceService,
     private readonly createStudySessionUC: CreateStudySession,
@@ -290,6 +292,16 @@ export class StudyGroupsController {
       });
 
       sendData(res, 200, notifications, { total: notifications.length, page, pageSize });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async markNotificationRead(req: IncomingMessage, res: ServerResponse, notificationId: string): Promise<void> {
+    try {
+      await this.markNotificationAsRead.execute(notificationId);
+      sendData(res, 200, { success: true });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

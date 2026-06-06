@@ -7,6 +7,7 @@ import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById
 import { ListApplicationsByRequest } from "./application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "./application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "./application/use-cases/ListUserNotifications.js";
+import { MarkNotificationAsRead } from "./application/use-cases/MarkNotificationAsRead.js";
 import { MarkAllNotificationsAsRead } from "./application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "./application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
@@ -416,11 +417,14 @@ function bootstrap(): void {
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
   const cancelMyApplicationUC = new CancelMyApplication(applicationRepository);
   const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
+  const markNotificationAsRead = new MarkNotificationAsRead(notificationRepository);
   const markAllNotificationsAsRead = new MarkAllNotificationsAsRead(notificationRepository);
   const createStudySessionUC = new CreateStudySession(
     sessionRepos.session,
     sessionRepos.series,
     studyGroupRepository,
+    memberRepository,
+    subject,
   );
   const cancelStudySessionUC = new CancelStudySession(
     sessionRepos.session,
@@ -466,6 +470,7 @@ function bootstrap(): void {
     cancelMyApplicationUC,
     toggleStudyGroupMessageReaction,
     voteInPoll,
+    markNotificationAsRead,
     markAllNotificationsAsRead,
     preferenceService,
     createStudySessionUC,

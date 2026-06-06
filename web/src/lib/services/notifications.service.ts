@@ -18,12 +18,13 @@ export async function fetchNotifications() {
 
     // Merge: keep client-side notifications (e.g. event alerts) that don't
     // exist on the server, so they don't get wiped by polling.
-    // Client-side notifications come first so they aren't pushed past the
-    // visible limit of the bell dropdown (which slices to 10 items).
+    // Server notifications come first (ordered newest-first by the API)
+    // so the bell dropdown and notifications page show the most recent items
+    // at the top.
     const serverIds = new Set(deduped.map((n) => n.id));
     const merged = [
-      ...current.filter((n) => !serverIds.has(n.id)),
       ...deduped,
+      ...current.filter((n) => !serverIds.has(n.id)),
     ];
 
     store.setNotifications(merged);

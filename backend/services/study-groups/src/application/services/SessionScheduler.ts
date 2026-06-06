@@ -42,8 +42,12 @@ export class SessionScheduler {
     for (const session of sessions) {
       try {
         console.log(`[SessionScheduler] Processing reminder for session ${session.id}, remindAt: ${session.remindAt}`);
-        const userIds = await this.sessionRepository.listAttendeeUserIds(session.id);
-        console.log(`[SessionScheduler] Found ${userIds.length} confirmed attendees for session ${session.id}`);
+        const confirmedUserIds = await this.sessionRepository.listAttendeeUserIds(session.id);
+        // Also notify the session creator
+        const userIds = session.createdBy
+          ? Array.from(new Set([...confirmedUserIds, session.createdBy]))
+          : confirmedUserIds;
+        console.log(`[SessionScheduler] Found ${userIds.length} recipients (${confirmedUserIds.length} confirmed + creator) for session ${session.id}`);
 
         for (const userId of userIds) {
           const nowMs = Date.now();

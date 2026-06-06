@@ -13,6 +13,7 @@ interface StudySessionRow {
   parent_series_id: string | null;
   created_by: string;
   cancelled_at: string | null;
+  remind_at: string | null;
   reminder_sent_at: string | null;
   created_at: Date;
   updated_at: Date;
@@ -29,7 +30,7 @@ function mapSession(row: StudySessionRow): StudySession {
     endTime: row.end_time,
     location: null,
     status: row.cancelled_at ? "cancelled" : "scheduled",
-    remindAt: null,
+    remindAt: row.remind_at ?? null,
     reminded: row.reminder_sent_at !== null,
     createdBy: row.created_by,
     createdAt: new Date(row.created_at).toISOString(),
@@ -42,8 +43,8 @@ export class PostgresStudySessionRepository implements IStudySessionRepository {
 
   async create(input: CreateStudySessionInput): Promise<StudySession> {
     const result = await this.pool.query<StudySessionRow>(
-      `INSERT INTO study_sessions (parent_series_id, group_id, title, description, start_time, end_time, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO study_sessions (parent_series_id, group_id, title, description, start_time, end_time, created_by, remind_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [
         input.seriesId,
@@ -53,6 +54,7 @@ export class PostgresStudySessionRepository implements IStudySessionRepository {
         input.startTime,
         input.endTime,
         input.createdBy,
+        input.remindAt,
       ],
     );
     return mapSession(result.rows[0]);
