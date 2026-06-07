@@ -1,26 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import eventsService from "@/lib/services/events.service";
 import { Button } from "@/components/ui/Button";
 import useNotifications from "@/hooks/useNotifications";
 import { useEventsStore } from "@/store/useEventsStore";
+import { useEventCategories } from "@/hooks/useEventCategories";
 
 export function CrearEventoPage() {
   const navigate = useNavigate();
   const { success, error: showError } = useNotifications();
   const addEvent = useEventsStore((s) => s.addEvent);
+  const categories = useEventCategories();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
     eventDate: "",
     location: "",
-    category: "academico",
+    category: "",
   });
+
+  useEffect(() => {
+    if (categories.length > 0 && !form.category) {
+      setForm((prev) => ({ ...prev, category: categories[0].slug }));
+    }
+  }, [categories, form.category]);
 
   const isValid =
     form.title.trim().length > 0 &&
-    form.eventDate.trim().length > 0;
+    form.eventDate.trim().length > 0 &&
+    form.category.trim().length > 0;
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -135,10 +144,12 @@ export function CrearEventoPage() {
               onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="academico">Académico</option>
-              <option value="cultural">Cultural</option>
-              <option value="deportivo">Deportivo</option>
-              <option value="otro">Otro</option>
+              {categories.length === 0 && (
+                <option value="" disabled>Cargando categorías...</option>
+              )}
+              {categories.map((c) => (
+                <option key={c.id} value={c.slug}>{c.name}</option>
+              ))}
             </select>
           </div>
 

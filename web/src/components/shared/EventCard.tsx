@@ -1,6 +1,7 @@
 import React from "react";
-import { CampusEventUI, EventCategoryUI } from "@/types/ui";
+import { CampusEventUI } from "@/types/ui";
 import { Badge } from "@/components/ui/Badge";
+import { useEventCategories } from "@/hooks/useEventCategories";
 
 interface EventCardProps {
   event: CampusEventUI;
@@ -18,12 +19,12 @@ export function EventCard({
   onAttend,
   isAttending = false,
 }: EventCardProps) {
-  const categoryLabels: Record<EventCategoryUI, string> = {
-    academico: "Académico",
-    cultural: "Cultural",
-    deportivo: "Deporte",
-    otro: "Otro",
-  };
+  const categories = useEventCategories();
+
+  const categoryName =
+    categories.find((c) => c.slug === event.category)?.name
+    ?? event.category
+    ?? "Otro";
 
   return (
     <div className="card-hover overflow-hidden">
@@ -36,7 +37,7 @@ export function EventCard({
           <h3 className="font-semibold text-base text-neutral-900 flex-1">
             {event.title}
           </h3>
-          <Badge>{categoryLabels[event.category]}</Badge>
+          <Badge>{categoryName}</Badge>
         </div>
 
         <p className="text-sm text-neutral-600 mb-3 line-clamp-2">{event.description}</p>

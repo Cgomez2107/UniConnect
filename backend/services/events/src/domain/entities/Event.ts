@@ -6,7 +6,7 @@
  * Los campos status / maxCapacity / registeredCount / endAt se mantienen
  * opcionales por compatibilidad con code existente, pero no existen en DB.
  */
-export type EventCategory = "academico" | "cultural" | "deportivo" | "otro";
+export type EventCategory = string;
 
 export interface Event {
   readonly id: string;

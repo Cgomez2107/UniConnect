@@ -6,7 +6,7 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         description: z.ZodString;
         eventDate: z.ZodString;
         location: z.ZodOptional<z.ZodString>;
-        category: z.ZodDefault<z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>>;
+        category: z.ZodDefault<z.ZodString>;
         capacity: z.ZodOptional<z.ZodNumber>;
         isOnline: z.ZodDefault<z.ZodBoolean>;
         eventUrl: z.ZodOptional<z.ZodString>;
@@ -15,7 +15,7 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         description: string;
         title: string;
         eventDate: string;
-        category: "academico" | "cultural" | "deportivo" | "otro";
+        category: string;
         isOnline: boolean;
         location?: string | undefined;
         capacity?: number | undefined;
@@ -26,7 +26,7 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         title: string;
         eventDate: string;
         location?: string | undefined;
-        category?: "academico" | "cultural" | "deportivo" | "otro" | undefined;
+        category?: string | undefined;
         capacity?: number | undefined;
         isOnline?: boolean | undefined;
         eventUrl?: string | undefined;
@@ -37,7 +37,7 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         description: string;
         title: string;
         eventDate: string;
-        category: "academico" | "cultural" | "deportivo" | "otro";
+        category: string;
         isOnline: boolean;
         location?: string | undefined;
         capacity?: number | undefined;
@@ -50,7 +50,7 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         title: string;
         eventDate: string;
         location?: string | undefined;
-        category?: "academico" | "cultural" | "deportivo" | "otro" | undefined;
+        category?: string | undefined;
         capacity?: number | undefined;
         isOnline?: boolean | undefined;
         eventUrl?: string | undefined;
@@ -64,7 +64,7 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         description: z.ZodString;
         eventDate: z.ZodString;
         location: z.ZodOptional<z.ZodString>;
-        category: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+        category: z.ZodString;
         creatorId: z.ZodString;
         creator: z.ZodOptional<z.ZodObject<{
             id: z.ZodString;
@@ -111,7 +111,7 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         description: string;
         title: string;
         eventDate: string;
-        category: "academico" | "cultural" | "deportivo" | "otro";
+        category: string;
         creatorId: string;
         attendeeCount: number;
         isOnline: boolean;
@@ -137,7 +137,7 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         description: string;
         title: string;
         eventDate: string;
-        category: "academico" | "cultural" | "deportivo" | "otro";
+        category: string;
         creatorId: string;
         attendeeCount: number;
         isOnline: boolean;
@@ -165,7 +165,7 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         description: string;
         title: string;
         eventDate: string;
-        category: "academico" | "cultural" | "deportivo" | "otro";
+        category: string;
         creatorId: string;
         attendeeCount: number;
         isOnline: boolean;
@@ -193,7 +193,7 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         description: string;
         title: string;
         eventDate: string;
-        category: "academico" | "cultural" | "deportivo" | "otro";
+        category: string;
         creatorId: string;
         attendeeCount: number;
         isOnline: boolean;

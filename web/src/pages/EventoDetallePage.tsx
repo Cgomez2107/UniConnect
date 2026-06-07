@@ -3,17 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import eventsService from "@/lib/services/events.service";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  academico: "Académico",
-  cultural: "Cultural",
-  deportivo: "Deportivo",
-  otro: "Otro",
-};
+import { useEventCategories } from "@/hooks/useEventCategories";
 
 export function EventoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const categories = useEventCategories();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +66,11 @@ export function EventoDetallePage() {
         <div className="bg-white rounded-xl border border-neutral-200 p-6">
           <div className="flex items-start justify-between mb-4">
             <h1 className="text-2xl font-bold text-neutral-900">{event.title}</h1>
-            <Badge>{CATEGORY_LABELS[event.category] || event.category}</Badge>
+            <Badge>
+              {categories.find((c) => c.slug === event.category)?.name
+                ?? event.category
+                ?? "Otro"}
+            </Badge>
           </div>
 
           <p className="text-neutral-600 mb-6 leading-relaxed">

@@ -3,15 +3,11 @@ import { useNavigate } from "react-router-dom";
 import useEvents from "@/hooks/useEvents";
 import { useEventsSync } from "@/hooks";
 import { useEventSubscriptionStore } from "@/store/useEventSubscriptionStore";
+import { useEventCategories } from "@/hooks/useEventCategories";
 import { EventCard } from "@/components/shared/EventCard";
 import { Button } from "@/components/ui/Button";
 
-const CATEGORIES = [
-  { value: "academico", label: "Académico", icon: "🎓" },
-  { value: "cultural", label: "Cultural", icon: "🎭" },
-  { value: "deportivo", label: "Deportivo", icon: "⚽" },
-  { value: "otro", label: "Otro", icon: "📌" },
-] as const;
+const CATEGORY_ICONS = ["🎓", "🎭", "⚽", "📌", "🎨", "💡", "🌍", "🎵"];
 
 export function EventosPage() {
   const navigate = useNavigate();
@@ -20,7 +16,16 @@ export function EventosPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const subscribedCategories = useEventSubscriptionStore((s) => s.subscribedCategories);
   const toggleSubscription = useEventSubscriptionStore((s) => s.toggle);
-  const isSubscribed = (category: string) => subscribedCategories.includes(category);
+  const isSubscribed = (slug: string) => subscribedCategories.includes(slug);
+  const dbCategories = useEventCategories();
+
+  const categories = useMemo(() => {
+    return dbCategories.map((c, i) => ({
+      slug: c.slug,
+      name: c.name,
+      icon: CATEGORY_ICONS[i % CATEGORY_ICONS.length],
+    }));
+  }, [dbCategories]);
 
   // Sincronización en tiempo real — actualiza el store cuando otro usuario crea/edita/elimina un evento
   useEventsSync();
@@ -101,20 +106,20 @@ export function EventosPage() {
             >
               Todas
             </button>
-            {CATEGORIES.map(({ value, label, icon }) => (
+            {categories.map(({ slug, name, icon }) => (
               <button
-                key={value}
+                key={slug}
                 onClick={() =>
-                  setActiveCategory(activeCategory === value ? null : value)
+                  setActiveCategory(activeCategory === slug ? null : slug)
                 }
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeCategory === value
+                  activeCategory === slug
                     ? "bg-primary-600 text-white shadow-sm"
                     : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
                 }`}
               >
                 <span className="mr-1.5">{icon}</span>
-                {label}
+                {name}
               </button>
             ))}
             {hasActiveFilter && (
@@ -157,23 +162,23 @@ export function EventosPage() {
 
         {!isLoading && filteredEvents.length > 0 && (
           <div className="space-y-10">
-            {CATEGORIES.map(({ value, label, icon }) => {
-              const catEvents = groupedByCategory[value];
+            {categories.map(({ slug, name, icon }) => {
+              const catEvents = groupedByCategory[slug];
               if (!catEvents?.length) return null;
-              const subscribed = isSubscribed(value);
+              const subscribed = isSubscribed(slug);
 
               return (
-                <section key={value}>
+                <section key={slug}>
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="inline-flex items-center gap-2 text-lg font-bold text-neutral-800">
                       <span>{icon}</span>
-                      <span>{label}</span>
+                      <span>{name}</span>
                       <span className="text-sm font-normal text-neutral-400 ml-1">
                         ({catEvents.length})
                       </span>
                     </h2>
                     <button
-                      onClick={() => toggleSubscription(value)}
+                      onClick={() => toggleSubscription(slug)}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                         subscribed
                           ? "bg-primary-100 text-primary-700 hover:bg-primary-200"

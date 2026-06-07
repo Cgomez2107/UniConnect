@@ -63,6 +63,23 @@ export function useGlobalSync() {
 
       if (!isSubscribed) return;
 
+      // 2. Fetch role directly from Supabase profiles (not from stale store)
+      const { data: { user: sbUser } } = await supabase.auth.getUser();
+      if (sbUser?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", sbUser.id)
+          .single();
+
+        if (profile?.role === "admin") {
+          console.log("[useGlobalSync] Admin user detected — skipping student subscriptions.");
+          return;
+        }
+      }
+
+      if (!isSubscribed) return;
+
       console.log("[useGlobalSync] Initializing database listener (authenticated:", isAuthenticated, ")");
 
       channel = supabase

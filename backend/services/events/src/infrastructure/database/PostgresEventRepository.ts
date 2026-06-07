@@ -99,10 +99,22 @@ export class PostgresEventRepository implements IEventRepository {
     category?: string;
     imageUrl?: string;
   }): Promise<Event> {
+    // Resolver category slug → category_id
+    const catSlug = input.category ?? "academico";
+    const catResult = await this.pool.query<{ id: string }>(
+      `SELECT id FROM event_categories WHERE slug = $1`,
+      [catSlug],
+    );
+    const categoryId = catResult.rows[0]?.id ?? (
+      await this.pool.query<{ id: string }>(
+        `SELECT id FROM event_categories WHERE slug = 'otro'`,
+      )
+    ).rows[0]?.id;
+
     const result = await this.pool.query<{ id: string }>(
       `
-        INSERT INTO events (title, description, location, event_date, category, image_url, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO events (title, description, location, event_date, category, category_id, image_url, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
       `,
       [
@@ -110,7 +122,8 @@ export class PostgresEventRepository implements IEventRepository {
         input.description,
         input.location,
         input.startAt,
-        input.category ?? "academico",
+        catSlug,
+        categoryId ?? null,
         input.imageUrl ?? null,
         input.organizerId,
       ],

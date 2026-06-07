@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
+import { supabase } from "@/lib/supabase";
 import { GATEWAY_BASE_URL, API_PREFIX } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import axios from "axios";
@@ -99,14 +100,51 @@ export function OAuthCallbackPage() {
                 });
               }
 
-              // Redirigir al dashboard
-              const preOAuthLocation = sessionStorage.getItem("preOAuthLocation") || "/solicitudes";
-              sessionStorage.removeItem("preOAuthLocation");
-
               // Limpiar el hash de la URL
               window.history.replaceState({}, document.title, window.location.pathname);
 
-              navigate(preOAuthLocation);
+              // Consultar rol directamente desde Supabase (el backend puede tener caché)
+              // Usamos fetch directo con el token del hash (no el cliente supabase que usa anon key)
+              let role = data.user?.role;
+              const sbUserId = claims?.sub;
+              if (sbUserId && supabaseAccessToken) {
+                try {
+                  const res = await fetch(
+                    `https://becitrklvpadvjwdbmck.supabase.co/rest/v1/profiles?id=eq.${sbUserId}&select=role`,
+                    {
+                      headers: {
+                        apikey: "sb_publishable_FkHanjxqCZ7LDaQa1AomSg_xThwhZxW",
+                        Authorization: `Bearer ${supabaseAccessToken}`,
+                      },
+                    }
+                  );
+                  if (res.ok) {
+                    const profiles = await res.json();
+                    const sbRole = profiles?.[0]?.role;
+                    if (sbRole) {
+                      role = sbRole;
+                      // Actualizar store con el rol correcto de Supabase
+                      useAuthStore.setState({
+                        user: {
+                          ...useAuthStore.getState().user,
+                          role: sbRole,
+                        } as any,
+                      });
+                    }
+                  }
+                } catch {
+                  // fallback al rol del backend
+                }
+              }
+
+              // Redirigir según el rol de Supabase
+              if (role === "admin") {
+                navigate("/admin", { replace: true });
+              } else {
+                const preOAuthLocation = sessionStorage.getItem("preOAuthLocation") || "/solicitudes";
+                sessionStorage.removeItem("preOAuthLocation");
+                navigate(preOAuthLocation);
+              }
             } else {
               console.error("[OAuthCallback] No JWT token returned from backend");
               navigate("/login", { state: { error: "No se generó el token" } });

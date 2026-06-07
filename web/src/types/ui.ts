@@ -96,7 +96,7 @@ export interface ConversationUI {
   unreadCount: number;
 }
 
-export type EventCategoryUI = "academico" | "cultural" | "deportivo" | "otro";
+export type EventCategoryUI = string;
 
 export interface CampusEventUI {
   id: string;

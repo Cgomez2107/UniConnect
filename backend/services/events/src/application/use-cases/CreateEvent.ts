@@ -2,7 +2,6 @@ import type { Event } from "../../domain/entities/Event.js";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
 import type { ISubject } from "../../domain/events/ISubject.js";
 import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
-import type { EventCategory } from "../../domain/entities/Event.js";
 
 export interface CreateEventInput {
   readonly actorUserId: string;
@@ -11,7 +10,7 @@ export interface CreateEventInput {
   readonly location: string;
   readonly startAt: string;
   readonly endAt?: string;
-  readonly category: EventCategory;
+  readonly category: string;
   readonly imageUrl?: string;
   readonly maxCapacity?: number;
 }
@@ -38,11 +37,6 @@ export class CreateEvent {
 
     if (!input.category) {
       throw new ValidationError("Category is required");
-    }
-
-    const validCategories: EventCategory[] = ["academico", "cultural", "deportivo", "otro"];
-    if (!validCategories.includes(input.category)) {
-      throw new ValidationError("Invalid category");
     }
 
     const event = await this.repository.create({

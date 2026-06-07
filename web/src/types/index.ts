@@ -401,7 +401,22 @@ export interface AdminMetrics {
 // EVENTOS DEL CAMPUS
 // ============================================================================
 
-export type EventCategory = "academico" | "cultural" | "deportivo" | "otro";
+export type EventCategory = string;
+
+/** Payload para crear una categoría de evento */
+export interface CreateEventCategoryPayload {
+  name: string;
+  description?: string;
+}
+
+/** Fila de la tabla event_categories (gestión dinámica desde admin) */
+export interface EventCategoryRow {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  created_at: string;
+}
 
 /** Evento del campus (vista estudiante y admin) */
 export interface CampusEvent {
@@ -419,13 +434,13 @@ export interface CampusEvent {
   creator?: { full_name: string } | null;
 }
 
-/** Payload para crear/editar un evento */
+/** Payload para crear/editar un evento (admin) */
 export interface CreateEventPayload {
   title: string;
   description?: string;
   event_date: string;
   location?: string;
-  category: EventCategory;
+  category_id: string;
   image_url?: string;
 }
 
@@ -436,6 +451,7 @@ export interface AdminEvent {
   event_date: string;
   location: string | null;
   category: EventCategory;
+  category_id: string;
   created_at: string;
   creator_name: string;
 }
