@@ -283,8 +283,8 @@ export default function ChatScreen() {
           onReply={handleReply}
           onRetry={handleRetry}
           onOpenMedia={openMediaViewer}
-          onVote={(messageId, optionIndex) => {
-            voteInPoll(messageId, optionIndex).catch((err) =>
+          onVote={async (messageId, optionIndex) => {
+            await voteInPoll(messageId, optionIndex).catch((err) =>
               console.error("vote error:", err),
             );
           }}

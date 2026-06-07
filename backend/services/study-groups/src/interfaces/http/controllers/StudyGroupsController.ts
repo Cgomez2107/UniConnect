@@ -369,8 +369,8 @@ export class StudyGroupsController {
       );
 
       const preferences = results
-        .filter((r): r is PromiseFulfilledResult<{ eventType: string; label: string; channels: Record<string, boolean> }> => r.status === "fulfilled")
-        .map((r) => r.value);
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => (r as PromiseFulfilledResult<{ eventType: string; label: string; channels: Record<string, boolean> }>).value);
 
       sendJson(res, 200, { preferences: preferences ?? [] });
     } catch (error) {
