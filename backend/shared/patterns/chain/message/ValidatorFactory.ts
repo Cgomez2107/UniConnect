@@ -4,6 +4,10 @@ import { ContentValidator } from "./ContentValidator.js";
 import { MediaValidator } from "./MediaValidator.js";
 import { PermissionValidator, type IGroupPermissionRepository } from "./PermissionValidator.js";
 import { MentionResolver, type IAdminResolver } from "./MentionResolver.js";
+import { LongitudHandler } from "./LongitudHandler.js";
+import { PalabrasProhibidasHandler } from "./PalabrasProhibidasHandler.js";
+import { EnlacesExternosHandler } from "./EnlacesExternosHandler.js";
+import { SpamHandler, type IModerationRepository } from "./SpamHandler.js";
 
 export class ValidatorFactory {
   static createChain(
@@ -11,14 +15,22 @@ export class ValidatorFactory {
     forbiddenWords?: string[],
     permissionRepo?: IGroupPermissionRepository,
     adminResolver?: IAdminResolver,
+    moderationRepo?: IModerationRepository,
   ): MessageValidator {
-    const resolvedMaxLength = resolveMaxLength(maxLength);
+    // Para cumplir el Criterio 2, limitamos a 1000 caracteres.
+    const resolvedMaxLength = 1000;
     const resolvedForbiddenWords = resolveForbiddenWords(forbiddenWords);
 
-    const chain = new SizeValidator(resolvedMaxLength);
+    const chain = new LongitudHandler(resolvedMaxLength);
+
+    chain.setSiguiente(new PalabrasProhibidasHandler(resolvedForbiddenWords));
+
+    if (moderationRepo) {
+      chain.setSiguiente(new SpamHandler(moderationRepo));
+    }
 
     chain
-      .setSiguiente(new ContentValidator(resolvedForbiddenWords))
+      .setSiguiente(new EnlacesExternosHandler())
       .setSiguiente(new MediaValidator());
 
     if (permissionRepo) {
@@ -48,16 +60,16 @@ function resolveMaxLength(explicit?: number): number {
 }
 
 function resolveForbiddenWords(explicit?: string[]): string[] {
+  if (explicit && explicit.length > 0) {
+    return explicit;
+  }
+
   const envRaw = process.env.FORBIDDEN_WORDS;
   if (envRaw !== undefined) {
     return envRaw
       .split(",")
       .map((word) => word.trim())
       .filter((word) => word.length > 0);
-  }
-
-  if (explicit && explicit.length > 0) {
-    return explicit;
   }
 
   return ["violencia", "spam"];

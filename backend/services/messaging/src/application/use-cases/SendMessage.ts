@@ -20,7 +20,7 @@ import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.j
 import { PollTimerService } from "../../domain/services/PollTimerService.js";
 
 export class SendMessage {
-  private readonly validator = ValidatorFactory.createChain(5000);
+  private readonly validator;
 
   constructor(
     private readonly repository: IMessagingRepository,
@@ -30,7 +30,9 @@ export class SendMessage {
     private readonly chatNotificationObserver: IChatObserver,
     private readonly pollTimerService: PollTimerService,
     private readonly onClosePoll: (messageId: string) => Promise<void>,
-  ) {}
+  ) {
+    this.validator = ValidatorFactory.createChain(5000, undefined, undefined, undefined, this.repository);
+  }
 
   private readonly uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -58,6 +60,7 @@ export class SendMessage {
       mediaUrl: normalizedMediaUrl || undefined,
       mediaType: media?.mediaType?.trim() || undefined,
       mediaFilename: media?.mediaFilename?.trim() || undefined,
+      senderId: normalizedSenderId,
     });
 
     if (!validationResult.valido) {

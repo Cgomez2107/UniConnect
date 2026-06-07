@@ -13,6 +13,7 @@ export const EventTypeSchema = z.enum([
     "transferencia_admin_rechazada",
     "transferencia_admin_transferida",
     "admin_role_left",
+    "nuevo_evento",
 ]);
 export const ChannelConfigSchema = z.record(ChannelNameSchema, z.boolean());
 export const NotificationPreferenceSchema = z.object({

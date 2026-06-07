@@ -8,6 +8,9 @@ export class ValidationErrorMapper {
     PermissionError: ValidationErrorCode.INSUFFICIENT_PERMISSIONS,
     MentionError: ValidationErrorCode.INVALID_MENTION,
     ValidationError: ValidationErrorCode.VALIDATION_FAILED,
+    MO_001: ValidationErrorCode.MESSAGE_TOO_LONG,
+    MO_002: ValidationErrorCode.BANNED_CONTENT,
+    MO_003: ValidationErrorCode.SPAM_DETECTED,
   };
 
   static fromCodigoError(codigoError: string, mensajeError: string) {
@@ -16,8 +19,8 @@ export class ValidationErrorMapper {
     return {
       statusCode: this.getHttpStatus(code),
       body: {
-        error: this.getFrontendErrorCode(code),
-        message: this.getFrontendMessage(code, mensajeError),
+        error: codigoError.startsWith("MO_") ? codigoError : this.getFrontendErrorCode(code),
+        message: codigoError.startsWith("MO_") ? mensajeError : this.getFrontendMessage(code, mensajeError),
       },
     };
   }
