@@ -8,6 +8,8 @@ export interface VotoRecibidoEvent {
   readonly newVoteCount: number;
   readonly voterId: string;
   readonly targetAuthorId: string;
+  readonly userVote?: 'upvote' | 'downvote' | null;
+  readonly questionId?: string;
 }
 
 export interface RespuestaMarcadaSolucionEvent {

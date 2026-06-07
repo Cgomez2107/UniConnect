@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useEvents from "@/hooks/useEvents";
+import { useEventsSync } from "@/hooks";
 import { useEventSubscriptionStore } from "@/store/useEventSubscriptionStore";
 import { EventCard } from "@/components/shared/EventCard";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +21,9 @@ export function EventosPage() {
   const subscribedCategories = useEventSubscriptionStore((s) => s.subscribedCategories);
   const toggleSubscription = useEventSubscriptionStore((s) => s.toggle);
   const isSubscribed = (category: string) => subscribedCategories.includes(category);
+
+  // Sincronización en tiempo real — actualiza el store cuando otro usuario crea/edita/elimina un evento
+  useEventsSync();
 
   useEffect(() => {
     loadEvents();

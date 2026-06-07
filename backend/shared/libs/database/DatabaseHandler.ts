@@ -61,9 +61,9 @@ export class DatabaseHandler {
         user: config.user,
         password: config.password,
         ssl: config.ssl ? { rejectUnauthorized: false } : false,
-        max: config.max || 20,
+        max: config.max || 3,
         connectionTimeoutMillis: config.connectionTimeoutMillis || 2000,
-        idleTimeoutMillis: config.idleTimeoutMillis || 30000,
+        idleTimeoutMillis: config.idleTimeoutMillis || 10000,
       });
 
       // Test conexión

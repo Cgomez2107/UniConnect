@@ -16,6 +16,7 @@ export class StudySessionsClient extends BaseClient {
                 endTime: payload.endTime,
                 ...(payload.rrule !== undefined && { rrule: payload.rrule }),
                 ...(payload.weekCount !== undefined && { weekCount: payload.weekCount }),
+                ...(payload.remindAt !== undefined && { remindAt: payload.remindAt }),
             },
         });
         return this.ensureArray(response.data);
@@ -37,6 +38,23 @@ export class StudySessionsClient extends BaseClient {
             url: `/study-groups/sessions/${sessionId}`,
         });
         return response.data;
+    }
+    async updateAvailability(sessionId, payload) {
+        await this.transport.request({
+            method: "PATCH",
+            url: `/study-groups/sessions/${sessionId}/availability`,
+            body: {
+                status: payload.status,
+                userName: payload.userName,
+            },
+        });
+    }
+    async listSessionAttendees(sessionId) {
+        const response = await this.transport.request({
+            method: "GET",
+            url: `/study-groups/sessions/${sessionId}/attendees`,
+        });
+        return this.ensureArray(response.data);
     }
 }
 //# sourceMappingURL=StudySessionsClient.js.map

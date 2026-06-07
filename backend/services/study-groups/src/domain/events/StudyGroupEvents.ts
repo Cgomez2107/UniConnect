@@ -153,6 +153,8 @@ export interface SessionCreatedEvent {
   readonly startTime: string;
   readonly endTime: string;
   readonly createdBy: string;
+  readonly groupName: string;
+  readonly memberIds: string[];
   readonly isRecurring: boolean;
   readonly seriesId?: string | null;
 }

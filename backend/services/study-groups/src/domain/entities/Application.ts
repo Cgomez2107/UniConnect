@@ -12,4 +12,5 @@ export interface Application {
   readonly status: ApplicationStatus;
   readonly createdAt: string;
   readonly reviewedAt: string | null;
+  readonly applicantName?: string;
 }

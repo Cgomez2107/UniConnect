@@ -108,6 +108,7 @@ function bootstrap(): void {
     createStudyResource,
     updateStudyResource,
     deleteStudyResource,
+    permissionValidator,
   );
 
   const server = createServer((req, res) => {

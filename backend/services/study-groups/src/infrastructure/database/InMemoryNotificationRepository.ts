@@ -4,6 +4,13 @@ import type { INotificationRepository } from "../../domain/repositories/INotific
 export class InMemoryNotificationRepository implements INotificationRepository {
   private readonly notifications: UserNotification[] = [];
 
+  async markAsRead(notificationId: string): Promise<void> {
+    const notif = this.notifications.find(n => n.id === notificationId);
+    if (notif) {
+      notif.readAt = new Date().toISOString();
+    }
+  }
+
   async markAllAsRead(userId: string): Promise<void> {
     for (const notification of this.notifications) {
       if (notification.userId === userId && !notification.readAt) {

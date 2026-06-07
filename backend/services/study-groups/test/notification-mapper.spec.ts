@@ -176,9 +176,9 @@ describe("NotificationMapper — AVAILABILITY_UPDATED", () => {
     const result = single(mapper.map(event));
 
     assert.equal(result.dto.userId, "user-organizer");
-    assert.equal(result.dto.type, "disponibilidad_actualizada");
+    assert.equal(result.dto.type, "asistencia_confirmada");
     assert.equal(result.dto.title, "Grupo de Fisica");
-    assert.equal(result.dto.body, "Maria Lopez ha confirmado su asistencia a la sesion.");
+    assert.equal(result.dto.body, "Maria Lopez ha confirmado su asistencia a tu sesion de estudio.");
     assert.equal(result.dto.priority, "normal");
     assert.deepEqual(result.dto.payload, {
       sessionId: "ses-001",
@@ -205,7 +205,7 @@ describe("NotificationMapper — AVAILABILITY_UPDATED", () => {
     const result = single(mapper.map(event));
 
     assert.equal(result.dto.userId, "user-organizer");
-    assert.equal(result.dto.body, "Carlos Ruiz ha declinado su asistencia a la sesion.");
+    assert.equal(result.dto.body, "Carlos Ruiz no asistira a tu sesion de estudio.");
   });
 });
 

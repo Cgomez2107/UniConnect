@@ -3,6 +3,7 @@ import type { ISessionAttendeeRepository } from "../../domain/repositories/ISess
 import type { IStudySessionRepository } from "../../domain/repositories/IStudySessionRepository.js";
 import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
 import type { ISubject } from "../../domain/events/observers/ISubject.js";
+import type { IUserRepository } from "../../../../../shared/patterns/strategy/IUserRepository.js";
 import { NotFoundError, AuthorizationError } from "../../../../../shared/libs/errors/index.js";
 
 export class UpdateAvailability {
@@ -11,6 +12,7 @@ export class UpdateAvailability {
     private readonly sessionRepository: IStudySessionRepository,
     private readonly studyGroupRepository: IStudyGroupRepository,
     private readonly subject: ISubject,
+    private readonly userRepository: IUserRepository,
   ) {}
 
   async execute(
@@ -39,9 +41,15 @@ export class UpdateAvailability {
       throw new AuthorizationError("You are not a member of this group.");
     }
 
+    if (!userName || userName === "Usuario") {
+      const fullName = await this.userRepository.getFullName(userId);
+      userName = fullName ?? "Usuario";
+    }
+
     const attendee = await this.attendeeRepository.upsert(sessionId, userId, status);
 
-    await this.subject.emit({
+    // Emit notifications asynchronously (fire and forget) to not block availability update
+    this.subject.emit({
       type: "AVAILABILITY_UPDATED",
       version: "1.0",
       timestamp: new Date(),
@@ -51,8 +59,8 @@ export class UpdateAvailability {
       userName,
       status: status as "confirmed" | "declined",
       groupName: group.groupName ?? "",
-      organizerId: group.adminId,
-    });
+      organizerId: session.createdBy,
+    }).catch(err => console.error("Failed to emit availability updated event:", err));
 
     return attendee;
   }

@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { StudyRequestUI } from "@/types/ui";
-import type { StudyApplication, StudyGroup } from "@uniconnect/shared-types";
+import type { StudyApplication } from "@uniconnect/shared-types";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 import { mapStudyRequestApiToUI } from "@/utils/mappers";
+import { useStudyGroupsStore } from "@/store/useStudyGroupsStore";
 
 const PAGE_SIZE = 10;
 
 interface UseFeedState {
-  requests: StudyRequestUI[];
   applications: StudyApplication[];
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -24,10 +24,11 @@ interface UseFeedOptions {
 
 export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
   const { autoLoad = true, userId, subjectId, subjectIds } = options;
+  const store = useStudyGroupsStore();
+
   const [state, setState] = useState<UseFeedState>({
-    requests: [],
     applications: [],
-    isLoading: false,
+    isLoading: autoLoad,
     isLoadingMore: false,
     error: null,
     hasMore: true,
@@ -52,7 +53,6 @@ export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
     if (!effectiveSubjectIds.length) {
       setState((prev) => ({
         ...prev,
-        requests: [],
         applications: [],
         isLoading: false,
         isLoadingMore: false,
@@ -89,19 +89,13 @@ export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
         apps = [];
       }
 
-      const mapped = data.map((item) => mapStudyRequestApiToUI(item as any));
-      if (data.length > 0) {
-        console.debug("[useFeed] Primer item raw:", JSON.stringify(data[0], null, 2));
-      }
+      // Add loaded groups to our global Zustand store
+      data.forEach((group: any) => {
+        store.addGroup(group);
+      });
 
       setState((prev) => ({
-        requests: (reset ? mapped : [...prev.requests, ...mapped])
-          .filter((request, index, array) => array.findIndex((item) => item.id === request.id) === index)
-          .sort((left, right) => {
-            const leftTime = new Date(left.createdAt).getTime();
-            const rightTime = new Date(right.createdAt).getTime();
-            return rightTime - leftTime;
-          }),
+        ...prev,
         applications: apps.length > 0 ? apps : prev.applications,
         isLoading: false,
         isLoadingMore: false,
@@ -120,7 +114,7 @@ export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
         error: errorMessage,
       }));
     }
-  }, [effectiveSubjectIds, userId]);
+  }, [effectiveSubjectIds, userId, store.addGroup]);
 
   const loadRequests = useCallback(async () => {
     return loadPage(1, true);
@@ -141,8 +135,23 @@ export default function useFeed(options: UseFeedOptions = { autoLoad: true }) {
     }
   }, [autoLoad, loadRequests]);
 
+  // Read filtered, mapped study requests directly from global store
+  const filteredRequests = useMemo(() => {
+    return store.groups.filter((g) => effectiveSubjectIds.includes(g.subjectId));
+  }, [store.groups, effectiveSubjectIds]);
+
+  const mappedRequests = useMemo(() => {
+    return filteredRequests
+      .map((item) => mapStudyRequestApiToUI(item as any))
+      .sort((left, right) => {
+        const leftTime = new Date(left.createdAt).getTime();
+        const rightTime = new Date(right.createdAt).getTime();
+        return rightTime - leftTime;
+      });
+  }, [filteredRequests]);
+
   return {
-    requests: state.requests,
+    requests: mappedRequests,
     applications: state.applications,
     isLoading: state.isLoading,
     isLoadingMore: state.isLoadingMore,

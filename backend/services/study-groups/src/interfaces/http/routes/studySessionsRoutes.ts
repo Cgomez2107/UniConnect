@@ -26,6 +26,12 @@ export async function handleStudySessionsRoutes(
   const cancelMatch = requestUrl.pathname.match(
     /^\/api\/v1\/study-groups\/sessions\/([^/]+)$/,
   );
+  const availabilityMatch = requestUrl.pathname.match(
+    /^\/api\/v1\/study-groups\/sessions\/([^/]+)\/availability$/,
+  );
+  const attendeesMatch = requestUrl.pathname.match(
+    /^\/api\/v1\/study-groups\/sessions\/([^/]+)\/attendees$/,
+  );
 
   if (req.method === "POST" && seriesMatch) {
     await controller.handleCreateSeries(req, res, seriesMatch[1]);
@@ -39,6 +45,16 @@ export async function handleStudySessionsRoutes(
 
   if (req.method === "DELETE" && cancelMatch) {
     await controller.handleCancel(req, res, cancelMatch[1]);
+    return true;
+  }
+
+  if (req.method === "PATCH" && availabilityMatch) {
+    await controller.handleUpdateAvailability(req, res, availabilityMatch[1]);
+    return true;
+  }
+
+  if (req.method === "GET" && attendeesMatch) {
+    await controller.handleListAttendees(req, res, attendeesMatch[1]);
     return true;
   }
 

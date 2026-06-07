@@ -42,7 +42,7 @@ function buildStudyGroupsServer() {
   const reviewApplication: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
   const requestAdminTransfer: UseCaseStub = { execute: vi.fn().mockResolvedValue(sampleTransfer) };
   const acceptAdminTransfer: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
-  const leaveAdminRole: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
+  const leaveStudyGroup: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
   const rejectAdminTransfer: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
   const listMyStudyRequests: UseCaseStub = { execute: vi.fn().mockResolvedValue([]) };
   const listMyApplications: UseCaseStub = { execute: vi.fn().mockResolvedValue([]) };
@@ -67,7 +67,7 @@ function buildStudyGroupsServer() {
     requestAdminTransfer as never,
     acceptAdminTransfer as never,
     rejectAdminTransfer as never,
-    leaveAdminRole as never,
+    leaveStudyGroup as never,
     listMyStudyRequests as never,
     listMyApplications as never,
     cancelStudyRequest as never,
@@ -170,7 +170,7 @@ describe("Study Groups integration /study-groups", () => {
       reviewApplication,
       requestAdminTransfer,
       acceptAdminTransfer,
-      leaveAdminRole,
+    leaveStudyGroup,
     } = buildStudyGroupsServer();
 
     await request(server as any).get("/health").expect(200);

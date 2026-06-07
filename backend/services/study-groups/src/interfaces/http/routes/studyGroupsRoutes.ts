@@ -68,6 +68,14 @@ export async function handleStudyGroupsRoutes(
     return true;
   }
 
+  if (req.method === "PUT") {
+    const matchRead = requestUrl.pathname.match(/^\/api\/v1\/notifications\/([^/]+)\/read$/);
+    if (matchRead) {
+      await controller.markNotificationRead(req, res, matchRead[1]);
+      return true;
+    }
+  }
+
   if (req.method === "PUT" && requestUrl.pathname === "/api/v1/notifications/read-all") {
     await controller.markNotificationsRead(req, res);
     return true;
@@ -119,7 +127,7 @@ export async function handleStudyGroupsRoutes(
   }
 
   if (req.method === "POST" && leaveMatch) {
-    await controller.leaveAdmin(req, res, leaveMatch[1]);
+    await controller.leaveGroup(req, res, leaveMatch[1]);
     return true;
   }
 
@@ -198,6 +206,12 @@ export async function handleStudyGroupsRoutes(
     const cancelSessionMatch = requestUrl.pathname.match(
       /^\/api\/v1\/study-groups\/sessions\/([^/]+)$/,
     );
+    const availabilityMatch = requestUrl.pathname.match(
+      /^\/api\/v1\/study-groups\/sessions\/([^/]+)\/availability$/,
+    );
+    const attendeesMatch = requestUrl.pathname.match(
+      /^\/api\/v1\/study-groups\/sessions\/([^/]+)\/attendees$/,
+    );
 
     if (req.method === "POST" && seriesMatch) {
       await sessionsController.handleCreateSeries(req, res, seriesMatch[1]);
@@ -211,6 +225,16 @@ export async function handleStudyGroupsRoutes(
 
     if (req.method === "DELETE" && cancelSessionMatch) {
       await sessionsController.handleCancel(req, res, cancelSessionMatch[1]);
+      return true;
+    }
+
+    if (req.method === "PATCH" && availabilityMatch) {
+      await sessionsController.handleUpdateAvailability(req, res, availabilityMatch[1]);
+      return true;
+    }
+
+    if (req.method === "GET" && attendeesMatch) {
+      await sessionsController.handleListAttendees(req, res, attendeesMatch[1]);
       return true;
     }
   }

@@ -4,7 +4,8 @@ import { deps } from "@/store/deps";
 import { QuestionCard } from "@/components/forum/QuestionCard";
 import { AskQuestionModal } from "@/components/forum/AskQuestionModal";
 import { forumService } from "@/lib/forum/forum.service";
-import type { ForumQuestionSummary } from "@uniconnect/shared-api";
+import { useForumStore } from "@/store/useForumStore";
+import { useForumSync } from "@/hooks";
 
 interface SubjectInfo {
   id: string;
@@ -13,48 +14,56 @@ interface SubjectInfo {
 
 export function ForumPage() {
   const [subjects, setSubjects] = useState<SubjectInfo[]>([]);
-  const [questionsBySubject, setQuestionsBySubject] = useState<Record<string, ForumQuestionSummary[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [subjectsLoading, setSubjectsLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState<SubjectInfo | null>(null);
   const [askModalOpen, setAskModalOpen] = useState(false);
 
-  const loadData = useCallback(async () => {
+  // Subscribe to real-time events for the selected subject
+  useForumSync(selectedSubject?.id || null, null);
+
+  // Pull questions from global store
+  const questionsBySubject = useForumStore((s) => s.questionsBySubject);
+  const questionsLoading = useForumStore((s) => s.isLoading);
+  const loadQuestions = useForumStore((s) => s.loadQuestions);
+
+  const loadSubjects = useCallback(async () => {
     try {
       const mySubjects = await deps.apiClients.profiles.getMySubjects();
       const mapped = mySubjects.map((s) => ({ id: s.subjectId, name: s.subject.name }));
       setSubjects(mapped);
 
-      const qMap: Record<string, ForumQuestionSummary[]> = {};
+      // Load questions for each subject into the global store
       await Promise.all(
         mapped.map(async (sub) => {
           try {
-            const questions = await forumService.listQuestions(sub.id, 1, 5);
-            qMap[sub.id] = questions;
+            await loadQuestions(sub.id, 1, 5);
           } catch (err) {
             console.error(`[ForumPage] Error loading questions for subject ${sub.id}:`, err);
-            qMap[sub.id] = [];
           }
         })
       );
-      setQuestionsBySubject(qMap);
     } catch (err) {
       console.error("[ForumPage] Error loading subjects:", err);
     } finally {
-      setLoading(false);
+      setSubjectsLoading(false);
     }
-  }, []);
+  }, [loadQuestions]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadSubjects(); }, [loadSubjects]);
 
   const handleCreateQuestion = async (title: string, body: string) => {
     if (!selectedSubject) return;
-    await forumService.createQuestion({
+    const newQuestion = await forumService.createQuestion({
       subjectId: selectedSubject.id,
       title,
       body,
     });
-    await loadData();
+    // Optimistically inject into the store so the list updates immediately
+    // even before Supabase Realtime fires the INSERT event
+    useForumStore.getState().addQuestion(newQuestion as any);
   };
+
+  const loading = subjectsLoading;
 
   return (
     <div className="min-h-screen bg-neutral-50 animate-fade-in">
@@ -141,17 +150,26 @@ export function ForumPage() {
               + Nueva pregunta
             </button>
 
-            {questionsBySubject[selectedSubject.id]?.length === 0 && (
-              <div className="text-center py-16">
-                <MessageSquare size={48} className="mx-auto text-neutral-300 mb-4" />
-                <p className="text-neutral-500 mb-2">
-                  No hay preguntas aún en esta asignatura.
-                </p>
-                <p className="text-sm text-neutral-400">
-                  Sé el primero en preguntar.
-                </p>
+            {questionsLoading && (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-16 skeleton rounded-lg" />
+                ))}
               </div>
             )}
+
+            {!questionsLoading &&
+              (questionsBySubject[selectedSubject.id] || []).length === 0 && (
+                <div className="text-center py-16">
+                  <MessageSquare size={48} className="mx-auto text-neutral-300 mb-4" />
+                  <p className="text-neutral-500 mb-2">
+                    No hay preguntas aún en esta asignatura.
+                  </p>
+                  <p className="text-sm text-neutral-400">
+                    Sé el primero en preguntar.
+                  </p>
+                </div>
+              )}
 
             <div className="space-y-3">
               {(questionsBySubject[selectedSubject.id] || []).map((q) => (

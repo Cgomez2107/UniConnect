@@ -80,11 +80,21 @@ export function RecursoDetallePage() {
 
   const subjectName = resource?.subjects?.name;
   const uploaderName = resource?.profiles?.fullName;
-  const fileType = resource?.fileType || resource?.file_type;
-  const fileUrl = resource?.fileUrl || resource?.file_url;
+  const fileType = resource?.fileType || resource?.file_type || resource?.resourceType;
+  const fileUrl = resource?.fileUrl || resource?.file_url || "";
   const fileName = resource?.fileName || resource?.file_name;
   const fileSizeKb = resource?.fileSizeKb ?? resource?.file_size_kb;
   const createdAt = resource?.createdAt || resource?.created_at;
+
+  // OG data for links
+  const ogTitle = resource?.ogTitle;
+  const ogDescription = resource?.ogDescription;
+  const ogImage = resource?.ogImage;
+  const isLink = resource?.type === "link" || resource?.resourceType === "link";
+  const linkUrl = resource?.url ?? null;
+
+  // The URL to open: for files it's fileUrl, for links it's the link URL
+  const resourceActionUrl = isLink ? linkUrl : (fileUrl || null);
 
   const isOwner = user?.id === resource?.userId || user?.id === resource?.uploaderUserId || user?.role === "admin";
 
@@ -237,25 +247,39 @@ export function RecursoDetallePage() {
         </button>
 
         <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          {/* OG Image Preview for Links */}
+          {isLink && ogImage && (
+            <div className="w-full">
+              <img
+                src={ogImage}
+                alt={ogTitle || resource.title}
+                className="w-full h-48 object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </div>
+          )}
+
           <div className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-3xl flex-shrink-0">{getFileIcon(fileType)}</span>
+                  <span className="text-3xl flex-shrink-0">{isLink ? "🔗" : getFileIcon(fileType)}</span>
                   <h1 className="text-lg sm:text-xl font-bold text-neutral-900 break-words">
-                    {resource.title}
+                    {ogTitle || resource.title}
                   </h1>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge color="blue" variant="outline">
-                    {fileType || "Desconocido"}
+                  <Badge color={isLink ? "green" : "blue"} variant="outline">
+                    {isLink ? "Enlace" : (fileType || "Desconocido")}
                   </Badge>
                   {subjectName && (
                     <Badge color="green" variant="solid">
                       {subjectName}
                     </Badge>
                   )}
-                  {fileSizeKb != null && (
+                  {fileSizeKb != null && !isLink && (
                     <span className="text-xs text-neutral-400">
                       {formatFileSize(fileSizeKb)}
                     </span>
@@ -264,20 +288,29 @@ export function RecursoDetallePage() {
               </div>
             </div>
 
-            {resource.description && (
+            {ogDescription && isLink ? (
+              <div className="mb-6">
+                <h2 className="text-sm font-semibold text-neutral-700 mb-2">Descripción</h2>
+                <p className="text-sm text-neutral-600 whitespace-pre-wrap">
+                  {ogDescription}
+                </p>
+              </div>
+            ) : resource.description ? (
               <div className="mb-6">
                 <h2 className="text-sm font-semibold text-neutral-700 mb-2">Descripción</h2>
                 <p className="text-sm text-neutral-600 whitespace-pre-wrap">
                   {resource.description}
                 </p>
               </div>
-            )}
+            ) : null}
 
             <div className="border-t border-neutral-100 pt-4 mb-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-neutral-400">Archivo</span>
-                  <p className="text-neutral-700 font-medium truncate">{fileName || "Sin nombre"}</p>
+                  <span className="text-neutral-400">{isLink ? "Enlace" : "Archivo"}</span>
+                  <p className="text-neutral-700 font-medium truncate" title={isLink ? (linkUrl ?? "") : undefined}>
+                    {isLink ? (linkUrl || "Sin enlace") : (fileName || "Sin nombre")}
+                  </p>
                 </div>
                 <div>
                   <span className="text-neutral-400">Subido por</span>
@@ -294,12 +327,12 @@ export function RecursoDetallePage() {
               <Button
                 variant="primary"
                 onClick={() => {
-                  if (fileUrl) window.open(fileUrl, "_blank", "noopener,noreferrer");
+                  if (resourceActionUrl) window.open(resourceActionUrl, "_blank", "noopener,noreferrer");
                 }}
-                disabled={!fileUrl}
+                disabled={!resourceActionUrl}
                 className="w-full sm:w-auto"
               >
-                {fileUrl ? "Ver archivo" : "Archivo no disponible"}
+                {resourceActionUrl ? (isLink ? "Abrir enlace" : "Ver archivo") : "Archivo no disponible"}
               </Button>
               <Button variant="secondary" onClick={() => navigate("/recursos")} className="w-full sm:w-auto">
                 Volver

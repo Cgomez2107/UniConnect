@@ -40,7 +40,7 @@ export const forumService = {
     return forumClient.createAnswer(questionId, data);
   },
 
-  async castVote(data: CastVotePayload): Promise<{ voteCount: number }> {
+  async castVote(data: CastVotePayload): Promise<{ voteCount: number; userVote?: 'upvote' | 'downvote' | null; questionId?: string }> {
     return forumClient.castVote(data);
   },
 

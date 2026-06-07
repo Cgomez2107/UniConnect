@@ -19,6 +19,16 @@ export interface SendMessagePayload {
     mediaFilename?: string;
     replyToMessageId?: string;
     replyPreview?: string;
+    poll?: {
+        question: string;
+        options: Array<{
+            text: string;
+            votes: string[];
+        }>;
+        isOpen: boolean;
+        closesAt: string | null;
+        createdAt: string;
+    };
 }
 export interface GetMessagesParams {
     conversationId: string;

@@ -8,6 +8,7 @@ export interface CreateSeriesPayload {
   endTime: string;
   rrule?: string;
   weekCount?: number;
+  remindAt?: string;
 }
 
 export interface StudySessionDTO {
@@ -23,6 +24,14 @@ export interface StudySessionDTO {
   cancelled_at?: string | null;
   reminder_sent_at?: string | null;
   created_at: string;
+  updated_at: string;
+}
+
+export interface SessionAttendeeDTO {
+  id: string;
+  session_id: string;
+  user_id: string;
+  status: "pending" | "confirmed" | "declined";
   updated_at: string;
 }
 
@@ -42,6 +51,7 @@ export class StudySessionsClient extends BaseClient {
         endTime: payload.endTime,
         ...(payload.rrule !== undefined && { rrule: payload.rrule }),
         ...(payload.weekCount !== undefined && { weekCount: payload.weekCount }),
+        ...(payload.remindAt !== undefined && { remindAt: payload.remindAt }),
       },
     });
     return this.ensureArray(response.data);
@@ -65,5 +75,24 @@ export class StudySessionsClient extends BaseClient {
       url: `/study-groups/sessions/${sessionId}`,
     });
     return response.data;
+  }
+
+  async updateAvailability(sessionId: string, payload: { status: "confirmed" | "declined"; userName: string }): Promise<void> {
+    await this.transport.request({
+      method: "PATCH",
+      url: `/study-groups/sessions/${sessionId}/availability`,
+      body: {
+        status: payload.status,
+        userName: payload.userName,
+      },
+    });
+  }
+
+  async listSessionAttendees(sessionId: string): Promise<SessionAttendeeDTO[]> {
+    const response = await this.transport.request<SessionAttendeeDTO[]>({
+      method: "GET",
+      url: `/study-groups/sessions/${sessionId}/attendees`,
+    });
+    return this.ensureArray(response.data);
   }
 }

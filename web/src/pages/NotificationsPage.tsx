@@ -51,8 +51,8 @@ export function NotificationsPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {uniqueNotifications.map((n) => (
-              <NotificationItem key={n.id} notificacion={n} />
+            {uniqueNotifications.map((n, index) => (
+              <NotificationItem key={n.id ?? `notification-${index}`} notificacion={n} />
             ))}
           </div>
         )}

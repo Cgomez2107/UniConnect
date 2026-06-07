@@ -5,4 +5,5 @@ export interface ContactInfo {
 
 export interface IUserRepository {
   getContactInfo(userId: string): Promise<ContactInfo>;
+  getFullName(userId: string): Promise<string | null>;
 }

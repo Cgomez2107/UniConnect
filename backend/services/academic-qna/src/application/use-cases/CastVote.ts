@@ -20,15 +20,19 @@ export class CastVote {
     private readonly forumSubject: ForumSubject,
   ) {}
 
-  async execute(input: CastVoteInput): Promise<number> {
-    const voteCount = await this.voteRepo.upsertAndGetDelta(
+  async execute(input: CastVoteInput): Promise<{ voteCount: number; userVote: 'upvote' | 'downvote' | null; questionId?: string }> {
+    const result = await this.voteRepo.upsertAndGetDelta(
       input.targetType,
       input.targetId,
       input.voterId,
       input.voteType,
     );
 
+    const voteCount = result.voteCount;
+    const userVote = result.userVote;
+
     let targetAuthorId: string;
+    let questionId: string | undefined;
 
     if (input.targetType === 'question') {
       const question = await this.questionRepo.findById(input.targetId);
@@ -36,12 +40,14 @@ export class CastVote {
         throw new NotFoundError('Pregunta no encontrada.');
       }
       targetAuthorId = question.authorId;
+      questionId = input.targetId;
     } else {
       const answer = await this.answerRepo.findById(input.targetId);
       if (!answer) {
         throw new NotFoundError('Respuesta no encontrada.');
       }
       targetAuthorId = answer.authorId;
+      questionId = answer.questionId;
     }
 
     await this.forumSubject.emitVoteEvent({
@@ -54,8 +60,10 @@ export class CastVote {
       newVoteCount: voteCount,
       voterId: input.voterId,
       targetAuthorId,
+      userVote,
+      questionId,
     });
 
-    return voteCount;
+    return { voteCount, userVote, questionId };
   }
 }

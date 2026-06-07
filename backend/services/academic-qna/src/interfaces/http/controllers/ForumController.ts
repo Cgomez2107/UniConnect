@@ -160,14 +160,14 @@ export class ForumController {
       }
 
       const body = (req as any).__validatedBody ?? await readJsonBody<CastVoteBody>(req);
-      const voteCount = await this.castVoteUseCase.execute({
+      const result = await this.castVoteUseCase.execute({
         targetType: body.targetType as 'question' | 'answer',
         targetId: body.targetId ?? "",
         voterId: actorUserId,
         voteType: body.voteType as 'upvote' | 'downvote',
       });
 
-      sendData(res, 200, { voteCount });
+      sendData(res, 200, { voteCount: result.voteCount, userVote: result.userVote, questionId: result.questionId });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

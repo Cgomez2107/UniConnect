@@ -52,11 +52,17 @@ export class ContentValidator extends BaseForumValidator {
     if (!title || title.trim().length === 0) {
       return { isValid: false, error: "El título es requerido." };
     }
+    if (title.trim().length < 5) {
+      return { isValid: false, error: "El título debe tener al menos 5 caracteres." };
+    }
     if (title.length > 200) {
       return { isValid: false, error: "El título no puede superar los 200 caracteres." };
     }
     if (!body || body.trim().length === 0) {
       return { isValid: false, error: "El contenido de la pregunta es requerido." };
+    }
+    if (body.trim().length < 10) {
+      return { isValid: false, error: "El contenido debe tener al menos 10 caracteres." };
     }
     if (body.length > 5000) {
       return { isValid: false, error: "El contenido no puede superar los 5000 caracteres." };

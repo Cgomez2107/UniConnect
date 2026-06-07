@@ -6,4 +6,5 @@ export interface IForumAnswerRepository {
   findByQuestion(questionId: string): Promise<ForumAnswer[]>;
   pinAnswer(answerId: string): Promise<void>;
   markAsSolution(answerId: string): Promise<void>;
+  unmarkAllSolutionsForQuestion(questionId: string): Promise<void>;
 }

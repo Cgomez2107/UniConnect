@@ -81,4 +81,18 @@ export class InMemoryApplicationRepository implements IApplicationRepository {
     }
     this.applications.splice(idx, 1);
   }
+
+  async leaveGroup(input: { requestId: string; userId: string }): Promise<void> {
+    const idx = this.applications.findIndex(
+      (a) => a.requestId === input.requestId && a.applicantId === input.userId && a.status === "aceptada",
+    );
+    if (idx === -1) {
+      throw new NotFoundError("No tienes una membresía activa en este grupo.");
+    }
+    this.applications[idx] = {
+      ...this.applications[idx],
+      status: "rechazada",
+      reviewedAt: new Date().toISOString(),
+    };
+  }
 }

@@ -156,7 +156,27 @@ export class FetchTransport extends BaseTransport {
                 headerRecord[key] = value;
             });
             if (!response.ok) {
-                const error = new Error(this.mapHttpStatusToError(response.status));
+                let errorMessage = this.mapHttpStatusToError(response.status);
+                if (rawData && typeof rawData === "object") {
+                    const rawObj = rawData;
+                    if (typeof rawObj.message === "string" && rawObj.message) {
+                        errorMessage = rawObj.message;
+                        if (rawObj.details && typeof rawObj.details === "object") {
+                            const details = rawObj.details;
+                            if (details.fieldErrors && typeof details.fieldErrors === "object") {
+                                const fieldErrors = details.fieldErrors;
+                                const fields = Object.entries(fieldErrors)
+                                    .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
+                                    .join("; ");
+                                errorMessage += ` (${fields})`;
+                            }
+                        }
+                    }
+                    else if (typeof rawObj.error === "string" && rawObj.error) {
+                        errorMessage = rawObj.error;
+                    }
+                }
+                const error = new Error(errorMessage);
                 error.status = response.status;
                 error.response = {
                     status: response.status,

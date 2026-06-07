@@ -10,6 +10,7 @@ interface Props {
   currentUserId: string;
   onSendMessage?: (content: string) => Promise<void> | void;
   isSending?: boolean;
+  onVote?: (messageId: string, optionIndex: number) => Promise<void>;
 }
 
 function formatTime(value: string) {
@@ -24,6 +25,7 @@ export function GroupChatPanel({
   currentUserId,
   onSendMessage,
   isSending = false,
+  onVote,
 }: Props) {
   const [draft, setDraft] = useState("");
 
@@ -89,7 +91,11 @@ export function GroupChatPanel({
                     : "bg-[#26292B] text-zinc-300 px-4 py-3 rounded-2xl rounded-tl-none border border-[#2D3135] text-body-sm"
                 }
               >
-                {transformRawMessage(message).render({ currentUserId })}
+                {transformRawMessage(message, (optionIndex) => {
+                  onVote?.(message.id, optionIndex).catch((err) =>
+                    console.error("vote error:", err),
+                  );
+                }).render({ currentUserId })}
               </div>
             </div>
           );

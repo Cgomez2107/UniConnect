@@ -179,9 +179,11 @@ export class NotificationMapper {
       case "AVAILABILITY_UPDATED":
         return [buildNotificacion(
           event.organizerId,
-          "disponibilidad_actualizada",
+          event.status === "confirmed" ? "asistencia_confirmada" : "asistencia_declinada",
           event.groupName,
-          `${event.userName} ha ${event.status === "confirmed" ? "confirmado" : "declinado"} su asistencia a la sesion.`,
+          event.status === "confirmed"
+            ? `${event.userName} ha confirmado su asistencia a tu sesion de estudio.`
+            : `${event.userName} no asistira a tu sesion de estudio.`,
           {
             sessionId: event.sessionId,
             requestId: event.requestId,
@@ -224,19 +226,24 @@ export class NotificationMapper {
         return attendeeNotifications;
       }
 
-      case "SESSION_CREATED":
-        return [buildNotificacion(
-          event.createdBy,
-          "study_session_created",
-          event.title,
-          "Se ha creado una nueva sesión de estudio.",
-          {
-            sessionId: event.sessionId,
-            groupId: event.groupId,
-            startTime: event.startTime,
-          },
-          "normal",
-        )];
+      case "SESSION_CREATED": {
+        const recipients = event.memberIds.filter(id => id !== event.createdBy);
+        return recipients.map(memberId =>
+          buildNotificacion(
+            memberId,
+            "nueva_sesion",
+            event.groupName || event.title,
+            `Se ha programado una nueva sesion de estudio para ${event.groupName}.`,
+            {
+              sessionId: event.sessionId,
+              groupId: event.groupId,
+              startTime: event.startTime,
+            },
+            "normal",
+            { label: "Ver sesion", endpoint: `/study-groups/${event.groupId}/sessions/${event.sessionId}`, method: "GET" },
+          ),
+        );
+      }
 
       default: {
         const _exhaustive: never = event;

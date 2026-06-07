@@ -135,6 +135,9 @@ export interface StudyResourceUI {
   subjectName?: string | null;
   uploadedBy?: string | null;
   uploaderName?: string | null;
+  activeDecorators?: readonly string[];
+  type?: "file" | "link";
+  url?: string | null;
 }
 
 export interface SubjectMiniUI {
