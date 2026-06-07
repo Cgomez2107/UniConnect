@@ -87,7 +87,7 @@ export function IncomingRequestsList() {
     ...g,
     applications: g.applications.map((a) => ({
       ...a,
-      userName: a.userName || profileNames.get(a.applicantId)?.fullName || "Usuario",
+      userName: a.applicantName || profileNames.get(a.applicantId)?.fullName || "Usuario",
       userAvatar: profileNames.get(a.applicantId)?.avatarUrl || null,
     })),
   }));

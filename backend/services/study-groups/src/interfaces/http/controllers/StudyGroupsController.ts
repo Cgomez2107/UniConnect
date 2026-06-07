@@ -369,7 +369,7 @@ export class StudyGroupsController {
       );
 
       const preferences = results
-        .filter((r): r is PromiseFulfilledResult<{ eventType: typeof eventTypes[number]; label: string; channels: Record<string, boolean> }> => r.status === "fulfilled")
+        .filter((r): r is PromiseFulfilledResult<{ eventType: string; label: string; channels: Record<string, boolean> }> => r.status === "fulfilled")
         .map((r) => r.value);
 
       sendJson(res, 200, { preferences: preferences ?? [] });

@@ -12,7 +12,6 @@ interface ApiResource {
   subject_id?: string;
   title: string;
   description?: string | null;
-  url?: string;
   fileUrl?: string;
   file_url?: string;
   fileName?: string;
@@ -52,8 +51,6 @@ function mapResource(raw: ApiResource): StudyResource {
     subject_id: raw.subjectId ?? raw.subject_id ?? "",
     title: raw.title,
     description: raw.description ?? null,
-    type: raw.resourceType ?? raw.resource_type ?? "file",
-    url: raw.url ?? "",
     file_url: raw.fileUrl ?? raw.file_url ?? "",
     file_name: raw.fileName ?? raw.file_name ?? "",
     file_type: raw.fileType ?? raw.file_type ?? null,
