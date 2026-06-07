@@ -129,6 +129,19 @@ function bootstrap(): void {
 				return {};
 			}
 		},
+		async getFullName(userId: string): Promise<string | null> {
+			if (!pool) return null;
+			try {
+				const result = await pool.query(
+					`SELECT full_name FROM profiles WHERE id = $1`,
+					[userId],
+				);
+				if (result.rows.length === 0) return null;
+				return result.rows[0].full_name as string | null;
+			} catch {
+				return null;
+			}
+		},
 	};
 
 	// ✅ Estrategias de notificación
