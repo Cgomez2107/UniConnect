@@ -19,6 +19,7 @@ const TYPE_ICONS: Record<string, string> = {
   solicitud_ingreso: "📋",
   miembro_aceptado: "✅",
   miembro_rechazado: "❌",
+  nuevo_evento: "📅",
 };
 
 export default function BellButton() {

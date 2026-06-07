@@ -14,6 +14,8 @@ export class ForumSubject extends EventEmitter {
         voteType: event.voteType,
         newVoteCount: event.newVoteCount,
         voterId: event.voterId,
+        userVote: event.userVote,
+        questionId: event.questionId,
       },
     };
 

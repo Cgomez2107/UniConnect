@@ -156,15 +156,31 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
       throw new Error("Opción inválida.");
     }
 
+    // Criterio 5: Verificar si el usuario ya votó en esta encuesta
+    const hasVoted = poll.options.some((opt: any) =>
+      opt.votes && opt.votes.includes(userId)
+    );
+
+    if (hasVoted) {
+      throw new Error("Ya has registrado tu voto en esta encuesta. No puedes votar más de una vez.");
+    }
+
     const updatedOptions = poll.options.map((opt: any, i: number) => {
-      const cleaned = opt.votes ? opt.votes.filter((uid: string) => uid !== userId) : [];
       if (i === optionIndex) {
-        return { ...opt, votes: [...cleaned, userId] };
+        const votes = opt.votes ? [...opt.votes, userId] : [userId];
+        return { ...opt, votes };
       }
-      return { ...opt, votes: cleaned };
+      return opt;
     });
 
-    const updatedPoll = { ...poll, options: updatedOptions };
+    // Criterio 4: Calcular porcentajes en tiempo real
+    const totalVotes = updatedOptions.reduce((sum: number, opt: any) => sum + (opt.votes?.length || 0), 0);
+    const optionsWithPercentages = updatedOptions.map((opt: any) => ({
+      ...opt,
+      percentage: totalVotes > 0 ? ((opt.votes?.length || 0) / totalVotes * 100).toFixed(1) : "0.0",
+    }));
+
+    const updatedPoll = { ...poll, options: optionsWithPercentages };
 
     await this.pool.query(
       `UPDATE study_group_messages SET poll_data = $1::jsonb WHERE id = $2`,

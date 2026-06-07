@@ -81,6 +81,7 @@ export class BaseMessagingClient {
                 ...(payload.mediaFilename !== undefined && { mediaFilename: payload.mediaFilename }),
                 ...(payload.replyToMessageId !== undefined && { replyToMessageId: payload.replyToMessageId }),
                 ...(payload.replyPreview !== undefined && { replyPreview: payload.replyPreview }),
+                ...(payload.poll !== undefined && { poll: payload.poll }),
             },
         });
         return mapMessageDtoToDomain(response.data);

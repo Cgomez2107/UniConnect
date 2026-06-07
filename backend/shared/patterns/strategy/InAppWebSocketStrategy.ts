@@ -45,10 +45,13 @@ export class InAppWebSocketStrategy implements INotificationStrategy {
         notificacion.type,
         {
           id: notificationId,
+          type: notificacion.type,
+          userId: notificacion.userId,
           title: notificacion.title,
           body: notificacion.body,
           priority: notificacion.priority,
           action: notificacion.action,
+          createdAt: new Date().toISOString(),
           ...(notificacion.payload ?? {}),
         },
       );

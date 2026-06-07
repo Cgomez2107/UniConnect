@@ -5,6 +5,8 @@ import { CreateStudySession } from "../src/application/use-cases/CreateStudySess
 import { InMemoryStudySessionRepository } from "../src/infrastructure/database/InMemoryStudySessionRepository.js";
 import { InMemorySessionSeriesRepository } from "../src/infrastructure/database/InMemorySessionSeriesRepository.js";
 import type { IStudyGroupRepository } from "../src/domain/repositories/IStudyGroupRepository.js";
+import type { IMemberRepository } from "../src/domain/repositories/IMemberRepository.js";
+import type { ISubject } from "../src/domain/events/observers/ISubject.js";
 import type { GroupContext } from "../src/domain/states/GroupContext.js";
 
 function createMockGroupRepo(adminId: string): IStudyGroupRepository {
@@ -19,12 +21,23 @@ function createMockGroupRepo(adminId: string): IStudyGroupRepository {
   };
 }
 
+const noopSubject: ISubject = {
+  subscribe: () => {},
+  unsubscribe: () => {},
+  emit: async () => {},
+};
+
+const noopMemberRepo: IMemberRepository = {
+  listByRequest: async () => [],
+  findByGroup: async () => [],
+};
+
 describe("CreateStudySession — executeSingle", () => {
   it("creates a single session with remind_at set 30 min before start", async () => {
     const sessionRepo = new InMemoryStudySessionRepository();
     const seriesRepo = new InMemorySessionSeriesRepository();
     const groupRepo = createMockGroupRepo("user-admin");
-    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo);
+    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo, noopMemberRepo, noopSubject);
 
     const result = await uc.executeSingle({
       actorUserId: "user-admin",
@@ -46,7 +59,7 @@ describe("CreateStudySession — executeSingle", () => {
     const sessionRepo = new InMemoryStudySessionRepository();
     const seriesRepo = new InMemorySessionSeriesRepository();
     const groupRepo = createMockGroupRepo("user-admin");
-    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo);
+    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo, noopMemberRepo, noopSubject);
 
     await assert.rejects(
       () => uc.executeSingle({
@@ -64,7 +77,7 @@ describe("CreateStudySession — executeRecurring", () => {
     const sessionRepo = new InMemoryStudySessionRepository();
     const seriesRepo = new InMemorySessionSeriesRepository();
     const groupRepo = createMockGroupRepo("user-admin");
-    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo);
+    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo, noopMemberRepo, noopSubject);
 
     const result = await uc.executeRecurring({
       actorUserId: "user-admin",
@@ -92,7 +105,7 @@ describe("CreateStudySession — executeRecurring", () => {
     const sessionRepo = new InMemoryStudySessionRepository();
     const seriesRepo = new InMemorySessionSeriesRepository();
     const groupRepo = createMockGroupRepo("user-admin");
-    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo);
+    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo, noopMemberRepo, noopSubject);
 
     const result = await uc.executeRecurring({
       actorUserId: "user-admin",
@@ -113,7 +126,7 @@ describe("CreateStudySession — executeRecurring", () => {
     const sessionRepo = new InMemoryStudySessionRepository();
     const seriesRepo = new InMemorySessionSeriesRepository();
     const groupRepo = createMockGroupRepo("user-admin");
-    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo);
+    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo, noopMemberRepo, noopSubject);
 
     await assert.rejects(
       () => uc.executeRecurring({
@@ -133,7 +146,7 @@ describe("CreateStudySession — executeRecurring", () => {
     const sessionRepo = new InMemoryStudySessionRepository();
     const seriesRepo = new InMemorySessionSeriesRepository();
     const groupRepo = createMockGroupRepo("user-admin");
-    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo);
+    const uc = new CreateStudySession(sessionRepo, seriesRepo, groupRepo, noopMemberRepo, noopSubject);
 
     await assert.rejects(
       () => uc.executeRecurring({

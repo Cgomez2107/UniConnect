@@ -17,6 +17,8 @@ function mapResource(r: any): StudyResourceUI {
     fileName: r.fileName ?? r.file_name ?? "",
     fileType: r.fileType ?? r.file_type ?? null,
     fileSizeKb: r.fileSizeKb ?? r.file_size_kb ?? null,
+    type: r.type ?? (r.resourceType === "link" || r.resource_type === "link" ? "link" as const : undefined),
+    url: r.url ?? null,
     resourceType: r.resourceType ?? r.resource_type ?? r.fileType ?? null,
     ogTitle: r.ogTitle ?? r.og_title ?? null,
     ogImage: r.ogImage ?? r.og_image ?? null,
@@ -63,8 +65,6 @@ const resourcesService = {
 
     if (payload.url) {
       createPayload.url = payload.url;
-      createPayload.fileUrl = payload.url;
-      createPayload.fileName = payload.fileName ?? payload.url;
     } else if (payload.fileUrl) {
       createPayload.fileUrl = payload.fileUrl;
       createPayload.fileName = payload.fileName ?? payload.fileUrl;

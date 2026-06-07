@@ -14,18 +14,18 @@ export class ApiEventRepository implements IEventRepository {
   private readonly fallback = new SupabaseEventRepository();
 
   async getAllEvents(): Promise<CampusEvent[]> {
-    const data = await fetchApi<CampusEvent[]>("/events");
+    const data = await fetchApi<CampusEvent[]>("/api/v1/events");
     return (data ?? []).map(mapEventFromApi);
   }
 
   async getUpcoming(): Promise<CampusEvent[]> {
-    const data = await fetchApi<CampusEvent[]>("/events?upcoming=true");
+    const data = await fetchApi<CampusEvent[]>("/api/v1/events?upcoming=true");
     return (data ?? []).map(mapEventFromApi);
   }
 
   async getById(eventId: string): Promise<CampusEvent | null> {
     try {
-      const data = await fetchApi<CampusEvent>(`/events/${eventId}`);
+      const data = await fetchApi<CampusEvent>(`/api/v1/events/${eventId}`);
       return data ? mapEventFromApi(data) : null;
     } catch (error) {
       if (error instanceof Error && error.message.toLowerCase().includes("not found")) {
@@ -48,7 +48,7 @@ export class ApiEventRepository implements IEventRepository {
       imageUrl?: string;
     },
   ): Promise<CampusEvent> {
-    const data = await fetchApi<CampusEvent>("/events", {
+    const data = await fetchApi<CampusEvent>("/api/v1/events", {
       method: "POST",
       body: JSON.stringify({
         title: payload.title,
@@ -79,14 +79,14 @@ export class ApiEventRepository implements IEventRepository {
       imageUrl?: string;
     },
   ): Promise<void> {
-    await fetchApi(`/events/${eventId}`, {
+    await fetchApi(`/api/v1/events/${eventId}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     });
   }
 
   async delete(eventId: string, _userId: string): Promise<void> {
-    await fetchApi(`/events/${eventId}`, {
+    await fetchApi(`/api/v1/events/${eventId}`, {
       method: "DELETE",
     });
   }

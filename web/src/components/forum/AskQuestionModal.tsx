@@ -59,12 +59,13 @@ export function AskQuestionModal({ isOpen, onClose, onSubmit, subjectName }: Ask
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
-              placeholder="Ej: ¿Cómo se resuelve el ejercicio 3?"
+              placeholder="Ej: ¿Cómo se resuelve el ejercicio 3? (mín. 5 caract.)"
               className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
-            <span className="text-xs text-neutral-400 mt-1 block text-right">
-              {title.length}/200
-            </span>
+            <div className="flex justify-between mt-1 text-xs text-neutral-400">
+              <span>Mínimo 5 caracteres</span>
+              <span>{title.length}/200</span>
+            </div>
           </div>
 
           <div>
@@ -76,12 +77,13 @@ export function AskQuestionModal({ isOpen, onClose, onSubmit, subjectName }: Ask
               onChange={(e) => setBody(e.target.value)}
               maxLength={5000}
               rows={5}
-              placeholder="Describe tu pregunta con detalle..."
+              placeholder="Describe tu pregunta con detalle... (mín. 10 caract.)"
               className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
             />
-            <span className="text-xs text-neutral-400 mt-1 block text-right">
-              {body.length}/5000
-            </span>
+            <div className="flex justify-between mt-1 text-xs text-neutral-400">
+              <span>Mínimo 10 caracteres</span>
+              <span>{body.length}/5000</span>
+            </div>
           </div>
         </div>
 
@@ -94,7 +96,7 @@ export function AskQuestionModal({ isOpen, onClose, onSubmit, subjectName }: Ask
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting || !title.trim() || !body.trim()}
+            disabled={submitting || title.trim().length < 5 || body.trim().length < 10}
             className="px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Publicando..." : "Publicar pregunta"}

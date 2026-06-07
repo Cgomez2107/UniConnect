@@ -35,6 +35,7 @@ export class OpenGraphService implements IOpenGraphService {
     const timeout = setTimeout(() => controller.abort(), 5_000);
 
     try {
+      console.log(`[OpenGraphService] Fetching OG data for URL: ${url}`);
       const response = await fetch(url, {
         signal: controller.signal,
         headers: {
@@ -44,17 +45,26 @@ export class OpenGraphService implements IOpenGraphService {
       });
 
       if (!response.ok) {
+        console.log(`[OpenGraphService] Response not OK: ${response.status} ${response.statusText}`);
         return { ogTitle: null, ogDescription: null, ogImage: null };
       }
 
       const html = await response.text();
+      console.log(`[OpenGraphService] HTML fetched, length: ${html.length} chars`);
+
+      const ogTitle = this.extract(html, "og:title");
+      const ogDescription = this.extract(html, "og:description");
+      const ogImage = this.extract(html, "og:image");
+
+      console.log(`[OpenGraphService] Extracted - Title: ${ogTitle}, Description: ${ogDescription ? ogDescription.substring(0, 50) + '...' : null}, Image: ${ogImage}`);
 
       return {
-        ogTitle: this.extract(html, "og:title"),
-        ogDescription: this.extract(html, "og:description"),
-        ogImage: this.extract(html, "og:image"),
+        ogTitle,
+        ogDescription,
+        ogImage,
       };
-    } catch {
+    } catch (error) {
+      console.error(`[OpenGraphService] Error fetching OG data for ${url}:`, error);
       return { ogTitle: null, ogDescription: null, ogImage: null };
     } finally {
       clearTimeout(timeout);

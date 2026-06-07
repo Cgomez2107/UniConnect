@@ -62,7 +62,8 @@ export function MensajesPage() {
     };
     load();
 
-    const token = useAuthStore.getState().accessToken || localStorage.getItem("accessToken");
+    const raw = localStorage.getItem("uniconnect-auth-session");
+    const token = useAuthStore.getState().accessToken || (raw ? (JSON.parse(raw)?.state?.accessToken ?? null) : null);
     const ws = new WebSocket(`${getWsUrl()}/ws?token=${token}`);
     wsRef.current = ws;
 

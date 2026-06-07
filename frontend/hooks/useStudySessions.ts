@@ -13,6 +13,15 @@ export interface StudySession {
   cancelledAt?: string | null;
 }
 
+export interface SessionAttendee {
+  id: string;
+  sessionId: string;
+  userId: string;
+  status: "pending" | "confirmed" | "declined";
+  fullName?: string | null;
+  avatarUrl?: string | null;
+}
+
 export function useStudySessions() {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,6 +98,27 @@ export function useStudySessions() {
     [],
   );
 
+  const updateAvailability = useCallback(
+    async (sessionId: string, status: "confirmed" | "declined", userName?: string) => {
+      try {
+        const attendee = await fetchApi<SessionAttendee>(
+          `/study-groups/sessions/${sessionId}/availability`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({ status, userName }),
+          },
+        );
+        return attendee;
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error al actualizar disponibilidad";
+        setError(message);
+        throw err;
+      }
+    },
+    [],
+  );
+
   return {
     sessions,
     loading,
@@ -96,5 +126,6 @@ export function useStudySessions() {
     loadSessions,
     cancelSession,
     createSeries,
+    updateAvailability,
   };
 }

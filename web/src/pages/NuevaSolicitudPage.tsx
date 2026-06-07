@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import useForm from "@/hooks/useForm";
 import studyGroupsService from "@/lib/services/studyGroups.service";
 import profilesService from "@/lib/services/profiles.service";
+import { useStudyGroupsStore } from "@/store/useStudyGroupsStore";
 import type { Subject } from "@/types";
 
 interface NuevaSolicitudFormData {
@@ -15,6 +16,7 @@ interface NuevaSolicitudFormData {
 
 export function NuevaSolicitudPage() {
   const navigate = useNavigate();
+  const addGroup = useStudyGroupsStore((s) => s.addGroup);
   const [error, setError] = useState<string | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(true);
@@ -50,12 +52,14 @@ export function NuevaSolicitudPage() {
     async (formValues) => {
       setError(null);
       try {
-        await studyGroupsService.createStudyGroup({
+        const newGroup = await studyGroupsService.createStudyGroup({
           subjectId: formValues.subjectId,
           title: formValues.title.trim(),
           description: formValues.description.trim(),
           maxMembers: formValues.maxMembers,
         });
+        // Inject into global store so the feed updates immediately for all users
+        if (newGroup) addGroup(newGroup as any);
         navigate("/solicitudes");
       } catch (err: any) {
         if (err?.status === 409) {

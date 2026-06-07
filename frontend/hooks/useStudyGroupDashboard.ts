@@ -490,6 +490,38 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     [activeRequestId]
   );
 
+  const voteInPoll = useCallback(
+    async (messageId: string, optionIndex: number) => {
+      if (!activeRequestId) return null;
+
+      try {
+        const response = await fetchApi<any>(
+          `/study-groups/${activeRequestId}/messages/${messageId}/polls/vote`,
+          {
+            method: "POST",
+            body: JSON.stringify({ optionIndex }),
+          },
+        );
+
+        const poll = response?.poll ?? null;
+
+        if (poll) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, poll_data: poll } : m,
+            ),
+          );
+        }
+
+        return poll;
+      } catch (err) {
+        console.error("[useStudyGroupDashboard] voteInPoll error:", err);
+        throw err;
+      }
+    },
+    [activeRequestId],
+  );
+
   const dismissToast = useCallback(() => setToast(null), []);
 
   return {
@@ -515,5 +547,6 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
     leaveGroup,
     updateDescription,
     requestAdminTransfer,
+    voteInPoll,
   };
 }

@@ -18,6 +18,8 @@ export function createNotificationStore(deps, subject = notificationSubject) {
         // Add notification
         addNotification(notification) {
             const current = get();
+            if (current.notifications.some((n) => n.id === notification.id))
+                return;
             set((state) => ({
                 notifications: [notification, ...state.notifications],
                 unreadCount: !notification.read ? state.unreadCount + 1 : state.unreadCount,
@@ -84,7 +86,6 @@ export function createNotificationStore(deps, subject = notificationSubject) {
         },
         // Clear all notifications
         clearAll() {
-            const current = get();
             set({
                 notifications: [],
                 unreadCount: 0,
@@ -109,7 +110,8 @@ export function createNotificationStore(deps, subject = notificationSubject) {
             try {
                 const storedNotifications = await storage.getItem("notifications:store");
                 if (storedNotifications) {
-                    const notifications = JSON.parse(storedNotifications);
+                    const parsed = JSON.parse(storedNotifications);
+                    const notifications = parsed.notifications ?? parsed;
                     const unreadCount = notifications.filter((n) => !n.read).length;
                     set({
                         notifications,
@@ -137,9 +139,16 @@ export function createNotificationStore(deps, subject = notificationSubject) {
             },
         },
         partialize: (state) => ({
-            notifications: state.notifications,
+            notifications: state.notifications.filter((n) => !n.id?.startsWith("toast-")),
             unreadCount: state.unreadCount,
         }),
+        migrate: (persistedState, version) => {
+            if (persistedState?.notifications) {
+                persistedState.notifications = persistedState.notifications.filter((n) => !n.id?.startsWith("toast-"));
+                persistedState.unreadCount = persistedState.notifications.filter((n) => !n.read).length;
+            }
+            return persistedState;
+        },
     }));
 }
 //# sourceMappingURL=createNotificationStore.js.map

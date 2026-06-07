@@ -85,7 +85,7 @@ function mapMessage(raw: ApiMessage): Message {
 export class ApiMessageRepository implements IMessageRepository {
   async getById(id: string): Promise<Message | null> {
     try {
-      const data = await fetchApi<ApiMessage>(`/messages/${id}`);
+      const data = await fetchApi<ApiMessage>(`/api/v1/messages/${id}`);
       return data ? mapMessage(data) : null;
     } catch (error) {
       if (error instanceof Error && error.message.toLowerCase().includes("no encontrado")) {
@@ -102,7 +102,7 @@ export class ApiMessageRepository implements IMessageRepository {
       offset: String(offset),
     });
 
-    const data = await fetchApi<ApiMessage[]>(`/messages?${params.toString()}`);
+    const data = await fetchApi<ApiMessage[]>(`/api/v1/messages?${params.toString()}`);
     return (data ?? []).map(mapMessage);
   }
 
@@ -129,7 +129,7 @@ export class ApiMessageRepository implements IMessageRepository {
             replyPreview: payload.reply_preview,
           };
 
-    const data = await fetchApi<ApiMessage>("/messages", {
+    const data = await fetchApi<ApiMessage>("/api/v1/messages", {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -138,20 +138,20 @@ export class ApiMessageRepository implements IMessageRepository {
   }
 
   async markAsRead(messageId: string): Promise<void> {
-    await fetchApi(`/messages/${messageId}/read`, {
+    await fetchApi(`/api/v1/messages/${messageId}/read`, {
       method: "PATCH",
     });
   }
 
   async markConversationAsRead(conversationId: string): Promise<number> {
-    const response = await fetchApi<{ count: number }>(`/conversations/${conversationId}/read`, {
+    const response = await fetchApi<{ count: number }>(`/api/v1/conversations/${conversationId}/read`, {
       method: "PATCH",
     });
     return response?.count ?? 0;
   }
 
   async getTotalUnreadCount(): Promise<number> {
-    const response = await fetchApi<{ count: number }>("/messages/unread-count");
+    const response = await fetchApi<{ count: number }>("/api/v1/messages/unread-count");
     return response?.count ?? 0;
   }
 }

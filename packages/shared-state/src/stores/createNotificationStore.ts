@@ -130,8 +130,6 @@ export function createNotificationStore(
 
         // Clear all notifications
         clearAll(): void {
-          const current = get();
-
           set({
             notifications: [],
             unreadCount: 0,
@@ -165,7 +163,8 @@ export function createNotificationStore(
             );
 
             if (storedNotifications) {
-              const notifications: Notification[] = JSON.parse(storedNotifications);
+              const parsed = JSON.parse(storedNotifications);
+              const notifications: Notification[] = parsed.notifications ?? parsed;
               const unreadCount = notifications.filter((n) => !n.read).length;
 
               set({
@@ -197,9 +196,28 @@ export function createNotificationStore(
           },
         },
         partialize: (state: any) => ({
-          notifications: state.notifications,
+          notifications: state.notifications
+            .filter((n: any) => !n.id?.startsWith("toast-"))
+            .map((n: any) => ({
+              ...n,
+              description: n.description ?? n.body ?? undefined,
+              read: n.read ?? (n.readAt != null || n.read_at != null),
+            })),
           unreadCount: state.unreadCount,
         }),
+        migrate: (persistedState: any, version: number) => {
+          if (persistedState?.notifications) {
+            persistedState.notifications = persistedState.notifications
+              .filter((n: any) => !n.id?.startsWith("toast-"))
+              .map((n: any) => ({
+                ...n,
+                description: n.description ?? n.body ?? undefined,
+                read: n.read ?? (n.readAt != null || n.read_at != null),
+              }));
+            persistedState.unreadCount = persistedState.notifications.filter((n: any) => !n.read).length;
+          }
+          return persistedState;
+        },
       }
     )
   );

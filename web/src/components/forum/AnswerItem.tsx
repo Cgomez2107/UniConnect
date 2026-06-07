@@ -1,4 +1,4 @@
-import { CheckCircle, Pin } from "lucide-react";
+import { CheckCircle, Pin, ThumbsUp } from "lucide-react";
 
 interface AnswerItemProps {
   id: string;
@@ -10,6 +10,7 @@ interface AnswerItemProps {
   createdAt: string;
   currentUserId?: string;
   isAdmin: boolean;
+  isQuestionAuthor: boolean;
   userVote?: "upvote" | "downvote" | null;
   onVote: (answerId: string) => Promise<void>;
   onMarkSolution: (answerId: string) => Promise<void>;
@@ -26,6 +27,7 @@ export function AnswerItem({
   createdAt,
   currentUserId,
   isAdmin,
+  isQuestionAuthor,
   userVote,
   onVote,
   onMarkSolution,
@@ -52,9 +54,7 @@ export function AnswerItem({
             }`}
             aria-label="Votar"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 15l-6-6-6 6" />
-            </svg>
+            <ThumbsUp size={20} fill={userVote === "upvote" ? "currentColor" : "none"} />
           </button>
           <span className={`text-sm font-semibold tabular-nums ${voteCount > 0 ? "text-neutral-900" : "text-neutral-400"}`}>
             {voteCount}
@@ -86,7 +86,7 @@ export function AnswerItem({
                 Solución
               </span>
             )}
-            {isAdmin && !isSolution && !isPinned && (
+            {(isAdmin || isQuestionAuthor) && !isSolution && !isPinned && (
               <>
                 <button
                   onClick={() => onMarkSolution(id)}
@@ -94,7 +94,7 @@ export function AnswerItem({
                 >
                   Marcar como solución
                 </button>
-                {onPinAnswer && (
+                {isAdmin && onPinAnswer && (
                   <button
                     onClick={() => onPinAnswer(id)}
                     className="text-[10px] font-semibold text-yellow-600 hover:text-yellow-700"

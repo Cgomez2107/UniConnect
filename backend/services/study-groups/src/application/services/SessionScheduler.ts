@@ -37,16 +37,24 @@ export class SessionScheduler {
 
   private async processReminders(): Promise<void> {
     const sessions = await this.sessionRepository.findPendingReminders();
+    console.log(`[SessionScheduler] Found ${sessions.length} sessions with pending reminders`);
 
     for (const session of sessions) {
       try {
-        const userIds = await this.sessionRepository.listAttendeeUserIds(session.id);
+        console.log(`[SessionScheduler] Processing reminder for session ${session.id}, remindAt: ${session.remindAt}`);
+        const confirmedUserIds = await this.sessionRepository.listAttendeeUserIds(session.id);
+        // Also notify the session creator
+        const userIds = session.createdBy
+          ? Array.from(new Set([...confirmedUserIds, session.createdBy]))
+          : confirmedUserIds;
+        console.log(`[SessionScheduler] Found ${userIds.length} recipients (${confirmedUserIds.length} confirmed + creator) for session ${session.id}`);
 
         for (const userId of userIds) {
           const nowMs = Date.now();
           const startMs = new Date(session.startTime).getTime();
           const minutesLeft = Math.max(0, Math.round((startMs - nowMs) / 60000));
 
+          console.log(`[SessionScheduler] Sending reminder to user ${userId} for session ${session.id}`);
           await this.notificationService.notificar({
             userId,
             type: "recordatorio_sesion",
@@ -62,6 +70,7 @@ export class SessionScheduler {
         }
 
         await this.sessionRepository.markReminded(session.id);
+        console.log(`[SessionScheduler] Marked session ${session.id} as reminded`);
       } catch (err) {
         console.error(`[SessionScheduler] Failed to process session ${session.id}:`, err);
       }

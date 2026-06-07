@@ -474,7 +474,7 @@ export function GroupDashboardPage() {
         .map((a: any) => ({
           ...a,
           applicantId: a.userId || a.applicantId,
-          applicantName: resolveName(a.userId || a.applicantId, a.user?.fullName || null),
+          applicantName: resolveName(a.userId || a.applicantId, a.user?.fullName || a.applicantName || null),
           applicantAvatar: a.user?.avatarUrl || resolveAvatar(a.userId || a.applicantId),
           message: a.message || "",
           createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
@@ -881,9 +881,14 @@ export function GroupDashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           {isMember && (
-            <Button variant="primary" size="sm" onClick={() => setShowSessionModal(true)}>
-              Programar sesiones
-            </Button>
+            <>
+              <Button variant="secondary" size="sm" onClick={() => navigate(`/calendario-estudio?groupId=${id}`)}>
+                Ver calendario
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => setShowSessionModal(true)}>
+                Programar sesiones
+              </Button>
+            </>
           )}
           {isAuthor && perms?.canTransfer && (
             <Button variant="secondary" size="sm" onClick={() => setShowTransferModal(true)}>

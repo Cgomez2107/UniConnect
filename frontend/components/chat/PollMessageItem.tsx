@@ -15,6 +15,11 @@ function getTotalVotes(options: PollData["options"]): number {
 }
 
 function getPercentage(options: PollData["options"], index: number): number {
+  // Criterio 4: Usar porcentaje calculado por el backend si está disponible
+  if (options[index].percentage) {
+    return parseFloat(options[index].percentage);
+  }
+  // Fallback: calcular localmente
   const total = getTotalVotes(options);
   if (total === 0) return 0;
   return Math.round((options[index].votes.length / total) * 100);

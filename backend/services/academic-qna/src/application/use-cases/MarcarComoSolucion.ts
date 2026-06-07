@@ -29,10 +29,15 @@ export class MarcarComoSolucion {
     }
 
     const isAdmin = await this.questionRepo.isAdminOfStudyGroup(input.questionId, input.userId);
-    if (!isAdmin) {
+    const isQuestionAuthor = question.authorId === input.userId;
+    
+    if (!isAdmin && !isQuestionAuthor) {
       throw new AuthorizationError('No tienes permisos para marcar una solución en este grupo.');
     }
 
+    // Unmark any existing solutions for this question
+    await this.answerRepo.unmarkAllSolutionsForQuestion(input.questionId);
+    
     await this.questionRepo.markAsSolved(input.questionId);
     await this.answerRepo.markAsSolution(input.answerId);
 

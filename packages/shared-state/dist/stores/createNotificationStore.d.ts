@@ -24,19 +24,13 @@ export declare function createNotificationStore(deps: StoreDeps, subject?: Notif
     setState(partial: NotificationState | Partial<NotificationState> | ((state: NotificationState) => NotificationState | Partial<NotificationState>), replace?: false | undefined): unknown;
     setState(state: NotificationState | ((state: NotificationState) => NotificationState), replace: true): unknown;
     persist: {
-        setOptions: (options: Partial<import("zustand/middleware").PersistOptions<NotificationState, {
-            notifications: any;
-            unreadCount: any;
-        }, unknown>>) => void;
+        setOptions: (options: Partial<import("zustand/middleware").PersistOptions<NotificationState, any, unknown>>) => void;
         clearStorage: () => void;
         rehydrate: () => Promise<void> | void;
         hasHydrated: () => boolean;
         onHydrate: (fn: (state: NotificationState) => void) => () => void;
         onFinishHydration: (fn: (state: NotificationState) => void) => () => void;
-        getOptions: () => Partial<import("zustand/middleware").PersistOptions<NotificationState, {
-            notifications: any;
-            unreadCount: any;
-        }, unknown>>;
+        getOptions: () => Partial<import("zustand/middleware").PersistOptions<NotificationState, any, unknown>>;
     };
 }>;
 //# sourceMappingURL=createNotificationStore.d.ts.map

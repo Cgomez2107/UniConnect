@@ -7,12 +7,13 @@ import { GetStudyRequestById } from "./application/use-cases/GetStudyRequestById
 import { ListApplicationsByRequest } from "./application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "./application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "./application/use-cases/ListUserNotifications.js";
+import { MarkNotificationAsRead } from "./application/use-cases/MarkNotificationAsRead.js";
 import { MarkAllNotificationsAsRead } from "./application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "./application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "./application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "./application/use-cases/ListMyStudyRequests.js";
 import { ListMyApplications } from "./application/use-cases/ListMyApplications.js";
-import { LeaveAdminRole } from "./application/use-cases/LeaveAdminRole.js";
+import { LeaveStudyGroup } from "./application/use-cases/LeaveStudyGroup.js";
 import { RejectAdminTransfer } from "./application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "./application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "./application/use-cases/ReviewApplication.js";
@@ -296,6 +297,18 @@ function bootstrap(): void {
         return {};
       }
     },
+    async getFullName(userId: string) {
+      if (!pool) return null;
+      try {
+        const result = await pool.query<{ full_name: string | null }>(
+          `SELECT full_name FROM profiles WHERE id = $1`,
+          [userId],
+        );
+        return result.rows[0]?.full_name ?? null;
+      } catch {
+        return null;
+      }
+    },
   };
 
   const groupChatNotificationObserver = new GroupChatNotificationObserver(
@@ -394,6 +407,7 @@ function bootstrap(): void {
     repository,
     studyGroupRepository,
     subject,
+    userRepository ?? groupUserRepository,
     membershipService,
   );
   const reviewApplication = new ReviewApplication(
@@ -410,17 +424,20 @@ function bootstrap(): void {
   );
   const acceptAdminTransfer = new AcceptAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
   const rejectAdminTransfer = new RejectAdminTransfer(adminTransferRepository, studyGroupRepository, subject);
-  const leaveAdminRole = new LeaveAdminRole(studyGroupRepository, subject);
+  const leaveStudyGroupUseCase = new LeaveStudyGroup(studyGroupRepository, memberRepository, applicationRepository, subject);
   const listMyStudyRequestsUC = new ListMyStudyRequests(repository);
   const listMyApplicationsUC = new ListMyApplications(applicationRepository);
   const cancelStudyRequestUC = new CancelStudyRequest(repository);
   const cancelMyApplicationUC = new CancelMyApplication(applicationRepository);
   const toggleStudyGroupMessageReaction = new ToggleStudyGroupMessageReaction(messageRepository);
+  const markNotificationAsRead = new MarkNotificationAsRead(notificationRepository);
   const markAllNotificationsAsRead = new MarkAllNotificationsAsRead(notificationRepository);
   const createStudySessionUC = new CreateStudySession(
     sessionRepos.session,
     sessionRepos.series,
     studyGroupRepository,
+    memberRepository,
+    subject,
   );
   const cancelStudySessionUC = new CancelStudySession(
     sessionRepos.session,
@@ -433,6 +450,7 @@ function bootstrap(): void {
     sessionRepos.session,
     studyGroupRepository,
     subject,
+    userRepository ?? groupUserRepository,
   );
   const listSessionsByGroupUC = new ListSessionsByGroup(
     sessionRepos.session,
@@ -459,13 +477,14 @@ function bootstrap(): void {
     requestAdminTransfer,
     acceptAdminTransfer,
     rejectAdminTransfer,
-    leaveAdminRole,
+    leaveStudyGroupUseCase,
     listMyStudyRequestsUC,
     listMyApplicationsUC,
     cancelStudyRequestUC,
     cancelMyApplicationUC,
     toggleStudyGroupMessageReaction,
     voteInPoll,
+    markNotificationAsRead,
     markAllNotificationsAsRead,
     preferenceService,
     createStudySessionUC,
@@ -483,6 +502,8 @@ function bootstrap(): void {
     createStudySessionSeriesUC,
     cancelStudySessionUC,
     listStudySessionsUC,
+    updateAvailabilityUC,
+    listSessionsByGroupUC,
   );
   const server = createStudyGroupsServer(controller, sessionsController);
 

@@ -5,6 +5,7 @@ export async function fetchNotifications() {
   try {
     const apiNotifications = await deps.apiClients.notifications.list();
     const store = useNotificationStore.getState();
+    const current = store.notifications;
 
     const seen = new Set<string>();
     const deduped: typeof apiNotifications = [];
@@ -15,7 +16,21 @@ export async function fetchNotifications() {
       }
     }
 
-    store.setNotifications(deduped);
+    // Merge: keep client-side notifications (e.g. event alerts) that don't
+    // exist on the server, so they don't get wiped by polling.
+    // Then sort by createdAt descending so notifications always appear
+    // in arrival order regardless of source (API vs local).
+    const serverIds = new Set(deduped.map((n) => n.id));
+    const merged = [
+      ...deduped,
+      ...current.filter((n) => !serverIds.has(n.id)),
+    ].sort((a, b) => {
+      const ta = new Date(a.createdAt).getTime();
+      const tb = new Date(b.createdAt).getTime();
+      return tb - ta;
+    });
+
+    store.setNotifications(merged);
   } catch (err) {
     console.error("Error fetching notifications:", err);
   }

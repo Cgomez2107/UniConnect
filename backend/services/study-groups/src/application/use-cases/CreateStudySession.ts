@@ -1,5 +1,7 @@
 import type { StudySession } from "../../domain/entities/StudySession.js";
 import type { SessionSeries } from "../../domain/entities/SessionSeries.js";
+import type { ISubject } from "../../domain/events/observers/ISubject.js";
+import type { IMemberRepository } from "../../domain/repositories/IMemberRepository.js";
 import type { IStudySessionRepository, CreateStudySessionInput } from "../../domain/repositories/IStudySessionRepository.js";
 import type { ISessionSeriesRepository } from "../../domain/repositories/ISessionSeriesRepository.js";
 import type { IStudyGroupRepository } from "../../domain/repositories/IStudyGroupRepository.js";
@@ -49,6 +51,8 @@ export class CreateStudySession {
     private readonly sessionRepository: IStudySessionRepository,
     private readonly seriesRepository: ISessionSeriesRepository,
     private readonly studyGroupRepository: IStudyGroupRepository,
+    private readonly memberRepository: IMemberRepository,
+    private readonly subject: ISubject,
   ) {}
 
   private groupNameCache: string = "";
@@ -72,6 +76,11 @@ export class CreateStudySession {
       remindAt: remindAt.toISOString(),
       createdBy: input.actorUserId,
     });
+
+    // Emit notification to all group members except creator
+    this.emitSessionCreated(session, groupName).catch(err =>
+      console.error("Failed to emit SESSION_CREATED event:", err),
+    );
 
     return { type: "single", session };
   }
@@ -155,12 +164,59 @@ export class CreateStudySession {
 
     const createdSessions = await this.sessionRepository.createMany(sessions);
 
+    // Emit events for each created session (fire and forget)
+    this.emitSessionCreatedBatch(createdSessions, groupName).catch(err =>
+      console.error("Failed to emit SESSION_CREATED events:", err),
+    );
+
     return {
       type: "recurring",
       series,
       sessions: createdSessions,
       count: createdSessions.length,
     };
+  }
+
+  private async emitSessionCreated(session: StudySession, groupName: string): Promise<void> {
+    const members = await this.memberRepository.findByGroup(session.requestId);
+    await this.subject.emit({
+      type: "SESSION_CREATED",
+      version: "1.0",
+      timestamp: new Date(),
+      sessionId: session.id,
+      groupId: session.requestId,
+      title: session.title,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      createdBy: session.createdBy,
+      groupName,
+      memberIds: members.map(m => m.userId),
+      isRecurring: false,
+      seriesId: session.seriesId,
+    });
+  }
+
+  private async emitSessionCreatedBatch(sessions: StudySession[], groupName: string): Promise<void> {
+    if (sessions.length === 0) return;
+    const members = await this.memberRepository.findByGroup(sessions[0].requestId);
+    const memberIds = members.map(m => m.userId);
+    await Promise.all(sessions.map(session =>
+      this.subject.emit({
+        type: "SESSION_CREATED",
+        version: "1.0",
+        timestamp: new Date(),
+        sessionId: session.id,
+        groupId: session.requestId,
+        title: session.title,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        createdBy: session.createdBy,
+        groupName,
+        memberIds,
+        isRecurring: true,
+        seriesId: session.seriesId,
+      }),
+    ));
   }
 
   private async ensureAuthorized(actorUserId: string, requestId: string): Promise<string> {

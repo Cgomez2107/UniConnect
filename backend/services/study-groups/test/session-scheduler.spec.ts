@@ -31,7 +31,8 @@ describe("SessionScheduler", () => {
 
     const reminded = await sessionRepo.getById(session.id);
     assert.ok(reminded?.reminded);
-    assert.equal(mockNotify.mock.calls.length, 2);
+    // 2 confirmed attendees + 1 creator = 3 recipients
+    assert.equal(mockNotify.mock.calls.length, 3);
   });
 
   it("skips already reminded sessions", async () => {
@@ -62,8 +63,8 @@ describe("SessionScheduler", () => {
     await new Promise(resolve => setTimeout(resolve, 200));
     scheduler.stop();
 
-    // Should have processed the same sessions only once total across both runs
-    assert.equal(mockNotify.mock.calls.length, 0);
+    // Creator is included as recipient (no confirmed attendees, just the creator)
+    assert.equal(mockNotify.mock.calls.length, 1);
   });
 
   it("stops polling when stop() is called", async () => {

@@ -15,5 +15,6 @@ export interface INotificationRepository {
     page: number;
     pageSize: number;
   }): Promise<UserNotification[]>;
+  markAsRead(notificationId: string): Promise<void>;
   markAllAsRead(userId: string): Promise<void>;
 }

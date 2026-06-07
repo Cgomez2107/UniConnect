@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronUp } from "lucide-react";
+import { ThumbsUp } from "lucide-react";
 
 interface VoteButtonsProps {
   voteCount: number;
@@ -33,7 +33,7 @@ export function VoteButtons({ voteCount, userVote, onVote, disabled }: VoteButto
         } ${animating ? "scale-125" : ""}`}
         aria-label="Votar"
       >
-        <ChevronUp size={20} />
+        <ThumbsUp size={20} fill={userVote === "upvote" ? "currentColor" : "none"} />
       </button>
       <span
         className={`text-sm font-semibold tabular-nums ${

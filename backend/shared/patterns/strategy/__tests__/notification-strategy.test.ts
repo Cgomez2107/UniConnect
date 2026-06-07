@@ -20,6 +20,10 @@ class MockUserRepository implements IUserRepository {
   async getContactInfo(userId: string) {
     return { email: `${userId}@ucaldas.edu.co`, pushToken: `push_${userId}` };
   }
+
+  async getFullName(userId: string): Promise<string | null> {
+    return `Usuario ${userId}`;
+  }
 }
 
 const mockUserRepository = new MockUserRepository();

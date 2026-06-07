@@ -51,6 +51,8 @@ function mapResource(raw: ApiResource): StudyResource {
     subject_id: raw.subjectId ?? raw.subject_id ?? "",
     title: raw.title,
     description: raw.description ?? null,
+    type: raw.resourceType ?? raw.resource_type ?? "file",
+    url: raw.fileUrl ?? raw.file_url ?? "",
     file_url: raw.fileUrl ?? raw.file_url ?? "",
     file_name: raw.fileName ?? raw.file_name ?? "",
     file_type: raw.fileType ?? raw.file_type ?? null,
@@ -73,13 +75,13 @@ function mapResource(raw: ApiResource): StudyResource {
 
 export class ApiStudyResourceRepository implements IStudyResourceRepository {
   async getAll(): Promise<StudyResource[]> {
-    const data = await fetchApi<ApiResource[]>("/resources");
+    const data = await fetchApi<ApiResource[]>("/api/v1/resources");
     return (data ?? []).map(mapResource);
   }
 
   async getById(id: string): Promise<StudyResource | null> {
     try {
-      const data = await fetchApi<ApiResource>(`/resources/${id}`);
+      const data = await fetchApi<ApiResource>(`/api/v1/resources/${id}`);
       return data ? mapResource(data) : null;
     } catch (error) {
       if (error instanceof Error && error.message.toLowerCase().includes("not found")) {
@@ -91,13 +93,13 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
 
   async getBySubject(subjectId: string): Promise<StudyResource[]> {
     const params = new URLSearchParams({ subjectId });
-    const data = await fetchApi<ApiResource[]>(`/resources?${params.toString()}`);
+    const data = await fetchApi<ApiResource[]>(`/api/v1/resources?${params.toString()}`);
     return (data ?? []).map(mapResource);
   }
 
   async getByUser(userId: string): Promise<StudyResource[]> {
     const params = new URLSearchParams({ userId });
-    const data = await fetchApi<ApiResource[]>(`/resources?${params.toString()}`);
+    const data = await fetchApi<ApiResource[]>(`/api/v1/resources?${params.toString()}`);
     return (data ?? []).map(mapResource);
   }
 
@@ -107,7 +109,7 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
     if (filters?.userId) params.set("userId", filters.userId);
     if (filters?.type) params.set("type", filters.type);
     const qs = params.toString();
-    const data = await fetchApi<ApiResource[]>(`/resources${qs ? `?${qs}` : ""}`);
+    const data = await fetchApi<ApiResource[]>(`/api/v1/resources${qs ? `?${qs}` : ""}`);
     return (data ?? []).map(mapResource);
   }
 
@@ -130,7 +132,7 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
   ): Promise<StudyResource> {
     void userId;
 
-    const data = await fetchApi<ApiResource>("/resources", {
+    const data = await fetchApi<ApiResource>("/api/v1/resources", {
       method: "POST",
       body: JSON.stringify({
         programId,
@@ -157,7 +159,7 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
     payload: { title?: string; description?: string | null },
   ): Promise<StudyResource> {
     void userId;
-    const data = await fetchApi<ApiResource>(`/resources/${resourceId}`, {
+    const data = await fetchApi<ApiResource>(`/api/v1/resources/${resourceId}`, {
       method: "PUT",
       body: JSON.stringify({
         title: payload.title,
@@ -170,7 +172,7 @@ export class ApiStudyResourceRepository implements IStudyResourceRepository {
 
   async delete(resourceId: string, userId: string): Promise<void> {
     void userId;
-    await fetchApi(`/resources/${resourceId}`, {
+    await fetchApi(`/api/v1/resources/${resourceId}`, {
       method: "DELETE",
     });
   }

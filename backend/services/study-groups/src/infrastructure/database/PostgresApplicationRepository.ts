@@ -12,6 +12,7 @@ interface ApplicationRow {
   status: "pendiente" | "aceptada" | "rechazada";
   created_at: Date | string;
   reviewed_at: Date | string | null;
+  applicant_full_name?: string | null;
 }
 
 function mapApplication(row: ApplicationRow): Application {
@@ -23,6 +24,7 @@ function mapApplication(row: ApplicationRow): Application {
     status: row.status,
     createdAt: new Date(row.created_at).toISOString(),
     reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : null,
+    applicantName: row.applicant_full_name ?? undefined,
   };
 }
 
@@ -37,10 +39,13 @@ export class PostgresApplicationRepository implements IApplicationRepository {
 
     const result = await this.pool.query<ApplicationRow>(
       `
-        SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
-        FROM applications
-        WHERE request_id = $1
-        ORDER BY created_at DESC
+        SELECT a.id, a.request_id, a.applicant_id, a.message,
+               a.status, a.created_at, a.reviewed_at,
+               p.full_name AS applicant_full_name
+        FROM applications a
+        LEFT JOIN profiles p ON p.id = a.applicant_id
+        WHERE a.request_id = $1
+        ORDER BY a.created_at DESC
       `,
       [requestId],
     );
@@ -70,9 +75,12 @@ export class PostgresApplicationRepository implements IApplicationRepository {
   async getById(applicationId: string): Promise<Application | null> {
     const result = await this.pool.query<ApplicationRow>(
       `
-        SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
-        FROM applications
-        WHERE id = $1
+        SELECT a.id, a.request_id, a.applicant_id, a.message,
+               a.status, a.created_at, a.reviewed_at,
+               p.full_name AS applicant_full_name
+        FROM applications a
+        LEFT JOIN profiles p ON p.id = a.applicant_id
+        WHERE a.id = $1
         LIMIT 1
       `,
       [applicationId],
@@ -84,9 +92,12 @@ export class PostgresApplicationRepository implements IApplicationRepository {
   async create(input: { requestId: string; applicantId: string; message: string }): Promise<Application> {
     // Permitir re-postulación si la anterior fue rechazada
     const existing = await this.pool.query<ApplicationRow>(
-      `SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
-       FROM applications
-       WHERE request_id = $1 AND applicant_id = $2
+      `SELECT a.id, a.request_id, a.applicant_id, a.message,
+              a.status, a.created_at, a.reviewed_at,
+              p.full_name AS applicant_full_name
+       FROM applications a
+       LEFT JOIN profiles p ON p.id = a.applicant_id
+       WHERE a.request_id = $1 AND a.applicant_id = $2
        LIMIT 1`,
       [input.requestId, input.applicantId],
     );
@@ -129,10 +140,13 @@ export class PostgresApplicationRepository implements IApplicationRepository {
   async getByApplicantId(applicantId: string): Promise<Application[]> {
     const result = await this.pool.query<ApplicationRow>(
       `
-        SELECT id, request_id, applicant_id, message, status, created_at, reviewed_at
-        FROM applications
-        WHERE applicant_id = $1
-        ORDER BY created_at DESC
+        SELECT a.id, a.request_id, a.applicant_id, a.message,
+               a.status, a.created_at, a.reviewed_at,
+               p.full_name AS applicant_full_name
+        FROM applications a
+        LEFT JOIN profiles p ON p.id = a.applicant_id
+        WHERE a.applicant_id = $1
+        ORDER BY a.created_at DESC
       `,
       [applicantId],
     );
@@ -153,5 +167,18 @@ export class PostgresApplicationRepository implements IApplicationRepository {
     }
 
     await this.pool.query("DELETE FROM applications WHERE id = $1", [applicationId]);
+  }
+
+  async leaveGroup(input: { requestId: string; userId: string }): Promise<void> {
+    const result = await this.pool.query(
+      `UPDATE applications
+       SET status = 'rechazada', reviewed_at = NOW()
+       WHERE request_id = $1 AND applicant_id = $2 AND status = 'aceptada'
+       RETURNING id`,
+      [input.requestId, input.userId],
+    );
+    if (result.rows.length === 0) {
+      throw new NotFoundError("No tienes una membresía activa en este grupo.");
+    }
   }
 }

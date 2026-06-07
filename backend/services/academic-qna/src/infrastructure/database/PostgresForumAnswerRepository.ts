@@ -95,4 +95,11 @@ export class PostgresForumAnswerRepository implements IForumAnswerRepository {
       [answerId],
     );
   }
+
+  async unmarkAllSolutionsForQuestion(questionId: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE forum_answers SET is_solution = false, updated_at = NOW() WHERE question_id = $1`,
+      [questionId],
+    );
+  }
 }

@@ -34,6 +34,13 @@ function mapNotification(row: NotificationRow): UserNotification {
 export class PostgresNotificationRepository implements INotificationRepository {
   constructor(private readonly pool: Pool) {}
 
+  async markAsRead(notificationId: string): Promise<void> {
+    await this.pool.query(
+      "UPDATE user_notifications SET read_at = NOW() WHERE id = $1",
+      [notificationId],
+    );
+  }
+
   async markAllAsRead(userId: string): Promise<void> {
     await this.pool.query(
       "UPDATE user_notifications SET read_at = NOW() WHERE user_id = $1 AND read_at IS NULL",

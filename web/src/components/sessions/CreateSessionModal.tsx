@@ -25,8 +25,8 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState(60);
+  const [reminderMinutes, setReminderMinutes] = useState(30);
   const [isRecurring, setIsRecurring] = useState(false);
   const [weekCount, setWeekCount] = useState(8);
   const [submitting, setSubmitting] = useState(false);
@@ -54,8 +54,8 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
     setDescription("");
     setStartDate("");
     setStartTime("");
-    setEndDate("");
-    setEndTime("");
+    setDurationMinutes(60);
+    setReminderMinutes(30);
     setIsRecurring(false);
     setWeekCount(8);
     setSubjectFilter("");
@@ -98,14 +98,16 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
   }, [isOpen]);
 
   const handleSubmit = async () => {
+    if (submitting) return; // Prevent double submission
+
     setError(null);
     if (!groupId) { setError("Selecciona un grupo"); return; }
     if (!title.trim()) { setError("El título es obligatorio"); return; }
     if (!startDate || !startTime) { setError("Selecciona fecha y hora de inicio"); return; }
-    if (!endDate || !endTime) { setError("Selecciona fecha y hora de fin"); return; }
+    if (!durationMinutes || durationMinutes < 15) { setError("La duración debe ser de al menos 15 minutos"); return; }
 
     const startDateTime = new Date(`${startDate}T${startTime}`);
-    const endDateTime = new Date(`${endDate}T${endTime}`);
+    const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60 * 1000);
 
     if (isNaN(startDateTime.getTime())) { setError("Fecha de inicio inválida"); return; }
     if (isNaN(endDateTime.getTime())) { setError("Fecha de fin inválida"); return; }
@@ -115,10 +117,10 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
       return;
     }
 
-    if (endDateTime <= startDateTime) {
-      setError("La fecha de fin debe ser posterior a la de inicio");
-      return;
-    }
+    // Calculate remindAt if reminderMinutes is set
+    const remindAt = reminderMinutes > 0
+      ? new Date(startDateTime.getTime() - reminderMinutes * 60 * 1000).toISOString()
+      : undefined;
 
     setSubmitting(true);
     try {
@@ -127,6 +129,7 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
         description: description.trim(),
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
+        remindAt,
         ...(isRecurring ? { rrule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA,SU", weekCount } : {}),
       });
       setSuccess(true);
@@ -156,7 +159,7 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Crear serie de sesiones">
-      <div className="space-y-4">
+      <div className="max-h-[70vh] overflow-y-auto space-y-4 pr-2">
         {success ? (
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm text-center font-medium">
             ¡Sesiones creadas correctamente!
@@ -167,46 +170,17 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
         )}
 
-        {preselectedGroupId ? (
+        {preselectedGroupId && selectedGroup && (
           <div className="flex items-center gap-4 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
             <div className="text-sm">
               <span className="text-neutral-500">Grupo:</span>{" "}
-              <span className="font-medium text-neutral-800">{selectedGroup?.title || "Cargando..."}</span>
+              <span className="font-medium text-neutral-800">{selectedGroup.title}</span>
             </div>
             <div className="text-sm">
               <span className="text-neutral-500">Materia:</span>{" "}
-              <span className="font-medium text-neutral-800">{selectedGroup?.subjectName || "Cargando..."}</span>
+              <span className="font-medium text-neutral-800">{selectedGroup.subjectName}</span>
             </div>
           </div>
-        ) : (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Materia</label>
-              <select
-                value={subjectFilter}
-                onChange={(e) => { setSubjectFilter(e.target.value); setGroupId(""); }}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Todas las materias</option>
-                {subjectOptions.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Grupo</label>
-              <select
-                value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Seleccionar grupo...</option>
-                {filteredGroups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.title}</option>
-                ))}
-              </select>
-            </div>
-          </>
         )}
 
         <div>
@@ -253,26 +227,32 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Fecha fin</label>
-            <input
-              type="date"
-              value={endDate}
-              min={todayStr}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Hora fin</label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Duración (minutos)</label>
+          <input
+            type="number"
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+            min={15}
+            max={480}
+            step={15}
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p className="text-xs text-neutral-500 mt-1">Mínimo 15 minutos, máximo 8 horas</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Recordatorio (minutos antes)</label>
+          <input
+            type="number"
+            value={reminderMinutes}
+            onChange={(e) => setReminderMinutes(Number(e.target.value))}
+            min={0}
+            max={1440}
+            step={5}
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p className="text-xs text-neutral-500 mt-1">0 para sin recordatorio, máximo 24 horas</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -302,8 +282,8 @@ export function CreateSessionModal({ isOpen, onClose, onCreated, preselectedGrou
         </div>
 
         <div className="flex gap-3 pt-2">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-          <Button variant="primary" onClick={handleSubmit} loading={submitting} className="flex-1">Crear sesiones</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting} className="flex-1">Cancelar</Button>
+          <Button variant="primary" onClick={handleSubmit} loading={submitting} disabled={submitting} className="flex-1">Crear sesiones</Button>
         </div>
           </>
         )}

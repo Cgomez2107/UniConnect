@@ -17,6 +17,9 @@ const PUBLIC_PATHS = new Set([
 
 const conversationRooms = new Map<string, Set<WebSocket>>();
 const studyGroupRooms = new Map<string, Set<WebSocket>>();
+const forumSubjectRooms = new Map<string, Set<WebSocket>>();
+const forumQuestionRooms = new Map<string, Set<WebSocket>>();
+const eventsRoom = new Set<WebSocket>();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -225,6 +228,40 @@ function broadcastToConversation(conversationId: string, event: string, payload:
   console.log(JSON.stringify({ service: "gateway", level: "info", message: "broadcastToConversation: sent", conversationId, event, sent, roomSize: room.size }));
 }
 
+function broadcastToForumSubject(subjectId: string, event: string, payload: unknown): void {
+  const room = forumSubjectRooms.get(subjectId);
+  if (!room) {
+    console.log(JSON.stringify({ service: "gateway", level: "warn", message: "broadcastToForumSubject: ROOM EMPTY", subjectId, event }));
+    return;
+  }
+  const message = JSON.stringify({ event, payload });
+  let sent = 0;
+  for (const ws of room) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+      sent++;
+    }
+  }
+  console.log(JSON.stringify({ service: "gateway", level: "info", message: "broadcastToForumSubject: sent", subjectId, event, sent, roomSize: room.size }));
+}
+
+function broadcastToForumQuestion(questionId: string, event: string, payload: unknown): void {
+  const room = forumQuestionRooms.get(questionId);
+  if (!room) {
+    console.log(JSON.stringify({ service: "gateway", level: "warn", message: "broadcastToForumQuestion: ROOM EMPTY", questionId, event }));
+    return;
+  }
+  const message = JSON.stringify({ event, payload });
+  let sent = 0;
+  for (const ws of room) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+      sent++;
+    }
+  }
+  console.log(JSON.stringify({ service: "gateway", level: "info", message: "broadcastToForumQuestion: sent", questionId, event, sent, roomSize: room.size }));
+}
+
 function handleWebSocketUpgrade(
   wss: WebSocketServer,
   jwtMiddleware: JWTMiddleware,
@@ -260,6 +297,9 @@ function handleWebSocketUpgrade(
 
     const subscribedConversations = new Set<string>();
     const subscribedGroups = new Set<string>();
+    const subscribedSubjects = new Set<string>();
+    const subscribedQuestions = new Set<string>();
+    let subscribedToEvents = false;
 
     ws.on("message", (rawData) => {
       try {
@@ -282,6 +322,33 @@ function handleWebSocketUpgrade(
           subscribedGroups.add(groupId);
           console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS subscribed to study group", groupId }));
         }
+        if (msg.type === "subscribe" && msg.channel === "events") {
+          eventsRoom.add(ws);
+          subscribedToEvents = true;
+          console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS subscribed to events channel" }));
+        }
+        if (msg.type === "unsubscribe" && msg.channel === "events") {
+          eventsRoom.delete(ws);
+          subscribedToEvents = false;
+        }
+        if (msg.type === "subscribe" && msg.subjectId) {
+          const subId = msg.subjectId;
+          if (!forumSubjectRooms.has(subId)) {
+            forumSubjectRooms.set(subId, new Set());
+          }
+          forumSubjectRooms.get(subId)!.add(ws);
+          subscribedSubjects.add(subId);
+          console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS subscribed to forum subject", subjectId: subId }));
+        }
+        if (msg.type === "subscribe" && msg.questionId) {
+          const qId = msg.questionId;
+          if (!forumQuestionRooms.has(qId)) {
+            forumQuestionRooms.set(qId, new Set());
+          }
+          forumQuestionRooms.get(qId)!.add(ws);
+          subscribedQuestions.add(qId);
+          console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS subscribed to forum question", questionId: qId }));
+        }
         if (msg.type === "unsubscribe" && msg.conversationId) {
           const room = conversationRooms.get(msg.conversationId);
           if (room) {
@@ -297,6 +364,22 @@ function handleWebSocketUpgrade(
             if (room.size === 0) studyGroupRooms.delete(msg.groupId);
           }
           subscribedGroups.delete(msg.groupId);
+        }
+        if (msg.type === "unsubscribe" && msg.subjectId) {
+          const room = forumSubjectRooms.get(msg.subjectId);
+          if (room) {
+            room.delete(ws);
+            if (room.size === 0) forumSubjectRooms.delete(msg.subjectId);
+          }
+          subscribedSubjects.delete(msg.subjectId);
+        }
+        if (msg.type === "unsubscribe" && msg.questionId) {
+          const room = forumQuestionRooms.get(msg.questionId);
+          if (room) {
+            room.delete(ws);
+            if (room.size === 0) forumQuestionRooms.delete(msg.questionId);
+          }
+          subscribedQuestions.delete(msg.questionId);
         }
       } catch {
         // ignore malformed messages
@@ -321,8 +404,28 @@ function handleWebSocketUpgrade(
           unsubscribedGroups++;
         }
       }
+      for (const subId of subscribedSubjects) {
+        const room = forumSubjectRooms.get(subId);
+        if (room) {
+          room.delete(ws);
+          if (room.size === 0) forumSubjectRooms.delete(subId);
+        }
+      }
+      for (const qId of subscribedQuestions) {
+        const room = forumQuestionRooms.get(qId);
+        if (room) {
+          room.delete(ws);
+          if (room.size === 0) forumQuestionRooms.delete(qId);
+        }
+      }
       subscribedConversations.clear();
       subscribedGroups.clear();
+      subscribedSubjects.clear();
+      subscribedQuestions.clear();
+      if (subscribedToEvents) {
+        eventsRoom.delete(ws);
+        subscribedToEvents = false;
+      }
       console.log(JSON.stringify({ service: "gateway", level: "info", message: "WS client disconnected", userId: payload.sub, unsubscribedGroups, unsubscribedConversations }));
     });
   });
@@ -469,6 +572,151 @@ function onMessagingResponse(
   }
 }
 
+function broadcastToEvents(event: string, payload: unknown): void {
+  if (eventsRoom.size === 0) {
+    console.log(JSON.stringify({ service: "gateway", level: "warn", message: "broadcastToEvents: ROOM EMPTY", event }));
+    return;
+  }
+  const message = JSON.stringify({ event, payload });
+  let sent = 0;
+  for (const ws of eventsRoom) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+      sent++;
+    }
+  }
+  console.log(JSON.stringify({ service: "gateway", level: "info", message: "broadcastToEvents: sent", event, sent, roomSize: eventsRoom.size }));
+}
+
+function onEventsResponse(
+  info: ProxyResponse,
+  _requestUrl: URL,
+  _jwtPayload: JWTPayload,
+): void {
+  console.log(JSON.stringify({ service: "gateway", level: "info", message: "onEventsResponse called", method: info.method, pathname: info.pathname, status: info.status }));
+
+  // 1. New event: POST /api/v1/events  (201)
+  if (info.method === "POST" && info.pathname === "/api/v1/events" && info.status === 201) {
+    let payload: any;
+    try { const p = JSON.parse(info.body); payload = p?.data || p; } catch { payload = info.body; }
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "onEventsResponse: broadcasting new_event", id: payload?.id }));
+    broadcastToEvents("new_event", payload);
+    return;
+  }
+
+  // 2. Update event: PATCH /api/v1/events/:id  (200)
+  const updateMatch = info.pathname.match(/^\/api\/v1\/events\/([^/]+)$/);
+  if (info.method === "PATCH" && updateMatch && info.status === 200) {
+    let payload: any;
+    try { const p = JSON.parse(info.body); payload = p?.data || p; } catch { payload = info.body; }
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "onEventsResponse: broadcasting event_updated", id: updateMatch[1] }));
+    broadcastToEvents("event_updated", payload);
+    return;
+  }
+
+  // 3. Delete event: DELETE /api/v1/events/:id  (200 | 204)
+  const deleteMatch = info.pathname.match(/^\/api\/v1\/events\/([^/]+)$/);
+  if (info.method === "DELETE" && deleteMatch && (info.status === 200 || info.status === 204)) {
+    const eventId = deleteMatch[1];
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "onEventsResponse: broadcasting event_deleted", eventId }));
+    broadcastToEvents("event_deleted", { id: eventId });
+    return;
+  }
+}
+
+function onForumResponse(
+  info: ProxyResponse,
+  requestUrl: URL,
+  jwtPayload: JWTPayload,
+): void {
+  console.log(JSON.stringify({ service: "gateway", level: "info", message: "onForumResponse called", method: info.method, pathname: info.pathname, status: info.status }));
+  
+  // 1. New question: POST /api/v1/forum/questions
+  if (info.method === "POST" && info.pathname === "/api/v1/forum/questions" && info.status === 201) {
+    let payload: any;
+    try {
+      const parsed = JSON.parse(info.body);
+      payload = parsed?.data || parsed;
+    } catch {
+      payload = info.body;
+    }
+    const subjectId = payload?.subjectId || payload?.subject_id;
+    if (subjectId) {
+      console.log(JSON.stringify({ service: "gateway", level: "info", message: "onForumResponse: broadcasting new question", subjectId }));
+      broadcastToForumSubject(subjectId, "new_question", payload);
+    }
+    return;
+  }
+
+  // 2. New answer: POST /api/v1/forum/questions/:questionId/answers
+  const answerMatch = info.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)\/answers$/);
+  if (info.method === "POST" && answerMatch && info.status === 201) {
+    const questionId = answerMatch[1];
+    let payload: any;
+    try {
+      const parsed = JSON.parse(info.body);
+      payload = parsed?.data || parsed;
+    } catch {
+      payload = info.body;
+    }
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "onForumResponse: broadcasting new answer", questionId }));
+    broadcastToForumQuestion(questionId, "new_answer", payload);
+    return;
+  }
+
+  // 3. Mark as solution: POST /api/v1/forum/questions/:questionId/solution
+  const solutionMatch = info.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)\/solution$/);
+  if (info.method === "POST" && solutionMatch && info.status === 200) {
+    const questionId = solutionMatch[1];
+    let payload: any;
+    try {
+      const parsed = JSON.parse(info.body);
+      payload = parsed?.data || parsed;
+    } catch {
+      payload = info.body;
+    }
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "onForumResponse: broadcasting solution marked", questionId }));
+    broadcastToForumQuestion(questionId, "question_solved", payload);
+    return;
+  }
+
+  // 4. Pin/unpin answer: PATCH /api/v1/forum/questions/:questionId/answers/:answerId/pin
+  const pinMatch = info.pathname.match(/^\/api\/v1\/forum\/questions\/([^/]+)\/answers\/([^/]+)\/pin$/);
+  if (info.method === "PATCH" && pinMatch && info.status === 200) {
+    const questionId = pinMatch[1];
+    const answerId = pinMatch[2];
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "onForumResponse: broadcasting answer pin change", questionId, answerId }));
+    broadcastToForumQuestion(questionId, "answer_pin_changed", { questionId, answerId });
+    return;
+  }
+
+  // 5. Vote cast: POST /api/v1/forum/votes
+  if (info.method === "POST" && info.pathname === "/api/v1/forum/votes" && info.status === 200) {
+    let payload: any;
+    try {
+      const parsed = JSON.parse(info.body);
+      payload = parsed?.data || parsed;
+    } catch {
+      payload = info.body;
+    }
+    console.log(JSON.stringify({ service: "gateway", level: "info", message: "onForumResponse: broadcasting vote change", payload }));
+    if (payload?.targetType === "question") {
+      if (payload.subjectId) {
+        broadcastToForumSubject(payload.subjectId, "question_vote_updated", payload);
+      }
+      broadcastToForumQuestion(payload.targetId, "question_vote_updated", payload);
+    } else if (payload?.targetType === "answer") {
+      const questionId = payload.questionId;
+      if (!questionId) {
+        console.log(JSON.stringify({ service: "gateway", level: "warn", message: "answer vote missing questionId", payload }));
+        return;
+      }
+      broadcastToForumQuestion(questionId, "answer_vote_updated", payload);
+    }
+    return;
+  }
+}
+
 function setCorsHeaders(
   res: NodeServerResponse,
   origin: string,
@@ -557,7 +805,15 @@ async function handleRequest(
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 7. JWT authentication for all other API routes
+  // 7. Public GET endpoints for resources (list and detail)
+  // ──────────────────────────────────────────────────────────────────────────
+  if (isResourcesRoute(requestUrl.pathname) && req.method === "GET") {
+    await proxyRequest(req, res, env.resourcesBaseUrl);
+    return;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 8. JWT authentication for all other API routes
   // ──────────────────────────────────────────────────────────────────────────
   const payload = jwtMiddleware.authenticate(req, res);
   if (!payload) {
@@ -605,12 +861,16 @@ async function handleRequest(
   }
 
   if (isEventsRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.eventsBaseUrl);
+    await proxyRequest(req, res, env.eventsBaseUrl, undefined, (info) => {
+      onEventsResponse(info, requestUrl, payload);
+    });
     return;
   }
 
   if (isForumRoute(requestUrl.pathname)) {
-    await proxyRequest(req, res, env.forumBaseUrl);
+    await proxyRequest(req, res, env.forumBaseUrl, undefined, (info) => {
+      onForumResponse(info, requestUrl, payload);
+    });
     return;
   }
 

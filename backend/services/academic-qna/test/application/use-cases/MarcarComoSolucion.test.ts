@@ -69,6 +69,7 @@ describe("V05 — MarcarComoSolucion", () => {
       findByQuestion: jest.fn<any>(),
       pinAnswer: jest.fn<any>(),
       markAsSolution: jest.fn<any>(),
+      unmarkAllSolutionsForQuestion: jest.fn<any>(),
     };
 
     forumSubject = new ForumSubject();

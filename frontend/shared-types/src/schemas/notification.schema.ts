@@ -9,6 +9,7 @@ export const NotificationTypeEnum = z.enum([
   "mention",
   "friendRequest",
   "system",
+  "nuevo_evento",
 ]);
 
 export const PrioridadEnum = z.enum(["normal", "urgente", "critica"]);
@@ -43,6 +44,7 @@ export const NotificationDTOSchema = z.object({
     "mention",
     "friend_request",
     "system",
+    "nuevo_evento",
   ]),
   title: z.string().min(1).max(200),
   description: z.string().max(500).optional(),

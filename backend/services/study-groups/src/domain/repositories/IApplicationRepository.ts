@@ -7,4 +7,5 @@ export interface IApplicationRepository {
   review(input: { applicationId: string; actorUserId: string; status: Exclude<ApplicationStatus, "pendiente"> }): Promise<void>;
   getByApplicantId(applicantId: string): Promise<Application[]>;
   delete(applicationId: string, actorUserId: string): Promise<void>;
+  leaveGroup(input: { requestId: string; userId: string }): Promise<void>;
 }

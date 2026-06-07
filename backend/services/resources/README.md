@@ -124,6 +124,57 @@ Al eliminar un recurso:
 - `pnpm --filter @uniconnect/resources start`
 - `pnpm --filter @uniconnect/resources typecheck`
 
-## Estado de implementacion
+## Patrón Decorator
+
+El servicio implementa el patrón Decorator para extender dinámicamente la funcionalidad de las tarjetas de recursos.
+
+### Decoradores Disponibles
+
+- **BaseResourceCard**: Implementación base con métodos `getContent()`, `getMetadata()`, `render()`, `toJSON()`
+- **OpenGraphDecorator**: Agrega metadatos Open Graph (título, descripción, imagen) para enlaces
+- **RatingDecorator**: Agrega datos de valoración (promedio, total)
+- **CommentsDecorator**: Agrega resumen de comentarios
+
+### Composición de Decoradores
+
+Los decoradores son componibles entre sí. Para crear una tarjeta con decoradores:
+
+```typescript
+import { ResourceDecoratorFactory } from "./domain/decorators/ResourceDecoratorFactory.js";
+
+// Crear una tarjeta con decoradores aplicados dinámicamente
+const card = ResourceDecoratorFactory.createCard(resource);
+
+// Crear múltiples tarjetas
+const cards = ResourceDecoratorFactory.createCards(resources);
+```
+
+La factory aplica decoradores automáticamente según los datos disponibles:
+- Si el recurso tiene datos OG (`ogTitle`, `ogDescription`, `ogImage`), aplica `OpenGraphDecorator`
+- Si el recurso tiene datos de valoración, aplica `RatingDecorator` (pendiente de implementación en DB)
+- Si el recurso tiene comentarios, aplica `CommentsDecorator` (pendiente de implementación en DB)
+
+### Composición Manual
+
+También puedes componer decoradores manualmente:
+
+```typescript
+import { BaseResourceCard } from "./domain/decorators/BaseResourceCard.js";
+import { OpenGraphDecorator } from "./domain/decorators/OpenGraphDecorator.js";
+import { RatingDecorator } from "./domain/decorators/RatingDecorator.js";
+
+let card = new BaseResourceCard(resource);
+card = OpenGraphDecorator.wrap(card, { ogTitle, ogDescription, ogImage });
+card = RatingDecorator.wrap(card, { average: 4.5, total: 10 });
+```
+
+### Compatibilidad con Decoradores de Mensajes
+
+Los decoradores de recursos siguen el mismo patrón que los decoradores de mensajes del Sprint 3, permitiendo:
+- Composición dinámica según datos disponibles
+- Extensión sin modificar la clase base
+- Reutilización de lógica de decoración
+
+## Estado de implementación
 
 Servicio funcional para CRUD de recursos, integrado con gateway y frontend para el dominio de recursos.

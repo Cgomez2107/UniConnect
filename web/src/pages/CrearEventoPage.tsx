@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import eventsService from "@/lib/services/events.service";
 import { Button } from "@/components/ui/Button";
 import useNotifications from "@/hooks/useNotifications";
+import { useEventsStore } from "@/store/useEventsStore";
 
 export function CrearEventoPage() {
   const navigate = useNavigate();
   const { success, error: showError } = useNotifications();
+  const addEvent = useEventsStore((s) => s.addEvent);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -33,7 +35,7 @@ export function CrearEventoPage() {
     setSaving(true);
     try {
       const isoDate = new Date(form.eventDate).toISOString();
-      await eventsService.createEvent({
+      const newEvent = await eventsService.createEvent({
         title: form.title.trim(),
         description: form.description.trim() || "Sin descripción",
         startAt: isoDate,
@@ -41,6 +43,8 @@ export function CrearEventoPage() {
         location: form.location.trim() || "Por definir",
         category: form.category,
       });
+      // Inject into global store for immediate visibility in event list
+      if (newEvent) addEvent(newEvent as any);
       success("Evento creado exitosamente");
       navigate("/eventos");
     } catch (err: any) {

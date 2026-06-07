@@ -4,6 +4,7 @@ import {
   FileMessageDecorator, 
   MentionMessageDecorator, 
   ReactionMessageDecorator, 
+  PollMessageDecorator,
   IMessage 
 } from '@/chat/models/MessageDecorator';
 
@@ -18,7 +19,7 @@ function groupReactions(reactions: Reaction[]): { emoji: string; count: number }
 /**
  * Factory para transformar mensajes crudos en objetos decorados (US-D01).
  */
-export function transformRawMessage(raw: any): IMessage {
+export function transformRawMessage(raw: any, onVote?: (optionIndex: number) => void): IMessage {
   let message: IMessage = new BaseMessage(
     raw.id,
     raw.content || '',
@@ -42,6 +43,12 @@ export function transformRawMessage(raw: any): IMessage {
   if (Array.isArray(raw.reactions) && raw.reactions.length > 0) {
     const grouped = groupReactions(raw.reactions)
     message = new ReactionMessageDecorator(message, grouped)
+  }
+
+  // Criterio 2, 4, 5: Manejo de encuestas (poll_data)
+  const pollData = raw.poll_data || raw.poll
+  if (pollData) {
+    message = new PollMessageDecorator(message, pollData, onVote)
   }
 
   return message

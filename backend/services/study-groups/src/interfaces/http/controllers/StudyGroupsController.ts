@@ -10,12 +10,13 @@ import { GetStudyRequestById } from "../../../application/use-cases/GetStudyRequ
 import { ListApplicationsByRequest } from "../../../application/use-cases/ListApplicationsByRequest.js";
 import { ListStudyGroupMessages } from "../../../application/use-cases/ListStudyGroupMessages.js";
 import { ListUserNotifications } from "../../../application/use-cases/ListUserNotifications.js";
+import { MarkNotificationAsRead } from "../../../application/use-cases/MarkNotificationAsRead.js";
 import { MarkAllNotificationsAsRead } from "../../../application/use-cases/MarkAllNotificationsAsRead.js";
 import { ListMembersByRequest } from "../../../application/use-cases/ListMembersByRequest.js";
 import { ListOpenStudyRequests } from "../../../application/use-cases/ListOpenStudyRequests.js";
 import { ListMyStudyRequests } from "../../../application/use-cases/ListMyStudyRequests.js";
 import { ListMyApplications } from "../../../application/use-cases/ListMyApplications.js";
-import { LeaveAdminRole } from "../../../application/use-cases/LeaveAdminRole.js";
+import { LeaveStudyGroup } from "../../../application/use-cases/LeaveStudyGroup.js";
 import { RejectAdminTransfer } from "../../../application/use-cases/RejectAdminTransfer.js";
 import { RequestAdminTransfer } from "../../../application/use-cases/RequestAdminTransfer.js";
 import { ReviewApplication } from "../../../application/use-cases/ReviewApplication.js";
@@ -80,13 +81,14 @@ export class StudyGroupsController {
     private readonly requestAdminTransfer: RequestAdminTransfer,
     private readonly acceptAdminTransfer: AcceptAdminTransfer,
     private readonly rejectAdminTransfer: RejectAdminTransfer,
-    private readonly leaveAdminRole: LeaveAdminRole,
+    private readonly leaveStudyGroup: LeaveStudyGroup,
     private readonly listMyStudyRequestsUC: ListMyStudyRequests,
     private readonly listMyApplicationsUC: ListMyApplications,
     private readonly cancelStudyRequestUC: CancelStudyRequest,
     private readonly cancelMyApplicationUC: CancelMyApplication,
     private readonly toggleStudyGroupMessageReaction: ToggleStudyGroupMessageReaction,
     private readonly voteInPoll: VoteInPoll,
+    private readonly markNotificationAsRead: MarkNotificationAsRead,
     private readonly markAllNotificationsAsRead: MarkAllNotificationsAsRead,
     private readonly preferenceService: PreferenceService,
     private readonly createStudySessionUC: CreateStudySession,
@@ -296,6 +298,16 @@ export class StudyGroupsController {
     }
   }
 
+  async markNotificationRead(req: IncomingMessage, res: ServerResponse, notificationId: string): Promise<void> {
+    try {
+      await this.markNotificationAsRead.execute(notificationId);
+      sendData(res, 200, { success: true });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
   async markNotificationsRead(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
@@ -329,6 +341,7 @@ export class StudyGroupsController {
         "transferencia_admin_rechazada",
         "transferencia_admin_transferida",
         "admin_role_left",
+        "nuevo_evento",
       ] as const;
 
       const labels: Record<string, string> = {
@@ -340,9 +353,10 @@ export class StudyGroupsController {
         transferencia_admin_rechazada: "Transferencia de admin rechazada",
         transferencia_admin_transferida: "Admin transferido",
         admin_role_left: "Admin renunció",
+        nuevo_evento: "Nuevo evento universitario",
       };
 
-      const preferences = await Promise.all(
+      const results = await Promise.allSettled(
         eventTypes.map(async (eventType) => {
           const canales = await this.preferenceService.getCanalesActivos(actorUserId, eventType);
           const channels: Record<string, boolean> = {
@@ -353,6 +367,10 @@ export class StudyGroupsController {
           return { eventType, label: labels[eventType] ?? eventType, channels };
         }),
       );
+
+      const preferences = results
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => (r as PromiseFulfilledResult<{ eventType: string; label: string; channels: Record<string, boolean> }>).value);
 
       sendJson(res, 200, { preferences: preferences ?? [] });
     } catch (error) {
@@ -616,13 +634,18 @@ export class StudyGroupsController {
           sendError(res, 400, error.message);
           return;
         }
+        // Criterio 5: Manejo específico para voto duplicado
+        if (msg.includes("ya has registrado") || msg.includes("ya registro")) {
+          sendError(res, 400, error.message);
+          return;
+        }
       }
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
   }
 
-  async leaveAdmin(
+  async leaveGroup(
     req: IncomingMessage,
     res: ServerResponse,
     requestId: string,
@@ -634,12 +657,12 @@ export class StudyGroupsController {
     }
 
     try {
-      await this.leaveAdminRole.execute({
+      await this.leaveStudyGroup.execute({
         requestId,
         actorUserId,
       });
 
-      sendData(res, 200, { message: "Salida de administracion registrada." });
+      sendData(res, 200, { message: "Salida del grupo registrada." });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -829,7 +852,7 @@ export class StudyGroupsController {
       const result = await this.updateAvailabilityUC.execute(
         sessionId,
         actorUserId,
-        "",
+        body.userName ?? "",
         body.status,
       );
       sendData(res, 200, result);
