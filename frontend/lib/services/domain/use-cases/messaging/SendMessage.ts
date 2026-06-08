@@ -41,8 +41,8 @@ export class SendMessage {
       throw new Error("Message content or image is required")
     }
 
-    if (content.length > 5000) {
-      throw new Error("Message content must be less than 5000 characters")
+    if (content.length > 1000) {
+      throw new Error("Message content must be less than 1000 characters")
     }
 
     if (mediaUrl.length > 2048) {

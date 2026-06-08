@@ -112,9 +112,9 @@ export function ChatInput({
   const hasValidationError = validationState?.error;
   const hasWarning = validationState?.warnings && validationState.warnings.length > 0;
   const charCount = value.length;
-  const isNearLimit = charCount > 4500;
+  const isNearLimit = charCount > 900;
 
-  const canSend = (value.trim().length > 0 || hasMedia) && !sending && !hasValidationError && !isBlocked;
+  const canSend = (value.trim().length > 0 || hasMedia) && !sending && !isBlocked;
   const canQuickAction = !sending && !pickingImage && !isBlocked;
 
   const formatRecordTime = (sec: number) => {
@@ -233,7 +233,6 @@ export function ChatInput({
             placeholder={isBlocked ? "Chat suspendido por spam..." : hasMedia ? "Agrega un comentario opcional..." : "Escribe un mensaje..."}
             placeholderTextColor={C.textPlaceholder}
             multiline
-            maxLength={5000}
             numberOfLines={4}
             editable={!isBlocked && !sending}
             style={[
@@ -246,7 +245,7 @@ export function ChatInput({
             blurOnSubmit={false}
           />
           <Text style={[styles.charCounter, { color: isNearLimit || hasValidationError ? (hasValidationError ? C.error : '#FFA500') : C.textSecondary }]}>
-            {charCount}/5000
+            {charCount}/1000
           </Text>
         </View>
 

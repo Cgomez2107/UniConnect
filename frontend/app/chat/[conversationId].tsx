@@ -104,17 +104,27 @@ export default function ChatScreen() {
   const userId = user?.id ?? "";
 
   const chatItems = useMemo<ChatListItem[]>(() => {
+    // Sort messages chronologically to ensure contiguous grouping and correct order
+    const sortedMessages = [...messages].sort((a, b) => {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : Date.now();
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : Date.now();
+      return timeA - timeB;
+    });
+
     const items: ChatListItem[] = [];
     let lastDayKey = "";
 
-    for (const msg of messages) {
-      const d = new Date(msg.created_at);
-      const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    for (const msg of sortedMessages) {
+      const createdTime = msg.created_at || new Date().toISOString();
+      const d = new Date(createdTime);
+      const validDate = isNaN(d.getTime()) ? new Date() : d;
+      const dayKey = `${validDate.getFullYear()}-${validDate.getMonth()}-${validDate.getDate()}`;
+
       if (dayKey !== lastDayKey) {
         items.push({
           type: "day",
-          id: `day-${dayKey}`,
-          label: formatDayLabel(msg.created_at),
+          id: `day-${dayKey}-${msg.id}`, // Incorporate message ID to guarantee uniqueness
+          label: formatDayLabel(validDate.toISOString()),
         });
         lastDayKey = dayKey;
       }
@@ -128,6 +138,7 @@ export default function ChatScreen() {
 
     return items;
   }, [messages]);
+
 
   useEffect(() => {
     if (!conversationIdValue) return;
@@ -188,7 +199,7 @@ export default function ChatScreen() {
 
   // Integrar validación
   const { validationState, validateMessage, clearValidation } = useMessageValidation({
-    maxLength: 5000,
+    maxLength: 1000,
     debounceMs: 300,
   });
 
@@ -205,18 +216,16 @@ export default function ChatScreen() {
     const currentText = chatInputProps.text.value;
     if (!currentText.trim()) return;
 
-    // Validar
-    await validateMessage(currentText);
-    
-    // Si hay error, no enviar
-    if (validationState.error) {
+    // Validar localmente (ej: longitud)
+    const state = await validateMessage(currentText);
+    if (!state.isValid) {
       return;
     }
 
-    // Enviar
+    // Enviar directamente para que el backend maneje la moderación
     chatInputProps.send.onSend();
     clearValidation();
-  }, [chatInputProps, validateMessage, validationState.error, clearValidation]);
+  }, [chatInputProps, validateMessage, clearValidation]);
 
   const displayName = otherUserName
     ? decodeURIComponent(otherUserName)

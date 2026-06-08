@@ -4,6 +4,8 @@ import type { ValidationMetadata } from "./IValidationHandler";
 const DEFAULT_FORBIDDEN_WORDS = [
   "spam", "violencia", "odio", "racismo",
   "discriminación", "pornografía", "drogas", "armas",
+  "idiota", "estupido", "insulto", "tonto",
+  "perra", "marica", "hp", "hpta", "puto", "puta",
 ];
 
 export class ContentValidator extends BaseValidator {

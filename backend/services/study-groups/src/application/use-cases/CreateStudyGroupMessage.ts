@@ -67,9 +67,9 @@ export class CreateStudyGroupMessage {
     });
 
     if (!validationResult.valido) {
-      if (validationResult.codigoError === "MO_003") {
-        console.warn("[CreateStudyGroupMessage] Spam detectado, lanzando ModerationError:", validationResult.mensajeError);
-        throw new ModerationError(validationResult.mensajeError ?? "Spam detectado", validationResult.codigoError);
+      if (validationResult.codigoError && validationResult.codigoError.startsWith("MO_")) {
+        console.warn(`[CreateStudyGroupMessage] Moderación falló (${validationResult.codigoError}), lanzando ModerationError:`, validationResult.mensajeError);
+        throw new ModerationError(validationResult.mensajeError ?? "Moderación falló", validationResult.codigoError);
       }
       throw new Error(validationResult.mensajeError ?? "Error de validación");
     }

@@ -1,7 +1,7 @@
 import { ApplicationError } from "./ApplicationError.js";
 
 export class ModerationError extends ApplicationError {
-  readonly statusCode = 429;
+  readonly statusCode: number;
 
   constructor(
     message: string,
@@ -9,6 +9,7 @@ export class ModerationError extends ApplicationError {
   ) {
     super(message, "ModerationError");
     Object.setPrototypeOf(this, ModerationError.prototype);
+    this.statusCode = code === "MO_003" ? 429 : 400;
   }
 
   toJSON() {

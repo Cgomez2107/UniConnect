@@ -5,6 +5,7 @@ export interface IModerationRepository {
   isUserBlocked(userId: string): Promise<boolean>;
   blockUser(userId: string, durationMinutes: number, reason: string): Promise<void>;
   recordMessageTimestamp(userId: string): Promise<number>;
+  getUserBlockExpiration?(userId: string): Promise<Date | null>;
 }
 
 export class SpamHandler extends MessageValidator {
@@ -19,12 +20,22 @@ export class SpamHandler extends MessageValidator {
     }
 
     // 1. Comprobar si el usuario ya está bloqueado
-    const isBlocked = await this.repo.isUserBlocked(senderId);
+    let isBlocked = false;
+    let blockUntil: Date | null = null;
+
+    if (typeof this.repo.getUserBlockExpiration === "function") {
+      blockUntil = await this.repo.getUserBlockExpiration(senderId);
+      isBlocked = !!blockUntil;
+    } else {
+      isBlocked = await this.repo.isUserBlocked(senderId);
+    }
+
     if (isBlocked) {
+      const remainingMs = blockUntil ? blockUntil.getTime() - Date.now() : 5 * 60 * 1000;
       return {
         valido: false,
         codigoError: "MO_003",
-        mensajeError: "Usuario bloqueado temporalmente por spam.",
+        mensajeError: `Usuario bloqueado temporalmente por spam. Restante: ${Math.max(0, remainingMs)}`,
       };
     }
 
@@ -37,10 +48,11 @@ export class SpamHandler extends MessageValidator {
       return {
         valido: false,
         codigoError: "MO_003",
-        mensajeError: "Spam detectado. Usuario bloqueado automáticamente por 5 minutos.",
+        mensajeError: `Spam detectado. Usuario bloqueado automáticamente por 5 minutos. Restante: ${5 * 60 * 1000}`,
       };
     }
 
     return { valido: true };
   }
 }
+

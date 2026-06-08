@@ -118,6 +118,7 @@ export function useGoogleAuth() {
 
 		try {
 			const redirectUrl = getOAuthRedirectUrl()
+			console.log("[GoogleAuth] Redirect URL generada para Supabase:", redirectUrl)
 			const useCase = container.getGetOAuthSignInUrl()
 			const authUrl = await useCase.execute({
 				provider: "google",

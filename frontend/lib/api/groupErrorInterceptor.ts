@@ -28,7 +28,7 @@ const STATE_ERROR_PATTERNS: [RegExp, string][] = [
   [/no estás matriculado/i,
    "No estás matriculado en esta materia."],
   [/MO_001/i,
-   "Tu mensaje supera el límite permitido de caracteres (5000)."],
+   "Tu mensaje supera el límite permitido de caracteres (1000)."],
   [/MO_002/i,
    "Tu mensaje contiene palabras que infringen las normas de la comunidad."],
   [/MO_003/i,
@@ -58,27 +58,36 @@ function extractMessage(error: unknown): string | null {
   if (error && typeof error === "object") {
     const obj = error as Record<string, unknown>;
 
+    let prefix = "";
+    if (obj.code && typeof obj.code === "string") {
+      prefix = `${obj.code}: `;
+    }
+
     if ("response" in obj && obj.response) {
       const resp = obj.response as Record<string, unknown>;
       const data = resp.data as Record<string, unknown> | undefined;
 
+      if (data?.code && typeof data.code === "string") {
+        prefix = `${data.code}: `;
+      }
+
       if (data?.error && typeof data.error === "string") {
-        return data.error;
+        return prefix + data.error;
       }
       if (data?.message && typeof data.message === "string") {
-        return data.message;
+        return prefix + data.message;
       }
       if (resp.data && typeof resp.data === "string") {
-        return resp.data;
+        return prefix + resp.data;
       }
-    }
-
-    if ("message" in obj && typeof obj.message === "string") {
-      return obj.message;
     }
 
     if ("error" in obj && typeof obj.error === "string") {
-      return obj.error;
+      return prefix + obj.error;
+    }
+
+    if ("message" in obj && typeof obj.message === "string") {
+      return prefix + obj.message;
     }
   }
 

@@ -1219,12 +1219,6 @@
                   },
                   "category": {
                     "type": "string",
-                    "enum": [
-                      "academico",
-                      "cultural",
-                      "deportivo",
-                      "otro"
-                    ],
                     "default": "academico"
                   },
                   "capacity": {
@@ -1292,13 +1286,7 @@
                           "maxLength": 200
                         },
                         "category": {
-                          "type": "string",
-                          "enum": [
-                            "academico",
-                            "cultural",
-                            "deportivo",
-                            "otro"
-                          ]
+                          "type": "string"
                         },
                         "creatorId": {
                           "$ref": "#/properties/event/properties/id"

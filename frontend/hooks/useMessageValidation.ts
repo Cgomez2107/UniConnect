@@ -20,8 +20,8 @@ interface UseMessageValidationOptions {
  * Máximos y límites de validación (deben coincidir con backend)
  */
 const VALIDATION_LIMITS = {
-  MAX_MESSAGE_LENGTH: 5000,
-  WARN_LENGTH_THRESHOLD: 4500,
+  MAX_MESSAGE_LENGTH: 1000,
+  WARN_LENGTH_THRESHOLD: 900,
   FILENAME_MAX_LENGTH: 200,
   FILE_MAX_SIZE_MB: 10,
 };
@@ -38,6 +38,16 @@ const FORBIDDEN_WORDS = [
   "pornografía",
   "drogas",
   "armas",
+  "idiota",
+  "estupido",
+  "insulto",
+  "tonto",
+  "perra",
+  "marica",
+  "hp",
+  "hpta",
+  "puto",
+  "puta",
 ];
 
 const FORBIDDEN_WORDS_REGEX = FORBIDDEN_WORDS.map(
@@ -160,9 +170,7 @@ function performBasicValidation(
       isValid: false,
       error: {
         code: ValidationErrorCode.MESSAGE_TOO_LONG,
-        message: ValidationErrorMessages[
-          ValidationErrorCode.MESSAGE_TOO_LONG
-        ],
+        message: "El mensaje es demasiado largo. Máximo 1000 caracteres.",
         details: {
           maxLength,
           currentLength: trimmed.length,
@@ -182,17 +190,7 @@ function performBasicValidation(
     });
   }
 
-  if (isForbiddenContent(trimmed)) {
-    return {
-      isValidating: false,
-      isValid: false,
-      error: {
-        code: ValidationErrorCode.BANNED_CONTENT,
-        message: ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT],
-      },
-      suggestions: [],
-    };
-  }
+  // Client-side forbidden content check is disabled to rely exclusively on the backend moderation pipeline.
 
   return {
     isValidating: false,

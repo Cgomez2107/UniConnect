@@ -540,18 +540,24 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
   }
 
   async isUserBlocked(userId: string): Promise<boolean> {
+    const expiration = await this.getUserBlockExpiration(userId);
+    return !!expiration;
+  }
+
+  async getUserBlockExpiration(userId: string): Promise<Date | null> {
     const block = this.blockedUsers.get(userId);
     if (!block) {
-      return false;
+      return null;
     }
 
     if (new Date() < block.until) {
-      return true;
+      return block.until;
     }
 
     this.blockedUsers.delete(userId);
-    return false;
+    return null;
   }
+
 
   async blockUser(userId: string, durationMinutes: number, reason: string): Promise<void> {
     const until = new Date(Date.now() + durationMinutes * 60000);

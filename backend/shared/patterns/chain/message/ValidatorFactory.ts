@@ -72,5 +72,5 @@ export function resolveForbiddenWords(explicit?: string[]): string[] {
       .filter((word) => word.length > 0);
   }
 
-  return ["violencia", "spam"];
+  return ["violencia", "spam", "odio", "racismo", "discriminación", "pornografía", "drogas", "armas", "idiota", "estupido", "insulto", "tonto", "perra", "marica", "hp", "hpta", "puto", "puta"];
 }

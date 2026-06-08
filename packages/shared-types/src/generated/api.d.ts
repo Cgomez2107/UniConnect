@@ -4099,8 +4099,7 @@ export interface components {
         Post_events_RequestBody: {
             title: string;
             description?: string;
-            /** @enum {string} */
-            category: "academico" | "cultural" | "deportivo" | "otro";
+            category: string;
             /** Format: date-time */
             eventDate: string;
             /** Format: date-time */
@@ -4198,8 +4197,7 @@ export interface components {
             };
         };
         Post_eventos_suscribir_RequestBody: {
-            /** @enum {string} */
-            categoria: "academico" | "cultural" | "deportivo" | "otro";
+            categoria: string;
         };
         Post_eventos_suscribir_201Response: {
             data: {
@@ -4214,8 +4212,7 @@ export interface components {
             };
         };
         Delete_eventos_suscribir_RequestBody: {
-            /** @enum {string} */
-            categoria: "academico" | "cultural" | "deportivo" | "otro";
+            categoria: string;
         };
         Delete_eventos_suscribir_200Response: {
             data: {

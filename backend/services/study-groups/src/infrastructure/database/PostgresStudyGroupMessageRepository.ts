@@ -245,13 +245,18 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
   }
 
   async isUserBlocked(userId: string): Promise<boolean> {
+    const expiration = await this.getUserBlockExpiration(userId);
+    return !!expiration;
+  }
+
+  async getUserBlockExpiration(userId: string): Promise<Date | null> {
     const result = await this.pool.query<{ blocked_until: Date }>(
       `SELECT blocked_until FROM study_group_moderation_blocks WHERE user_id = $1`,
       [userId],
     );
 
     if (!result.rows[0]) {
-      return false;
+      return null;
     }
 
     const blockedUntil = new Date(result.rows[0].blocked_until);
@@ -260,11 +265,12 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
         `DELETE FROM study_group_moderation_blocks WHERE user_id = $1`,
         [userId],
       );
-      return false;
+      return null;
     }
 
-    return true;
+    return blockedUntil;
   }
+
 
   async blockUser(userId: string, durationMinutes: number, reason: string): Promise<void> {
     const until = new Date(Date.now() + durationMinutes * 60000);

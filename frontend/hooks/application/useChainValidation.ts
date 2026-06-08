@@ -10,7 +10,7 @@ interface UseChainValidationOptions {
 }
 
 const DEFAULT_OPTIONS: UseChainValidationOptions = {
-  maxLength: 5000,
+  maxLength: 1000,
   maxMentions: 10,
   debounceMs: 300,
 };

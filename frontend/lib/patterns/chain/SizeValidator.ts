@@ -2,7 +2,7 @@ import { BaseValidator } from "./BaseValidator";
 import type { ValidationMetadata } from "./IValidationHandler";
 
 export class SizeValidator extends BaseValidator {
-  constructor(private readonly maxLength: number = 5000) {
+  constructor(private readonly maxLength: number = 1000) {
     super();
   }
 

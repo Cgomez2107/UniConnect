@@ -32,4 +32,5 @@ export interface IStudyGroupMessageRepository {
   isUserBlocked(userId: string): Promise<boolean>;
   blockUser(userId: string, durationMinutes: number, reason: string): Promise<void>;
   recordMessageTimestamp(userId: string): Promise<number>;
+  getUserBlockExpiration?(userId: string): Promise<Date | null>;
 }

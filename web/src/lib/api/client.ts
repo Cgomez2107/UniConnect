@@ -239,8 +239,19 @@ apiClient.interceptors.response.use(
       console.log("[API Client] Checking for spam block:", status === 429, rawErrorStr.includes("MO_003"));
 
       if (status === 429 || rawErrorStr.includes("MO_003")) {
-        console.log("[API Client] Activando bloqueo de spam por 5 minutos");
-        useSpamStore.getState().setBlocked(5 * 60 * 1000);
+        let remainingMs = 5 * 60 * 1000;
+        const errData = error.response?.data as any;
+        const errorMsg = typeof errData?.error === "string" && errData.error.includes("Restante") ? errData.error :
+                         typeof errData?.message === "string" && errData.message.includes("Restante") ? errData.message :
+                         typeof errData?.details === "string" && errData.details.includes("Restante") ? errData.details :
+                         (typeof errData?.error === "string" ? errData.error : 
+                          typeof errData?.message === "string" ? errData.message : "");
+        const match = errorMsg.match(/Restante:\s*(\d+)/i);
+        if (match) {
+          remainingMs = parseInt(match[1], 10);
+        }
+        console.log("[API Client] Activando bloqueo de spam por:", remainingMs, "ms");
+        useSpamStore.getState().setBlocked(remainingMs);
       }
 
       // Deduplicación de Toast

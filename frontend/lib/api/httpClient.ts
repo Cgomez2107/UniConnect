@@ -114,9 +114,21 @@ export async function fetchApi<T>(
 
         const status = response.status;
         if ([400, 403, 409, 422, 429].includes(status)) {
-            const friendly = parseGroupError(rawMessage);
-            if (status === 429 || rawMessage.includes("MO_003")) {
-                useSpamStore.getState().setBlocked(5 * 60 * 1000);
+            const friendly = parseGroupError(parsed || rawMessage);
+            const rawErrorStr = JSON.stringify(parsed || "");
+            const hasMo003 = rawErrorStr.includes("MO_003") || status === 429;
+            if (hasMo003) {
+                let remainingMs = 5 * 60 * 1000;
+                const errorMsg = typeof parsed?.error === "string" && parsed.error.includes("Restante") ? parsed.error :
+                                 typeof parsed?.message === "string" && parsed.message.includes("Restante") ? parsed.message :
+                                 typeof parsed?.details === "string" && parsed.details.includes("Restante") ? parsed.details :
+                                 (typeof parsed?.error === "string" ? parsed.error : 
+                                  typeof parsed?.message === "string" ? parsed.message : "");
+                const match = errorMsg.match(/Restante:\s*(\d+)/i);
+                if (match) {
+                    remainingMs = parseInt(match[1], 10);
+                }
+                useSpamStore.getState().setBlocked(remainingMs);
             }
             showToastBridge(friendly, "error");
             throw new Error(friendly);

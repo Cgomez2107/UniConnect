@@ -91,9 +91,20 @@ transport.setOnError((error) => {
   console.log("[deps] Error callback invoked:", error);
   if (error.status === 429) {
     const data = error.data as any;
-    if (data?.code === "MO_003") {
-      console.log("[deps] Spam detected (MO_003), activating block for 5 minutes");
-      useSpamStore.getState().setBlocked(5 * 60 * 1000);
+    const rawStr = JSON.stringify(data || "");
+    if (rawStr.includes("MO_003")) {
+      let remainingMs = 5 * 60 * 1000;
+      const errorMsg = typeof data?.error === "string" && data.error.includes("Restante") ? data.error :
+                       typeof data?.message === "string" && data.message.includes("Restante") ? data.message :
+                       typeof data?.details === "string" && data.details.includes("Restante") ? data.details :
+                       (typeof data?.error === "string" ? data.error : 
+                        typeof data?.message === "string" ? data.message : "");
+      const match = errorMsg.match(/Restante:\s*(\d+)/i);
+      if (match) {
+        remainingMs = parseInt(match[1], 10);
+      }
+      console.log("[deps] Spam detected (MO_003), activating block for:", remainingMs, "ms");
+      useSpamStore.getState().setBlocked(remainingMs);
     }
   }
 });
