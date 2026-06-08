@@ -180,6 +180,7 @@ function parseJsonColumn<T>(raw: unknown): T {
 export class PostgresMessagingRepository implements IMessagingRepository {
   private readonly messageTimestamps = new Map<string, Date[]>();
   private readonly blockedUsers = new Map<string, { until: Date; reason: string }>();
+  private readonly blockHistory: { userId: string; reason: string; timestamp: Date }[] = [];
 
   constructor(private readonly pool: Pool) {}
 
@@ -855,5 +856,14 @@ export class PostgresMessagingRepository implements IMessagingRepository {
 
     this.messageTimestamps.set(userId, recentTimestamps);
     return recentTimestamps.length;
+  }
+
+  async recordBlockEvent(userId: string, reason: string): Promise<void> {
+    this.blockHistory.push({ userId, reason, timestamp: new Date() });
+  }
+
+  async countBlocksInLastHour(userId: string): Promise<number> {
+    const limitTime = new Date(Date.now() - 60 * 60 * 1000);
+    return this.blockHistory.filter((item) => item.userId === userId && item.timestamp >= limitTime).length;
   }
 }

@@ -12,6 +12,7 @@ export enum ValidationErrorCode {
   FORBIDDEN_WORDS = "FORBIDDEN_WORDS",
   BANNED_CONTENT = "BANNED_CONTENT",
   SPAM_DETECTED = "SPAM_DETECTED",
+  ESCALATED_TO_ADMIN = "ESCALATED_TO_ADMIN",
 
   // Media validation errors
   UNSUPPORTED_FILE_TYPE = "UNSUPPORTED_FILE_TYPE",
@@ -48,6 +49,8 @@ export const ValidationErrorMessages: Record<ValidationErrorCode, string> = {
     "El contenido de tu mensaje no está permitido en este chat.",
   [ValidationErrorCode.SPAM_DETECTED]:
     "Se detectó comportamiento sospechoso. Intenta más tarde.",
+  [ValidationErrorCode.ESCALATED_TO_ADMIN]:
+    "Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana.",
 
   [ValidationErrorCode.UNSUPPORTED_FILE_TYPE]:
     "Este tipo de archivo no está soportado. Intenta con imágenes, PDFs o documentos.",

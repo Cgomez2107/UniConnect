@@ -92,6 +92,8 @@ function toApiMessage(message: Message) {
   };
 }
 
+import { NotificationService } from "../../../../../../shared/patterns/strategy/NotificationService.js";
+
 export class MessagingController {
   constructor(
     private readonly getConversationsUseCase: GetConversations,
@@ -106,6 +108,8 @@ export class MessagingController {
     private readonly markConversationAsReadUseCase: MarkConversationAsRead,
     private readonly toggleReactionUseCase: ToggleReaction,
     private readonly voteInPollUseCase: VoteInPoll,
+    private readonly notificationService?: NotificationService,
+    private readonly getAdminUserIds?: () => Promise<string[]>,
   ) {}
 
   async listConversations(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -246,8 +250,9 @@ export class MessagingController {
   }
 
   async createMessage(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    let actorUserId: string | null = null;
     try {
-      const actorUserId = getActorUserId(req);
+      actorUserId = getActorUserId(req);
       if (!actorUserId) {
         sendError(res, 401, "Token de autenticacion requerido.");
         return;
@@ -281,6 +286,20 @@ export class MessagingController {
         return;
       }
       if (error instanceof ModerationError) {
+        if (error.code === "MO_004" && this.notificationService && this.getAdminUserIds) {
+          this.getAdminUserIds().then((adminIds) => {
+            for (const adminId of adminIds) {
+              this.notificationService!.notificar({
+                userId: adminId,
+                type: "moderation_escalation",
+                title: "Escalación de Moderación Reincidente",
+                body: `El usuario ${actorUserId} ha alcanzado el límite de 3 bloqueos en 1 hora por spam y su caso ha sido escalado.`,
+                payload: { userId: actorUserId, reason: "Spam block limit reached" },
+                priority: "critica",
+              }).catch((e) => console.error("[MessagingController] Failed to notify admin:", e));
+            }
+          }).catch((e) => console.error("[MessagingController] Failed to resolve admin IDs:", e));
+        }
         sendJson(res, error.statusCode, { error: error.message, code: error.code, name: error.name });
         return;
       }

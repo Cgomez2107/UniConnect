@@ -5,6 +5,7 @@ export class InMemoryStudyGroupMessageRepository implements IStudyGroupMessageRe
   private readonly messages: StudyGroupMessage[] = [];
   private readonly blockedUsers = new Map<string, { until: Date; reason: string }>();
   private readonly messageTimestamps = new Map<string, Date[]>();
+  private readonly blockHistory: { userId: string; reason: string; timestamp: Date }[] = [];
 
   async listByRequest(input: {
     requestId: string;
@@ -164,5 +165,14 @@ export class InMemoryStudyGroupMessageRepository implements IStudyGroupMessageRe
     this.messageTimestamps.set(userId, timestamps);
 
     return timestamps.length;
+  }
+
+  async recordBlockEvent(userId: string, reason: string): Promise<void> {
+    this.blockHistory.push({ userId, reason, timestamp: new Date() });
+  }
+
+  async countBlocksInLastHour(userId: string): Promise<number> {
+    const limitTime = new Date(Date.now() - 60 * 60 * 1000);
+    return this.blockHistory.filter((item) => item.userId === userId && item.timestamp >= limitTime).length;
   }
 }

@@ -33,4 +33,6 @@ export interface IStudyGroupMessageRepository {
   blockUser(userId: string, durationMinutes: number, reason: string): Promise<void>;
   recordMessageTimestamp(userId: string): Promise<number>;
   getUserBlockExpiration?(userId: string): Promise<Date | null>;
+  recordBlockEvent(userId: string, reason: string): Promise<void>;
+  countBlocksInLastHour(userId: string): Promise<number>;
 }

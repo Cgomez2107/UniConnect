@@ -52,6 +52,7 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
   private readonly pollVotes = new Map<string, StoredPollVote>();
   private readonly messageTimestamps = new Map<string, Date[]>();
   private readonly blockedUsers = new Map<string, { until: Date; reason: string }>();
+  private readonly blockHistory: { userId: string; reason: string; timestamp: Date }[] = [];
 
   async getConversationById(id: string, currentUserId: string): Promise<ConversationSummary | null> {
     const conversation = this.conversations.get(id);
@@ -575,5 +576,14 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
 
     this.messageTimestamps.set(userId, recentTimestamps);
     return recentTimestamps.length;
+  }
+
+  async recordBlockEvent(userId: string, reason: string): Promise<void> {
+    this.blockHistory.push({ userId, reason, timestamp: new Date() });
+  }
+
+  async countBlocksInLastHour(userId: string): Promise<number> {
+    const limitTime = new Date(Date.now() - 60 * 60 * 1000);
+    return this.blockHistory.filter((item) => item.userId === userId && item.timestamp >= limitTime).length;
   }
 }

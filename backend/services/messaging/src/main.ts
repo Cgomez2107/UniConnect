@@ -245,6 +245,19 @@ function bootstrap(): void {
     markConversationAsRead,
     toggleReaction,
     voteInPoll,
+    notificationService,
+    async (): Promise<string[]> => {
+      if (!pool) return [];
+      try {
+        const result = await pool.query(
+          "SELECT id FROM profiles WHERE role = 'admin'"
+        );
+        return result.rows.map((r) => r.id);
+      } catch (error) {
+        console.error("[getAdminUserIds] Failed to fetch admins:", error);
+        return [];
+      }
+    },
   );
 
 	const server = createServer((req, res) => {

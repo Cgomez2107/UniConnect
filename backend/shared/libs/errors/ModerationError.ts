@@ -9,7 +9,7 @@ export class ModerationError extends ApplicationError {
   ) {
     super(message, "ModerationError");
     Object.setPrototypeOf(this, ModerationError.prototype);
-    this.statusCode = code === "MO_003" ? 429 : 400;
+    this.statusCode = (code === "MO_003" || code === "MO_004") ? 429 : 400;
   }
 
   toJSON() {

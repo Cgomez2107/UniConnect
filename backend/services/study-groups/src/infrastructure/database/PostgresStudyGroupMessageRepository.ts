@@ -53,6 +53,15 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
       `);
 
       await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS study_group_moderation_blocks_history (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          reason TEXT NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await this.pool.query(`
         CREATE TABLE IF NOT EXISTS study_group_message_timestamps (
           user_id TEXT NOT NULL,
           timestamp TIMESTAMP NOT NULL,
@@ -302,6 +311,23 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
       [userId],
     );
 
+    return parseInt(result.rows[0].count, 10);
+  }
+
+  async recordBlockEvent(userId: string, reason: string): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO study_group_moderation_blocks_history (user_id, reason) VALUES ($1, $2)`,
+      [userId, reason],
+    );
+  }
+
+  async countBlocksInLastHour(userId: string): Promise<number> {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const result = await this.pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM study_group_moderation_blocks_history 
+       WHERE user_id = $1 AND created_at >= $2`,
+      [userId, oneHourAgo],
+    );
     return parseInt(result.rows[0].count, 10);
   }
 }

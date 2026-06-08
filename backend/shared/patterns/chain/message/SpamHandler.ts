@@ -6,6 +6,8 @@ export interface IModerationRepository {
   blockUser(userId: string, durationMinutes: number, reason: string): Promise<void>;
   recordMessageTimestamp(userId: string): Promise<number>;
   getUserBlockExpiration?(userId: string): Promise<Date | null>;
+  recordBlockEvent(userId: string, reason: string): Promise<void>;
+  countBlocksInLastHour(userId: string): Promise<number>;
 }
 
 export class SpamHandler extends MessageValidator {
@@ -32,6 +34,14 @@ export class SpamHandler extends MessageValidator {
 
     if (isBlocked) {
       const remainingMs = blockUntil ? blockUntil.getTime() - Date.now() : 5 * 60 * 1000;
+      const blockCount = await this.repo.countBlocksInLastHour(senderId);
+      if (blockCount >= 3) {
+        return {
+          valido: false,
+          codigoError: "MO_004",
+          mensajeError: `Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana. Restante: ${Math.max(0, remainingMs)}`,
+        };
+      }
       return {
         valido: false,
         codigoError: "MO_003",
@@ -45,6 +55,15 @@ export class SpamHandler extends MessageValidator {
     // 3. Criterio de rechazo y bloqueo automático
     if (count > 5) {
       await this.repo.blockUser(senderId, 5, "Spam detectado: Envío masivo en 30s");
+      await this.repo.recordBlockEvent(senderId, "Spam detectado: Envío masivo en 30s");
+      const blockCount = await this.repo.countBlocksInLastHour(senderId);
+      if (blockCount >= 3) {
+        return {
+          valido: false,
+          codigoError: "MO_004",
+          mensajeError: `Spam detectado. Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana. Restante: ${5 * 60 * 1000}`,
+        };
+      }
       return {
         valido: false,
         codigoError: "MO_003",

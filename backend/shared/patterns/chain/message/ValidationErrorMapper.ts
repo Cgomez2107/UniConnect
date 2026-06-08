@@ -11,6 +11,7 @@ export class ValidationErrorMapper {
     MO_001: ValidationErrorCode.MESSAGE_TOO_LONG,
     MO_002: ValidationErrorCode.BANNED_CONTENT,
     MO_003: ValidationErrorCode.SPAM_DETECTED,
+    MO_004: ValidationErrorCode.ESCALATED_TO_ADMIN,
   };
 
   static fromCodigoError(codigoError: string, mensajeError: string) {
@@ -64,6 +65,9 @@ export class ValidationErrorMapper {
     }
     if (message.includes("spam")) {
       return ValidationErrorCode.SPAM_DETECTED;
+    }
+    if (message.includes("escalado") || message.includes("escalated") || message.includes("revisión humana")) {
+      return ValidationErrorCode.ESCALATED_TO_ADMIN;
     }
 
     return ValidationErrorCode.UNKNOWN_ERROR;
@@ -150,7 +154,7 @@ export class ValidationErrorMapper {
       return 404;
     }
 
-    if (code === ValidationErrorCode.SPAM_DETECTED) {
+    if (code === ValidationErrorCode.SPAM_DETECTED || code === ValidationErrorCode.ESCALATED_TO_ADMIN) {
       return 429;
     }
 

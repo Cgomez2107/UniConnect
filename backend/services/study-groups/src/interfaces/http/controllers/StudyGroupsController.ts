@@ -96,6 +96,8 @@ export class StudyGroupsController {
     private readonly cancelStudySessionUC: CancelStudySession,
     private readonly updateAvailabilityUC: UpdateAvailability,
     private readonly listSessionsByGroupUC: ListSessionsByGroup,
+    private readonly notificationService?: import("../../../../../../shared/patterns/strategy/NotificationService.js").NotificationService,
+    private readonly getAdminUserIds?: () => Promise<string[]>,
   ) { }
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -265,6 +267,20 @@ export class StudyGroupsController {
       sendData(res, 201, created);
     } catch (error) {
       if (error instanceof ModerationError) {
+        if (error.code === "MO_004" && this.notificationService && this.getAdminUserIds) {
+          this.getAdminUserIds().then((adminIds) => {
+            for (const adminId of adminIds) {
+              this.notificationService!.notificar({
+                userId: adminId,
+                type: "moderation_escalation",
+                title: "Escalación de Moderación Reincidente",
+                body: `El usuario ${actorUserId} ha alcanzado el límite de 3 bloqueos en 1 hora por spam y su caso ha sido escalado.`,
+                payload: { userId: actorUserId, reason: "Spam block limit reached" },
+                priority: "critica",
+              }).catch((e) => console.error("[StudyGroupsController] Failed to notify admin:", e));
+            }
+          }).catch((e) => console.error("[StudyGroupsController] Failed to resolve admin IDs:", e));
+        }
         sendJson(res, error.statusCode, { error: error.message, code: error.code, name: error.name });
         return;
       }
