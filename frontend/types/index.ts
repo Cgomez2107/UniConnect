@@ -392,7 +392,22 @@ export interface AdminMetrics {
 // Eventos del campus
 
 
-export type EventCategory = "academico" | "cultural" | "deportivo" | "otro";
+export type EventCategory = string;
+
+/** Fila de la tabla event_categories (DB) */
+export interface EventCategoryRow {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  created_at: string;
+}
+
+/** Payload para crear categoria */
+export interface CreateEventCategoryPayload {
+  name: string;
+  description?: string;
+}
 
 /** Evento del campus (vista estudiante y admin) */
 export interface CampusEvent {
@@ -402,6 +417,7 @@ export interface CampusEvent {
   event_date: string;       // ISO 8601
   location: string | null;
   category: EventCategory;
+  category_id: string;
   image_url: string | null;
   created_by: string | null;
   created_at: string;
@@ -417,6 +433,7 @@ export interface CreateEventPayload {
   event_date: string;
   location?: string;
   category: EventCategory;
+  category_id?: string;
   image_url?: string;
 }
 
@@ -427,6 +444,7 @@ export interface AdminEvent {
   event_date: string;
   location: string | null;
   category: EventCategory;
+  category_id: string;
   created_at: string;
   creator_name: string;
 }

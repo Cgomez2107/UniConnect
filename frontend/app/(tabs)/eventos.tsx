@@ -3,11 +3,12 @@
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
+import { useEventCategories } from "@/hooks/useEventCategories"
 import { useEventObserver } from "@/hooks/application/useEventObserver"
 import { useEvents, type EventFilter } from "@/hooks/application/useEvents"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import type { CampusEvent, EventCategory } from "@/types"
+import type { CampusEvent, EventCategoryRow } from "@/types"
 import { router } from "expo-router"
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -25,30 +26,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 const SUBSCRIPTIONS_KEY = "uniconnect-event-subscriptions"
 
-function loadSubscriptions(): string[] {
-  // Se carga async en useEffect, arrancamos con vacío
-  return []
-}
-
-// Constantes de categoría
-
-const CATEGORY_ICON: Record<EventCategory, keyof typeof Ionicons.glyphMap> = {
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   academico: "school-outline",
   cultural: "color-palette-outline",
   deportivo: "football-outline",
   otro: "bookmark-outline",
 }
-const CATEGORY_COLOR: Record<EventCategory, string> = { academico: "#2563eb", cultural: "#a855f7", deportivo: "#22c55e", otro: "#f59e0b" }
-const CATEGORY_LABEL: Record<EventCategory, string> = { academico: "Académico", cultural: "Cultural", deportivo: "Deportivo", otro: "Otro" }
+const CATEGORY_COLORS: Record<string, string> = { academico: "#2563eb", cultural: "#a855f7", deportivo: "#22c55e", otro: "#f59e0b" }
+const CATEGORY_LABELS: Record<string, string> = { academico: "Académico", cultural: "Cultural", deportivo: "Deportivo", otro: "Otro" }
 
-const FILTERS: { key: EventFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: "todos", label: "Todos", icon: "apps-outline" },
-  { key: "academico", label: "Académico", icon: "school-outline" },
-  { key: "cultural", label: "Cultural", icon: "color-palette-outline" },
-  { key: "deportivo", label: "Deportivo", icon: "football-outline" },
-  { key: "otro", label: "Otro", icon: "bookmark-outline" },
-  { key: "pasados", label: "Pasados", icon: "time-outline" },
-]
+function categoryIcon(slug: string): keyof typeof Ionicons.glyphMap {
+  return CATEGORY_ICONS[slug] ?? "bookmark-outline"
+}
+function categoryColor(slug: string): string {
+  return CATEGORY_COLORS[slug] ?? "#6b7280"
+}
+function categoryLabel(slug: string): string {
+  return CATEGORY_LABELS[slug] ?? (slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "))
+}
 
 // Tarjeta de evento
 
@@ -67,7 +62,7 @@ const EventCard = memo(function EventCard({ item, C, onOpen }: { item: CampusEve
   const day       = date.toLocaleDateString("es-CO", { day: "2-digit" })
   const month     = date.toLocaleDateString("es-CO", { month: "short" }).toUpperCase()
   const time      = date.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })
-  const catColor  = CATEGORY_COLOR[item.category] ?? C.primary
+  const catColor  = categoryColor(item.category)
 
   const handleOpen = useCallback(() => {
     onOpen(item.id)
@@ -90,9 +85,9 @@ const EventCard = memo(function EventCard({ item, C, onOpen }: { item: CampusEve
         <View style={styles.cardBody}>
           <View style={[styles.categoryBadge, { backgroundColor: catColor + "18" }]}>
             <View style={styles.categoryInline}>
-              <Ionicons name={CATEGORY_ICON[item.category]} size={13} color={catColor} />
+              <Ionicons name={categoryIcon(item.category)} size={13} color={catColor} />
               <Text style={[styles.categoryText, { color: catColor }]}>
-                {CATEGORY_LABEL[item.category]}
+                {categoryLabel(item.category)}
               </Text>
             </View>
           </View>
@@ -129,6 +124,23 @@ export default function EventosScreen() {
   const insets = useSafeAreaInsets()
 
   const { filteredEvents, isLoading, isRefreshing, activeFilter, setActiveFilter, refresh } = useEvents()
+  const { categories: dbCategories } = useEventCategories()
+
+  // Build dynamic filters from DB categories + "todos" + "pasados"
+  const filters = useMemo(() => {
+    const staticFilters: { key: EventFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+      { key: "todos", label: "Todos", icon: "apps-outline" },
+    ]
+    for (const cat of dbCategories) {
+      staticFilters.push({
+        key: cat.id as EventFilter,
+        label: cat.name,
+        icon: categoryIcon(cat.slug),
+      })
+    }
+    staticFilters.push({ key: "pasados", label: "Pasados", icon: "time-outline" })
+    return staticFilters
+  }, [dbCategories])
 
   // ── Suscripciones a categorías (persistidas localmente) ──────────
   const [subscribedCategories, setSubscribedCategories] = useState<string[]>([])
@@ -150,11 +162,11 @@ export default function EventosScreen() {
   }, [])
 
   const toggleSubscription = useCallback(
-    (category: string) => {
+    (categoryId: string) => {
       persistSubscriptions(
-        subscribedCategories.includes(category)
-          ? subscribedCategories.filter((c) => c !== category)
-          : [...subscribedCategories, category],
+        subscribedCategories.includes(categoryId)
+          ? subscribedCategories.filter((c) => c !== categoryId)
+          : [...subscribedCategories, categoryId],
       )
     },
     [subscribedCategories, persistSubscriptions],
@@ -192,8 +204,9 @@ export default function EventosScreen() {
       return "No se han registrado eventos en el pasado."
     }
 
-    return `No hay eventos de tipo "${CATEGORY_LABEL[activeFilter as EventCategory] ?? activeFilter}".`
-  }, [activeFilter])
+    const catName = dbCategories.find((c) => c.id === activeFilter)?.name ?? categoryLabel(activeFilter)
+    return `No hay eventos de tipo "${catName}".`
+  }, [activeFilter, dbCategories])
 
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
@@ -214,7 +227,7 @@ export default function EventosScreen() {
           contentContainerStyle={styles.filtersRow}
           bounces={false}
         >
-          {FILTERS.map((f) => {
+          {filters.map((f) => {
             const active = activeFilter === f.key
             return (
               <TouchableOpacity

@@ -1,29 +1,36 @@
 import { Colors } from "@/constants/Colors";
-import type { AdminEvent, EventCategory } from "@/types";
+import type { AdminEvent } from "@/types";
 import * as Haptics from "expo-haptics";
 import { Animated, Text, TouchableOpacity, View } from "react-native";
 import { getTimeAgo, styles, useEntryAnim } from "./shared";
 
-const CATEGORY_ICON: Record<EventCategory, string> = {
+const CATEGORY_ICONS: Record<string, string> = {
   academico: "🎓",
   cultural: "🎭",
   deportivo: "⚽",
   otro: "📌",
 };
 
-const CATEGORY_COLOR: Record<EventCategory, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   academico: "#2563eb",
   cultural: "#a855f7",
   deportivo: "#22c55e",
   otro: "#f59e0b",
 };
 
-const CATEGORY_LABEL: Record<EventCategory, string> = {
-  academico: "Académico",
-  cultural: "Cultural",
-  deportivo: "Deportivo",
-  otro: "Otro",
-};
+const FALLBACK_ICONS = ["📅", "🎯", "📚", "💡", "🎪", "🏆", "🔬", "🎨"];
+
+function categoryIcon(slug: string, index?: number): string {
+  return CATEGORY_ICONS[slug] ?? FALLBACK_ICONS[(index ?? 0) % FALLBACK_ICONS.length] ?? "📅";
+}
+
+function categoryColor(slug: string): string {
+  return CATEGORY_COLORS[slug] ?? "#6b7280";
+}
+
+function categoryLabel(slug: string): string {
+  return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
+}
 
 function formatEventDate(iso: string): string {
   const d = new Date(iso);
@@ -45,13 +52,13 @@ interface EventRowProps {
 
 export function EventRow({ item, onEdit, onDelete, C }: EventRowProps) {
   const { fadeAnim, slideAnim } = useEntryAnim();
-  const catColor = CATEGORY_COLOR[item.category] ?? C.textSecondary;
+  const catColor = categoryColor(item.category);
 
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       <View style={[styles.row, { backgroundColor: C.surface, borderColor: C.border, alignItems: "flex-start" }]}>
         <View style={[styles.fileBox, { backgroundColor: catColor + "18" }]}>
-          <Text style={{ fontSize: 22 }}>{CATEGORY_ICON[item.category] ?? "📅"}</Text>
+          <Text style={{ fontSize: 22 }}>{categoryIcon(item.category)}</Text>
         </View>
 
         <View style={styles.info}>
@@ -72,7 +79,7 @@ export function EventRow({ item, onEdit, onDelete, C }: EventRowProps) {
 
           <View style={[styles.tagsRow, { marginTop: 6 }]}> 
             <View style={[styles.badge, { backgroundColor: catColor + "18" }]}>
-              <Text style={[styles.badgeText, { color: catColor }]}>{CATEGORY_LABEL[item.category] ?? item.category}</Text>
+              <Text style={[styles.badgeText, { color: catColor }]}>{categoryLabel(item.category)}</Text>
             </View>
             <View style={[styles.badge, { backgroundColor: C.border }]}>
               <Text style={[styles.badgeText, { color: C.textSecondary }]}>por {item.creator_name}</Text>

@@ -25,7 +25,7 @@ export class ApiStudentRepository implements IStudentRepository {
                 params.set("currentUserId", currentUserId);
             }
 
-            const data = await fetchApi<any[]>(`/api/v1/students?${params.toString()}`);
+            const data = await fetchApi<any[]>(`/students?${params.toString()}`);
             return (data ?? []).map(mapStudentSearchResultFromApi);
         } catch (error) {
             return this.fallback.searchBySubject(subjectId, currentUserId, page, pageSize);
@@ -34,7 +34,7 @@ export class ApiStudentRepository implements IStudentRepository {
 
     async getDecoratedProfile(studentId: string): Promise<PerfilCompleto | null> {
         try {
-            const data = await fetchApi<any>(`/api/v1/perfil/${studentId}?vista=completa`);
+            const data = await fetchApi<any>(`/perfil/${studentId}?vista=completa`);
             if (!data) return null;
             return mapPerfilCompletoFromApi(data);
         } catch {
@@ -49,7 +49,7 @@ export class ApiStudentRepository implements IStudentRepository {
                 params.set("currentUserId", currentUserId);
             }
             const suffix = params.toString() ? `?${params.toString()}` : "";
-            const data = await fetchApi<any>(`/api/v1/students/${studentId}${suffix}`);
+            const data = await fetchApi<any>(`/students/${studentId}${suffix}`);
             return data ? mapStudentPublicProfileFromApi(data) : null;
         } catch (error) {
             return this.fallback.getPublicProfile(studentId, currentUserId);

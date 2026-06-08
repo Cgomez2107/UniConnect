@@ -17,7 +17,7 @@ export class SupabaseEventRepository implements IEventRepository {
   async getById(id: string): Promise<CampusEvent | null> {
     const { data, error } = await supabase
       .from("events")
-      .select("*, creator:created_by ( full_name )")
+      .select("*, creator:created_by ( full_name ), category_id")
       .eq("id", id)
       .single()
 
@@ -41,7 +41,13 @@ export class SupabaseEventRepository implements IEventRepository {
   }
 
   async getAllEvents(): Promise<CampusEvent[]> {
-    throw new Error("Not implemented in Supabase fallback")
+    const { data, error } = await supabase
+      .from("events")
+      .select("*, creator:created_by ( full_name )")
+      .order("event_date", { ascending: false })
+
+    if (error) throw new Error(error.message)
+    return (data ?? []) as CampusEvent[]
   }
 
   async create(_userId: string, _payload: any): Promise<CampusEvent> {
@@ -56,8 +62,15 @@ export class SupabaseEventRepository implements IEventRepository {
     throw new Error("Not implemented in Supabase fallback")
   }
 
-  async getByAuthor(_userId: string): Promise<CampusEvent[]> {
-    throw new Error("Not implemented in Supabase fallback")
+  async getByAuthor(userId: string): Promise<CampusEvent[]> {
+    const { data, error } = await supabase
+      .from("events")
+      .select("*, creator:created_by ( full_name )")
+      .eq("created_by", userId)
+      .order("event_date", { ascending: false })
+
+    if (error) throw new Error(error.message)
+    return (data ?? []) as CampusEvent[]
   }
 
   async updateStatus(_eventId: string, _status: string): Promise<void> {

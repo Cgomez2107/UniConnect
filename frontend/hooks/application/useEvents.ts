@@ -1,8 +1,8 @@
 import { DIContainer } from "@/lib/services/di/container"
-import type { CampusEvent, EventCategory } from "@/types"
+import type { CampusEvent } from "@/types"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-export type EventFilter = EventCategory | "todos" | "pasados"
+export type EventFilter = string | "todos" | "pasados"
 
 export function useEvents() {
   const container = useMemo(() => DIContainer.getInstance(), [])
@@ -45,6 +45,9 @@ export function useEvents() {
 
   const filteredEvents = useMemo(() => {
     if (activeFilter === "todos" || activeFilter === "pasados") return events
+    if (activeFilter.includes("-")) {
+      return events.filter((e) => e.category_id === activeFilter)
+    }
     return events.filter((e) => e.category === activeFilter)
   }, [events, activeFilter])
 

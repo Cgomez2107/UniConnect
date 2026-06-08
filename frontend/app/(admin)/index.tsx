@@ -1,7 +1,7 @@
 // Panel de administración UniConnect.
 
 import { AdminHeader } from "@/components/admin/AdminHeader"
-import { EventModalFields, FacultyModalFields, ProgramModalFields, SubjectModalFields } from "@/components/admin/AdminCatalogModalFields"
+import { CategoryModalFields, EventModalFields, FacultyModalFields, ProgramModalFields, SubjectModalFields } from "@/components/admin/AdminCatalogModalFields"
 import { AdminMetricsPanel } from "@/components/admin/AdminMetricsPanel"
 import { AdminSearchBar } from "@/components/admin/AdminSearchBar"
 import { AdminTabs, type ActiveTab } from "@/components/admin/AdminTabs"
@@ -12,7 +12,7 @@ import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
 import { useAdmin } from "@/hooks/application/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
-import type { AdminEvent, AdminRequest, AdminResource, AdminUser, Faculty, Program, Subject } from "@/types"
+import type { AdminEvent, AdminRequest, AdminResource, AdminUser, EventCategoryRow, Faculty, Program, Subject } from "@/types"
 import { router } from "expo-router"
 import * as Haptics from "expo-haptics"
 import { StatusBar } from "expo-status-bar"
@@ -22,6 +22,8 @@ import {
   FlatList,
   ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
   useColorScheme,
   View,
 } from "react-native"
@@ -307,6 +309,45 @@ export default function AdminPanelScreen() {
               contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
               renderItem={renderEventItem}
+              ListHeaderComponent={
+                <View style={[styles.categorySection, { borderColor: C.border, marginBottom: 12 }]}>
+                  <Text style={[styles.categorySectionTitle, { color: C.textPrimary }]}>
+                    Gestión de Categorías
+                  </Text>
+                  <Text style={[styles.categorySectionSub, { color: C.textSecondary }]}>
+                    {admin.eventCategories.length} categoría(s) disponibles
+                  </Text>
+                  <View style={styles.categoryChipsRow}>
+                    {admin.eventCategories.map((cat: EventCategoryRow) => (
+                      <View key={cat.id} style={[styles.categoryChip, { backgroundColor: C.primary + "15", borderColor: C.border }]}>
+                        <Text style={[styles.categoryChipText, { color: C.textPrimary }]}>{cat.name}</Text>
+                        <TouchableOpacity
+                          onPress={() => admin.openEditCategory(cat)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Text style={[styles.categoryAction, { color: C.primary }]}>✎</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => admin.handleDeleteCategory(cat)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Text style={[styles.categoryAction, { color: C.error }]}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    <TouchableOpacity
+                      style={[styles.addCategoryChip, { borderColor: C.primary }]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                        admin.openCreateCategory()
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.addCategoryChipText, { color: C.primary }]}>+ Nueva</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              }
               ListEmptyComponent={<EmptyState emoji="📅" iconName="calendar-outline" title="No hay eventos" body="Crea el primer evento del campus" />}
             />
           )}
@@ -374,7 +415,19 @@ export default function AdminPanelScreen() {
         onSave={admin.saveEvent}
         C={C}
       >
-        <EventModalFields C={C} modal={admin.eventModal} setModal={admin.setEventModal} />
+        <EventModalFields C={C} modal={admin.eventModal} setModal={admin.setEventModal} categories={admin.eventCategories} />
+      </CrudModal>
+
+      <CrudModal
+        visible={admin.categoryModal.visible}
+        title={admin.categoryModal.mode === "create" ? "Nueva categoría" : "Editar categoría"}
+        error={admin.categoryModal.error}
+        isSubmitting={admin.isSubmitting}
+        onClose={admin.closeCategoryModal}
+        onSave={admin.saveCategory}
+        C={C}
+      >
+        <CategoryModalFields C={C} modal={admin.categoryModal} setModal={admin.setCategoryModal} />
       </CrudModal>
     </View>
   )
@@ -385,4 +438,32 @@ const styles = StyleSheet.create({
   list: { padding: 16, gap: 8 },
   // Métricas
   metricsContainer: { padding: 16, gap: 12 },
+  // Gestión de categorías
+  categorySection: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  categorySectionTitle: { fontSize: 15, fontWeight: "700", marginBottom: 2 },
+  categorySectionSub: { fontSize: 12, marginBottom: 10 },
+  categoryChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  categoryChipText: { fontSize: 13, fontWeight: "600" },
+  categoryAction: { fontSize: 14, fontWeight: "700", paddingLeft: 2 },
+  addCategoryChip: {
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  addCategoryChipText: { fontSize: 13, fontWeight: "600" },
 })

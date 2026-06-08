@@ -18,6 +18,7 @@ export interface Event {
   readonly organizerId: string;   // Mapeado desde created_by
   readonly organizerName?: string;
   readonly category: EventCategory;
+  readonly categoryId: string;
   readonly imageUrl?: string;
   readonly createdAt: string;
   readonly updatedAt: string;

@@ -8,8 +8,9 @@ import type {
   AdminRequest,
   AdminResource,
   AdminUser,
+  CreateEventCategoryPayload,
   CreateEventPayload,
-  EventCategory,
+  EventCategoryRow,
   Faculty,
   Program,
   Subject,
@@ -53,8 +54,16 @@ export interface EventModalState {
     description: string
     event_date: string      // ISO string (YYYY-MM-DDTHH:mm)
     location: string
-    category: EventCategory
+    category: string
   }
+  error: string
+}
+
+export interface CategoryModalState {
+  visible: boolean
+  mode: "create" | "edit"
+  item: EventCategoryRow | null
+  form: { name: string; description: string }
   error: string
 }
 
@@ -73,8 +82,12 @@ const EVENT_MODAL_INIT: EventModalState = {
   visible: false,
   mode: "create",
   item: null,
-  form: { title: "", description: "", event_date: "", location: "", category: "academico" },
+  form: { title: "", description: "", event_date: "", location: "", category: "" },
   error: "",
+}
+
+const CATEGORY_MODAL_INIT: CategoryModalState = {
+  visible: false, mode: "create", item: null, form: { name: "", description: "" }, error: "",
 }
 
 
@@ -106,6 +119,9 @@ export function useAdmin(search: string) {
   const [subjectModal, setSubjectModal] = useState<SubjectModalState>(SUBJECT_MODAL_INIT)
   const [eventModal, setEventModal] = useState<EventModalState>(EVENT_MODAL_INIT)
 
+  const [eventCategories, setEventCategories] = useState<EventCategoryRow[]>([])
+  const [categoryModal, setCategoryModal] = useState<CategoryModalState>(CATEGORY_MODAL_INIT)
+
   const formatAdminError = (error: unknown) => {
     const raw = error instanceof Error ? error.message : String(error ?? "")
     const msg = raw.toLowerCase()
@@ -120,6 +136,11 @@ export function useAdmin(search: string) {
 
     if (msg.includes("permission denied")) {
       return "Tu sesión no tiene permisos para esta acción. Cierra sesión y vuelve a ingresar."
+    }
+
+    // Category-specific errors already have user-friendly messages from the repository
+    if (msg.includes("no se puede eliminar la categoría") || msg.includes("ya existe una categoría")) {
+      return raw
     }
 
     return raw || "Ocurrió un error inesperado."
@@ -138,9 +159,10 @@ export function useAdmin(search: string) {
         adminGateway.getAllResources(),
         adminGateway.getAdminMetrics(),
         adminGateway.getAllEvents(),
+        adminGateway.getAllEventCategories(),
       ])
 
-      const [facs, progs, subs, usrs, reqs, ress, mets, evts] = result
+      const [facs, progs, subs, usrs, reqs, ress, mets, evts, cats] = result
 
       if (facs.status === "fulfilled") setFaculties(facs.value)
       if (progs.status === "fulfilled") setPrograms(progs.value as Program[])
@@ -150,6 +172,7 @@ export function useAdmin(search: string) {
       if (ress.status === "fulfilled") setResources(ress.value)
       if (mets.status === "fulfilled") setMetrics(mets.value)
       if (evts.status === "fulfilled") setEvents(evts.value)
+      if (cats.status === "fulfilled") setEventCategories(cats.value)
 
       const failedSections = [
         facs.status === "rejected" ? "facultades" : null,
@@ -655,6 +678,68 @@ export function useAdmin(search: string) {
     }
   }
 
+  // ── Category CRUD ────────────────────────────────────────
+  const openCreateCategory = () => setCategoryModal({ ...CATEGORY_MODAL_INIT, visible: true })
+  const openEditCategory = (item: EventCategoryRow) =>
+    setCategoryModal({
+      visible: true, mode: "edit", item,
+      form: { name: item.name, description: item.description ?? "" }, error: "",
+    })
+  const closeCategoryModal = () => setCategoryModal((p) => ({ ...p, visible: false }))
+
+  const saveCategory = async () => {
+    const name = categoryModal.form.name.trim()
+    if (!name)
+      return setCategoryModal((p) => ({ ...p, error: "El nombre no puede estar vacío." }))
+    if (
+      eventCategories.find(
+        (c) => c.name.toLowerCase() === name.toLowerCase() && c.id !== categoryModal.item?.id
+      )
+    )
+      return setCategoryModal((p) => ({ ...p, error: "Ya existe una categoría con ese nombre." }))
+
+    setIsSubmitting(true)
+    try {
+      const payload: CreateEventCategoryPayload = {
+        name,
+        description: categoryModal.form.description.trim() || undefined,
+      }
+      if (categoryModal.mode === "create") {
+        const nueva = await adminGateway.createEventCategory(payload)
+        setEventCategories((p) => [...p, nueva])
+      } else {
+        const actualizada = await adminGateway.updateEventCategory(categoryModal.item!.id, payload)
+        setEventCategories((p) => p.map((c) => (c.id === actualizada.id ? actualizada : c)))
+      }
+      closeCategoryModal()
+    } catch (error: unknown) {
+      setCategoryModal((p) => ({ ...p, error: formatAdminError(error) }))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteCategory = (item: EventCategoryRow) => {
+    Alert.alert(
+      "Eliminar categoría",
+      `¿Eliminar "${item.name}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar", style: "destructive", onPress: async () => {
+            try {
+              await adminGateway.deleteEventCategory(item.id)
+              setEventCategories((p) => p.filter((c) => c.id !== item.id))
+            } catch (error: unknown) {
+              const message = formatAdminError(error)
+              Alert.alert("No se puede eliminar", message)
+            }
+          },
+        },
+      ]
+    )
+  }
+
   const handleDeleteEvent = (item: AdminEvent) => {
     Alert.alert(
       "Eliminar evento",
@@ -736,5 +821,14 @@ export function useAdmin(search: string) {
     closeEventModal,
     saveEvent,
     handleDeleteEvent,
+    // Categorías
+    eventCategories,
+    categoryModal,
+    setCategoryModal,
+    openCreateCategory,
+    openEditCategory,
+    closeCategoryModal,
+    saveCategory,
+    handleDeleteCategory,
   }
 }

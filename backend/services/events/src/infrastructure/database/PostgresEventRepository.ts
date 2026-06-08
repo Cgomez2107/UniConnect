@@ -14,6 +14,7 @@ interface EventRow {
   event_date: Date | string;
   location: string | null;
   category: string;
+  category_id: string;
   image_url: string | null;
   created_by: string | null;
   organizer_name: string | null;
@@ -32,6 +33,7 @@ function mapEvent(row: EventRow): Event {
     organizerId: row.created_by ?? "",
     organizerName: row.organizer_name ?? undefined,
     category: row.category as any,
+    categoryId: row.category_id,
     imageUrl: row.image_url ?? undefined,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
@@ -46,6 +48,7 @@ const SELECT_EVENTS = `
     e.event_date,
     e.location,
     e.category,
+    e.category_id,
     e.image_url,
     e.created_by,
     pr.full_name AS organizer_name,

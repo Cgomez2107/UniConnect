@@ -5,7 +5,9 @@ import type {
   AdminResource,
   AdminUser,
   CampusEvent,
+  CreateEventCategoryPayload,
   CreateEventPayload,
+  EventCategoryRow,
   Faculty,
   Program,
   Subject,
@@ -114,5 +116,21 @@ export class AdminPanelGateway {
 
   deleteEvent(id: string): Promise<void> {
     return this.repository.deleteEvent(id)
+  }
+
+  getAllEventCategories(): Promise<EventCategoryRow[]> {
+    return this.repository.getAllEventCategories()
+  }
+
+  createEventCategory(payload: CreateEventCategoryPayload): Promise<EventCategoryRow> {
+    return this.repository.createEventCategory(payload)
+  }
+
+  updateEventCategory(id: string, payload: CreateEventCategoryPayload): Promise<EventCategoryRow> {
+    return this.repository.updateEventCategory(id, payload)
+  }
+
+  deleteEventCategory(id: string): Promise<{ eventCount: number }> {
+    return this.repository.deleteEventCategory(id)
   }
 }

@@ -14,18 +14,26 @@ export class ApiEventRepository implements IEventRepository {
   private readonly fallback = new SupabaseEventRepository();
 
   async getAllEvents(): Promise<CampusEvent[]> {
-    const data = await fetchApi<CampusEvent[]>("/api/v1/events");
-    return (data ?? []).map(mapEventFromApi);
+    try {
+      const data = await fetchApi<CampusEvent[]>("/events");
+      return (data ?? []).map(mapEventFromApi);
+    } catch {
+      return this.fallback.getAllEvents();
+    }
   }
 
   async getUpcoming(): Promise<CampusEvent[]> {
-    const data = await fetchApi<CampusEvent[]>("/api/v1/events?upcoming=true");
-    return (data ?? []).map(mapEventFromApi);
+    try {
+      const data = await fetchApi<CampusEvent[]>("/events?upcoming=true");
+      return (data ?? []).map(mapEventFromApi);
+    } catch {
+      return this.fallback.getUpcoming();
+    }
   }
 
   async getById(eventId: string): Promise<CampusEvent | null> {
     try {
-      const data = await fetchApi<CampusEvent>(`/api/v1/events/${eventId}`);
+      const data = await fetchApi<CampusEvent>(`/events/${eventId}`);
       return data ? mapEventFromApi(data) : null;
     } catch (error) {
       if (error instanceof Error && error.message.toLowerCase().includes("not found")) {
@@ -48,7 +56,7 @@ export class ApiEventRepository implements IEventRepository {
       imageUrl?: string;
     },
   ): Promise<CampusEvent> {
-    const data = await fetchApi<CampusEvent>("/api/v1/events", {
+    const data = await fetchApi<CampusEvent>("/events", {
       method: "POST",
       body: JSON.stringify({
         title: payload.title,
@@ -79,14 +87,14 @@ export class ApiEventRepository implements IEventRepository {
       imageUrl?: string;
     },
   ): Promise<void> {
-    await fetchApi(`/api/v1/events/${eventId}`, {
+    await fetchApi(`/events/${eventId}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     });
   }
 
   async delete(eventId: string, _userId: string): Promise<void> {
-    await fetchApi(`/api/v1/events/${eventId}`, {
+    await fetchApi(`/events/${eventId}`, {
       method: "DELETE",
     });
   }
@@ -118,6 +126,7 @@ function mapEventFromApi(raw: any): CampusEvent {
     // event_date del schema → startAt en el backend → event_date en el frontend
     event_date: raw.startAt ?? raw.eventDate ?? raw.event_date,
     category: raw.category ?? "academico",
+    category_id: raw.categoryId ?? raw.category_id,
     image_url: raw.imageUrl ?? raw.image_url ?? null,
     created_by: raw.organizerId ?? raw.createdBy ?? raw.created_by,
     created_at: raw.createdAt ?? raw.created_at,

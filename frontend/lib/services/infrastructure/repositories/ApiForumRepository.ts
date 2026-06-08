@@ -50,7 +50,7 @@ function mapAnswerFromApi(raw: any): ForumAnswer {
 
 export class ApiForumRepository implements IForumRepository {
   async createQuestion(subjectId: string, title: string, body: string): Promise<ForumQuestion> {
-    const data = await fetchApi<any>("/api/v1/forum/questions", {
+    const data = await fetchApi<any>("/forum/questions", {
       method: "POST",
       body: JSON.stringify({ subjectId, title, body }),
     });
@@ -64,7 +64,7 @@ export class ApiForumRepository implements IForumRepository {
       limit: String(limit),
     });
 
-    const data: any = await fetchApi(`/api/v1/forum/questions?${query.toString()}`, {
+    const data: any = await fetchApi(`/forum/questions?${query.toString()}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -73,7 +73,7 @@ export class ApiForumRepository implements IForumRepository {
   }
 
   async getQuestionDetail(id: string): Promise<{ question: ForumQuestion; answers: ForumAnswer[] }> {
-    const data = await fetchApi<any>(`/api/v1/forum/questions/${id}`);
+    const data = await fetchApi<any>(`/forum/questions/${id}`);
     return {
       question: mapQuestionFromApi(data.question ?? data),
       answers: (data.answers ?? data.data?.answers ?? []).map(mapAnswerFromApi),
@@ -81,7 +81,7 @@ export class ApiForumRepository implements IForumRepository {
   }
 
   async createAnswer(questionId: string, body: string): Promise<ForumAnswer> {
-    const data = await fetchApi<any>(`/api/v1/forum/questions/${questionId}/answers`, {
+    const data = await fetchApi<any>(`/forum/questions/${questionId}/answers`, {
       method: "POST",
       body: JSON.stringify({ body }),
     });
@@ -89,12 +89,12 @@ export class ApiForumRepository implements IForumRepository {
   }
 
   async listAnswers(questionId: string): Promise<ForumAnswer[]> {
-    const data = await fetchApi<any[]>(`/api/v1/forum/questions/${questionId}/answers`);
+    const data = await fetchApi<any[]>(`/forum/questions/${questionId}/answers`);
     return (Array.isArray(data) ? data : []).map(mapAnswerFromApi);
   }
 
   async castVote(payload: ForumVotePayload): Promise<{ voteCount: number }> {
-    const data = await fetchApi<any>("/api/v1/forum/votes", {
+    const data = await fetchApi<any>("/forum/votes", {
       method: "POST",
       body: JSON.stringify({
         targetType: payload.target_type,
@@ -106,14 +106,14 @@ export class ApiForumRepository implements IForumRepository {
   }
 
   async markAsSolution(questionId: string, answerId: string): Promise<void> {
-    await fetchApi(`/api/v1/forum/questions/${questionId}/solution`, {
+    await fetchApi(`/forum/questions/${questionId}/solution`, {
       method: "POST",
       body: JSON.stringify({ answerId }),
     });
   }
 
   async pinAnswer(questionId: string, answerId: string): Promise<void> {
-    await fetchApi(`/api/v1/forum/questions/${questionId}/answers/${answerId}/pin`, {
+    await fetchApi(`/forum/questions/${questionId}/answers/${answerId}/pin`, {
       method: "PATCH",
     });
   }

@@ -5,7 +5,9 @@ import type {
   AdminResource,
   AdminUser,
   CampusEvent,
+  CreateEventCategoryPayload,
   CreateEventPayload,
+  EventCategoryRow,
   Faculty,
   Program,
   Subject,
@@ -42,4 +44,9 @@ export interface IAdminPanelRepository {
   createEvent(payload: CreateEventPayload): Promise<CampusEvent>
   updateEvent(id: string, payload: Partial<CreateEventPayload>): Promise<CampusEvent>
   deleteEvent(id: string): Promise<void>
+
+  getAllEventCategories(): Promise<EventCategoryRow[]>
+  createEventCategory(payload: CreateEventCategoryPayload): Promise<EventCategoryRow>
+  updateEventCategory(id: string, payload: CreateEventCategoryPayload): Promise<EventCategoryRow>
+  deleteEventCategory(id: string): Promise<{ eventCount: number }>
 }

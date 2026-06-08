@@ -6,32 +6,41 @@ import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
 import { useEventDetailScreen } from "@/hooks/application/useEventDetailScreen"
-import type { CampusEvent, EventCategory } from "@/types"
 import { Ionicons } from "@expo/vector-icons"
 import { router, useLocalSearchParams } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-const CATEGORY_ICON: Record<EventCategory, keyof typeof Ionicons.glyphMap> = {
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   academico: "school-outline",
   cultural: "color-palette-outline",
   deportivo: "football-outline",
   otro: "bookmark-outline",
 }
 
-const CATEGORY_LABEL: Record<EventCategory, string> = {
-  academico: "Academico",
+const CATEGORY_LABELS: Record<string, string> = {
+  academico: "Académico",
   cultural: "Cultural",
   deportivo: "Deportivo",
   otro: "Otro",
 }
 
-const CATEGORY_COLOR: Record<EventCategory, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   academico: "#2563eb",
   cultural: "#a855f7",
   deportivo: "#22c55e",
   otro: "#f59e0b",
+}
+
+function categoryIcon(slug: string): keyof typeof Ionicons.glyphMap {
+  return CATEGORY_ICONS[slug] ?? "bookmark-outline"
+}
+function categoryColor(slug: string): string {
+  return CATEGORY_COLORS[slug] ?? "#6b7280"
+}
+function categoryLabel(slug: string): string {
+  return CATEGORY_LABELS[slug] ?? (slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "))
 }
 
 export default function EventDetail() {
@@ -41,8 +50,8 @@ export default function EventDetail() {
   const { id } = useLocalSearchParams<{ id?: string }>()
   const { loading, event, formattedDate } = useEventDetailScreen(id)
 
-  const category = event?.category ?? "otro"
-  const categoryColor = CATEGORY_COLOR[category]
+  const categorySlug = event?.category ?? "otro"
+  const catColor = categoryColor(categorySlug)
 
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}> 
@@ -69,9 +78,9 @@ export default function EventDetail() {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.categoryBadge, { backgroundColor: categoryColor + "18" }]}> 
-            <Ionicons name={CATEGORY_ICON[category]} size={14} color={categoryColor} />
-            <Text style={[styles.categoryText, { color: categoryColor }]}>{CATEGORY_LABEL[category]}</Text>
+          <View style={[styles.categoryBadge, { backgroundColor: catColor + "18" }]}> 
+            <Ionicons name={categoryIcon(categorySlug)} size={14} color={catColor} />
+            <Text style={[styles.categoryText, { color: catColor }]}>{categoryLabel(categorySlug)}</Text>
           </View>
 
           <Text style={[styles.title, { color: C.textPrimary }]}>{event.title}</Text>
