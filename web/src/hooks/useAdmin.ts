@@ -132,7 +132,7 @@ export default function useAdmin() {
 
       const rows: any[] = data ?? [];
       const authorIds = rows.map((r) => r.author_id).filter(Boolean);
-      let authorsById: Record<string, string> = {};
+      const authorsById: Record<string, string> = {};
 
       if (authorIds.length > 0) {
         const { data: authors } = await supabase

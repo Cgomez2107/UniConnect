@@ -651,6 +651,7 @@ export function useAdmin(search: string) {
           event_date: nuevo.event_date,
           location: nuevo.location,
           category: nuevo.category,
+          category_id: nuevo.category_id,
           created_at: nuevo.created_at,
           creator_name: nuevo.creator?.full_name ?? "Admin",
         }
@@ -665,6 +666,7 @@ export function useAdmin(search: string) {
           event_date: actualizado.event_date,
           location: actualizado.location,
           category: actualizado.category,
+          category_id: actualizado.category_id,
           created_at: actualizado.created_at,
           creator_name: actualizado.creator?.full_name ?? "Admin",
         }
