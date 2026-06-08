@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { parseGroupError } from "./groupErrorInterceptor";
 import { showToastBridge } from "./toastBridge";
 import { useSpamStore } from "@/store/useSpamStore";
+import { useNotificationStore } from "@/store/useNotificationStore";
 
 const API_BASE_URL =
     process.env.EXPO_PUBLIC_API_BASE_URL ||
@@ -116,7 +117,7 @@ export async function fetchApi<T>(
         if ([400, 403, 409, 422, 429].includes(status)) {
             const friendly = parseGroupError(parsed || rawMessage);
             const rawErrorStr = JSON.stringify(parsed || "");
-            const hasMo003 = rawErrorStr.includes("MO_003") || status === 429;
+            const hasMo003 = rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004") || status === 429;
             if (hasMo003) {
                 let remainingMs = 5 * 60 * 1000;
                 const errorMsg = typeof parsed?.error === "string" && parsed.error.includes("Restante") ? parsed.error :
@@ -128,13 +129,48 @@ export async function fetchApi<T>(
                 if (match) {
                     remainingMs = parseInt(match[1], 10);
                 }
-                useSpamStore.getState().setBlocked(remainingMs);
+                const code = rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
+                useSpamStore.getState().setBlocked(remainingMs, code);
+
+                // Add notification for spam block
+                try {
+                    const blockTitle = code === "MO_004"
+                        ? "Caso escalado a revisión humana"
+                        : "Chat suspendido temporalmente";
+                    const blockMessage = code === "MO_004"
+                        ? "Has acumulado múltiples infracciones. Tu caso fue escalado a revisión humana."
+                        : "Has sido bloqueado por comportamiento de spam.";
+                    useNotificationStore.getState().pushNotification({
+                        id: `spam-block-${Date.now()}`,
+                        type: "system",
+                        title: blockTitle,
+                        body: blockMessage,
+                        payload: {
+                            errorCode: code,
+                            showWhyButton: true,
+                        },
+                        priority: "urgente",
+                    });
+                } catch (e) {
+                    console.warn("[API] No se pudo mostrar notificación de bloqueo:", e);
+                }
             }
-            showToastBridge(friendly, "error");
-            throw new Error(friendly);
+            const isModerationError =
+                rawErrorStr.includes("MO_001") ||
+                rawErrorStr.includes("MO_002") ||
+                rawErrorStr.includes("MO_003") ||
+                rawErrorStr.includes("MO_004");
+            if (!isModerationError) {
+                showToastBridge(friendly, "error");
+            }
+            const errObj = new Error(friendly);
+            (errObj as any).code = parsed?.code || parsed?.error || null;
+            throw errObj;
         }
 
-        throw new Error(rawMessage);
+        const rawErrObj = new Error(rawMessage);
+        (rawErrObj as any).code = parsed?.code || parsed?.error || null;
+        throw rawErrObj;
     }
 
     if (result !== null && typeof result === "object" && "data" in result) {

@@ -21,6 +21,7 @@ import { AdminSolicitudesPage } from "./pages/admin/SolicitudesPage";
 import { AdminRecursosPage } from "./pages/admin/RecursosPage";
 import { AdminEventosPage } from "./pages/admin/EventosPage";
 import { MetricasPage } from "./pages/admin/MetricasPage";
+import { ModeracionPage } from "./pages/admin/ModeracionPage";
 import { ChatPage } from "./pages/ChatPage";
 import { InvitationsPage } from "./pages/InvitationsPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
@@ -140,7 +141,8 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<Navigate to="facultades" replace />} />
+          <Route index element={<Navigate to="moderacion" replace />} />
+          <Route path="moderacion" element={<ModeracionPage />} />
           <Route path="facultades" element={<FacultadesPage />} />
           <Route path="programas" element={<ProgramasPage />} />
           <Route path="materias" element={<MateriasPage />} />

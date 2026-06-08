@@ -110,6 +110,7 @@ export class MessagingController {
     private readonly voteInPollUseCase: VoteInPoll,
     private readonly notificationService?: NotificationService,
     private readonly getAdminUserIds?: () => Promise<string[]>,
+    private readonly getUserName?: (userId: string) => Promise<string | null>,
   ) {}
 
   async listConversations(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -286,19 +287,44 @@ export class MessagingController {
         return;
       }
       if (error instanceof ModerationError) {
+        if (this.notificationService && actorUserId && (error.code === "MO_003" || error.code === "MO_004")) {
+          const isEscalation = error.code === "MO_004";
+          this.notificationService.notificar({
+            userId: actorUserId,
+            type: "system",
+            title: isEscalation ? "Caso escalado a revisión humana" : "Chat suspendido temporalmente",
+            body: isEscalation
+              ? "Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana."
+              : "Has sido bloqueado por comportamiento de spam.",
+            payload: {
+              errorCode: error.code,
+              showWhyButton: true,
+              data: {
+                errorCode: error.code,
+                showWhyButton: true,
+              }
+            },
+            priority: isEscalation ? "critica" : "urgente",
+          }).catch((e) => console.error("[MessagingController] Failed to notify user of block:", e));
+        }
+
         if (error.code === "MO_004" && this.notificationService && this.getAdminUserIds) {
-          this.getAdminUserIds().then((adminIds) => {
-            for (const adminId of adminIds) {
-              this.notificationService!.notificar({
-                userId: adminId,
-                type: "moderation_escalation",
-                title: "Escalación de Moderación Reincidente",
-                body: `El usuario ${actorUserId} ha alcanzado el límite de 3 bloqueos en 1 hora por spam y su caso ha sido escalado.`,
-                payload: { userId: actorUserId, reason: "Spam block limit reached" },
-                priority: "critica",
-              }).catch((e) => console.error("[MessagingController] Failed to notify admin:", e));
-            }
-          }).catch((e) => console.error("[MessagingController] Failed to resolve admin IDs:", e));
+          const userNamePromise = this.getUserName && actorUserId ? this.getUserName(actorUserId) : Promise.resolve(null);
+          userNamePromise.then((name) => {
+            const displayName = name || actorUserId;
+            this.getAdminUserIds!().then((adminIds) => {
+              for (const adminId of adminIds) {
+                this.notificationService!.notificar({
+                  userId: adminId,
+                  type: "moderation_escalation",
+                  title: "Escalación de Moderación Reincidente",
+                  body: `El usuario ${displayName} ha alcanzado el límite de 3 bloqueos en 1 hora por spam y su caso ha sido escalado.`,
+                  payload: { userId: actorUserId, reason: "Spam block limit reached" },
+                  priority: "critica",
+                }).catch((e) => console.error("[MessagingController] Failed to notify admin:", e));
+              }
+            }).catch((e) => console.error("[MessagingController] Failed to resolve admin IDs:", e));
+          }).catch((e) => console.error("[MessagingController] Failed to resolve user name:", e));
         }
         sendJson(res, error.statusCode, { error: error.message, code: error.code, name: error.name });
         return;

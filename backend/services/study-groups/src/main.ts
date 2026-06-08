@@ -505,6 +505,18 @@ function bootstrap(): void {
         return [];
       }
     },
+    async (userId: string): Promise<string | null> => {
+      if (!pool) return null;
+      try {
+        const result = await pool.query(
+          "SELECT full_name FROM profiles WHERE id = $1",
+          [userId]
+        );
+        return result.rows[0]?.full_name as string | null;
+      } catch {
+        return null;
+      }
+    },
   );
   const createStudySessionSeriesUC = new CreateStudySessionSeries(
     sessionRepos.session,

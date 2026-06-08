@@ -190,7 +190,17 @@ function performBasicValidation(
     });
   }
 
-  // Client-side forbidden content check is disabled to rely exclusively on the backend moderation pipeline.
+  if (isForbiddenContent(trimmed)) {
+    return {
+      isValidating: false,
+      isValid: false,
+      error: {
+        code: ValidationErrorCode.FORBIDDEN_WORDS,
+        message: "Tu mensaje contiene palabras que infringen las normas de la comunidad.",
+      },
+      suggestions: [],
+    };
+  }
 
   return {
     isValidating: false,

@@ -232,26 +232,56 @@ apiClient.interceptors.response.use(
     if (status && [400, 403, 409, 422, 429].includes(status)) {
       const friendly = parseGroupError(error);
 
-      // Activar bloqueo de spam si es código 429 o MO_003
+      // Activar bloqueo de spam si es código 429, MO_003 o MO_004
       const rawErrorStr = JSON.stringify(error.response?.data || "");
       console.log("[API Client] Error status:", status, "Error data:", error.response?.data);
       console.log("[API Client] Raw error string:", rawErrorStr);
-      console.log("[API Client] Checking for spam block:", status === 429, rawErrorStr.includes("MO_003"));
+      console.log("[API Client] Checking for spam block:", status === 429, rawErrorStr.includes("MO_003"), rawErrorStr.includes("MO_004"));
 
-      if (status === 429 || rawErrorStr.includes("MO_003")) {
+      if (status === 429 || rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004")) {
         let remainingMs = 5 * 60 * 1000;
         const errData = error.response?.data as any;
         const errorMsg = typeof errData?.error === "string" && errData.error.includes("Restante") ? errData.error :
                          typeof errData?.message === "string" && errData.message.includes("Restante") ? errData.message :
                          typeof errData?.details === "string" && errData.details.includes("Restante") ? errData.details :
-                         (typeof errData?.error === "string" ? errData.error : 
+                         (typeof errData?.error === "string" ? errData.error :
                           typeof errData?.message === "string" ? errData.message : "");
         const match = errorMsg.match(/Restante:\s*(\d+)/i);
         if (match) {
           remainingMs = parseInt(match[1], 10);
         }
-        console.log("[API Client] Activando bloqueo de spam por:", remainingMs, "ms");
-        useSpamStore.getState().setBlocked(remainingMs);
+        const errorCode = rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
+        console.log("[API Client] Activando bloqueo de spam por:", remainingMs, "ms, código:", errorCode);
+        useSpamStore.getState().setBlocked(remainingMs, errorCode);
+
+        // Add notification for spam block
+        try {
+          const store = useNotificationStore.getState();
+          if (typeof store.addNotification === "function") {
+            const blockTitle = errorCode === "MO_004"
+              ? "Caso escalado a revisión humana"
+              : "Chat suspendido temporalmente";
+            const blockMessage = errorCode === "MO_004"
+              ? "Has acumulado múltiples infracciones. Tu caso fue escalado a revisión humana."
+              : "Has sido bloqueado por comportamiento de spam.";
+            const spamNotif: Notification = {
+              id: `spam-block-${Date.now()}`,
+              userId: "",
+              type: "system",
+              title: blockTitle,
+              description: blockMessage,
+              read: false,
+              createdAt: new Date().toISOString(),
+              data: {
+                errorCode: errorCode,
+                showWhyButton: true,
+              },
+            };
+            store.addNotification(spamNotif);
+          }
+        } catch (e) {
+          console.warn("[API] No se pudo mostrar notificación de bloqueo:", e);
+        }
       }
 
       // Deduplicación de Toast

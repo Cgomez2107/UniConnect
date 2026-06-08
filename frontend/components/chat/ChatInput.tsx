@@ -11,7 +11,7 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { ValidationState } from "@uniconnect/shared-types";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSpamStore } from "@/store/useSpamStore";
+import { CommunityGuidelinesModal } from "@/components/ui/CommunityGuidelinesModal";
 
 interface ChatInputTextState {
   value: string;
@@ -98,7 +99,9 @@ export function ChatInput({
     onPress: onVoicePress,
   } = voice;
 
-  const { isBlocked, remainingTime, checkBlockStatus } = useSpamStore();
+  const { isBlocked, remainingTime, blockReason, checkBlockStatus } = useSpamStore();
+  const [guidelinesVisible, setGuidelinesVisible] = useState(false);
+  const [guidelinesErrorCode, setGuidelinesErrorCode] = useState<string | null>(null);
 
   useEffect(() => {
     checkBlockStatus();
@@ -175,28 +178,62 @@ export function ChatInput({
       {/* Validación */}
       {isBlocked && (
         <View style={[styles.blockedCard, { backgroundColor: C.error + '15', borderColor: C.error }]}>
-          <Text style={styles.errorIcon}>🚫</Text>
+          <Text style={styles.errorIcon}>{blockReason === 'MO_004' ? '🚨' : '🚫'}</Text>
           <View style={{ flex: 1 }}>
             <Text style={[styles.blockedTitle, { color: C.error }]}>
-              Chat suspendido temporalmente
+              {blockReason === 'MO_004' ? 'Caso escalado a revisión humana' : 'Chat suspendido temporalmente'}
             </Text>
             <Text style={[styles.blockedMessage, { color: C.textSecondary }]}>
-              Has sido bloqueado por comportamiento de spam. Podrás enviar mensajes de nuevo en:{" "}
-              <Text style={{ fontWeight: "700", color: C.error }}>
-                {Math.floor(remainingTime / 60)}:
-                {String(remainingTime % 60).padStart(2, "0")}
-              </Text>
+              {blockReason === 'MO_004'
+                ? <>Has acumulado múltiples infracciones. Tu caso fue escalado a revisión humana. Podrás enviar mensajes de nuevo en:{" "}
+                  <Text style={{ fontWeight: "700", color: C.error }}>
+                    {Math.floor(remainingTime / 60)}:
+                    {String(remainingTime % 60).padStart(2, "0")}
+                  </Text>
+                </>
+                : <>Has sido bloqueado por comportamiento de spam. Podrás enviar mensajes de nuevo en:{" "}
+                  <Text style={{ fontWeight: "700", color: C.error }}>
+                    {Math.floor(remainingTime / 60)}:
+                    {String(remainingTime % 60).padStart(2, "0")}
+                  </Text>
+                </>}
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => {
+              setGuidelinesErrorCode(blockReason);
+              setGuidelinesVisible(true);
+            }}
+            style={[styles.whyBtn, { borderColor: C.error + '60' }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={[styles.whyBtnText, { color: C.error }]}>🤔 ¿Por qué?</Text>
+          </TouchableOpacity>
         </View>
       )}
+
+      <CommunityGuidelinesModal
+        visible={guidelinesVisible}
+        onClose={() => setGuidelinesVisible(false)}
+        errorCode={guidelinesErrorCode}
+      />
 
       {hasValidationError && (
         <View style={[styles.errorCard, { backgroundColor: C.error + '20', borderColor: C.error }]}>
           <Text style={[styles.errorIcon]}>⚠️</Text>
-          <Text style={[styles.errorMessage, { color: C.error }]}>
+          <Text style={[styles.errorMessage, { color: C.error, flex: 1 }]}>
             {validationState?.error?.message || 'Error de validación'}
           </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setGuidelinesErrorCode(validationState?.error?.code || null);
+              setGuidelinesVisible(true);
+            }}
+            style={[styles.whyBtn, { borderColor: C.error + '60' }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={[styles.whyBtnText, { color: C.error }]}>🤔 ¿Por qué?</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -463,7 +500,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
     marginBottom: 4,
   },
@@ -475,5 +512,17 @@ const styles = StyleSheet.create({
   blockedMessage: {
     fontSize: 12,
     lineHeight: 16,
+  },
+  whyBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: "center",
+    marginLeft: 2,
+  },
+  whyBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });

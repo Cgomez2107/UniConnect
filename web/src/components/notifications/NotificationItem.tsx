@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, X, AlertTriangle, AlertCircle } from "lucide-react";
 import type { Prioridad, Accion } from "@/types";
+import { useState } from "react";
+import { CommunityGuidelinesDialog } from "@/components/chat/CommunityGuidelinesDialog";
 
 interface NotificacionData {
   id: string;
@@ -97,13 +99,18 @@ export function NotificationItem({ notificacion: n }: Props) {
   const styles = PRIORITY_STYLES[priority] ?? PRIORITY_STYLES.normal;
   const route = getActionRoute(n);
   const label = getActionLabel(n);
+  const [guidelinesOpen, setGuidelinesOpen] = useState(false);
 
   const desc = n.description ?? n.body;
+  const data = n.data ?? (n as any).payload;
+  const showWhyButton = data?.showWhyButton === true;
+  const errorCode = data?.errorCode || null;
 
   return (
-    <div
-      className={`card p-4 flex items-start gap-3 border-l-4 ${styles.border} ${!n.read ? styles.bg : ""}`}
-    >
+    <>
+      <div
+        className={`card p-4 flex items-start gap-3 border-l-4 ${styles.border} ${!n.read ? styles.bg : ""}`}
+      >
       <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
         isRejected(n.type)
           ? "bg-error-100 text-error-600"
@@ -149,12 +156,31 @@ export function NotificationItem({ notificacion: n }: Props) {
             </button>
           </>
         )}
+
+        {showWhyButton && (
+          <>
+            <div className="mt-3 pt-2 border-t border-neutral-100 dark:border-neutral-700/50" />
+            <button
+              onClick={() => setGuidelinesOpen(true)}
+              className="text-xs font-medium text-error-600 dark:text-error-400 hover:text-error-700 dark:hover:text-error-300"
+            >
+              🤔 ¿Por qué?
+            </button>
+          </>
+        )}
       </div>
 
       {!n.read && (
         <span className="shrink-0 w-2 h-2 rounded-full bg-primary-500 mt-2" />
       )}
     </div>
+
+    <CommunityGuidelinesDialog
+      open={guidelinesOpen}
+      onClose={() => setGuidelinesOpen(false)}
+      errorCode={errorCode}
+    />
+    </>
   );
 }
 

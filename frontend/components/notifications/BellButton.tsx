@@ -12,6 +12,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { CommunityGuidelinesModal } from "@/components/ui/CommunityGuidelinesModal";
 
 const TYPE_ICONS: Record<string, string> = {
   transferencia_admin_solicitada: "🔄",
@@ -26,6 +27,8 @@ export default function BellButton() {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
   const [open, setOpen] = useState(false);
+  const [guidelinesVisible, setGuidelinesVisible] = useState(false);
+  const [guidelinesErrorCode, setGuidelinesErrorCode] = useState<string | null>(null);
   const notifications = useNotificationStore((s) => s.queue);
 
   const recent = notifications.slice(0, 10);
@@ -72,6 +75,20 @@ export default function BellButton() {
               ) : (
                 recent.map((n: NotificationData) => {
                   const icon = TYPE_ICONS[n.type] ?? "🔔";
+                  const rawPayload = n.payload ?? (n as any).data;
+                  let parsedPayload: any = null;
+                  if (typeof rawPayload === "string") {
+                    try {
+                      parsedPayload = JSON.parse(rawPayload);
+                    } catch {
+                      parsedPayload = {};
+                    }
+                  } else {
+                    parsedPayload = rawPayload || {};
+                  }
+
+                  const showWhyButton = parsedPayload?.showWhyButton === true || parsedPayload?.data?.showWhyButton === true;
+                  const errorCode = parsedPayload?.errorCode || parsedPayload?.data?.errorCode || null;
                   return (
                     <View
                       key={n.id ?? Math.random()}
@@ -94,6 +111,19 @@ export default function BellButton() {
                         >
                           {n.body}
                         </Text>
+                        {showWhyButton && (
+                          <TouchableOpacity
+                            onPress={() => {
+                              setGuidelinesErrorCode(errorCode);
+                              setGuidelinesVisible(true);
+                            }}
+                            style={styles.whyBtn}
+                          >
+                            <Text style={[styles.whyBtnText, { color: C.error }]}>
+                              🤔 ¿Por qué?
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </View>
                   );
@@ -115,6 +145,12 @@ export default function BellButton() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <CommunityGuidelinesModal
+        visible={guidelinesVisible}
+        onClose={() => setGuidelinesVisible(false)}
+        errorCode={guidelinesErrorCode}
+      />
     </>
   );
 }
@@ -215,6 +251,14 @@ const styles = StyleSheet.create({
   },
   ajustesText: {
     fontSize: 14,
+    fontWeight: "600",
+  },
+  whyBtn: {
+    marginTop: 4,
+    alignSelf: "flex-start",
+  },
+  whyBtnText: {
+    fontSize: 11,
     fontWeight: "600",
   },
 });

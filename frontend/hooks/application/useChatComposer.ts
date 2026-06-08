@@ -112,8 +112,23 @@ export function useChatComposer({
       setSelectedImage(null);
       setReplyingTo(null);
       setTyping(false);
-    } catch (err) {
+    } catch (err: any) {
+      const code = err && typeof err === "object" && "code" in err ? String(err.code) : "";
       const message = err instanceof Error ? err.message : "No se pudo enviar el mensaje.";
+      // Check if it's a validation error (MO_001 or MO_002)
+      const isValidationError =
+        code === "MO_001" ||
+        code === "MO_002" ||
+        message.includes("MO_001") ||
+        message.includes("MO_002") ||
+        message.includes("límite permitido") ||
+        message.includes("palabras prohibidas") ||
+        message.includes("normas de la comunidad") ||
+        message.includes("infringen");
+      if (isValidationError) {
+        // Don't show toast for validation errors - let the UI handle it
+        throw err;
+      }
       showToast(message, "error");
     } finally {
       setSending(false);

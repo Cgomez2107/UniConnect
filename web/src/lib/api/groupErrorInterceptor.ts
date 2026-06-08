@@ -5,6 +5,8 @@ const STATE_ERROR_PATTERNS: [RegExp, string][] = [
    "El mensaje contiene palabras prohibidas o inapropiadas."],
   [/MO_003|spam|bloqueado temporalmente/i,
    "Has enviado demasiados mensajes. Chat suspendido por 5 minutos."],
+  [/MO_004|revisión humana|escalado/i,
+   "Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana."],
   [/InvalidStateTransitionError/i,
    "Acción no permitida en el estado actual del grupo."],
   [/grupo está disuelto/i,

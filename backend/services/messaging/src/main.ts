@@ -146,8 +146,36 @@ function bootstrap(): void {
 	};
 
 	// ✅ Estrategias de notificación
+	const notificationRepository = {
+		async create(input: {
+			userId: string;
+			type: string;
+			title: string;
+			body: string;
+			payload: Record<string, unknown> | null;
+			priority?: "normal" | "urgente" | "critica";
+			action?: { label: string; endpoint: string; method?: "GET" | "POST" | "PUT" | "DELETE" };
+		}): Promise<string> {
+			if (!pool) return "";
+			const enrichedPayload = {
+				...(input.payload ?? {}),
+				...(input.priority ? { _priority: input.priority } : {}),
+				...(input.action ? { _action: input.action } : {}),
+			};
+			const result = await pool.query<{ id: string }>(
+				`
+				INSERT INTO user_notifications (user_id, type, title, body, payload)
+				VALUES ($1, $2, $3, $4, $5)
+				RETURNING id
+				`,
+				[input.userId, input.type, input.title, input.body, JSON.stringify(enrichedPayload)],
+			);
+			return result.rows[0]?.id || "";
+		}
+	};
+
 	const strategies = realtimeGateway
-		? [new InAppWebSocketStrategy(realtimeGateway)]
+		? [new InAppWebSocketStrategy(realtimeGateway, notificationRepository)]
 		: [];
 
 	const MESSAGING_CHANNELS = ["in_app_websocket"];
@@ -256,6 +284,18 @@ function bootstrap(): void {
       } catch (error) {
         console.error("[getAdminUserIds] Failed to fetch admins:", error);
         return [];
+      }
+    },
+    async (userId: string): Promise<string | null> => {
+      if (!pool) return null;
+      try {
+        const result = await pool.query(
+          "SELECT full_name FROM profiles WHERE id = $1",
+          [userId]
+        );
+        return result.rows[0]?.full_name as string | null;
+      } catch {
+        return null;
       }
     },
   );

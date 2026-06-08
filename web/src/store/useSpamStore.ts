@@ -5,7 +5,8 @@ interface SpamState {
   isBlocked: boolean;
   blockUntil: number | null; // Timestamp ms
   remainingTime: number; // in seconds
-  setBlocked: (durationMs: number) => void;
+  blockReason: string | null;
+  setBlocked: (durationMs: number, errorCode?: string) => void;
   clearBlock: () => void;
   checkBlockStatus: () => void;
 }
@@ -16,18 +17,21 @@ export const useSpamStore = create<SpamState>()(
       isBlocked: false,
       blockUntil: null,
       remainingTime: 0,
-      setBlocked: (durationMs: number) => {
+      blockReason: null,
+      setBlocked: (durationMs: number, errorCode?: string) => {
         const until = Date.now() + durationMs;
-        console.log("[useSpamStore] setBlocked llamado con durationMs:", durationMs, "until:", until);
+        console.log("[useSpamStore] setBlocked llamado con durationMs:", durationMs, "until:", until, "code:", errorCode);
         set({
           isBlocked: true,
           blockUntil: until,
           remainingTime: Math.max(0, Math.ceil(durationMs / 1000)),
+          blockReason: errorCode ?? "MO_003",
         });
         console.log("[useSpamStore] Estado después de setBlocked:", {
           isBlocked: true,
           blockUntil: until,
           remainingTime: Math.max(0, Math.ceil(durationMs / 1000)),
+          blockReason: errorCode ?? "MO_003",
         });
       },
       clearBlock: () => {
@@ -35,13 +39,14 @@ export const useSpamStore = create<SpamState>()(
           isBlocked: false,
           blockUntil: null,
           remainingTime: 0,
+          blockReason: null,
         });
       },
       checkBlockStatus: () => {
         const { blockUntil } = get();
         if (!blockUntil) {
           if (get().isBlocked) {
-            set({ isBlocked: false, blockUntil: null, remainingTime: 0 });
+            set({ isBlocked: false, blockUntil: null, remainingTime: 0, blockReason: null });
           }
           return;
         }
@@ -51,6 +56,7 @@ export const useSpamStore = create<SpamState>()(
             isBlocked: false,
             blockUntil: null,
             remainingTime: 0,
+            blockReason: null,
           });
         } else {
           set({
@@ -66,6 +72,7 @@ export const useSpamStore = create<SpamState>()(
       partialize: (state) => ({
         isBlocked: state.isBlocked,
         blockUntil: state.blockUntil,
+        blockReason: state.blockReason,
       }),
     }
   )

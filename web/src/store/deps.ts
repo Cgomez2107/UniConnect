@@ -92,7 +92,7 @@ transport.setOnError((error) => {
   if (error.status === 429) {
     const data = error.data as any;
     const rawStr = JSON.stringify(data || "");
-    if (rawStr.includes("MO_003")) {
+    if (rawStr.includes("MO_003") || rawStr.includes("MO_004")) {
       let remainingMs = 5 * 60 * 1000;
       const errorMsg = typeof data?.error === "string" && data.error.includes("Restante") ? data.error :
                        typeof data?.message === "string" && data.message.includes("Restante") ? data.message :
@@ -103,8 +103,9 @@ transport.setOnError((error) => {
       if (match) {
         remainingMs = parseInt(match[1], 10);
       }
-      console.log("[deps] Spam detected (MO_003), activating block for:", remainingMs, "ms");
-      useSpamStore.getState().setBlocked(remainingMs);
+      const errorCode = rawStr.includes("MO_004") ? "MO_004" : "MO_003";
+      console.log("[deps] Spam/Escalado detected (", errorCode, "), activating block for:", remainingMs, "ms");
+      useSpamStore.getState().setBlocked(remainingMs, errorCode);
     }
   }
 });

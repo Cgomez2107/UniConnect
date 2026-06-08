@@ -16,6 +16,7 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  ShieldAlert,
 } from "lucide-react";
 
 interface AdminNavItem {
@@ -25,6 +26,7 @@ interface AdminNavItem {
 }
 
 const ADMIN_NAV_ITEMS: AdminNavItem[] = [
+  { label: "Moderación", path: "/admin/moderacion", icon: ShieldAlert },
   { label: "Facultades", path: "/admin/facultades", icon: Building2 },
   { label: "Programas", path: "/admin/programas", icon: GraduationCap },
   { label: "Materias", path: "/admin/materias", icon: BookOpen },

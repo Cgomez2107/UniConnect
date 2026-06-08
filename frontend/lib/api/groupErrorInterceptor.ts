@@ -33,6 +33,8 @@ const STATE_ERROR_PATTERNS: [RegExp, string][] = [
    "Tu mensaje contiene palabras que infringen las normas de la comunidad."],
   [/MO_003/i,
    "Has sido bloqueado temporalmente (5 min) por comportamiento de spam."],
+  [/MO_004/i,
+   "Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana."],
 ];
 
 const GENERIC_ERROR = "Ha ocurrido un error inesperado. Intenta de nuevo.";

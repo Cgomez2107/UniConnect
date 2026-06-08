@@ -13,6 +13,7 @@ import { Colors } from "@/constants/Colors";
 import { useChatComposer } from "@/hooks/application/useChatComposer";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import { useMessageValidation } from "@/hooks/useMessageValidation";
+import { ValidationErrorCode } from "@uniconnect/shared-types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUnreadCountStore } from "@/store/unreadCountStore";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -203,13 +204,32 @@ export default function ChatScreen() {
     debounceMs: 300,
   });
 
+  // Estado para errores de validación del backend
+  const [backendValidationError, setBackendValidationError] = useState<{
+    code: ValidationErrorCode;
+    message: string;
+  } | null>(null);
+
+  // Combinar estado de validación local y backend
+  const combinedValidationState = backendValidationError
+    ? {
+        ...validationState,
+        isValid: false,
+        error: {
+          code: backendValidationError.code,
+          message: backendValidationError.message,
+        },
+      }
+    : validationState;
+
   // Wrapper para el onChange que valida mientras escribe
   const handleTextChange = useCallback((text: string) => {
     chatInputProps.text.onChangeText(text);
     chatInputProps.text.onTyping(text);
+    setBackendValidationError(null);
     // Validar mientras escribe (debounced)
     void validateMessage(text);
-  }, [chatInputProps, validateMessage]);
+  }, [chatInputProps, validateMessage, setBackendValidationError]);
 
   // Wrapper para validar antes de enviar
   const handleSendWithValidation = useCallback(async () => {
@@ -223,9 +243,35 @@ export default function ChatScreen() {
     }
 
     // Enviar directamente para que el backend maneje la moderación
-    chatInputProps.send.onSend();
-    clearValidation();
-  }, [chatInputProps, validateMessage, clearValidation]);
+    try {
+      await chatInputProps.send.onSend();
+      clearValidation();
+      setBackendValidationError(null);
+    } catch (err: any) {
+      const code = err && typeof err === "object" && "code" in err ? String(err.code) : "";
+      const message = err instanceof Error ? err.message : String(err);
+      // Check if it's a validation error from backend
+      if (code === "MO_001" || message.includes("MO_001") || message.includes("límite permitido")) {
+        // Longitud excedida
+        setBackendValidationError({
+          code: ValidationErrorCode.MESSAGE_TOO_LONG,
+          message: "Tu mensaje supera el límite permitido de caracteres (1000).",
+        });
+      } else if (
+        code === "MO_002" ||
+        message.includes("MO_002") ||
+        message.includes("palabras prohibidas") ||
+        message.includes("normas de la comunidad") ||
+        message.includes("infringen")
+      ) {
+        // Palabras prohibidas
+        setBackendValidationError({
+          code: ValidationErrorCode.FORBIDDEN_WORDS,
+          message: "Tu mensaje contiene palabras que infringen las normas de la comunidad.",
+        });
+      }
+    }
+  }, [chatInputProps, validateMessage, clearValidation, setBackendValidationError]);
 
   const displayName = otherUserName
     ? decodeURIComponent(otherUserName)
@@ -385,7 +431,7 @@ export default function ChatScreen() {
             send: { ...chatInputProps.send, onSend: handleSendWithValidation },
             voice: chatInputProps.voice,
           }}
-          validationState={validationState}
+          validationState={combinedValidationState}
         />
       )}
     </KeyboardAvoidingView>

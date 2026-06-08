@@ -7,6 +7,7 @@ import { ValidationErrorCode } from "@uniconnect/shared-types";
 import { PollCreator } from "./PollCreator";
 import { useSpamStore } from "@/store/useSpamStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { CommunityGuidelinesDialog } from "./CommunityGuidelinesDialog";
 
 interface PollData {
   question: string;
@@ -89,8 +90,10 @@ export function MentionInput({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mentionMapRef = useRef<Map<string, string>>(new Map());
 
-  const { isBlocked, remainingTime, checkBlockStatus } = useSpamStore();
+  const { isBlocked, remainingTime, blockReason, checkBlockStatus } = useSpamStore();
   const { addNotification } = useNotificationStore();
+  const [guidelinesOpen, setGuidelinesOpen] = useState(false);
+  const [guidelinesErrorCode, setGuidelinesErrorCode] = useState<string | null>(null);
 
   useEffect(() => {
     checkBlockStatus();
@@ -101,10 +104,26 @@ export function MentionInput({
   }, [checkBlockStatus]);
 
   // Hooks de validación
-  const { validationState, validateMessage, clearValidation } = useMessageValidation({
+  const { validationState: localValidationState, validateMessage, clearValidation } = useMessageValidation({
     maxLength: 1000,
     debounceMs: 300,
   });
+
+  const [backendValidationError, setBackendValidationError] = useState<{
+    code: string;
+    message: string;
+  } | null>(null);
+
+  const validationState = backendValidationError
+    ? {
+        ...localValidationState,
+        isValid: false,
+        error: {
+          code: backendValidationError.code,
+          message: backendValidationError.message,
+        },
+      }
+    : localValidationState;
 
   const { validateFile } = useFileValidation({ maxSizeMb: 10 });
 
@@ -142,6 +161,7 @@ export function MentionInput({
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setText(value);
+    setBackendValidationError(null);
 
     // Validar mensaje en tiempo real
     validateMessage(value).catch(() => {
@@ -257,10 +277,29 @@ export function MentionInput({
       await onSend(fullContent, mentions);
       setText("");
       clearValidation();
+      setBackendValidationError(null);
     } catch (err: any) {
       console.error("Error al enviar mensaje:", err);
 
-      // Mostrar mensaje de error del backend al usuario usando toast notification
+      const rawErrorStr = JSON.stringify(err?.response?.data || err?.data || err || "");
+      const isMo001 = rawErrorStr.includes("MO_001") || rawErrorStr.toLowerCase().includes("límite");
+      const isMo002 = rawErrorStr.includes("MO_002") || rawErrorStr.toLowerCase().includes("palabra");
+
+      if (isMo001) {
+        setBackendValidationError({
+          code: "MO_001",
+          message: "Tu mensaje supera el límite permitido de caracteres (1000).",
+        });
+        return;
+      } else if (isMo002) {
+        setBackendValidationError({
+          code: "MO_002",
+          message: "Tu mensaje contiene palabras que infringen las normas de la comunidad.",
+        });
+        return;
+      }
+
+      // Mostrar mensaje de error genérico del backend al usuario
       let errorMessage = "Error al enviar mensaje";
       if (err?.response?.data?.error) {
         errorMessage = err.response.data.error;
@@ -280,7 +319,7 @@ export function MentionInput({
         read: false,
       });
     }
-  }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions, validateMessage, clearValidation, pendingPoll]);
+  }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions, validateMessage, clearValidation, pendingPoll, setBackendValidationError]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -441,21 +480,43 @@ export function MentionInput({
         {/* Spam block warning banner */}
         {isBlocked && (
           <div className="mb-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3 text-red-600 dark:text-red-400">
-            <span className="text-lg mt-0.5">🚫</span>
+            <span className="text-lg mt-0.5">{blockReason === 'MO_004' ? '🚨' : '🚫'}</span>
             <div className="flex-1">
               <p className="text-xs font-bold text-red-800 dark:text-red-300">
-                Chat suspendido temporalmente
+                {blockReason === 'MO_004' ? 'Caso escalado a revisión humana' : 'Chat suspendido temporalmente'}
               </p>
               <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                Has sido bloqueado por comportamiento de spam. Podrás enviar mensajes de nuevo en:{" "}
-                <span className="font-bold text-red-600 dark:text-red-400">
-                  {Math.floor(remainingTime / 60)}:
-                  {String(remainingTime % 60).padStart(2, "0")}
-                </span>
+                {blockReason === 'MO_004'
+                  ? <>Has acumulado múltiples infracciones. Tu caso fue escalado a revisión humana. Podrás enviar mensajes de nuevo en:{" "}
+                    <span className="font-bold text-red-600 dark:text-red-400">
+                      {Math.floor(remainingTime / 60)}:{String(remainingTime % 60).padStart(2, "0")}
+                    </span>
+                  </>
+                  : <>Has sido bloqueado por comportamiento de spam. Podrás enviar mensajes de nuevo en:{" "}
+                    <span className="font-bold text-red-600 dark:text-red-400">
+                      {Math.floor(remainingTime / 60)}:{String(remainingTime % 60).padStart(2, "0")}
+                    </span>
+                  </>}
               </p>
             </div>
+            <button
+              onClick={() => {
+                setGuidelinesErrorCode(blockReason);
+                setGuidelinesOpen(true);
+              }}
+              className="ml-1 shrink-0 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors self-center"
+              title="Ver normas infringidas"
+            >
+              🤔 ¿Por qué?
+            </button>
           </div>
         )}
+
+        <CommunityGuidelinesDialog
+          open={guidelinesOpen}
+          onClose={() => setGuidelinesOpen(false)}
+          errorCode={guidelinesErrorCode}
+        />
 
         {/* Validation error display */}
         {validationState.error && (
@@ -466,6 +527,16 @@ export function MentionInput({
                 {validationState.error.message}
               </p>
             </div>
+            <button
+              onClick={() => {
+                setGuidelinesErrorCode(validationState.error?.code || null);
+                setGuidelinesOpen(true);
+              }}
+              className="ml-1 shrink-0 text-xs font-semibold text-error-600 dark:text-error-400 border border-error-300 dark:border-error-700 rounded-lg px-2 py-1 hover:bg-error-100 dark:hover:bg-error-900/30 transition-colors self-center"
+              title="Ver normas infringidas"
+            >
+              🤔 ¿Por qué?
+            </button>
           </div>
         )}
 

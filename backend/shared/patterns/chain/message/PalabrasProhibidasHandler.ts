@@ -8,7 +8,7 @@ export class PalabrasProhibidasHandler extends MessageValidator {
     super();
     this.forbiddenPatterns = forbiddenWords.map((word) => ({
       word,
-      pattern: new RegExp(word, "gi"),
+      pattern: new RegExp(word, "i"),
     }));
   }
 
