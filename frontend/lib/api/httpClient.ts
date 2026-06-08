@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { parseGroupError } from "./groupErrorInterceptor";
 import { showToastBridge } from "./toastBridge";
+import { useSpamStore } from "@/store/useSpamStore";
 
 const API_BASE_URL =
     process.env.EXPO_PUBLIC_API_BASE_URL ||
@@ -112,8 +113,11 @@ export async function fetchApi<T>(
             `Error ${response.status} al conectar con el servidor.`;
 
         const status = response.status;
-        if ([400, 403, 409, 422].includes(status)) {
+        if ([400, 403, 409, 422, 429].includes(status)) {
             const friendly = parseGroupError(rawMessage);
+            if (status === 429 || rawMessage.includes("MO_003")) {
+                useSpamStore.getState().setBlocked(5 * 60 * 1000);
+            }
             showToastBridge(friendly, "error");
             throw new Error(friendly);
         }

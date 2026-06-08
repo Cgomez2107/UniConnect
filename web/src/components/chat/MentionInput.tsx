@@ -5,6 +5,8 @@ import { useMessageValidation, useFileValidation } from "@/hooks/useMessageValid
 import { useMessageAutocomplete, useFilePicker } from "@/hooks/useMessageAutocomplete";
 import { ValidationErrorCode } from "@uniconnect/shared-types";
 import { PollCreator } from "./PollCreator";
+import { useSpamStore } from "@/store/useSpamStore";
+import { useNotificationStore } from "@/store/useNotificationStore";
 
 interface PollData {
   question: string;
@@ -87,9 +89,20 @@ export function MentionInput({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mentionMapRef = useRef<Map<string, string>>(new Map());
 
+  const { isBlocked, remainingTime, checkBlockStatus } = useSpamStore();
+  const { addNotification } = useNotificationStore();
+
+  useEffect(() => {
+    checkBlockStatus();
+    const interval = setInterval(() => {
+      checkBlockStatus();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [checkBlockStatus]);
+
   // Hooks de validación
   const { validationState, validateMessage, clearValidation } = useMessageValidation({
-    maxLength: 5000,
+    maxLength: 1000,
     debounceMs: 300,
   });
 
@@ -244,8 +257,28 @@ export function MentionInput({
       await onSend(fullContent, mentions);
       setText("");
       clearValidation();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error al enviar mensaje:", err);
+
+      // Mostrar mensaje de error del backend al usuario usando toast notification
+      let errorMessage = "Error al enviar mensaje";
+      if (err?.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err?.data?.error) {
+        errorMessage = err.data.error;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      addNotification({
+        id: `toast-${Date.now()}`,
+        userId: "system",
+        type: "system",
+        title: errorMessage,
+        description: "",
+        createdAt: new Date().toISOString(),
+        read: false,
+      });
     }
   }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions, validateMessage, clearValidation, pendingPoll]);
 
@@ -300,7 +333,7 @@ export function MentionInput({
     };
   }, []);
 
-  const canSubmit = (text.trim().length > 0 || !!pendingFile || !!pendingPoll) && !sending && !uploadingFile;
+  const canSubmit = (text.trim().length > 0 || !!pendingFile || !!pendingPoll) && !sending && !uploadingFile && !isBlocked;
 
   return (
     <div className="relative">
@@ -405,6 +438,25 @@ export function MentionInput({
       )}
 
       <div className="bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 p-3">
+        {/* Spam block warning banner */}
+        {isBlocked && (
+          <div className="mb-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3 text-red-600 dark:text-red-400">
+            <span className="text-lg mt-0.5">🚫</span>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-red-800 dark:text-red-300">
+                Chat suspendido temporalmente
+              </p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                Has sido bloqueado por comportamiento de spam. Podrás enviar mensajes de nuevo en:{" "}
+                <span className="font-bold text-red-600 dark:text-red-400">
+                  {Math.floor(remainingTime / 60)}:
+                  {String(remainingTime % 60).padStart(2, "0")}
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Validation error display */}
         {validationState.error && (
           <div className="mb-2 p-2 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg flex items-start gap-2">
@@ -479,7 +531,7 @@ export function MentionInput({
           <button
             type="button"
             onClick={() => imgInputRef.current?.click()}
-            disabled={uploadingImage || sending || uploadingFile || !onSendImage}
+            disabled={uploadingImage || sending || uploadingFile || !onSendImage || isBlocked}
             className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-50"
             title="Adjuntar imagen"
           >
@@ -495,7 +547,7 @@ export function MentionInput({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={sending || uploadingFile || !onUploadFile}
+            disabled={sending || uploadingFile || !onUploadFile || isBlocked}
             className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-50"
             title="Adjuntar archivo"
           >
@@ -511,7 +563,7 @@ export function MentionInput({
           <button
             type="button"
             onClick={() => setShowPollCreator(true)}
-            disabled={showPollCreator || sending}
+            disabled={showPollCreator || sending || isBlocked}
             className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
               showPollCreator
                 ? "bg-primary-100 text-primary-600"
@@ -532,7 +584,7 @@ export function MentionInput({
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder={pendingFile ? "Añade un mensaje..." : placeholder}
-            disabled={disabled || uploadingFile}
+            disabled={disabled || uploadingFile || isBlocked}
             className={`flex-1 px-4 py-2 border bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
               validationState.error
                 ? "border-error-500 dark:border-error-500 focus:ring-error-200 dark:focus:ring-error-800"
@@ -544,12 +596,12 @@ export function MentionInput({
           <div className="flex items-center gap-2">
             {/* Character counter */}
             <div className="text-[10px] text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-              <span className={text.length > 4500 ? "text-warning-600" : ""}>
+              <span className={text.length > 900 ? "text-warning-600" : ""}>
                 {text.length}
               </span>
               /{" "}
-              <span className={text.length > 4500 ? "text-warning-600" : ""}>
-                5000
+              <span className={text.length > 900 ? "text-warning-600" : ""}>
+                1000
               </span>
             </div>
             <Button

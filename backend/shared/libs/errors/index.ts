@@ -9,6 +9,7 @@ export { ContentError } from "./ContentError.js";
 export { SizeError } from "./SizeError.js";
 export { MediaError } from "./MediaError.js";
 export { PermissionError } from "./PermissionError.js";
+export { ModerationError } from "./ModerationError.js";
 export { mapErrorToHttpStatus } from "./mapHttpStatus.js";
 export { sanitizeError } from "./sanitizeError.js";
 
@@ -23,4 +24,5 @@ export type ErrorType =
   | "SizeError"
   | "MediaError"
   | "PermissionError"
+  | "ModerationError"
   | "Unknown";

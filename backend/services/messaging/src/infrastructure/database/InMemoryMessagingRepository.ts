@@ -50,6 +50,8 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
   private readonly messages = new Map<string, Message>();
   private readonly pollConfigs = new Map<string, StoredPollConfig>();
   private readonly pollVotes = new Map<string, StoredPollVote>();
+  private readonly messageTimestamps = new Map<string, Date[]>();
+  private readonly blockedUsers = new Map<string, { until: Date; reason: string }>();
 
   async getConversationById(id: string, currentUserId: string): Promise<ConversationSummary | null> {
     const conversation = this.conversations.get(id);
@@ -535,5 +537,37 @@ export class InMemoryMessagingRepository implements IMessagingRepository {
     }
 
     return config.groupId;
+  }
+
+  async isUserBlocked(userId: string): Promise<boolean> {
+    const block = this.blockedUsers.get(userId);
+    if (!block) {
+      return false;
+    }
+
+    if (new Date() < block.until) {
+      return true;
+    }
+
+    this.blockedUsers.delete(userId);
+    return false;
+  }
+
+  async blockUser(userId: string, durationMinutes: number, reason: string): Promise<void> {
+    const until = new Date(Date.now() + durationMinutes * 60000);
+    this.blockedUsers.set(userId, { until, reason });
+    console.warn(`[Moderación] Usuario ${userId} bloqueado por ${durationMinutes} minutos. Razón: ${reason}`);
+  }
+
+  async recordMessageTimestamp(userId: string): Promise<number> {
+    const now = new Date();
+    const limitTime = new Date(now.getTime() - 30000);
+
+    const userTimestamps = this.messageTimestamps.get(userId) ?? [];
+    const recentTimestamps = userTimestamps.filter((t) => t >= limitTime);
+    recentTimestamps.push(now);
+
+    this.messageTimestamps.set(userId, recentTimestamps);
+    return recentTimestamps.length;
   }
 }

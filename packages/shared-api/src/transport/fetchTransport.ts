@@ -159,6 +159,13 @@ export class FetchTransport extends BaseTransport {
     this.refreshProvider = provider;
   }
 
+  /**
+   * Set error callback (invoked on any error response)
+   */
+  setOnError(callback: ((error: { status: number; data: any }) => void) | null): void {
+    this.onError = callback;
+  }
+
   async request<TResponse = any>(
     options: RequestOptions
   ): Promise<ResponseData<TResponse>> {
@@ -235,6 +242,24 @@ export class FetchTransport extends BaseTransport {
 
         if (response.status === 401 && this.onSessionExpired) {
           this.onSessionExpired();
+        }
+
+        // Log 429 errors for spam detection
+        if (response.status === 429) {
+          console.log("[FetchTransport] 429 Error detected:", {
+            status: response.status,
+            statusText: response.statusText,
+            data: rawData,
+            headers: headerRecord,
+          });
+
+          // Call error callback if configured
+          if (this.onError) {
+            this.onError({
+              status: response.status,
+              data: rawData,
+            });
+          }
         }
 
         throw error;

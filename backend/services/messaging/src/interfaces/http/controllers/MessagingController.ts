@@ -21,6 +21,7 @@ import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHt
 import { ContentError } from "../../../../../../shared/libs/errors/ContentError.js";
 import { SizeError } from "../../../../../../shared/libs/errors/SizeError.js";
 import { MediaError } from "../../../../../../shared/libs/errors/MediaError.js";
+import { ModerationError } from "../../../../../../shared/libs/errors/ModerationError.js";
 import { sendJson, sendData, sendError } from "../../../../../../shared/http/sendJson.js";
 
 const CreateConversationBodySchema = z.object({
@@ -277,6 +278,10 @@ export class MessagingController {
       }
       if (error instanceof ContentError || error instanceof SizeError || error instanceof MediaError) {
         sendJson(res, error.statusCode, { error: error.message, reason: error.reason, name: error.name });
+        return;
+      }
+      if (error instanceof ModerationError) {
+        sendJson(res, error.statusCode, { error: error.message, code: error.code, name: error.name });
         return;
       }
       const mapped = mapErrorToHttpStatus(error);

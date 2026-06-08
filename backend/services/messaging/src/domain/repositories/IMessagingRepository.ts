@@ -33,4 +33,7 @@ export interface IMessagingRepository {
   getPollResults(pollId: string): Promise<PollResultsDTO>;
   closeExpiredPolls(): Promise<string[]>;
   getPollGroupId(pollId: string): Promise<string>;
+  isUserBlocked(userId: string): Promise<boolean>;
+  blockUser(userId: string, durationMinutes: number, reason: string): Promise<void>;
+  recordMessageTimestamp(userId: string): Promise<number>;
 }

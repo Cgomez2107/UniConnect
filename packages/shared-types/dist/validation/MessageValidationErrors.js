@@ -32,7 +32,7 @@ export var ValidationErrorCode;
  */
 export const ValidationErrorMessages = {
     [ValidationErrorCode.MESSAGE_EMPTY]: "El mensaje no puede estar vacío. Escribe algo o adjunta un archivo.",
-    [ValidationErrorCode.MESSAGE_TOO_LONG]: "El mensaje es demasiado largo. Máximo 5000 caracteres.",
+    [ValidationErrorCode.MESSAGE_TOO_LONG]: "El mensaje es demasiado largo. Máximo 1000 caracteres.",
     [ValidationErrorCode.FORBIDDEN_WORDS]: "Tu mensaje contiene palabras prohibidas. Por favor, revísalo.",
     [ValidationErrorCode.BANNED_CONTENT]: "El contenido de tu mensaje no está permitido en este chat.",
     [ValidationErrorCode.SPAM_DETECTED]: "Se detectó comportamiento sospechoso. Intenta más tarde.",

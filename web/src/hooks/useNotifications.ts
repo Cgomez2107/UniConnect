@@ -3,12 +3,20 @@ import { useNotificationStore } from "@/store/useNotificationStore";
 
 let toastCounter = 0;
 
+let lastToast: { message: string; timestamp: number } | null = null;
+
 export default function useNotifications() {
   const { addNotification, removeNotification, clearAll } =
     useNotificationStore();
 
   const show = useCallback(
     (message: string, type: "success" | "error" | "info" | "warning" = "info") => {
+      const now = Date.now();
+      if (lastToast && lastToast.message === message && (now - lastToast.timestamp) < 2000) {
+        return;
+      }
+      lastToast = { message, timestamp: now };
+
       const toastType = type === "warning" ? "system" : type === "error" ? "system" : type === "success" ? "studyGroupAccepted" : "message";
       addNotification({
         id: `toast-${Date.now()}-${++toastCounter}`,

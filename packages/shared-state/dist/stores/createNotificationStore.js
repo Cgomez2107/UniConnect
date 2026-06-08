@@ -139,12 +139,24 @@ export function createNotificationStore(deps, subject = notificationSubject) {
             },
         },
         partialize: (state) => ({
-            notifications: state.notifications.filter((n) => !n.id?.startsWith("toast-")),
+            notifications: state.notifications
+                .filter((n) => !n.id?.startsWith("toast-"))
+                .map((n) => ({
+                ...n,
+                description: n.description ?? n.body ?? undefined,
+                read: n.read ?? (n.readAt != null || n.read_at != null),
+            })),
             unreadCount: state.unreadCount,
         }),
         migrate: (persistedState, version) => {
             if (persistedState?.notifications) {
-                persistedState.notifications = persistedState.notifications.filter((n) => !n.id?.startsWith("toast-"));
+                persistedState.notifications = persistedState.notifications
+                    .filter((n) => !n.id?.startsWith("toast-"))
+                    .map((n) => ({
+                    ...n,
+                    description: n.description ?? n.body ?? undefined,
+                    read: n.read ?? (n.readAt != null || n.read_at != null),
+                }));
                 persistedState.unreadCount = persistedState.notifications.filter((n) => !n.read).length;
             }
             return persistedState;

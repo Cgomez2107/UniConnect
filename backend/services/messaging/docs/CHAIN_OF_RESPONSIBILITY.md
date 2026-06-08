@@ -347,7 +347,7 @@ export const ValidationErrorMessages: Record<
   string
 > = {
   [ValidationErrorCode.MESSAGE_TOO_LONG]:
-    "El mensaje es demasiado largo. Máximo 5000 caracteres.",
+    "El mensaje es demasiado largo. Máximo 1000 caracteres.",
   [ValidationErrorCode.BANNED_CONTENT]:
     "El contenido de tu mensaje no está permitido en este chat.",
   [ValidationErrorCode.UNSUPPORTED_FILE_TYPE]:
@@ -427,7 +427,7 @@ MessagingController.createMessage(req)
 ```json
 {
   "error": "MESSAGE_TOO_LONG",
-  "message": "El mensaje es demasiado largo. Máximo 5000 caracteres.",
+  "message": "El mensaje es demasiado largo. Máximo 1000 caracteres.",
   "details": {
     "timestamp": "2026-05-19T10:30:00Z",
     "errorName": "SizeError"

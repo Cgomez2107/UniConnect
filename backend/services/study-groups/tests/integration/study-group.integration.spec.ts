@@ -47,11 +47,19 @@ function buildStudyGroupsServer() {
   const listMyStudyRequests: UseCaseStub = { execute: vi.fn().mockResolvedValue([]) };
   const listMyApplications: UseCaseStub = { execute: vi.fn().mockResolvedValue([]) };
   const cancelStudyRequest: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
+  const cancelMyApplication: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
   const toggleStudyGroupMessageReaction: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
   const createStudySession: UseCaseStub = { execute: vi.fn().mockResolvedValue({ type: "single", session: {} }) };
   const cancelStudySession: UseCaseStub = { execute: vi.fn().mockResolvedValue({}) };
   const updateAvailability: UseCaseStub = { execute: vi.fn().mockResolvedValue({}) };
   const listSessionsByGroup = { execute: vi.fn().mockResolvedValue([]), listAttendees: vi.fn().mockResolvedValue([]) };
+  const voteInPoll: UseCaseStub = { execute: vi.fn().mockResolvedValue({ requestId: "req-001", poll: {} }) };
+  const markNotificationAsRead: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
+  const markAllNotificationsAsRead: UseCaseStub = { execute: vi.fn().mockResolvedValue(undefined) };
+  const preferenceService = {
+    getCanalesActivos: vi.fn().mockResolvedValue([]),
+    setCanalActivo: vi.fn().mockResolvedValue(undefined),
+  };
 
   const controller = new StudyGroupsController(
     listOpenStudyRequests as never,
@@ -71,7 +79,12 @@ function buildStudyGroupsServer() {
     listMyStudyRequests as never,
     listMyApplications as never,
     cancelStudyRequest as never,
+    cancelMyApplication as never,
     toggleStudyGroupMessageReaction as never,
+    voteInPoll as never,
+    markNotificationAsRead as never,
+    markAllNotificationsAsRead as never,
+    preferenceService as never,
     createStudySession as never,
     cancelStudySession as never,
     updateAvailability as never,
@@ -92,7 +105,7 @@ function buildStudyGroupsServer() {
     reviewApplication,
     requestAdminTransfer,
     acceptAdminTransfer,
-    leaveAdminRole,
+    leaveStudyGroup,
     rejectAdminTransfer,
     listMyStudyRequests,
     listMyApplications,
@@ -170,7 +183,7 @@ describe("Study Groups integration /study-groups", () => {
       reviewApplication,
       requestAdminTransfer,
       acceptAdminTransfer,
-    leaveStudyGroup,
+      leaveStudyGroup,
     } = buildStudyGroupsServer();
 
     await request(server as any).get("/health").expect(200);
@@ -198,7 +211,7 @@ describe("Study Groups integration /study-groups", () => {
     expect(reviewApplication.execute).toHaveBeenCalled();
     expect(requestAdminTransfer.execute).toHaveBeenCalled();
     expect(acceptAdminTransfer.execute).toHaveBeenCalled();
-    expect(leaveAdminRole.execute).toHaveBeenCalled();
+    expect(leaveStudyGroup.execute).toHaveBeenCalled();
   });
 
   it("responde VALIDATION_ERROR cuando review no trae status", async () => {

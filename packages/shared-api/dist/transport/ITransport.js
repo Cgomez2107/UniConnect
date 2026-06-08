@@ -7,6 +7,7 @@ export class BaseTransport {
     baseURL;
     defaultTimeout = 30000; // 30 seconds
     onSessionExpired = null;
+    onError = null;
     constructor(baseURL = "") {
         this.baseURL = baseURL;
     }
@@ -15,6 +16,12 @@ export class BaseTransport {
      */
     setOnSessionExpired(callback) {
         this.onSessionExpired = callback;
+    }
+    /**
+     * Set error callback (invoked on any error response)
+     */
+    setOnError(callback) {
+        this.onError = callback;
     }
     /**
      * Set auth provider callback
