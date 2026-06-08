@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "4bd3cc0b-caa0-47d5-8871-3a80c379d15a"
+      }
+    },
+    "android": {
+      "package": "com.juanse108.uniconnectmonorepo"
+    }
+  }
+}
