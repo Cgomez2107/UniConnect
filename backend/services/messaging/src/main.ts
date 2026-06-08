@@ -35,6 +35,7 @@ import type { IPreferenceService } from "../../../shared/patterns/strategy/IPref
 import type { INotificationPreferenceRepository } from "../../../shared/patterns/strategy/INotificationPreferenceRepository.js";
 import type { IUserRepository, ContactInfo } from "../../../shared/patterns/strategy/IUserRepository.js";
 import { SupabaseRealtimeGateway } from "./infrastructure/realtime/SupabaseRealtimeGateway.js";
+import { resolveForbiddenWords } from "../../../shared/patterns/chain/message/ValidatorFactory.js";
 
 function sendJsonError(statusCode: number, message: string): string {
 	return JSON.stringify({ error: message, statusCode });
@@ -207,6 +208,7 @@ function bootstrap(): void {
     }
   };
 
+  const forbiddenWords = resolveForbiddenWords();
   const sendMessage = new SendMessage(
     repository,
     chatSubject,
@@ -215,6 +217,9 @@ function bootstrap(): void {
     chatNotificationObserver,
     pollTimerService,
     onClosePoll,
+    forbiddenWords,
+    undefined, // permissionRepo - no aplicable para chat personal
+    undefined, // adminResolver - no aplicable para chat personal
   );
   const markMessageAsRead = new MarkMessageAsRead(repository);
   const markConversationAsRead = new MarkConversationAsRead(repository);

@@ -398,6 +398,7 @@ function bootstrap(): void {
     groupChatNotificationObserver,
     groupPermissionRepo,
     groupPermissionRepo,
+    messageRepository,
     pollTimerService,
     onClosePoll,
   );

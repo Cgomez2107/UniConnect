@@ -17,7 +17,10 @@ import {
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
 import { ValidatorFactory } from "../../../../../shared/patterns/chain/message/ValidatorFactory.js";
 import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
+import { ModerationError } from "../../../../../shared/libs/errors/ModerationError.js";
 import { PollTimerService } from "../../domain/services/PollTimerService.js";
+import type { IGroupPermissionRepository } from "../../../../../shared/patterns/chain/message/PermissionValidator.js";
+import type { IAdminResolver } from "../../../../../shared/patterns/chain/message/MentionResolver.js";
 
 export class SendMessage {
   private readonly validator;
@@ -30,8 +33,17 @@ export class SendMessage {
     private readonly chatNotificationObserver: IChatObserver,
     private readonly pollTimerService: PollTimerService,
     private readonly onClosePoll: (messageId: string) => Promise<void>,
+    private readonly forbiddenWords?: string[],
+    private readonly permissionRepo?: IGroupPermissionRepository,
+    private readonly adminResolver?: IAdminResolver,
   ) {
-    this.validator = ValidatorFactory.createChain(5000, undefined, undefined, undefined, this.repository);
+    this.validator = ValidatorFactory.createChain(
+      1000,
+      forbiddenWords,
+      permissionRepo,
+      adminResolver,
+      this.repository,
+    );
   }
 
   private readonly uuidRegex =
@@ -64,6 +76,10 @@ export class SendMessage {
     });
 
     if (!validationResult.valido) {
+      if (validationResult.codigoError === "MO_003") {
+        console.warn("[SendMessage] Spam detectado, lanzando ModerationError:", validationResult.mensajeError);
+        throw new ModerationError(validationResult.mensajeError ?? "Spam detectado", validationResult.codigoError);
+      }
       throw new Error(validationResult.mensajeError ?? "Error de validación");
     }
 

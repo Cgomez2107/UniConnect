@@ -36,6 +36,7 @@ import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { validateBody } from "../../../middleware/validationMiddleware.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
+import { ModerationError } from "../../../../../../shared/libs/errors/ModerationError.js";
 import { sendData, sendError, sendJson } from "../../../../../../shared/http/sendJson.js";
 import type { ApplyToStudyGroupDto } from "../dto/ApplyToStudyGroupDto.js";
 import type { PreferenceService } from "../../../application/services/PreferenceService.js";
@@ -234,6 +235,7 @@ export class StudyGroupsController {
     res: ServerResponse,
     requestId: string,
   ): Promise<void> {
+    console.log("[StudyGroupsController] createMessage llamado con requestId:", requestId);
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
       sendError(res, 401, "Token de autenticacion requerido.");
@@ -262,6 +264,10 @@ export class StudyGroupsController {
 
       sendData(res, 201, created);
     } catch (error) {
+      if (error instanceof ModerationError) {
+        sendJson(res, error.statusCode, { error: error.message, code: error.code, name: error.name });
+        return;
+      }
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
@@ -461,7 +467,10 @@ export class StudyGroupsController {
 
     const body = await readJsonBody(req);
     try {
-      const parsed = ReviewApplicationBodySchema.parse(body);
+      const parsed = validateBody<z.infer<typeof ReviewApplicationBodySchema>>(ReviewApplicationBodySchema, body, res);
+      if (!parsed) {
+        return;
+      }
 
       await this.reviewApplication.execute({
         applicationId,
@@ -471,11 +480,6 @@ export class StudyGroupsController {
 
       sendData(res, 200, { message: "Postulación revisada correctamente." });
     } catch (error) {
-      if (error instanceof ZodError) {
-        sendError(res, 400, "Error de validación: el campo 'status' debe ser 'aceptada' o 'rechazada'.");
-        return;
-      }
-
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }
@@ -495,7 +499,10 @@ export class StudyGroupsController {
     const body = await readJsonBody(req);
 
     try {
-      const parsed = RequestTransferBodySchema.parse(body);
+      const parsed = validateBody<z.infer<typeof RequestTransferBodySchema>>(RequestTransferBodySchema, body, res);
+      if (!parsed) {
+        return;
+      }
 
       const created = await this.requestAdminTransfer.execute({
         requestId,
@@ -505,11 +512,6 @@ export class StudyGroupsController {
 
       sendData(res, 201, created);
     } catch (error) {
-      if (error instanceof ZodError) {
-        sendError(res, 400, "Error de validación: el campo 'targetUserId' es requerido.");
-        return;
-      }
-
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
     }

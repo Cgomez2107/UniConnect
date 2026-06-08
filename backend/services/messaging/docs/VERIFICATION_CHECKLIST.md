@@ -152,7 +152,7 @@ ValidationErrorCode.SPAM_DETECTED → HTTP 429 (Too Many Requests)
 ```json
 {
   "error": "MESSAGE_TOO_LONG",
-  "message": "El mensaje es demasiado largo. Máximo 5000 caracteres.",
+  "message": "El mensaje es demasiado largo. Máximo 1000 caracteres.",
   "details": {
     "timestamp": "2026-05-19T10:30:00Z",
     "errorName": "SizeError"

@@ -27,6 +27,12 @@ const STATE_ERROR_PATTERNS: [RegExp, string][] = [
    "No puedes unirte al grupo en este momento."],
   [/no estás matriculado/i,
    "No estás matriculado en esta materia."],
+  [/MO_001/i,
+   "Tu mensaje supera el límite permitido de caracteres (5000)."],
+  [/MO_002/i,
+   "Tu mensaje contiene palabras que infringen las normas de la comunidad."],
+  [/MO_003/i,
+   "Has sido bloqueado temporalmente (5 min) por comportamiento de spam."],
 ];
 
 const GENERIC_ERROR = "Ha ocurrido un error inesperado. Intenta de nuevo.";

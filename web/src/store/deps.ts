@@ -14,6 +14,7 @@ import {
 } from "@uniconnect/shared-api";
 import { WebStorageAdapter, ConsoleLogger } from "@uniconnect/shared-state";
 import { getWsUrl } from "@/lib/wsUrl";
+import { useSpamStore } from "@/store/useSpamStore";
 
 const GATEWAY_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
 const WS_URL = getWsUrl();
@@ -83,6 +84,17 @@ transport.setOnSessionExpired(() => {
     }
   } catch {
     // ignore
+  }
+});
+
+transport.setOnError((error) => {
+  console.log("[deps] Error callback invoked:", error);
+  if (error.status === 429) {
+    const data = error.data as any;
+    if (data?.code === "MO_003") {
+      console.log("[deps] Spam detected (MO_003), activating block for 5 minutes");
+      useSpamStore.getState().setBlocked(5 * 60 * 1000);
+    }
   }
 });
 

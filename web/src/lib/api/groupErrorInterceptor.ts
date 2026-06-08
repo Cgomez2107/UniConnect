@@ -1,4 +1,10 @@
 const STATE_ERROR_PATTERNS: [RegExp, string][] = [
+  [/MO_001|excede el límite|demasiado largo/i,
+   "El mensaje excede el límite permitido de caracteres."],
+  [/MO_002|palabra prohibida|palabras prohibidas|contenido inapropiado/i,
+   "El mensaje contiene palabras prohibidas o inapropiadas."],
+  [/MO_003|spam|bloqueado temporalmente/i,
+   "Has enviado demasiados mensajes. Chat suspendido por 5 minutos."],
   [/InvalidStateTransitionError/i,
    "Acción no permitida en el estado actual del grupo."],
   [/grupo está disuelto/i,

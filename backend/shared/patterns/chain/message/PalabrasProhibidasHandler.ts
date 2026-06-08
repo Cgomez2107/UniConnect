@@ -4,7 +4,7 @@ import type { ResultadoValidacion } from "./ResultadoValidacion.js";
 export class PalabrasProhibidasHandler extends MessageValidator {
   private readonly forbiddenPatterns: { word: string; pattern: RegExp }[];
 
-  constructor(forbiddenWords: string[] = ["spam", "violencia", "odio", "idiotas", "estupidos", "insultos", "tontos", "perras", "maricas", "hp", "hpta", "puto", "puta"]) {
+  constructor(forbiddenWords: string[] = ["spam", "violencia", "odio", "idiota", "estupido", "insulto", "tonto", "perra", "marica", "hp", "hpta", "puto", "puta"]) {
     super();
     this.forbiddenPatterns = forbiddenWords.map((word) => ({
       word,

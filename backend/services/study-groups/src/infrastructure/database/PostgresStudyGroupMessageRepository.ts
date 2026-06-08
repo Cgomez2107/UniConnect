@@ -38,7 +38,36 @@ function mapMessage(row: StudyGroupMessageRow): StudyGroupMessage {
 }
 
 export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool) {
+    this.initializeModerationTables();
+  }
+
+  private async initializeModerationTables(): Promise<void> {
+    try {
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS study_group_moderation_blocks (
+          user_id TEXT PRIMARY KEY,
+          blocked_until TIMESTAMP NOT NULL,
+          reason TEXT NOT NULL
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS study_group_message_timestamps (
+          user_id TEXT NOT NULL,
+          timestamp TIMESTAMP NOT NULL,
+          PRIMARY KEY (user_id, timestamp)
+        )
+      `);
+
+      await this.pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_study_group_message_timestamps_user
+        ON study_group_message_timestamps(user_id)
+      `);
+    } catch (error) {
+      console.error("[PostgresStudyGroupMessageRepository] Error initializing moderation tables:", error);
+    }
+  }
 
   async listByRequest(input: {
     requestId: string;
@@ -213,5 +242,60 @@ export class PostgresStudyGroupMessageRepository implements IStudyGroupMessageRe
     );
 
     return { requestId: request_id, poll: updatedPoll };
+  }
+
+  async isUserBlocked(userId: string): Promise<boolean> {
+    const result = await this.pool.query<{ blocked_until: Date }>(
+      `SELECT blocked_until FROM study_group_moderation_blocks WHERE user_id = $1`,
+      [userId],
+    );
+
+    if (!result.rows[0]) {
+      return false;
+    }
+
+    const blockedUntil = new Date(result.rows[0].blocked_until);
+    if (new Date() > blockedUntil) {
+      await this.pool.query(
+        `DELETE FROM study_group_moderation_blocks WHERE user_id = $1`,
+        [userId],
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  async blockUser(userId: string, durationMinutes: number, reason: string): Promise<void> {
+    const until = new Date(Date.now() + durationMinutes * 60000);
+    await this.pool.query(
+      `INSERT INTO study_group_moderation_blocks (user_id, blocked_until, reason)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET blocked_until = $2, reason = $3`,
+      [userId, until, reason],
+    );
+    console.warn(`[Moderación] Usuario ${userId} bloqueado por ${durationMinutes} minutos. Razón: ${reason}`);
+  }
+
+  async recordMessageTimestamp(userId: string): Promise<number> {
+    const now = new Date();
+    const limitTime = new Date(now.getTime() - 30000);
+
+    await this.pool.query(
+      `DELETE FROM study_group_message_timestamps WHERE timestamp < $1`,
+      [limitTime],
+    );
+
+    await this.pool.query(
+      `INSERT INTO study_group_message_timestamps (user_id, timestamp) VALUES ($1, $2)`,
+      [userId, now],
+    );
+
+    const result = await this.pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM study_group_message_timestamps WHERE user_id = $1`,
+      [userId],
+    );
+
+    return parseInt(result.rows[0].count, 10);
   }
 }

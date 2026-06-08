@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError } from "axios";
 import { parseGroupError } from "./groupErrorInterceptor";
 import { useNotificationStore } from "../../store/useNotificationStore";
 import type { Notification } from "@uniconnect/shared-types";
+import { useSpamStore } from "../../store/useSpamStore";
 
 /**
  * ============================================================================
@@ -147,9 +148,7 @@ apiClient.interceptors.request.use(
   }
 );
 
-// ============================================================================
-// RESPONSE INTERCEPTOR: Manejo global de errores
-// ============================================================================
+let lastApiToast: { message: string; timestamp: number } | null = null;
 
 apiClient.interceptors.response.use(
   (response) => {
@@ -229,9 +228,28 @@ apiClient.interceptors.response.use(
       console.error("[API] Error del servidor:", error.response?.data);
     }
 
-    // Estado inválido / error de dominio: mostrar toast al usuario
-    if (status && [400, 403, 409, 422].includes(status)) {
+    // Estado inválido / error de dominio o spam: mostrar toast al usuario
+    if (status && [400, 403, 409, 422, 429].includes(status)) {
       const friendly = parseGroupError(error);
+
+      // Activar bloqueo de spam si es código 429 o MO_003
+      const rawErrorStr = JSON.stringify(error.response?.data || "");
+      console.log("[API Client] Error status:", status, "Error data:", error.response?.data);
+      console.log("[API Client] Raw error string:", rawErrorStr);
+      console.log("[API Client] Checking for spam block:", status === 429, rawErrorStr.includes("MO_003"));
+
+      if (status === 429 || rawErrorStr.includes("MO_003")) {
+        console.log("[API Client] Activando bloqueo de spam por 5 minutos");
+        useSpamStore.getState().setBlocked(5 * 60 * 1000);
+      }
+
+      // Deduplicación de Toast
+      const now = Date.now();
+      if (lastApiToast && lastApiToast.message === friendly && (now - lastApiToast.timestamp) < 2000) {
+        return Promise.reject(error);
+      }
+      lastApiToast = { message: friendly, timestamp: now };
+
       try {
         const store = useNotificationStore.getState();
         if (typeof store.addNotification === "function") {

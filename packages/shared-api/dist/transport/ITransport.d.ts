@@ -9,11 +9,22 @@ export declare abstract class BaseTransport implements ITransport {
     protected baseURL: string;
     protected defaultTimeout: number;
     protected onSessionExpired: (() => void) | null;
+    onError: ((error: {
+        status: number;
+        data: any;
+    }) => void) | null;
     constructor(baseURL?: string);
     /**
      * Set session expiration callback (invoked on 401 responses)
      */
     setOnSessionExpired(callback: (() => void) | null): void;
+    /**
+     * Set error callback (invoked on any error response)
+     */
+    setOnError(callback: ((error: {
+        status: number;
+        data: any;
+    }) => void) | null): void;
     /**
      * Execute HTTP request
      * To be implemented by subclasses

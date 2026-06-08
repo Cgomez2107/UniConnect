@@ -59,7 +59,7 @@ function resolveMaxLength(explicit?: number): number {
   return 5000;
 }
 
-function resolveForbiddenWords(explicit?: string[]): string[] {
+export function resolveForbiddenWords(explicit?: string[]): string[] {
   if (explicit && explicit.length > 0) {
     return explicit;
   }
