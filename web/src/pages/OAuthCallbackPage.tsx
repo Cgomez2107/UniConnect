@@ -79,6 +79,16 @@ export function OAuthCallbackPage() {
                 localStorage.setItem("refreshToken", data.refreshToken);
               }
 
+              // Sincronizar sesión con el cliente Supabase para que auth.uid() funcione
+              try {
+                await supabase.auth.setSession({
+                  access_token: data.accessToken,
+                  refresh_token: data.refreshToken || "",
+                });
+              } catch (sessionErr) {
+                console.warn("[OAuthCallback] setSession failed (non-critical):", sessionErr);
+              }
+
               // Actualizar store
               if (data.user) {
                 useAuthStore.setState({

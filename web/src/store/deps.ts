@@ -15,6 +15,7 @@ import {
 import { WebStorageAdapter, ConsoleLogger } from "@uniconnect/shared-state";
 import { getWsUrl } from "@/lib/wsUrl";
 import { useSpamStore } from "@/store/useSpamStore";
+import { supabase } from "@/lib/supabase";
 
 const GATEWAY_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
 const WS_URL = getWsUrl();
@@ -142,6 +143,16 @@ export const deps = {
   transport,
   storage: storageAdapter,
   logger,
+  onSessionCreated: async ({ accessToken, refreshToken }: { accessToken: string; refreshToken: string }) => {
+    try {
+      await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+    } catch (err) {
+      console.warn("[deps] supabase.auth.setSession failed (non-critical):", err);
+    }
+  },
 };
 
 export { AUTH_SESSION_KEY };

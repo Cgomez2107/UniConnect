@@ -10,7 +10,7 @@ export function useEventCategories() {
     supabase
       .from("event_categories")
       .select("*")
-      .order("name")
+      .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (!error && data) {

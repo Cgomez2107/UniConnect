@@ -47,7 +47,7 @@ export default function useAdmin() {
         .from("faculties")
         .select("*")
         .eq("is_active", true)
-        .order("name");
+        .order("created_at", { ascending: false });
       if (err) throw new Error(err.message);
       setFaculties(data as Faculty[]);
     } catch (e) {
@@ -65,7 +65,7 @@ export default function useAdmin() {
         .from("programs")
         .select("*, faculties ( name )")
         .eq("is_active", true)
-        .order("name");
+        .order("created_at", { ascending: false });
       if (err) throw new Error(err.message);
       const mapped = (data ?? []).map((p: any) => ({
         ...p,
@@ -87,7 +87,7 @@ export default function useAdmin() {
         .from("subjects")
         .select("*, program_subjects ( programs ( id, name, faculty_id ) )")
         .eq("is_active", true)
-        .order("name");
+        .order("created_at", { ascending: false });
       if (err) throw new Error(err.message);
       const mapped = (data ?? []).map((s: any) => ({
         ...s,
@@ -205,7 +205,7 @@ export default function useAdmin() {
       const { data, error: err } = await supabase
         .from("events")
         .select("id, title, event_date, location, category, category_id, created_at, creator:created_by ( full_name )")
-        .order("event_date", { ascending: true });
+        .order("created_at", { ascending: false });
       if (err) throw new Error(err.message);
       const mapped = (data ?? []).map((e: any) => ({
         id: e.id,
@@ -454,7 +454,7 @@ export default function useAdmin() {
       const { data, error: err } = await supabase
         .from("event_categories")
         .select("*")
-        .order("name");
+        .order("created_at", { ascending: false });
       if (err) throw new Error(err.message);
       setEventCategories(data as EventCategoryRow[]);
     } catch (e) {

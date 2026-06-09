@@ -1,5 +1,8 @@
 import { useEffect } from "react";
 import useAdmin from "@/hooks/useAdmin";
+import { useTableControls } from "@/hooks/useTableControls";
+import { TablePagination } from "@/components/shared/TablePagination";
+import type { AdminUser } from "@/types";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
@@ -15,6 +18,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export function UsuariosPage() {
   const { profiles, loading, error, getProfiles, updateUserRole, toggleUserActive } = useAdmin();
+  const table = useTableControls<AdminUser>(profiles, ["full_name", "email", "role"]);
 
   useEffect(() => {
     getProfiles();
@@ -77,6 +81,15 @@ export function UsuariosPage() {
 
       {!loading && !error && profiles.length > 0 && (
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-neutral-200 bg-white">
+            <input
+              type="text"
+              value={table.search}
+              onChange={(e) => table.setSearch(e.target.value)}
+              placeholder="Buscar por nombre, correo o rol..."
+              className="w-full max-w-xs px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-50">
@@ -90,7 +103,7 @@ export function UsuariosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {profiles.map((u) => (
+              {table.pageData.map((u) => (
                 <tr key={u.id} className="hover:bg-neutral-50 transition-colors">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
@@ -149,6 +162,14 @@ export function UsuariosPage() {
               ))}
             </tbody>
           </table>
+          <TablePagination
+            page={table.page}
+            totalPages={table.totalPages}
+            totalFiltered={table.totalFiltered}
+            onPageChange={table.setPage}
+            onPrev={table.prevPage}
+            onNext={table.nextPage}
+          />
         </div>
       )}
     </div>

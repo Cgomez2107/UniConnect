@@ -3,7 +3,8 @@ import useAdmin from "@/hooks/useAdmin";
 import { useAdminEvents } from "@/hooks/useAdminEvents";
 import AdminModal from "@/components/admin/AdminModal";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
-import type { EventCategoryRow, EventStatus } from "@/types";
+import { useTableControls } from "@/hooks/useTableControls";
+import type { EventCategoryRow, EventStatus, AdminEvent } from "@/types";
 
 const CATEGORY_COLORS = [
   "bg-blue-50 text-blue-700",
@@ -105,6 +106,9 @@ export function AdminEventosPage() {
     fetchEvents(page, includeDeleted);
   }, [fetchEvents, page, includeDeleted]);
 
+  const eventsTable = useTableControls<AdminEvent>(events, ["title", "location", "creator_name"]);
+  const catSearch = useTableControls<EventCategoryRow>(eventCategories, ["name", "slug", "description"]);
+
   useEffect(() => {
     getEventCategories();
   }, [getEventCategories]);
@@ -152,6 +156,11 @@ export function AdminEventosPage() {
       setModalError("Selecciona una categoría.");
       return;
     }
+    const parsedCapacity = formMaxCapacity ? parseInt(formMaxCapacity, 10) : null;
+    if (parsedCapacity !== null && (!Number.isFinite(parsedCapacity) || parsedCapacity < 1)) {
+      setModalError("El cupo máximo debe ser un número mayor a 0.");
+      return;
+    }
     setFormSubmitting(true);
     setModalError("");
     try {
@@ -165,7 +174,7 @@ export function AdminEventosPage() {
         startAt: new Date(formDate).toISOString(),
         location: formLocation.trim() || undefined,
         category,
-        maxCapacity: formMaxCapacity ? parseInt(formMaxCapacity, 10) : null,
+        maxCapacity: parsedCapacity,
       };
       if (editId) {
         await updateEvent(editId, payload);
@@ -394,10 +403,17 @@ export function AdminEventosPage() {
           Gestión de Categorías ({eventCategories.length})
         </summary>
         <div className="mt-3 space-y-2">
-          {eventCategories.length === 0 && (
+          <input
+            type="text"
+            value={catSearch.search}
+            onChange={(e) => catSearch.setSearch(e.target.value)}
+            placeholder="Filtrar categorías..."
+            className="w-full max-w-xs px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-2"
+          />
+          {catSearch.totalFiltered === 0 && (
             <p className="text-sm text-neutral-400">No hay categorías disponibles.</p>
           )}
-          {eventCategories.map((c) => (
+          {catSearch.pageData.map((c) => (
             <div key={c.id} className="flex items-center justify-between bg-white border border-neutral-200 rounded-lg px-4 py-2.5">
               <div className="flex items-center gap-3">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(eventCategories, c.id)}`}>
@@ -503,6 +519,15 @@ export function AdminEventosPage() {
 
       {!loading && !error && events.length > 0 && (
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-neutral-200 bg-white">
+            <input
+              type="text"
+              value={eventsTable.search}
+              onChange={(e) => eventsTable.setSearch(e.target.value)}
+              placeholder="Buscar por título, lugar o creador..."
+              className="w-full max-w-xs px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-50">
@@ -517,7 +542,7 @@ export function AdminEventosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {events.map((e, idx) => {
+              {eventsTable.pageData.map((e, idx) => {
                 if (!e || !e.id) return null;
                 const eventDate = e.event_date ? new Date(e.event_date) : null;
                 const createdDate = e.created_at ? new Date(e.created_at) : null;
