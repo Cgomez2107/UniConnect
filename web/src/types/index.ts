@@ -418,6 +418,9 @@ export interface EventCategoryRow {
   created_at: string;
 }
 
+/** Estados del ciclo de vida de eventos (State pattern del backend) */
+export type EventStatus = "draft" | "published" | "cancelled" | "finished";
+
 /** Evento del campus (vista estudiante y admin) */
 export interface CampusEvent {
   id: string;
@@ -430,6 +433,9 @@ export interface CampusEvent {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  status: EventStatus;
+  max_capacity: number | null;
+  registered_count: number;
   // join opcional
   creator?: { full_name: string } | null;
 }
@@ -442,18 +448,36 @@ export interface CreateEventPayload {
   location?: string;
   category_id: string;
   image_url?: string;
+  max_capacity?: number | null;
 }
 
 /** Evento visto desde el panel de admin (con nombre del creador aplanado) */
 export interface AdminEvent {
   id: string;
   title: string;
+  description: string | null;
   event_date: string;
   location: string | null;
   category: EventCategory;
   category_id: string;
+  status: EventStatus;
+  max_capacity: number | null;
+  registered_count: number;
+  image_url: string | null;
+  created_by: string | null;
   created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
   creator_name: string;
+}
+
+/** Resultado paginado de eventos desde el backend */
+export interface PaginatedAdminResult {
+  data: AdminEvent[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 // ============================================================================

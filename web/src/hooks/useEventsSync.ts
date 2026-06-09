@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useEventsStore } from "@/store/useEventsStore";
 import { getWsUrl } from "@/lib/wsUrl";
+import { fetchNotifications } from "@/lib/services/notifications.service";
 
 const WS_URL = getWsUrl();
 
@@ -47,14 +48,17 @@ export function useEventsSync() {
           switch (data.event) {
             case "new_event": {
               store.addEvent(data.payload);
+              fetchNotifications();
               break;
             }
             case "event_updated": {
               store.updateEvent(data.payload);
+              fetchNotifications();
               break;
             }
             case "event_deleted": {
               store.removeEvent(data.payload.id);
+              fetchNotifications();
               break;
             }
             default:

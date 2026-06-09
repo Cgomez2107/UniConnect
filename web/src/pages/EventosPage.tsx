@@ -5,7 +5,6 @@ import { useEventsSync } from "@/hooks";
 import { useEventSubscriptionStore } from "@/store/useEventSubscriptionStore";
 import { useEventCategories } from "@/hooks/useEventCategories";
 import { EventCard } from "@/components/shared/EventCard";
-import { Button } from "@/components/ui/Button";
 
 const CATEGORY_ICONS = ["🎓", "🎭", "⚽", "📌", "🎨", "💡", "🌍", "🎵"];
 
@@ -81,9 +80,6 @@ export function EventosPage() {
               Descubre eventos académicos, culturales y deportivos
             </p>
           </div>
-          <Button onClick={() => navigate("/crear-evento")}>
-            + Nuevo Evento
-          </Button>
         </div>
 
         <div className="mb-6 space-y-3">
@@ -154,9 +150,6 @@ export function EventosPage() {
                 ? "No hay eventos que coincidan con tu búsqueda"
                 : "No hay eventos disponibles"}
             </p>
-            <Button onClick={() => navigate("/crear-evento")}>
-              Crear el primer evento
-            </Button>
           </div>
         )}
 

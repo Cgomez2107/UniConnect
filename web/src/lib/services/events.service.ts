@@ -17,6 +17,9 @@ export function mapEvent(e: any): CampusEventUI {
     createdBy: e.createdBy ?? e.created_by ?? null,
     createdAt: e.createdAt?.toISOString?.() ?? e.createdAt ?? e.created_at,
     updatedAt: e.updatedAt?.toISOString?.() ?? e.updatedAt ?? e.updated_at,
+    status: e.status ?? e.state ?? "draft",
+    maxCapacity: e.maxCapacity ?? e.max_capacity ?? null,
+    registeredCount: e.registeredCount ?? e.registered_count ?? 0,
     creator: e.creator ? { fullName: e.creator.fullName ?? e.creator.full_name } : null,
   };
 }
@@ -28,8 +31,12 @@ const eventsService = {
   },
 
   async getEventById(id: string) {
-    const event = await deps.apiClients.events.getById(id);
-    return mapEvent(event);
+    const raw = await deps.apiClients.events.getById(id);
+    const event = mapEvent(raw);
+    return {
+      event,
+      isRegistered: (raw as any).isRegistered === true,
+    };
   },
 
   async createEvent(data: {
@@ -57,6 +64,10 @@ const eventsService = {
 
   async deleteEvent(id: string) {
     await deps.apiClients.events.delete(id);
+  },
+
+  async registerForEvent(eventId: string) {
+    await deps.apiClients.events.register(eventId);
   },
 };
 

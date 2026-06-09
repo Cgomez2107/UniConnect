@@ -1,6 +1,11 @@
 import type { IncomingMessage } from "node:http";
 
 export function getActorUserId(req: IncomingMessage): string | null {
+  const xUserId = req.headers["x-user-id"];
+  if (typeof xUserId === "string" && xUserId.trim()) {
+    return xUserId.trim();
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader || typeof authHeader !== "string") {
     return null;

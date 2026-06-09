@@ -11,3 +11,8 @@ export {
   type IEventSocketGateway,
 } from "./UniversityEventObserver.js";
 export type { ISubscriptionRepository } from "./subscriptions/ISubscriptionRepository.js";
+export type { EventCancelledEvent } from "./CancellationEvent.js";
+export {
+  CancellationObserver,
+  type IRegisteredUserRepository,
+} from "./CancellationObserver.js";

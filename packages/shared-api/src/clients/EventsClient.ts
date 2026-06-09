@@ -95,4 +95,11 @@ export class EventsClient extends BaseClient {
       url: `/events/${id}`,
     });
   }
+
+  async register(eventId: string): Promise<void> {
+    await this.transport.request({
+      method: "POST",
+      url: `/events/${eventId}/register`,
+    });
+  }
 }

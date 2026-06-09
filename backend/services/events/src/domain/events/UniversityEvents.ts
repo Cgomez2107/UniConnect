@@ -1,4 +1,5 @@
 import type { EventCategory } from "../entities/Event.js";
+import type { EventCancelledEvent } from "./CancellationEvent.js";
 
 export interface NuevoEventoUniversidadEvent {
   readonly type: "NUEVO_EVENTO";
@@ -21,5 +22,5 @@ export interface NuevoEventoUniversidadEvent {
   };
 }
 
-export type UniversityEvent = NuevoEventoUniversidadEvent;
+export type UniversityEvent = NuevoEventoUniversidadEvent | EventCancelledEvent;
 export type UniversityEventType = UniversityEvent["type"];

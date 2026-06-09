@@ -7,12 +7,18 @@ import { GetEventById } from "./application/use-cases/GetEventById.js";
 import { CreateEvent } from "./application/use-cases/CreateEvent.js";
 import { UpdateEvent } from "./application/use-cases/UpdateEvent.js";
 import { DeleteEvent } from "./application/use-cases/DeleteEvent.js";
+import { PublishEvent } from "./application/use-cases/PublishEvent.js";
+import { CancelEvent } from "./application/use-cases/CancelEvent.js";
+import { FinishEvent } from "./application/use-cases/FinishEvent.js";
+import { RegisterForEvent } from "./application/use-cases/RegisterForEvent.js";
 import { loadEventsEnv } from "./config/env.js";
 import { PostgresEventRepository } from "./infrastructure/database/PostgresEventRepository.js";
+import { PostgresEventNotificationRepository } from "./infrastructure/database/PostgresEventNotificationRepository.js";
 import { PostgresSubscriptionRepository } from "./infrastructure/database/PostgresSubscriptionRepository.js";
 import { Database } from "./infrastructure/database/Database.js";
 import { UniversityEventSubject } from "./domain/events/UniversityEventSubject.js";
 import { UniversityEventObserver } from "./domain/events/UniversityEventObserver.js";
+import { CancellationObserver } from "./domain/events/CancellationObserver.js";
 import { EventsController } from "./interfaces/http/controllers/EventsController.js";
 import { SubscriptionController } from "./interfaces/http/controllers/SubscriptionController.js";
 import { handleEventsRoutes } from "./interfaces/http/routes/eventsRoutes.js";
@@ -43,17 +49,14 @@ async function ensureEventSubscriptionsTable(pool: import("pg").Pool): Promise<v
 function bootstrap(): void {
   const env = loadEventsEnv();
 
-  // Inicialización del Singleton de BD
   const pool = Database.getInstance(env).getPool();
 
-  // Asegurar tabla event_subscriptions
   void ensureEventSubscriptionsTable(pool);
 
-  // Repositorio con inyección de dependencia
   const repository = new PostgresEventRepository(pool);
+  const notificationRepository = new PostgresEventNotificationRepository(pool);
   const subscriptionRepository = new PostgresSubscriptionRepository(pool);
 
-  // Sistema de eventos (Observer Pattern)
   const subject = new UniversityEventSubject();
   const socketGateway = env.supabaseUrl && env.supabaseServiceRoleKey
     ? new SupabaseRealtimeEventGateway(env.supabaseUrl, env.supabaseServiceRoleKey)
@@ -64,20 +67,32 @@ function bootstrap(): void {
   const eventObserver = new UniversityEventObserver(subscriptionRepository, socketGateway);
   subject.subscribe(eventObserver);
 
+  const cancellationObserver = new CancellationObserver(repository, notificationRepository, socketGateway);
+  subject.subscribe(cancellationObserver);
+
   const getAllEvents = new GetAllEvents(repository);
   const getUpcomingEvents = new GetUpcomingEvents(repository);
   const getEventById = new GetEventById(repository);
-  const createEvent = new CreateEvent(repository, subject);
+  const createEvent = new CreateEvent(repository);
   const updateEvent = new UpdateEvent(repository);
   const deleteEvent = new DeleteEvent(repository);
+  const publishEvent = new PublishEvent(repository, subscriptionRepository, notificationRepository, socketGateway);
+  const cancelEvent = new CancelEvent(repository, subject);
+  const finishEvent = new FinishEvent(repository);
+  const registerForEvent = new RegisterForEvent(repository);
 
   const controller = new EventsController(
+    pool,
     getAllEvents,
     getUpcomingEvents,
     getEventById,
     createEvent,
     updateEvent,
     deleteEvent,
+    publishEvent,
+    cancelEvent,
+    finishEvent,
+    registerForEvent,
   );
 
   const subscriptionController = new SubscriptionController(subscriptionRepository);
@@ -112,7 +127,6 @@ function bootstrap(): void {
     );
   });
 
-  // --- Graceful Shutdown ---
   const shutdown = async (signal: string) => {
     console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio events...`);
 

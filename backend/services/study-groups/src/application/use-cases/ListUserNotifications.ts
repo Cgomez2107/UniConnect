@@ -11,10 +11,15 @@ export class ListUserNotifications {
   constructor(private readonly repository: INotificationRepository) {}
 
   async execute(input: ListUserNotificationsInput): Promise<UserNotification[]> {
-    return this.repository.listByUser({
-      actorUserId: input.actorUserId,
-      page: input.page,
-      pageSize: input.pageSize,
-    });
+    try {
+      return await this.repository.listByUser({
+        actorUserId: input.actorUserId,
+        page: input.page,
+        pageSize: input.pageSize,
+      });
+    } catch (err) {
+      console.error("[ListUserNotifications] Unexpected error:", err);
+      return [];
+    }
   }
 }

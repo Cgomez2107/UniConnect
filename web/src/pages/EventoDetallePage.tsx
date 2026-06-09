@@ -12,16 +12,46 @@ export function EventoDetallePage() {
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [registering, setRegistering] = useState(false);
+  const [registerMsg, setRegisterMsg] = useState<string | null>(null);
+  const [isRegistered, setIsRegistered] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     eventsService
       .getEventById(id)
-      .then(setEvent)
+      .then(({ event, isRegistered: registered }) => {
+        setEvent(event);
+        setIsRegistered(registered);
+      })
       .catch((err) => setError(err?.message || "Error al cargar el evento"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleRegister = async () => {
+    if (!id || registering) return;
+    setRegistering(true);
+    setRegisterMsg(null);
+    try {
+      await eventsService.registerForEvent(id);
+      setIsRegistered(true);
+      setRegisterMsg("¡Inscripción exitosa!");
+      const { event: updated } = await eventsService.getEventById(id);
+      setEvent(updated);
+    } catch (err: any) {
+      setRegisterMsg(err?.message || "Error al inscribirse");
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const isPublished = event?.status === "published";
+  const isFull =
+    isPublished &&
+    event?.maxCapacity !== null &&
+    event?.registeredCount >= event?.maxCapacity;
+  const isCancelled = event?.status === "cancelled";
 
   if (loading) {
     return (
@@ -109,6 +139,52 @@ export function EventoDetallePage() {
                 <span className="text-lg">👤</span>
                 <span>Organizado por {event.creator.fullName}</span>
               </div>
+            )}
+            {event.maxCapacity !== null && (
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎟️</span>
+                <span>
+                  Cupo: {event.registeredCount ?? 0} / {event.maxCapacity}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 border-t border-neutral-100 pt-4">
+            {isRegistered ? (
+              <button
+                disabled
+                className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
+              >
+                Ya estás inscrito en este evento
+              </button>
+            ) : isCancelled ? (
+              <button
+                disabled
+                className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
+              >
+                Evento Cancelado - No acepta registros
+              </button>
+            ) : isFull ? (
+              <button
+                disabled
+                className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
+              >
+                Cupo Agotado
+              </button>
+            ) : isPublished ? (
+              <button
+                onClick={handleRegister}
+                disabled={registering}
+                className="w-full px-4 py-3 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors disabled:opacity-60"
+              >
+                {registering ? "Inscribiendo..." : "Inscribirme al evento"}
+              </button>
+            ) : null}
+            {registerMsg && (
+              <p className={`mt-2 text-sm text-center ${registerMsg.includes("exitosa") ? "text-green-600" : "text-error-600"}`}>
+                {registerMsg}
+              </p>
             )}
           </div>
         </div>
