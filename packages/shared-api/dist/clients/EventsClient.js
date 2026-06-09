@@ -66,5 +66,11 @@ export class EventsClient extends BaseClient {
             url: `/events/${id}`,
         });
     }
+    async register(eventId) {
+        await this.transport.request({
+            method: "POST",
+            url: `/events/${eventId}/register`,
+        });
+    }
 }
 //# sourceMappingURL=EventsClient.js.map

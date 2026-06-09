@@ -24,5 +24,6 @@ export declare class EventsClient extends BaseClient {
     create(payload: CreateEventPayload): Promise<Event>;
     update(id: string, payload: Partial<CreateEventPayload>): Promise<Event>;
     delete(id: string): Promise<void>;
+    register(eventId: string): Promise<void>;
 }
 //# sourceMappingURL=EventsClient.d.ts.map
