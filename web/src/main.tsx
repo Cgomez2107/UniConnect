@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { useAuthStore } from './store/useAuthStore'
+import { useSpamStore } from './store/useSpamStore'
 import { validateWebEnv, formatValidationErrors } from '@uniconnect/shared-utils/envValidator'
 
 // Validate critical env vars at startup
@@ -46,6 +47,11 @@ if (!envResult.valid) {
     useAuthStore.getState().hydrate();
   } catch (e) {
     // ignore hydration errors
+  }
+
+  // Expose spam store for E2E tests
+  if (typeof window !== 'undefined') {
+    (window as any).__ZUSTAND_STORE__ = useSpamStore;
   }
 
   createRoot(document.getElementById('root')!).render(

@@ -662,10 +662,11 @@ export function GroupDashboardPage() {
             : m
         );
       });
-    } catch {
+    } catch (err) {
       setMessages((prev) =>
         prev.map((m: any) => (m.id === tempId ? { ...m, clientStatus: "failed" } : m))
       );
+      throw err;
     } finally {
       setSending(false);
     }
