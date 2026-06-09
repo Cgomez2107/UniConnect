@@ -62,6 +62,11 @@ export function createAuthStore(deps: StoreDeps) {
               isLoading: false,
             });
 
+            deps.onSessionCreated?.({
+              accessToken: response.accessToken,
+              refreshToken: response.refreshToken,
+            });
+
             logger?.info("Sign in successful");
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Sign in failed";
@@ -95,6 +100,11 @@ export function createAuthStore(deps: StoreDeps) {
               refreshToken: response.refreshToken,
               isAuthenticated: true,
               isLoading: false,
+            });
+
+            deps.onSessionCreated?.({
+              accessToken: response.accessToken,
+              refreshToken: response.refreshToken,
             });
 
             logger?.info("Sign up successful");
