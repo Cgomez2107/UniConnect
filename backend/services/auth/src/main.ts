@@ -166,8 +166,8 @@ async function main() {
     const devOriginPattern = /^https?:\/\/192\.168\.\d{1,3}\.\d{1,3}:(8081|8082)$/;
 
     const isAllowed =
-      allowedOrigins.includes(origin) ||
-      (process.env.NODE_ENV !== "production" && devOriginPattern.test(origin));
+      (origin != null && allowedOrigins.includes(origin)) ||
+      (process.env.NODE_ENV !== "production" && origin != null && devOriginPattern.test(origin));
 
     if (origin && isAllowed) {
       res.setHeader("Access-Control-Allow-Origin", origin);
