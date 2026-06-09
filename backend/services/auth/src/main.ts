@@ -163,8 +163,13 @@ async function main() {
       "http://192.168.140.38:8082",
       "https://uniconnect-dashboard-web.fly.dev",
     ];
-    
-    if (origin && allowedOrigins.includes(origin)) {
+    const devOriginPattern = /^https?:\/\/192\.168\.\d{1,3}\.\d{1,3}:(8081|8082)$/;
+
+    const isAllowed =
+      allowedOrigins.includes(origin) ||
+      (process.env.NODE_ENV !== "production" && devOriginPattern.test(origin));
+
+    if (origin && isAllowed) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
     }

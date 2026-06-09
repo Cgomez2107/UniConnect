@@ -717,10 +717,9 @@ function onForumResponse(
   }
 }
 
-function setCorsHeaders(
-  res: NodeServerResponse,
-  origin: string,
-): boolean {
+const DEV_ORIGIN_PATTERN = /^https?:\/\/192\.168\.\d{1,3}\.\d{1,3}:(8081|8082)$/;
+
+function isOriginAllowed(origin: string): boolean {
   const allowedOrigins = [
     "http://localhost:8081",
     "http://localhost:8082",
@@ -731,7 +730,20 @@ function setCorsHeaders(
     "https://uniconnect-dashboard-web.fly.dev",
   ];
 
-  if (origin && allowedOrigins.includes(origin)) {
+  if (allowedOrigins.includes(origin)) return true;
+
+  if (process.env.NODE_ENV !== "production" && DEV_ORIGIN_PATTERN.test(origin)) {
+    return true;
+  }
+
+  return false;
+}
+
+function setCorsHeaders(
+  res: NodeServerResponse,
+  origin: string,
+): boolean {
+  if (origin && isOriginAllowed(origin)) {
     setHeader(res, "Access-Control-Allow-Origin", origin);
     setHeader(res, "Access-Control-Allow-Credentials", "true");
     setHeader(res, "Vary", "Origin");
