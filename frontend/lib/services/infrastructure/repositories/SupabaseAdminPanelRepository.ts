@@ -269,21 +269,14 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
   }
 
   async getAllEvents(includeDeleted?: boolean): Promise<AdminEvent[]> {
-    let query = supabase
+    const { data, error } = await supabase
       .from("events")
       .select("id, title, event_date, location, category, category_id, created_at, status, deleted_at, creator:created_by ( full_name )")
-
-    if (includeDeleted) {
-      query = query.not("deleted_at", "is", null)
-    } else {
-      query = query.is("deleted_at", null)
-    }
-
-    const { data, error } = await query.order("event_date", { ascending: true })
+      .order("event_date", { ascending: true })
 
     if (error) throw new Error(error.message)
 
-    return (data ?? []).map((e: any) => ({
+    const mapped = (data ?? []).map((e: any) => ({
       id: e.id,
       title: e.title,
       event_date: e.event_date,
@@ -295,6 +288,11 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
       status: e.status,
       deleted_at: e.deleted_at ?? null,
     })) as AdminEvent[]
+
+    if (includeDeleted) {
+      return mapped.filter((e) => e.deleted_at)
+    }
+    return mapped.filter((e) => !e.deleted_at)
   }
 
   async createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
