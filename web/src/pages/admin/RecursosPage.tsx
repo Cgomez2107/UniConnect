@@ -1,5 +1,8 @@
 import { useEffect } from "react";
 import useAdmin from "@/hooks/useAdmin";
+import { useTableControls } from "@/hooks/useTableControls";
+import { TablePagination } from "@/components/shared/TablePagination";
+import type { AdminResource } from "@/types";
 
 const FILE_TYPE_LABELS: Record<string, string> = {
   pdf: "PDF",
@@ -19,6 +22,7 @@ const FILE_TYPE_LABELS: Record<string, string> = {
 
 export function AdminRecursosPage() {
   const { resources, loading, error, getResources, deleteResource } = useAdmin();
+  const table = useTableControls<AdminResource>(resources, ["title", "file_type", "subject_name", "author_name"]);
 
   useEffect(() => {
     getResources();
@@ -76,6 +80,15 @@ export function AdminRecursosPage() {
 
       {!loading && !error && resources.length > 0 && (
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-neutral-200 bg-white">
+            <input
+              type="text"
+              value={table.search}
+              onChange={(e) => table.setSearch(e.target.value)}
+              placeholder="Buscar por nombre, tipo, materia o creador..."
+              className="w-full max-w-xs px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-50">
@@ -89,7 +102,7 @@ export function AdminRecursosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {resources.map((r) => (
+              {table.pageData.map((r) => (
                 <tr key={r.id} className="hover:bg-neutral-50 transition-colors">
                   <td className="px-5 py-3 text-sm font-medium text-neutral-800">
                     {r.title}
@@ -127,6 +140,14 @@ export function AdminRecursosPage() {
               ))}
             </tbody>
           </table>
+          <TablePagination
+            page={table.page}
+            totalPages={table.totalPages}
+            totalFiltered={table.totalFiltered}
+            onPageChange={table.setPage}
+            onPrev={table.prevPage}
+            onNext={table.nextPage}
+          />
         </div>
       )}
     </div>

@@ -32,6 +32,10 @@ export function createAuthStore(deps) {
                     isAuthenticated: true,
                     isLoading: false,
                 });
+                deps.onSessionCreated?.({
+                    accessToken: response.accessToken,
+                    refreshToken: response.refreshToken,
+                });
                 logger?.info("Sign in successful");
             }
             catch (error) {
@@ -58,6 +62,10 @@ export function createAuthStore(deps) {
                     refreshToken: response.refreshToken,
                     isAuthenticated: true,
                     isLoading: false,
+                });
+                deps.onSessionCreated?.({
+                    accessToken: response.accessToken,
+                    refreshToken: response.refreshToken,
                 });
                 logger?.info("Sign up successful");
             }
