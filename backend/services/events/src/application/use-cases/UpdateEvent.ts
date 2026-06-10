@@ -7,6 +7,7 @@ import { ValidationError } from "../../../../../shared/libs/errors/ValidationErr
 export interface UpdateEventInput {
   readonly actorUserId: string;
   readonly eventId: string;
+  readonly isAdmin?: boolean;
   readonly title?: string;
   readonly description?: string;
   readonly location?: string;
@@ -28,6 +29,10 @@ export class UpdateEvent {
     const existing = await this.repository.getById(input.eventId);
     if (!existing) {
       throw new NotFoundError("Evento no encontrado.");
+    }
+
+    if (existing.organizerId !== input.actorUserId && !input.isAdmin) {
+      throw new Error("Solo el organizador o un administrador pueden editar este evento.");
     }
 
     const context = EventContext.fromStatus(existing.status);

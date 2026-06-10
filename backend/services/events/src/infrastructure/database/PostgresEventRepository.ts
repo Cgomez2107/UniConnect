@@ -234,9 +234,7 @@ export class PostgresEventRepository implements IEventRepository {
       throw new Error("Event not found");
     }
 
-    if (event.organizerId !== organizerId) {
-      throw new Error("Only the event organizer can update this event");
-    }
+    // Authorization is handled in UpdateEvent use case
 
     const columnMap: Record<string, string> = {
       startAt: "event_date",

@@ -91,14 +91,6 @@ export function ModeracionPage() {
                   <p className="text-sm text-neutral-600 mt-1">
                     {alert.description || (alert as any).body}
                   </p>
-
-                  <div className="flex items-center gap-2 mt-3 text-xs bg-neutral-50 border border-neutral-100 rounded px-2.5 py-1.5 w-fit">
-                    <UserX size={14} className="text-neutral-500" />
-                    <span className="font-medium text-neutral-700">ID del Usuario:</span>
-                    <code className="text-primary-600 font-mono select-all bg-white px-1 py-0.5 rounded border border-neutral-100">
-                      {userId}
-                    </code>
-                  </div>
                 </div>
 
                 <div className="shrink-0">

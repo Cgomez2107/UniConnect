@@ -361,7 +361,11 @@ export function AdminEventosPage() {
         );
       case "cancelled":
       case "finished":
-        return <span className="text-sm text-neutral-400">—</span>;
+        return (
+          <button onClick={() => confirmDelete(e.id, e.title)} className="text-sm text-error-600 hover:text-error-800">
+            Eliminar
+          </button>
+        );
     }
   };
 

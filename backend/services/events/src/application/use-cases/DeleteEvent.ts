@@ -5,7 +5,7 @@ import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.j
 export class DeleteEvent {
   constructor(private readonly repository: IEventRepository) {}
 
-  async execute(input: { eventId: string; actorUserId: string; isAdmin: boolean }): Promise<void> {
+  async execute(input: { eventId: string; isAdmin: boolean }): Promise<void> {
     if (!input.eventId.trim()) {
       throw new Error("Event ID is required");
     }
@@ -15,9 +15,8 @@ export class DeleteEvent {
       throw new NotFoundError("Evento no encontrado.");
     }
 
-    const isOwner = event.organizerId === input.actorUserId;
-    if (!isOwner && !input.isAdmin) {
-      throw new Error("Solo el organizador o un administrador pueden eliminar el evento.");
+    if (!input.isAdmin) {
+      throw new Error("Solo un administrador puede eliminar un evento.");
     }
 
     const context = EventContext.fromStatus(event.status);
