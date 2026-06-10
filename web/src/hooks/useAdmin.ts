@@ -470,11 +470,14 @@ export default function useAdmin() {
       const slug = generateSlug(payload.name);
       const { data: existing } = await supabase
         .from("event_categories")
-        .select("id")
+        .select("id, name")
         .or(`slug.eq.${slug},name.ilike.${payload.name}`)
         .maybeSingle();
       if (existing) {
-        throw new Error("Ya existe una categoría con ese nombre o slug");
+        const conflictError = new Error(`Ya existe una categoría con el nombre "${existing.name}".`);
+        (conflictError as any).statusCode = 409;
+        console.error("[409] createEventCategory:", conflictError.message);
+        throw conflictError;
       }
       const { data, error: err } = await supabase
         .from("event_categories")
@@ -487,7 +490,10 @@ export default function useAdmin() {
         .single();
       if (err) {
         if (err.code === "23505") {
-          throw new Error("Ya existe una categoría con ese nombre o slug");
+          const conflictError = new Error(`Ya existe una categoría con el nombre "${payload.name.trim()}".`);
+          (conflictError as any).statusCode = 409;
+          console.error("[409] createEventCategory:", conflictError.message);
+          throw conflictError;
         }
         throw new Error(err.message);
       }
@@ -506,12 +512,15 @@ export default function useAdmin() {
       if (newSlug) {
         const { data: existing } = await supabase
           .from("event_categories")
-          .select("id")
+          .select("id, name")
           .or(`slug.eq.${newSlug},name.ilike.${updates.name}`)
           .neq("id", id)
           .maybeSingle();
         if (existing) {
-          throw new Error("Ya existe otra categoría con ese nombre o slug");
+          const conflictError = new Error(`Ya existe otra categoría con el nombre "${existing.name}".`);
+          (conflictError as any).statusCode = 409;
+          console.error("[409] updateEventCategory:", conflictError.message);
+          throw conflictError;
         }
       }
       const { data, error: err } = await supabase
@@ -528,7 +537,10 @@ export default function useAdmin() {
         .single();
       if (err) {
         if (err.code === "23505") {
-          throw new Error("Ya existe otra categoría con ese nombre o slug");
+          const conflictError = new Error(`Ya existe otra categoría con el nombre "${updates.name?.trim()}".`);
+          (conflictError as any).statusCode = 409;
+          console.error("[409] updateEventCategory:", conflictError.message);
+          throw conflictError;
         }
         throw new Error(err.message);
       }
@@ -556,7 +568,10 @@ export default function useAdmin() {
         .select("id", { count: "exact", head: true })
         .eq("category_id", id);
       if (count && count > 0) {
-        throw new Error(`No se puede eliminar la categoría porque tiene ${count} evento(s) activo(s) asociado(s). Reasigna o elimina los eventos primero.`);
+        const conflictError = new Error(`No se puede eliminar la categoría porque ${count} evento(s) la están usando. Reasigna o elimina los eventos primero.`);
+        (conflictError as any).statusCode = 409;
+        console.error("[409] deleteEventCategory:", conflictError.message);
+        throw conflictError;
       }
       const { error: err } = await supabase.from("event_categories").delete().eq("id", id);
       if (err) throw new Error(err.message);

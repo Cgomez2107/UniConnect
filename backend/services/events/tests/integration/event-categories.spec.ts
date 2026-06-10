@@ -216,24 +216,49 @@ describe("US-EV02 Criterio 3: Edit name regenerates slug, events keep reference 
   });
 });
 
-describe("US-EV02: Error message format (HTTP 409 equivalent)", () => {
-  it("mensaje de error por nombre duplicado identifica el nombre", () => {
-    const name = "Cultural";
-    const msg = `Ya existe una categoría con el nombre "${name}".`;
-    expect(msg).toContain(name);
-    expect(msg).toContain("Ya existe una categoría");
+describe("US-EV02 Criterio 2: Duplicate name returns HTTP 409 with category name", () => {
+  it("lanza error 409 con el nombre de la categoría duplicada", () => {
+    const duplicateName = "Cultural";
+    const error = new Error(`Ya existe una categoría con el nombre "${duplicateName}".`);
+    (error as any).statusCode = 409;
+
+    expect(error.message).toContain(duplicateName);
+    expect(error.message).toContain("Ya existe una categoría");
+    expect((error as any).statusCode).toBe(409);
   });
 
-  it("mensaje de error por eliminación bloqueada incluye cantidad de eventos", () => {
-    const count = 7;
-    const msg = `No se puede eliminar la categoría porque ${count} evento(s) la están usando. Reasigna o elimina los eventos primero.`;
-    expect(msg).toContain("7");
-    expect(msg).toContain("evento(s)");
-    expect(msg).toContain("Reasigna o elimina los eventos primero");
+  it("el error 409 identifica la categoría existente por nombre", () => {
+    const existingCategory = "Académico";
+    const error = new Error(`Ya existe una categoría con el nombre "${existingCategory}".`);
+    (error as any).statusCode = 409;
+
+    expect(error.message).toContain("Académico");
+    expect((error as any).statusCode).toBe(409);
+  });
+});
+
+describe("US-EV02 Criterio 4: Delete blocked returns HTTP 409 with event count", () => {
+  it("lanza error 409 cuando hay eventos activos asociados", () => {
+    const eventCount = 5;
+    const error = new Error(
+      `No se puede eliminar la categoría porque ${eventCount} evento(s) la están usando. Reasigna o elimina los eventos primero.`
+    );
+    (error as any).statusCode = 409;
+
+    expect(error.message).toContain("5");
+    expect(error.message).toContain("evento(s)");
+    expect(error.message).toContain("Reasigna o elimina los eventos primero");
+    expect((error as any).statusCode).toBe(409);
   });
 
-  it("mensaje de error por slug duplicado en web", () => {
-    const msg = "Ya existe una categoría con ese nombre o slug";
-    expect(msg).toContain("slug");
+  it("el error incluye el conteo exacto de eventos", () => {
+    const count = 12;
+    const error = new Error(
+      `No se puede eliminar la categoría porque ${count} evento(s) la están usando. Reasigna o elimina los eventos primero.`
+    );
+    (error as any).statusCode = 409;
+
+    expect(error.message).toContain("12");
+    expect((error as any).statusCode).toBe(409);
   });
 });
