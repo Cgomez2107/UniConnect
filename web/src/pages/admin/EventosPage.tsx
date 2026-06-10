@@ -30,10 +30,16 @@ function getCategoryColor(categories: EventCategoryRow[] | undefined, id: string
   return CATEGORY_COLORS[idx >= 0 ? idx % CATEGORY_COLORS.length : 0];
 }
 
-function getCategoryName(categories: EventCategoryRow[] | undefined, id: string | null | undefined): string {
-  if (!id || !Array.isArray(categories)) return 'Sin categoría';
-  const cat = categories.find((c) => c && (c.id === id || c.slug === id));
-  return cat?.name ?? id.slice(0, 8);
+function getCategoryName(categories: EventCategoryRow[] | undefined, id: string | null | undefined, slug?: string | null): string {
+  if (!id && !slug) return 'Sin categoría';
+  if (!Array.isArray(categories)) return 'Sin categoría';
+  const cat = categories.find((c) => c && (c.id === id || c.slug === id || c.slug === slug));
+  if (cat?.name) return cat.name;
+  if (slug) {
+    const bySlug = categories.find((c) => c.slug === slug);
+    if (bySlug?.name) return bySlug.name;
+  }
+  return slug ? slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ") : (id ? id.slice(0, 8) : 'Sin categoría');
 }
 
 export function AdminEventosPage() {
@@ -567,7 +573,7 @@ export function AdminEventosPage() {
                     </td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(eventCategories, e.category_id)}`}>
-                        {getCategoryName(eventCategories, e.category_id)}
+                        {getCategoryName(eventCategories, e.category_id, e.category)}
                       </span>
                     </td>
                     <td className="px-5 py-3">

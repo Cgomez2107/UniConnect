@@ -785,7 +785,7 @@ export function useAdmin(search: string) {
           text: "Eliminar", style: "destructive", onPress: async () => {
             try {
               await adminGateway.deleteEvent(item.id)
-              setEvents((p) => p.filter((e) => e.id !== item.id))
+              setEvents((p) => p.map((e) => e.id === item.id ? { ...e, deleted_at: new Date().toISOString() } : e))
             } catch (e: any) {
               Alert.alert("Error", e.message)
             }

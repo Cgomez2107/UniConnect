@@ -23,6 +23,7 @@ const STATUS_LABELS: Record<string, string> = {
   published: "Publicado",
   cancelled: "Cancelado",
   finished: "Finalizado",
+  deleted: "Eliminado",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
   published: "#22c55e",
   cancelled: "#ef4444",
   finished: "#6b7280",
+  deleted: "#dc2626",
 };
 
 const FALLBACK_ICONS = ["📅", "🎯", "📚", "💡", "🎪", "🏆", "🔬", "🎨"];
@@ -69,7 +71,7 @@ interface EventRowProps {
 export function EventRow({ item, onEdit, onDelete, onPublish, onCancel, C }: EventRowProps) {
   const { fadeAnim, slideAnim } = useEntryAnim();
   const catColor = categoryColor(item.category);
-  const st = item.status ?? "published";
+  const st = item.deleted_at ? "deleted" : (item.status ?? "published");
 
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
@@ -108,6 +110,7 @@ export function EventRow({ item, onEdit, onDelete, onPublish, onCancel, C }: Eve
             </View>
           </View>
 
+          {st !== "deleted" && (
           <View style={[styles.tagsRow, { marginTop: 8 }]}> 
             {st === "draft" && onPublish && (
               <TouchableOpacity
@@ -145,7 +148,7 @@ export function EventRow({ item, onEdit, onDelete, onPublish, onCancel, C }: Eve
                 <Text style={[styles.actionText, { color: C.primary }]}>Editar</Text>
               </TouchableOpacity>
             )}
-            {st !== "published" && (
+            {st !== "published" && st !== "deleted" && (
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: C.errorBackground }]}
                 onPress={() => {
@@ -158,6 +161,7 @@ export function EventRow({ item, onEdit, onDelete, onPublish, onCancel, C }: Eve
               </TouchableOpacity>
             )}
           </View>
+          )}
         </View>
       </View>
     </Animated.View>
