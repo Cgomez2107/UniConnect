@@ -273,7 +273,9 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
       .from("events")
       .select("id, title, event_date, location, category, category_id, created_at, status, deleted_at, creator:created_by ( full_name )")
 
-    if (!includeDeleted) {
+    if (includeDeleted) {
+      query = query.not("deleted_at", "is", null)
+    } else {
       query = query.is("deleted_at", null)
     }
 
