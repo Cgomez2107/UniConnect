@@ -6,3 +6,7 @@ export { PermissionValidator, type IGroupPermissionRepository } from "./Permissi
 export { MentionResolver, type IAdminResolver } from "./MentionResolver.js";
 export { ValidatorFactory } from "./ValidatorFactory.js";
 export type { ResultadoValidacion } from "./ResultadoValidacion.js";
+export { LongitudHandler } from "./LongitudHandler.js";
+export { PalabrasProhibidasHandler } from "./PalabrasProhibidasHandler.js";
+export { EnlacesExternosHandler } from "./EnlacesExternosHandler.js";
+export { SpamHandler, type IModerationRepository } from "./SpamHandler.js";

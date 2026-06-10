@@ -12,7 +12,7 @@ export class ValidationChainFactory {
     maxMentions?: number,
     permissionRepo?: IGroupPermissionRepository,
   ): BaseValidator {
-    const head: BaseValidator = new SizeValidator(maxLength ?? 5000);
+    const head: BaseValidator = new SizeValidator(maxLength ?? 1000);
     let current: BaseValidator = head;
 
     current = current.setNext(new ContentValidator(forbiddenWords)) as BaseValidator;

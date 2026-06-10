@@ -2,45 +2,37 @@ import { supabase } from "@/lib/supabase"
 import { useNotificationStore } from "@/store/useNotificationStore"
 import { useCallback, useEffect, useRef } from "react"
 
-const CATEGORY_LABELS: Record<string, string> = {
-  academico: "Académico",
-  cultural: "Cultural",
-  deportivo: "Deporte",
-  otro: "Otro",
-}
-
-export function useEventObserver(subscribedCategories: string[]) {
+export function useEventObserver(subscribedCategoryIds: string[]) {
   const pushNotification = useNotificationStore((s) => s.pushNotification)
-  const subsRef = useRef(subscribedCategories)
-  subsRef.current = subscribedCategories
+  const subsRef = useRef(subscribedCategoryIds)
+  subsRef.current = subscribedCategoryIds
 
   const handleInsert = useCallback(
     (payload: any) => {
       const newEvent = payload.new
       if (!newEvent?.id) return
 
-      const category = newEvent.category
-      if (!category || !subsRef.current.includes(category)) return
+      const categoryId = newEvent.category_id
+      if (!categoryId || !subsRef.current.includes(categoryId)) return
 
-      const label = CATEGORY_LABELS[category] || category
       pushNotification({
         id: `event-${newEvent.id}`,
         type: "nuevo_evento",
-        title: `Nuevo evento ${label}`,
+        title: "Nuevo evento",
         body: newEvent.title || "Nuevo evento disponible",
         priority: "normal",
         action: {
           label: "Ver evento",
           endpoint: `/eventos/${newEvent.id}`,
         },
-        payload: { eventId: newEvent.id, category },
+        payload: { eventId: newEvent.id, categoryId },
       })
     },
     [pushNotification],
   )
 
   useEffect(() => {
-    if (subscribedCategories.length === 0) return
+    if (subscribedCategoryIds.length === 0) return
 
     const channel = supabase
       .channel("mobile-new-campus-events")
@@ -58,5 +50,5 @@ export function useEventObserver(subscribedCategories: string[]) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [subscribedCategories.length > 0, handleInsert])
+  }, [subscribedCategoryIds.length > 0, handleInsert])
 }

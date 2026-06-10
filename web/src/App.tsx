@@ -12,7 +12,16 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { OAuthCallbackPage } from "./pages/OAuthCallbackPage";
 import { ViewerPage } from "./pages/ViewerPage";
 import { SubirRecursoPage } from "./pages/SubirRecursoPage";
-import { AdminPage } from "./pages/AdminPage";
+import { AdminLayout } from "./pages/admin/AdminLayout";
+import { FacultadesPage } from "./pages/admin/FacultadesPage";
+import { ProgramasPage } from "./pages/admin/ProgramasPage";
+import { MateriasPage } from "./pages/admin/MateriasPage";
+import { UsuariosPage } from "./pages/admin/UsuariosPage";
+import { AdminSolicitudesPage } from "./pages/admin/SolicitudesPage";
+import { AdminRecursosPage } from "./pages/admin/RecursosPage";
+import { AdminEventosPage } from "./pages/admin/EventosPage";
+import { MetricasPage } from "./pages/admin/MetricasPage";
+import { ModeracionPage } from "./pages/admin/ModeracionPage";
 import { ChatPage } from "./pages/ChatPage";
 import { InvitationsPage } from "./pages/InvitationsPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
@@ -128,10 +137,21 @@ function App() {
           path="/admin"
           element={
             <PrivateRoute isAuthenticated={isAuthenticated} requiredRole="admin">
-              <AdminPage />
+              <AdminLayout />
             </PrivateRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="moderacion" replace />} />
+          <Route path="moderacion" element={<ModeracionPage />} />
+          <Route path="facultades" element={<FacultadesPage />} />
+          <Route path="programas" element={<ProgramasPage />} />
+          <Route path="materias" element={<MateriasPage />} />
+          <Route path="usuarios" element={<UsuariosPage />} />
+          <Route path="solicitudes" element={<AdminSolicitudesPage />} />
+          <Route path="recursos" element={<AdminRecursosPage />} />
+          <Route path="eventos" element={<AdminEventosPage />} />
+          <Route path="metricas" element={<MetricasPage />} />
+        </Route>
         <Route
           path="/chat/:conversationId"
           element={

@@ -142,7 +142,7 @@ async function main() {
     supabaseUrl,
     supabaseServiceRoleKey,
   );
-  const signInUseCase = new SignInUseCase(authRepository, tokenRepository, jwtService);
+  const signInUseCase = new SignInUseCase(authRepository, tokenRepository, jwtService, supabaseUrl, supabaseServiceRoleKey);
   const refreshTokenUseCase = new RefreshTokenUseCase(tokenRepository, authRepository, jwtService);
 
   const authController = new AuthController(signUpUseCase, signInUseCase, refreshTokenUseCase);
@@ -163,8 +163,13 @@ async function main() {
       "http://192.168.140.38:8082",
       "https://uniconnect-dashboard-web.fly.dev",
     ];
-    
-    if (origin && allowedOrigins.includes(origin)) {
+    const devOriginPattern = /^https?:\/\/192\.168\.\d{1,3}\.\d{1,3}:(8081|8082)$/;
+
+    const isAllowed =
+      (origin != null && allowedOrigins.includes(origin)) ||
+      (process.env.NODE_ENV !== "production" && origin != null && devOriginPattern.test(origin));
+
+    if (origin && isAllowed) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
     }
@@ -234,7 +239,36 @@ async function main() {
           const token = auth.substring(7);
           const payload = jwtService.verifyAccessToken(token);
           if (payload) {
-            const user = await authRepository.findById(payload.sub);
+            let user = await authRepository.findById(payload.sub);
+            if (!user && supabaseServiceRoleKey) {
+              // Fallback: buscar en profiles table (usuarios creados via Supabase Auth)
+              try {
+                const profileResp = await fetch(
+                  `${supabaseUrl}/rest/v1/profiles?id=eq.${payload.sub}&select=id,full_name,role,email`,
+                  {
+                    headers: {
+                      apikey: supabaseServiceRoleKey,
+                      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+                    },
+                  },
+                );
+                if (profileResp.ok) {
+                  const rows = await profileResp.json() as Array<{ id: string; full_name: string; role: string; email: string }>;
+                  const profile = rows?.[0];
+                  if (profile) {
+                    sendData(res, 200, {
+                      id: profile.id,
+                      email: profile.email ?? "",
+                      fullName: profile.full_name,
+                      role: profile.role,
+                    });
+                    return;
+                  }
+                }
+              } catch {
+                // ignore
+              }
+            }
             if (user) {
               sendData(res, 200, {
                 id: user.id,
@@ -380,24 +414,30 @@ async function main() {
   });
 
   if (nodeEnv === "development" && !supabaseServiceRoleKey) {
-    const devSeedPasswordHash = await bcryptjs.hash("Test1234", 10);
-    const devUsers = [
-      { id: "a41040fc-fa2b-4b44-a68b-4418a0279623", email: "test@ucaldas.edu.co", fullName: "Estudiante Test" },
-      { id: "a0f6e12e-1c9c-4c87-9c23-a129a92aafdf", email: "estudiante.prueba@ucaldas.edu.co", fullName: "Estudiante Prueba" },
-    ];
-    for (const u of devUsers) {
-      const exists = await authRepository.findByEmail(u.email);
-      if (!exists) {
-        await authRepository.create({
-          id: u.id,
-          email: u.email,
-          fullName: u.fullName,
-          passwordHash: devSeedPasswordHash,
-          role: "estudiante",
-          isActive: true,
-        });
-        console.log(JSON.stringify({ service: "auth", level: "info", message: `Dev seed: user created ${u.email} with fixed id ${u.id}` }));
+    try {
+      const devSeedPasswordHash = await bcryptjs.hash("Test1234", 10);
+      const adminPasswordHash = await bcryptjs.hash("Admin1234", 10);
+      const devUsers = [
+        { id: "a41040fc-fa2b-4b44-a68b-4418a0279623", email: "test@ucaldas.edu.co", fullName: "Estudiante Test" },
+        { id: "a0f6e12e-1c9c-4c87-9c23-a129a92aafdf", email: "estudiante.prueba@ucaldas.edu.co", fullName: "Estudiante Prueba" },
+        { id: "b0f6e12e-2c9c-4c87-9c23-b129a92aafdf", email: "admin1@ucaldas.edu.co", fullName: "Admin Principal", passwordHashOverride: adminPasswordHash, roleOverride: "admin" as const },
+      ];
+      for (const u of devUsers) {
+        const exists = await authRepository.findByEmail(u.email);
+        if (!exists) {
+          await authRepository.create({
+            id: u.id,
+            email: u.email,
+            fullName: u.fullName,
+            passwordHash: u.passwordHashOverride ?? devSeedPasswordHash,
+            role: u.roleOverride ?? "estudiante",
+            isActive: true,
+          });
+          console.log(JSON.stringify({ service: "auth", level: "info", message: `Dev seed: user created ${u.email} with fixed id ${u.id}` }));
+        }
       }
+    } catch (seedError) {
+      console.warn(JSON.stringify({ service: "auth", level: "warn", message: "Dev seed skipped (non-fatal)", error: String(seedError) }));
     }
   }
 

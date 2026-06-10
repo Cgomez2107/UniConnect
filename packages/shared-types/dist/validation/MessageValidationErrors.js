@@ -11,6 +11,7 @@ export var ValidationErrorCode;
     ValidationErrorCode["FORBIDDEN_WORDS"] = "FORBIDDEN_WORDS";
     ValidationErrorCode["BANNED_CONTENT"] = "BANNED_CONTENT";
     ValidationErrorCode["SPAM_DETECTED"] = "SPAM_DETECTED";
+    ValidationErrorCode["ESCALATED_TO_ADMIN"] = "ESCALATED_TO_ADMIN";
     // Media validation errors
     ValidationErrorCode["UNSUPPORTED_FILE_TYPE"] = "UNSUPPORTED_FILE_TYPE";
     ValidationErrorCode["FILE_TOO_LARGE"] = "FILE_TOO_LARGE";
@@ -32,10 +33,11 @@ export var ValidationErrorCode;
  */
 export const ValidationErrorMessages = {
     [ValidationErrorCode.MESSAGE_EMPTY]: "El mensaje no puede estar vacío. Escribe algo o adjunta un archivo.",
-    [ValidationErrorCode.MESSAGE_TOO_LONG]: "El mensaje es demasiado largo. Máximo 5000 caracteres.",
+    [ValidationErrorCode.MESSAGE_TOO_LONG]: "El mensaje es demasiado largo. Máximo 1000 caracteres.",
     [ValidationErrorCode.FORBIDDEN_WORDS]: "Tu mensaje contiene palabras prohibidas. Por favor, revísalo.",
     [ValidationErrorCode.BANNED_CONTENT]: "El contenido de tu mensaje no está permitido en este chat.",
     [ValidationErrorCode.SPAM_DETECTED]: "Se detectó comportamiento sospechoso. Intenta más tarde.",
+    [ValidationErrorCode.ESCALATED_TO_ADMIN]: "Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana.",
     [ValidationErrorCode.UNSUPPORTED_FILE_TYPE]: "Este tipo de archivo no está soportado. Intenta con imágenes, PDFs o documentos.",
     [ValidationErrorCode.FILE_TOO_LARGE]: "El archivo es demasiado grande. Máximo 10 MB.",
     [ValidationErrorCode.INVALID_FILENAME]: "El nombre del archivo contiene caracteres no permitidos.",

@@ -276,6 +276,7 @@ export function GroupChatPage() {
       setMessages((prev) =>
         prev.map((m) => (m.id === tempId ? { ...m, clientStatus: "failed" } : m))
       );
+      throw err;
     }
   };
 

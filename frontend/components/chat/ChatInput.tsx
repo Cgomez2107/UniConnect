@@ -11,6 +11,7 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { ValidationState } from "@uniconnect/shared-types";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -23,6 +24,8 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSpamStore } from "@/store/useSpamStore";
+import { CommunityGuidelinesModal } from "@/components/ui/CommunityGuidelinesModal";
 
 interface ChatInputTextState {
   value: string;
@@ -96,14 +99,26 @@ export function ChatInput({
     onPress: onVoicePress,
   } = voice;
 
+  const { isBlocked, remainingTime, blockReason, checkBlockStatus } = useSpamStore();
+  const [guidelinesVisible, setGuidelinesVisible] = useState(false);
+  const [guidelinesErrorCode, setGuidelinesErrorCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    checkBlockStatus();
+    const interval = setInterval(() => {
+      checkBlockStatus();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [checkBlockStatus]);
+
   const hasMedia = !!imagePreviewUri;
   const hasValidationError = validationState?.error;
   const hasWarning = validationState?.warnings && validationState.warnings.length > 0;
   const charCount = value.length;
-  const isNearLimit = charCount > 4500;
+  const isNearLimit = charCount > 900;
 
-  const canSend = (value.trim().length > 0 || hasMedia) && !sending && !hasValidationError;
-  const canQuickAction = !sending && !pickingImage;
+  const canSend = (value.trim().length > 0 || hasMedia) && !sending && !isBlocked;
+  const canQuickAction = !sending && !pickingImage && !isBlocked;
 
   const formatRecordTime = (sec: number) => {
     const mins = Math.floor(sec / 60)
@@ -161,12 +176,64 @@ export function ChatInput({
       )}
 
       {/* Validación */}
+      {isBlocked && (
+        <View style={[styles.blockedCard, { backgroundColor: C.error + '15', borderColor: C.error }]}>
+          <Text style={styles.errorIcon}>{blockReason === 'MO_004' ? '🚨' : '🚫'}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.blockedTitle, { color: C.error }]}>
+              {blockReason === 'MO_004' ? 'Caso escalado a revisión humana' : 'Chat suspendido temporalmente'}
+            </Text>
+            <Text style={[styles.blockedMessage, { color: C.textSecondary }]}>
+              {blockReason === 'MO_004'
+                ? <>Has acumulado múltiples infracciones. Tu caso fue escalado a revisión humana. Podrás enviar mensajes de nuevo en:{" "}
+                  <Text style={{ fontWeight: "700", color: C.error }}>
+                    {Math.floor(remainingTime / 60)}:
+                    {String(remainingTime % 60).padStart(2, "0")}
+                  </Text>
+                </>
+                : <>Has sido bloqueado por comportamiento de spam. Podrás enviar mensajes de nuevo en:{" "}
+                  <Text style={{ fontWeight: "700", color: C.error }}>
+                    {Math.floor(remainingTime / 60)}:
+                    {String(remainingTime % 60).padStart(2, "0")}
+                  </Text>
+                </>}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              setGuidelinesErrorCode(blockReason);
+              setGuidelinesVisible(true);
+            }}
+            style={[styles.whyBtn, { borderColor: C.error + '60' }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={[styles.whyBtnText, { color: C.error }]}>🤔 ¿Por qué?</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <CommunityGuidelinesModal
+        visible={guidelinesVisible}
+        onClose={() => setGuidelinesVisible(false)}
+        errorCode={guidelinesErrorCode}
+      />
+
       {hasValidationError && (
         <View style={[styles.errorCard, { backgroundColor: C.error + '20', borderColor: C.error }]}>
           <Text style={[styles.errorIcon]}>⚠️</Text>
-          <Text style={[styles.errorMessage, { color: C.error }]}>
+          <Text style={[styles.errorMessage, { color: C.error, flex: 1 }]}>
             {validationState?.error?.message || 'Error de validación'}
           </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setGuidelinesErrorCode(validationState?.error?.code || null);
+              setGuidelinesVisible(true);
+            }}
+            style={[styles.whyBtn, { borderColor: C.error + '60' }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={[styles.whyBtnText, { color: C.error }]}>🤔 ¿Por qué?</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -182,7 +249,7 @@ export function ChatInput({
       <View style={styles.row}>
         <TouchableOpacity
           onPress={onPickImage}
-          disabled={pickingImage || sending}
+          disabled={pickingImage || sending || isBlocked}
           style={[styles.attachBtn, { backgroundColor: C.surface, borderColor: C.border }]}
           activeOpacity={0.8}
         >
@@ -200,11 +267,11 @@ export function ChatInput({
               onChangeText(text)
               onTyping(text)
             }}
-            placeholder={hasMedia ? "Agrega un comentario opcional..." : "Escribe un mensaje..."}
+            placeholder={isBlocked ? "Chat suspendido por spam..." : hasMedia ? "Agrega un comentario opcional..." : "Escribe un mensaje..."}
             placeholderTextColor={C.textPlaceholder}
             multiline
-            maxLength={5000}
             numberOfLines={4}
+            editable={!isBlocked && !sending}
             style={[
               styles.input,
               {
@@ -215,7 +282,7 @@ export function ChatInput({
             blurOnSubmit={false}
           />
           <Text style={[styles.charCounter, { color: isNearLimit || hasValidationError ? (hasValidationError ? C.error : '#FFA500') : C.textSecondary }]}>
-            {charCount}/5000
+            {charCount}/1000
           </Text>
         </View>
 
@@ -426,5 +493,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     flex: 1,
+  },
+  blockedCard: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 4,
+  },
+  blockedTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  blockedMessage: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  whyBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: "center",
+    marginLeft: 2,
+  },
+  whyBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });

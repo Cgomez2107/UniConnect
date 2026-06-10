@@ -1,26 +1,60 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import eventsService from "@/lib/services/events.service";
 import { Button } from "@/components/ui/Button";
 import useNotifications from "@/hooks/useNotifications";
 import { useEventsStore } from "@/store/useEventsStore";
+import { useEventCategories } from "@/hooks/useEventCategories";
 
 export function CrearEventoPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
   const { success, error: showError } = useNotifications();
   const addEvent = useEventsStore((s) => s.addEvent);
+  const updateEventInStore = useEventsStore((s) => s.updateEvent);
+  const categories = useEventCategories();
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(!!editId);
   const [form, setForm] = useState({
     title: "",
     description: "",
     eventDate: "",
     location: "",
-    category: "academico",
+    category: "",
+    maxCapacity: "",
   });
+
+  useEffect(() => {
+    if (!editId) return;
+    eventsService.getEventById(editId)
+      .then((res) => {
+        const event = "event" in res ? res.event : res;
+        setForm({
+          title: event.title || "",
+          description: event.description || "",
+          eventDate: event.eventDate
+            ? new Date(event.eventDate).toISOString().slice(0, 16)
+            : "",
+          location: event.location || "",
+          category: event.category || "",
+          maxCapacity: event.maxCapacity != null ? String(event.maxCapacity) : "",
+        });
+      })
+      .catch(() => showError("Error al cargar el evento"))
+      .finally(() => setLoading(false));
+  }, [editId, showError]);
+
+  useEffect(() => {
+    if (categories.length > 0 && !form.category) {
+      setForm((prev) => ({ ...prev, category: categories[0].slug }));
+    }
+  }, [categories, form.category]);
 
   const isValid =
     form.title.trim().length > 0 &&
-    form.eventDate.trim().length > 0;
+    form.eventDate.trim().length > 0 &&
+    form.category.trim().length > 0;
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -35,24 +69,46 @@ export function CrearEventoPage() {
     setSaving(true);
     try {
       const isoDate = new Date(form.eventDate).toISOString();
-      const newEvent = await eventsService.createEvent({
-        title: form.title.trim(),
-        description: form.description.trim() || "Sin descripción",
-        startAt: isoDate,
-        endAt: isoDate,
-        location: form.location.trim() || "Por definir",
-        category: form.category,
-      });
-      // Inject into global store for immediate visibility in event list
-      if (newEvent) addEvent(newEvent as any);
-      success("Evento creado exitosamente");
+      const parsedCapacity = form.maxCapacity ? parseInt(form.maxCapacity, 10) : undefined;
+
+      if (editId) {
+        await eventsService.updateEvent(editId, {
+          title: form.title.trim(),
+          description: form.description.trim() || "Sin descripción",
+          startAt: isoDate,
+          location: form.location.trim() || "Por definir",
+          category: form.category,
+          maxCapacity: parsedCapacity,
+        });
+        success("Evento actualizado exitosamente");
+      } else {
+        const newEvent = await eventsService.createEvent({
+          title: form.title.trim(),
+          description: form.description.trim() || "Sin descripción",
+          startAt: isoDate,
+          endAt: isoDate,
+          location: form.location.trim() || "Por definir",
+          category: form.category,
+          maxCapacity: parsedCapacity,
+        });
+        if (newEvent) addEvent(newEvent as any);
+        success("Evento creado exitosamente");
+      }
       navigate("/eventos");
     } catch (err: any) {
-      showError(err?.message || "Error al crear el evento");
+      showError(err?.message || "Error al guardar el evento");
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 animate-fade-in flex items-center justify-center">
+        <div className="text-neutral-500">Cargando evento...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50 animate-fade-in">
@@ -68,7 +124,7 @@ export function CrearEventoPage() {
         </button>
 
         <h1 className="text-2xl font-bold text-neutral-900 mb-6">
-          Crear Nuevo Evento
+          {editId ? "Editar Evento" : "Crear Nuevo Evento"}
         </h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-neutral-200 p-6 space-y-4">
@@ -135,16 +191,33 @@ export function CrearEventoPage() {
               onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="academico">Académico</option>
-              <option value="cultural">Cultural</option>
-              <option value="deportivo">Deportivo</option>
-              <option value="otro">Otro</option>
+              {categories.length === 0 && (
+                <option value="" disabled>Cargando categorías...</option>
+              )}
+              {categories.map((c) => (
+                <option key={c.id} value={c.slug}>{c.name}</option>
+              ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Cupo Máximo (opcional)
+            </label>
+            <input
+              name="maxCapacity"
+              type="number"
+              min={1}
+              value={form.maxCapacity}
+              onChange={handleChange}
+              placeholder="Ej: 100"
+              className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
           </div>
 
           <div className="flex gap-3 pt-2">
             <Button type="submit" loading={saving} disabled={!isValid}>
-              Crear Evento
+              {editId ? "Guardar Cambios" : "Crear Evento"}
             </Button>
             <Button
               type="button"

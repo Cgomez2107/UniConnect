@@ -13,6 +13,7 @@ import { useNotificationStore, type Prioridad, type Accion } from "@/store/useNo
 import { supabase } from "@/lib/supabase";
 import { fetchApi } from "@/lib/api/httpClient";
 import { useRouter } from "expo-router";
+import { CommunityGuidelinesModal } from "@/components/ui/CommunityGuidelinesModal";
 
 /**
  * GlobalNotificationModals
@@ -26,6 +27,19 @@ const PRIORITY_COLORS: Record<Prioridad, string> = {
   urgente: "#F59E0B",
   critica: "#EF4444",
 };
+
+function parsePayload(data: any) {
+  const raw = data?.payload ?? data?.data;
+  if (!raw) return {};
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  return raw;
+}
 
 function getPriorityBorder(priority?: Prioridad): string {
   return PRIORITY_COLORS[priority ?? "normal"] ?? PRIORITY_COLORS.normal;
@@ -64,6 +78,8 @@ export function GlobalNotificationModals() {
       return <JoinRequestModal data={current} onClose={handleClose} />;
     case "miembro_aceptado":
       return <WelcomeModal data={current} onClose={handleClose} />;
+    case "system":
+      return <SystemNotificationModal data={current} onClose={handleClose} />;
     default:
       if (current.action) {
         return <DefaultActionModal data={current} onClose={handleClose} />;
@@ -77,9 +93,10 @@ export function GlobalNotificationModals() {
 function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void }) {
   const router = useRouter();
   const priority = data.priority ?? "normal";
-  const groupName = data.payload?.groupName || (data.title !== "transferencia_admin_solicitada" ? data.title : "un grupo");
-  const transferId = data.payload?.transferId ?? data.payload?.id;
-  const groupId = data.payload?.groupId ?? data.payload?.requestId;
+  const payload = parsePayload(data);
+  const groupName = payload.groupName || (data.title !== "transferencia_admin_solicitada" ? data.title : "un grupo");
+  const transferId = payload.transferId ?? payload.id;
+  const groupId = payload.groupId ?? payload.requestId;
 
   const handleAccept = () => {
     onClose();
@@ -125,9 +142,10 @@ function AdminTransferModal({ data, onClose }: { data: any, onClose: () => void 
 
 // 2. Modal de Solicitud de Ingreso (Para el Admin)
 function JoinRequestModal({ data, onClose }: { data: any, onClose: () => void }) {
+  const payload = parsePayload(data);
   // Evitar usar el título si es igual al tipo (basura de pruebas)
-  const groupName = data.payload?.groupName || (data.title !== "solicitud_ingreso" ? data.title : "tu grupo");
-  const applicantName = data.payload?.applicantName || "un estudiante";
+  const groupName = payload.groupName || (data.title !== "solicitud_ingreso" ? data.title : "tu grupo");
+  const applicantName = payload.applicantName || "un estudiante";
 
   return (
     <Modal transparent visible animationType="fade">
@@ -159,7 +177,8 @@ function JoinRequestModal({ data, onClose }: { data: any, onClose: () => void })
 
 // 3. Modal de Bienvenida (Para el Miembro)
 function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
-  const groupName = data.payload?.groupName || (data.title !== "miembro_aceptado" ? data.title : "un nuevo grupo");
+  const payload = parsePayload(data);
+  const groupName = payload.groupName || (data.title !== "miembro_aceptado" ? data.title : "un nuevo grupo");
 
   return (
     <Modal transparent visible animationType="fade">
@@ -189,7 +208,7 @@ function WelcomeModal({ data, onClose }: { data: any, onClose: () => void }) {
 // 4. Modal Genérico con Acción Decorada (D03)
 function DefaultActionModal({ data, onClose }: { data: any, onClose: () => void }) {
   const router = useRouter();
-  const payload = data.payload ?? data.data ?? {};
+  const payload = parsePayload(data);
 
   const handleAction = useCallback(() => {
     onClose();
@@ -233,6 +252,52 @@ function DefaultActionModal({ data, onClose }: { data: any, onClose: () => void 
         </View>
       </View>
     </Modal>
+  );
+}
+
+// 5. Modal de Notificación de Sistema (por ejemplo, bloqueo/moderación)
+function SystemNotificationModal({ data, onClose }: { data: any, onClose: () => void }) {
+  const [guidelinesVisible, setGuidelinesVisible] = useState(false);
+  const payload = parsePayload(data);
+  const errorCode = payload.errorCode || payload.data?.errorCode || null;
+  const showWhyButton = payload.showWhyButton === true || payload.data?.showWhyButton === true;
+
+  return (
+    <>
+      <Modal transparent visible animationType="fade">
+        <View style={styles.overlay}>
+          <View style={[styles.container, { borderColor: getPriorityBorder(data.priority) }]}>
+            <Text style={styles.icon}>{getPriorityIcon(data.priority)}</Text>
+            {/* CORE: inmutable */}
+            <View style={styles.coreContainer}>
+              <Text style={styles.title}>{data.title ?? "Notificación de Sistema"}</Text>
+              <Text style={styles.description}>{data.body ?? data.description ?? ""}</Text>
+            </View>
+            {/* Decoradores */}
+            <View style={styles.decoratorDivider} />
+            <View style={styles.buttonContainer}>
+              {showWhyButton && (
+                <TouchableOpacity 
+                  style={[styles.button, styles.acceptButton]} 
+                  onPress={() => setGuidelinesVisible(true)}
+                >
+                  <Text style={styles.acceptText}>🤔 ¿POR QUÉ?</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onClose}>
+                <Text style={styles.rejectText}>CERRAR</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <CommunityGuidelinesModal
+        visible={guidelinesVisible}
+        onClose={() => setGuidelinesVisible(false)}
+        errorCode={errorCode}
+      />
+    </>
   );
 }
 

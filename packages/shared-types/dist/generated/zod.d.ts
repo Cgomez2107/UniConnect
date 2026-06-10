@@ -1087,7 +1087,7 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
 export declare const Post_events_RequestBodySchema: z.ZodObject<{
     title: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
-    category: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+    category: z.ZodString;
     eventDate: z.ZodString;
     endAt: z.ZodOptional<z.ZodString>;
     location: z.ZodOptional<z.ZodString>;
@@ -1096,7 +1096,7 @@ export declare const Post_events_RequestBodySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     title: string;
     eventDate: string;
-    category: "academico" | "cultural" | "deportivo" | "otro";
+    category: string;
     description?: string | undefined;
     location?: string | undefined;
     endAt?: string | undefined;
@@ -1105,7 +1105,7 @@ export declare const Post_events_RequestBodySchema: z.ZodObject<{
 }, {
     title: string;
     eventDate: string;
-    category: "academico" | "cultural" | "deportivo" | "otro";
+    category: string;
     description?: string | undefined;
     location?: string | undefined;
     endAt?: string | undefined;
@@ -1416,11 +1416,11 @@ export declare const Delete_events_id_200ResponseSchema: z.ZodObject<{
     };
 }>;
 export declare const Post_eventos_suscribir_RequestBodySchema: z.ZodObject<{
-    categoria: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+    categoria: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    categoria: "academico" | "cultural" | "deportivo" | "otro";
+    categoria: string;
 }, {
-    categoria: "academico" | "cultural" | "deportivo" | "otro";
+    categoria: string;
 }>;
 export declare const Post_eventos_suscribir_201ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -1467,11 +1467,11 @@ export declare const Get_eventos_suscripciones_200ResponseSchema: z.ZodObject<{
     };
 }>;
 export declare const Delete_eventos_suscribir_RequestBodySchema: z.ZodObject<{
-    categoria: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+    categoria: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    categoria: "academico" | "cultural" | "deportivo" | "otro";
+    categoria: string;
 }, {
-    categoria: "academico" | "cultural" | "deportivo" | "otro";
+    categoria: string;
 }>;
 export declare const Delete_eventos_suscribir_200ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{

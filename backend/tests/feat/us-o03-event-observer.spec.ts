@@ -272,7 +272,7 @@ describe("US-O03 - Observer de eventos universitarios", () => {
         startAt: "2026-06-20T10:00:00.000Z",
         category: undefined as never,
       }),
-      error => error instanceof Error && error.name === "ValidationError" && error.message === "Category is required",
+      error => error instanceof Error && error.name === "ValidationError" && error.message === "La categoría es obligatoria.",
     );
   });
 });

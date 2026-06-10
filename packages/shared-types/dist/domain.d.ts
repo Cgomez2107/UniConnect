@@ -177,7 +177,7 @@ export interface GroupConversation extends Conversation {
     groupId?: string;
     memberCount: number;
 }
-export type NotificationType = "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "mention" | "friendRequest" | "system";
+export type NotificationType = "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "mention" | "friendRequest" | "system" | "nuevo_evento" | "nueva_sesion" | "sesion_cancelada" | "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "asistencia_confirmada" | "asistencia_declinada" | "recordatorio_sesion" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left" | "study_session_cancelled";
 export interface Notification {
     id: string;
     userId: string;

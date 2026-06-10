@@ -13,6 +13,7 @@ import { Colors } from "@/constants/Colors";
 import { useChatComposer } from "@/hooks/application/useChatComposer";
 import { useMessaging } from "@/hooks/application/useMessaging";
 import { useMessageValidation } from "@/hooks/useMessageValidation";
+import { ValidationErrorCode } from "@uniconnect/shared-types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUnreadCountStore } from "@/store/unreadCountStore";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -104,17 +105,27 @@ export default function ChatScreen() {
   const userId = user?.id ?? "";
 
   const chatItems = useMemo<ChatListItem[]>(() => {
+    // Sort messages chronologically to ensure contiguous grouping and correct order
+    const sortedMessages = [...messages].sort((a, b) => {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : Date.now();
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : Date.now();
+      return timeA - timeB;
+    });
+
     const items: ChatListItem[] = [];
     let lastDayKey = "";
 
-    for (const msg of messages) {
-      const d = new Date(msg.created_at);
-      const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    for (const msg of sortedMessages) {
+      const createdTime = msg.created_at || new Date().toISOString();
+      const d = new Date(createdTime);
+      const validDate = isNaN(d.getTime()) ? new Date() : d;
+      const dayKey = `${validDate.getFullYear()}-${validDate.getMonth()}-${validDate.getDate()}`;
+
       if (dayKey !== lastDayKey) {
         items.push({
           type: "day",
-          id: `day-${dayKey}`,
-          label: formatDayLabel(msg.created_at),
+          id: `day-${dayKey}-${msg.id}`, // Incorporate message ID to guarantee uniqueness
+          label: formatDayLabel(validDate.toISOString()),
         });
         lastDayKey = dayKey;
       }
@@ -128,6 +139,7 @@ export default function ChatScreen() {
 
     return items;
   }, [messages]);
+
 
   useEffect(() => {
     if (!conversationIdValue) return;
@@ -188,35 +200,78 @@ export default function ChatScreen() {
 
   // Integrar validación
   const { validationState, validateMessage, clearValidation } = useMessageValidation({
-    maxLength: 5000,
+    maxLength: 1000,
     debounceMs: 300,
   });
+
+  // Estado para errores de validación del backend
+  const [backendValidationError, setBackendValidationError] = useState<{
+    code: ValidationErrorCode;
+    message: string;
+  } | null>(null);
+
+  // Combinar estado de validación local y backend
+  const combinedValidationState = backendValidationError
+    ? {
+        ...validationState,
+        isValid: false,
+        error: {
+          code: backendValidationError.code,
+          message: backendValidationError.message,
+        },
+      }
+    : validationState;
 
   // Wrapper para el onChange que valida mientras escribe
   const handleTextChange = useCallback((text: string) => {
     chatInputProps.text.onChangeText(text);
     chatInputProps.text.onTyping(text);
+    setBackendValidationError(null);
     // Validar mientras escribe (debounced)
     void validateMessage(text);
-  }, [chatInputProps, validateMessage]);
+  }, [chatInputProps, validateMessage, setBackendValidationError]);
 
   // Wrapper para validar antes de enviar
   const handleSendWithValidation = useCallback(async () => {
     const currentText = chatInputProps.text.value;
     if (!currentText.trim()) return;
 
-    // Validar
-    await validateMessage(currentText);
-    
-    // Si hay error, no enviar
-    if (validationState.error) {
+    // Validar localmente (ej: longitud)
+    const state = await validateMessage(currentText);
+    if (!state.isValid) {
       return;
     }
 
-    // Enviar
-    chatInputProps.send.onSend();
-    clearValidation();
-  }, [chatInputProps, validateMessage, validationState.error, clearValidation]);
+    // Enviar directamente para que el backend maneje la moderación
+    try {
+      await chatInputProps.send.onSend();
+      clearValidation();
+      setBackendValidationError(null);
+    } catch (err: any) {
+      const code = err && typeof err === "object" && "code" in err ? String(err.code) : "";
+      const message = err instanceof Error ? err.message : String(err);
+      // Check if it's a validation error from backend
+      if (code === "MO_001" || message.includes("MO_001") || message.includes("límite permitido")) {
+        // Longitud excedida
+        setBackendValidationError({
+          code: ValidationErrorCode.MESSAGE_TOO_LONG,
+          message: "Tu mensaje supera el límite permitido de caracteres (1000).",
+        });
+      } else if (
+        code === "MO_002" ||
+        message.includes("MO_002") ||
+        message.includes("palabras prohibidas") ||
+        message.includes("normas de la comunidad") ||
+        message.includes("infringen")
+      ) {
+        // Palabras prohibidas
+        setBackendValidationError({
+          code: ValidationErrorCode.FORBIDDEN_WORDS,
+          message: "Tu mensaje contiene palabras que infringen las normas de la comunidad.",
+        });
+      }
+    }
+  }, [chatInputProps, validateMessage, clearValidation, setBackendValidationError]);
 
   const displayName = otherUserName
     ? decodeURIComponent(otherUserName)
@@ -376,7 +431,7 @@ export default function ChatScreen() {
             send: { ...chatInputProps.send, onSend: handleSendWithValidation },
             voice: chatInputProps.voice,
           }}
-          validationState={validationState}
+          validationState={combinedValidationState}
         />
       )}
     </KeyboardAvoidingView>

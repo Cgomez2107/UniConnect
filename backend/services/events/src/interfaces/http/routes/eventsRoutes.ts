@@ -58,6 +58,12 @@ export async function handleEventsRoutes(
 ): Promise<boolean> {
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   const eventDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/events\/([^/]+)$/);
+  const eventActionMatch = requestUrl.pathname.match(
+    /^\/api\/v1\/events\/([^/]+)\/(publish|cancel|finish)$/,
+  );
+  const eventRegisterMatch = requestUrl.pathname.match(
+    /^\/api\/v1\/events\/([^/]+)\/register$/,
+  );
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
@@ -91,8 +97,33 @@ export async function handleEventsRoutes(
     return true;
   }
 
+  if (req.method === "PATCH" && eventDetailMatch) {
+    await controller.update(req, res, eventDetailMatch[1]);
+    return true;
+  }
+
   if (req.method === "DELETE" && eventDetailMatch) {
     await controller.delete(req, res, eventDetailMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && eventActionMatch) {
+    const [, eventId, action] = eventActionMatch;
+    switch (action) {
+      case "publish":
+        await controller.publish(req, res, eventId);
+        return true;
+      case "cancel":
+        await controller.cancel(req, res, eventId);
+        return true;
+      case "finish":
+        await controller.finish(req, res, eventId);
+        return true;
+    }
+  }
+
+  if (req.method === "POST" && eventRegisterMatch) {
+    await controller.register(req, res, eventRegisterMatch[1]);
     return true;
   }
 

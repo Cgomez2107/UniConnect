@@ -5,7 +5,7 @@ export declare const EventSchema: z.ZodObject<{
     description: z.ZodString;
     eventDate: z.ZodString;
     location: z.ZodOptional<z.ZodString>;
-    category: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+    category: z.ZodString;
     creatorId: z.ZodString;
     creator: z.ZodOptional<z.ZodObject<{
         id: z.ZodString;
@@ -52,7 +52,7 @@ export declare const EventSchema: z.ZodObject<{
     description: string;
     title: string;
     eventDate: string;
-    category: "academico" | "cultural" | "deportivo" | "otro";
+    category: string;
     creatorId: string;
     attendeeCount: number;
     isOnline: boolean;
@@ -78,7 +78,7 @@ export declare const EventSchema: z.ZodObject<{
     description: string;
     title: string;
     eventDate: string;
-    category: "academico" | "cultural" | "deportivo" | "otro";
+    category: string;
     creatorId: string;
     attendeeCount: number;
     isOnline: boolean;
@@ -104,7 +104,7 @@ export declare const EventDTOSchema: z.ZodObject<{
     description: z.ZodString;
     event_date: z.ZodString;
     location: z.ZodOptional<z.ZodString>;
-    category: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+    category: z.ZodString;
     creator_id: z.ZodString;
     creator: z.ZodOptional<z.ZodObject<{
         id: z.ZodString;
@@ -150,7 +150,7 @@ export declare const EventDTOSchema: z.ZodObject<{
     updated_at: string;
     description: string;
     title: string;
-    category: "academico" | "cultural" | "deportivo" | "otro";
+    category: string;
     tags: string[];
     event_date: string;
     creator_id: string;
@@ -176,7 +176,7 @@ export declare const EventDTOSchema: z.ZodObject<{
     updated_at: string;
     description: string;
     title: string;
-    category: "academico" | "cultural" | "deportivo" | "otro";
+    category: string;
     tags: string[];
     event_date: string;
     creator_id: string;

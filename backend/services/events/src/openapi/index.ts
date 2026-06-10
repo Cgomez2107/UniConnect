@@ -24,7 +24,7 @@ const EventDataSchema = z.object({
 const CreateEventBodySchema = z.object({
   title: z.string().min(1).max(300),
   description: z.string().max(5000).optional(),
-  category: z.enum(["academico", "cultural", "deportivo", "otro"]),
+  category: z.string(),
   eventDate: z.string().datetime(),
   endAt: z.string().datetime().optional(),
   location: z.string().max(300).optional(),
@@ -43,11 +43,11 @@ const UpdateEventBodySchema = z.object({
 });
 
 const SubscribeBodySchema = z.object({
-  categoria: z.enum(["academico", "cultural", "deportivo", "otro"]),
+  categoria: z.string(),
 });
 
 const UnsubscribeBodySchema = z.object({
-  categoria: z.enum(["academico", "cultural", "deportivo", "otro"]),
+  categoria: z.string(),
 });
 
 const SubscriptionListResponseSchema = z.object({

@@ -12,6 +12,7 @@ export enum ValidationErrorCode {
   FORBIDDEN_WORDS = "FORBIDDEN_WORDS",
   BANNED_CONTENT = "BANNED_CONTENT",
   SPAM_DETECTED = "SPAM_DETECTED",
+  ESCALATED_TO_ADMIN = "ESCALATED_TO_ADMIN",
 
   // Media validation errors
   UNSUPPORTED_FILE_TYPE = "UNSUPPORTED_FILE_TYPE",
@@ -40,7 +41,7 @@ export const ValidationErrorMessages: Record<ValidationErrorCode, string> = {
   [ValidationErrorCode.MESSAGE_EMPTY]:
     "El mensaje no puede estar vacío. Escribe algo o adjunta un archivo.",
   [ValidationErrorCode.MESSAGE_TOO_LONG]:
-    "El mensaje es demasiado largo. Máximo 5000 caracteres.",
+    "El mensaje es demasiado largo. Máximo 1000 caracteres.",
 
   [ValidationErrorCode.FORBIDDEN_WORDS]:
     "Tu mensaje contiene palabras prohibidas. Por favor, revísalo.",
@@ -48,6 +49,8 @@ export const ValidationErrorMessages: Record<ValidationErrorCode, string> = {
     "El contenido de tu mensaje no está permitido en este chat.",
   [ValidationErrorCode.SPAM_DETECTED]:
     "Se detectó comportamiento sospechoso. Intenta más tarde.",
+  [ValidationErrorCode.ESCALATED_TO_ADMIN]:
+    "Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana.",
 
   [ValidationErrorCode.UNSUPPORTED_FILE_TYPE]:
     "Este tipo de archivo no está soportado. Intenta con imágenes, PDFs o documentos.",

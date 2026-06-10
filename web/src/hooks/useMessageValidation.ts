@@ -27,8 +27,8 @@ interface UseMessageValidationOptions {
  * Máximos y límites de validación (deben coincidir con backend)
  */
 const VALIDATION_LIMITS = {
-  MAX_MESSAGE_LENGTH: 5000,
-  WARN_LENGTH_THRESHOLD: 4500, // Advertir cuando falta 500 caracteres
+  MAX_MESSAGE_LENGTH: 1000,
+  WARN_LENGTH_THRESHOLD: 900, // Advertir cuando falta 100 caracteres
   FILENAME_MAX_LENGTH: 255,
   FILE_MAX_SIZE_MB: 10,
 };
@@ -46,6 +46,16 @@ const FORBIDDEN_WORDS = [
   "pornografía",
   "drogas",
   "armas",
+  "idiota",
+  "estupido",
+  "insulto",
+  "tonto",
+  "perra",
+  "marica",
+  "hp",
+  "hpta",
+  "puto",
+  "puta",
 ];
 
 const FORBIDDEN_WORDS_REGEX = FORBIDDEN_WORDS.map(

@@ -24,6 +24,7 @@ export interface CreateEventPayload {
 export interface ListEventsFilters {
   page?: number;
   perPage?: number;
+  createdBy?: string;
 }
 
 export class EventsClient extends BaseClient {
@@ -38,6 +39,7 @@ export class EventsClient extends BaseClient {
       params: {
         ...(filters?.page !== undefined && { page: filters.page }),
         ...(filters?.perPage !== undefined && { per_page: filters.perPage }),
+        ...(filters?.createdBy !== undefined && { created_by: filters.createdBy }),
       },
     });
     return this.ensureArray(response.data).map((dto) => mapEventDtoToDomain(dto));
@@ -94,5 +96,28 @@ export class EventsClient extends BaseClient {
       method: "DELETE",
       url: `/events/${id}`,
     });
+  }
+
+  async register(eventId: string): Promise<void> {
+    await this.transport.request({
+      method: "POST",
+      url: `/events/${eventId}/register`,
+    });
+  }
+
+  async publish(eventId: string): Promise<Event> {
+    const response = await this.transport.request<EventDTO>({
+      method: "POST",
+      url: `/events/${eventId}/publish`,
+    });
+    return mapEventDtoToDomain(response.data);
+  }
+
+  async cancel(eventId: string): Promise<Event> {
+    const response = await this.transport.request<EventDTO>({
+      method: "POST",
+      url: `/events/${eventId}/cancel`,
+    });
+    return mapEventDtoToDomain(response.data);
   }
 }

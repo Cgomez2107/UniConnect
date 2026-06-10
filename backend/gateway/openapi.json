@@ -606,11 +606,33 @@
                   "isPublic": {
                     "type": "boolean",
                     "default": true
+                  },
+                  "fileUrl": {
+                    "type": "string"
+                  },
+                  "fileName": {
+                    "type": "string"
+                  },
+                  "fileType": {
+                    "type": "string"
+                  },
+                  "fileSizeKb": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "programId": {
+                    "type": "string"
+                  },
+                  "resourceType": {
+                    "type": "string",
+                    "enum": [
+                      "file",
+                      "link"
+                    ]
                   }
                 },
                 "required": [
                   "title",
-                  "url",
                   "subjectId"
                 ],
                 "additionalProperties": false
@@ -633,6 +655,15 @@
                           "type": "string",
                           "format": "uuid"
                         },
+                        "userId": {
+                          "$ref": "#/properties/resource/properties/id"
+                        },
+                        "programId": {
+                          "$ref": "#/properties/resource/properties/id"
+                        },
+                        "subjectId": {
+                          "$ref": "#/properties/resource/properties/id"
+                        },
                         "title": {
                           "type": "string",
                           "minLength": 1,
@@ -640,148 +671,90 @@
                         },
                         "description": {
                           "type": "string",
-                          "maxLength": 2000
+                          "nullable": true
                         },
-                        "type": {
+                        "fileUrl": {
                           "type": "string"
                         },
-                        "url": {
+                        "fileName": {
+                          "type": "string"
+                        },
+                        "fileType": {
                           "type": "string",
-                          "format": "uri"
+                          "nullable": true
                         },
-                        "uploaderUserId": {
-                          "$ref": "#/properties/resource/properties/id"
-                        },
-                        "uploader": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "$ref": "#/properties/resource/properties/id"
-                            },
-                            "email": {
-                              "type": "string",
-                              "format": "email"
-                            },
-                            "firstName": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100
-                            },
-                            "lastName": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100
-                            },
-                            "role": {
-                              "type": "string",
-                              "enum": [
-                                "estudiante",
-                                "admin"
-                              ]
-                            },
-                            "profileImageUrl": {
-                              "type": "string",
-                              "format": "uri"
-                            },
-                            "isVerified": {
-                              "type": "boolean"
-                            },
-                            "createdAt": {
-                              "type": "string",
-                              "format": "date-time"
-                            },
-                            "updatedAt": {
-                              "$ref": "#/properties/resource/properties/uploader/properties/createdAt"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "email",
-                            "firstName",
-                            "lastName",
-                            "role",
-                            "isVerified",
-                            "createdAt",
-                            "updatedAt"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "subjectId": {
-                          "$ref": "#/properties/resource/properties/id"
-                        },
-                        "subject": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "$ref": "#/properties/resource/properties/id"
-                            },
-                            "name": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 200
-                            },
-                            "programId": {
-                              "$ref": "#/properties/resource/properties/id"
-                            },
-                            "code": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 20
-                            },
-                            "description": {
-                              "type": "string",
-                              "maxLength": 500
-                            },
-                            "credits": {
-                              "type": "integer",
-                              "exclusiveMinimum": true,
-                              "minimum": 0
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "name",
-                            "programId",
-                            "code"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "tags": {
-                          "type": "array",
-                          "items": {
-                            "type": "string",
-                            "maxLength": 50
-                          }
-                        },
-                        "viewCount": {
+                        "fileSizeKb": {
                           "type": "integer",
-                          "minimum": 0
+                          "nullable": true
                         },
-                        "downloadCount": {
-                          "type": "integer",
-                          "minimum": 0
+                        "resourceType": {
+                          "type": "string",
+                          "nullable": true
                         },
-                        "isPublic": {
-                          "type": "boolean"
+                        "ogTitle": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "ogImage": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "ogDescription": {
+                          "type": "string",
+                          "nullable": true
                         },
                         "createdAt": {
-                          "$ref": "#/properties/resource/properties/uploader/properties/createdAt"
+                          "type": "string",
+                          "format": "date-time"
                         },
                         "updatedAt": {
-                          "$ref": "#/properties/resource/properties/uploader/properties/createdAt"
+                          "$ref": "#/properties/resource/properties/createdAt"
+                        },
+                        "profiles": {
+                          "type": "object",
+                          "properties": {
+                            "fullName": {
+                              "type": "string"
+                            },
+                            "avatarUrl": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "fullName",
+                            "avatarUrl"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "subjects": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
                         "id",
-                        "title",
-                        "type",
-                        "url",
-                        "uploaderUserId",
+                        "userId",
+                        "programId",
                         "subjectId",
-                        "tags",
-                        "viewCount",
-                        "downloadCount",
-                        "isPublic",
+                        "title",
+                        "description",
+                        "fileUrl",
+                        "fileName",
+                        "fileType",
+                        "fileSizeKb",
+                        "resourceType",
+                        "ogTitle",
+                        "ogImage",
+                        "ogDescription",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -1244,6 +1217,10 @@
                     "type": "string",
                     "maxLength": 200
                   },
+                  "category": {
+                    "type": "string",
+                    "default": "academico"
+                  },
                   "capacity": {
                     "type": "integer",
                     "exclusiveMinimum": true,
@@ -1307,6 +1284,9 @@
                         "location": {
                           "type": "string",
                           "maxLength": 200
+                        },
+                        "category": {
+                          "type": "string"
                         },
                         "creatorId": {
                           "$ref": "#/properties/event/properties/id"
@@ -1399,6 +1379,7 @@
                         "title",
                         "description",
                         "eventDate",
+                        "category",
                         "creatorId",
                         "attendeeCount",
                         "isOnline",
@@ -1455,13 +1436,13 @@
                   },
                   "title": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 200
+                    "minLength": 5,
+                    "maxLength": 300
                   },
                   "body": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 5000
+                    "minLength": 10,
+                    "maxLength": 10000
                   }
                 },
                 "required": [
@@ -1482,7 +1463,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "question": {
+                    "data": {
                       "type": "object",
                       "properties": {
                         "id": {
@@ -1490,26 +1471,27 @@
                           "format": "uuid"
                         },
                         "subjectId": {
-                          "$ref": "#/properties/question/properties/id"
+                          "$ref": "#/properties/data/properties/id"
                         },
                         "authorId": {
-                          "$ref": "#/properties/question/properties/id"
+                          "$ref": "#/properties/data/properties/id"
                         },
                         "title": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 200
+                          "minLength": 5,
+                          "maxLength": 300
                         },
                         "body": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 5000
+                          "minLength": 10,
+                          "maxLength": 10000
                         },
                         "status": {
                           "type": "string",
                           "enum": [
                             "active",
-                            "solved"
+                            "solved",
+                            "closed"
                           ]
                         },
                         "answerCount": {
@@ -1519,12 +1501,20 @@
                         "voteCount": {
                           "type": "integer"
                         },
+                        "userVote": {
+                          "type": "string",
+                          "enum": [
+                            "upvote",
+                            "downvote"
+                          ],
+                          "nullable": true
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
                         },
                         "updatedAt": {
-                          "$ref": "#/properties/question/properties/createdAt"
+                          "$ref": "#/properties/data/properties/createdAt"
                         }
                       },
                       "required": [
@@ -1543,7 +1533,7 @@
                     }
                   },
                   "required": [
-                    "question"
+                    "data"
                   ],
                   "additionalProperties": false
                 }
@@ -1577,10 +1567,17 @@
           {
             "name": "subjectId",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
             }
           },
           {
@@ -1588,17 +1585,10 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "not": {}
-                },
-                {
-                  "type": "integer",
-                  "exclusiveMinimum": true,
-                  "minimum": 0,
-                  "default": 1
-                }
-              ]
+              "type": "integer",
+              "exclusiveMinimum": true,
+              "minimum": 0,
+              "default": 1
             }
           },
           {
@@ -1606,18 +1596,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "not": {}
-                },
-                {
-                  "type": "integer",
-                  "exclusiveMinimum": true,
-                  "minimum": 0,
-                  "maximum": 100,
-                  "default": 20
-                }
-              ]
+              "type": "integer",
+              "exclusiveMinimum": true,
+              "minimum": 0,
+              "maximum": 100,
+              "default": 20
             }
           }
         ],
@@ -1629,7 +1612,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "questions": {
+                    "data": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -1639,21 +1622,22 @@
                             "format": "uuid"
                           },
                           "subjectId": {
-                            "$ref": "#/properties/questions/items/properties/id"
+                            "$ref": "#/properties/data/items/properties/id"
                           },
                           "authorId": {
-                            "$ref": "#/properties/questions/items/properties/id"
+                            "$ref": "#/properties/data/items/properties/id"
                           },
                           "title": {
                             "type": "string",
-                            "minLength": 1,
-                            "maxLength": 200
+                            "minLength": 5,
+                            "maxLength": 300
                           },
                           "status": {
                             "type": "string",
                             "enum": [
                               "active",
-                              "solved"
+                              "solved",
+                              "closed"
                             ]
                           },
                           "answerCount": {
@@ -1668,7 +1652,7 @@
                             "format": "date-time"
                           },
                           "updatedAt": {
-                            "$ref": "#/properties/questions/items/properties/createdAt"
+                            "$ref": "#/properties/data/items/properties/createdAt"
                           }
                         },
                         "required": [
@@ -1685,7 +1669,7 @@
                         "additionalProperties": false
                       }
                     },
-                    "pagination": {
+                    "meta": {
                       "type": "object",
                       "properties": {
                         "page": {
@@ -1710,7 +1694,7 @@
                     }
                   },
                   "required": [
-                    "questions"
+                    "data"
                   ],
                   "additionalProperties": false
                 }
@@ -1735,16 +1719,16 @@
         }
       }
     },
-    "/api/v1/forum/questions/{id}": {
+    "/api/v1/forum/questions/{questionId}": {
       "get": {
         "tags": [
           "Forum"
         ],
-        "summary": "GET /api/v1/forum/questions/:id",
-        "operationId": "GETapi_v1_forum_questions_id",
+        "summary": "GET /api/v1/forum/questions/:questionId",
+        "operationId": "GETapi_v1_forum_questions_questionId",
         "parameters": [
           {
-            "name": "id",
+            "name": "questionId",
             "in": "path",
             "required": true,
             "schema": {
@@ -1761,114 +1745,148 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "question": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
+                        "question": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "subjectId": {
+                              "$ref": "#/properties/data/properties/question/properties/id"
+                            },
+                            "authorId": {
+                              "$ref": "#/properties/data/properties/question/properties/id"
+                            },
+                            "title": {
+                              "type": "string",
+                              "minLength": 5,
+                              "maxLength": 300
+                            },
+                            "body": {
+                              "type": "string",
+                              "minLength": 10,
+                              "maxLength": 10000
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "solved",
+                                "closed"
+                              ]
+                            },
+                            "answerCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "voteCount": {
+                              "type": "integer"
+                            },
+                            "userVote": {
+                              "type": "string",
+                              "enum": [
+                                "upvote",
+                                "downvote"
+                              ],
+                              "nullable": true
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "$ref": "#/properties/data/properties/question/properties/createdAt"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "subjectId",
+                            "authorId",
+                            "title",
+                            "body",
+                            "status",
+                            "answerCount",
+                            "voteCount",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "additionalProperties": false
                         },
-                        "subjectId": {
-                          "$ref": "#/properties/question/properties/id"
-                        },
-                        "authorId": {
-                          "$ref": "#/properties/question/properties/id"
-                        },
-                        "title": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 200
-                        },
-                        "body": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 5000
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "active",
-                            "solved"
-                          ]
-                        },
-                        "answerCount": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "voteCount": {
-                          "type": "integer"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "updatedAt": {
-                          "$ref": "#/properties/question/properties/createdAt"
+                        "answers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "$ref": "#/properties/data/properties/question/properties/id"
+                              },
+                              "questionId": {
+                                "$ref": "#/properties/data/properties/question/properties/id"
+                              },
+                              "authorId": {
+                                "$ref": "#/properties/data/properties/question/properties/id"
+                              },
+                              "authorName": {
+                                "type": "string"
+                              },
+                              "body": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              "voteCount": {
+                                "type": "integer"
+                              },
+                              "isSolution": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "isPinned": {
+                                "type": "boolean",
+                                "default": false
+                              },
+                              "userVote": {
+                                "type": "string",
+                                "enum": [
+                                  "upvote",
+                                  "downvote"
+                                ],
+                                "nullable": true
+                              },
+                              "createdAt": {
+                                "$ref": "#/properties/data/properties/question/properties/createdAt"
+                              },
+                              "updatedAt": {
+                                "$ref": "#/properties/data/properties/question/properties/createdAt"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "questionId",
+                              "authorId",
+                              "authorName",
+                              "body",
+                              "voteCount",
+                              "createdAt",
+                              "updatedAt"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
-                        "id",
-                        "subjectId",
-                        "authorId",
-                        "title",
-                        "body",
-                        "status",
-                        "answerCount",
-                        "voteCount",
-                        "createdAt",
-                        "updatedAt"
+                        "question",
+                        "answers"
                       ],
                       "additionalProperties": false
-                    },
-                    "answers": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "$ref": "#/properties/question/properties/id"
-                          },
-                          "questionId": {
-                            "$ref": "#/properties/question/properties/id"
-                          },
-                          "authorId": {
-                            "$ref": "#/properties/question/properties/id"
-                          },
-                          "body": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 5000
-                          },
-                          "voteCount": {
-                            "type": "integer"
-                          },
-                          "isSolution": {
-                            "type": "boolean",
-                            "default": false
-                          },
-                          "createdAt": {
-                            "$ref": "#/properties/question/properties/createdAt"
-                          },
-                          "updatedAt": {
-                            "$ref": "#/properties/question/properties/createdAt"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "questionId",
-                          "authorId",
-                          "body",
-                          "voteCount",
-                          "createdAt",
-                          "updatedAt"
-                        ],
-                        "additionalProperties": false
-                      }
                     }
                   },
                   "required": [
-                    "question",
-                    "answers"
+                    "data"
                   ],
                   "additionalProperties": false
                 }
@@ -1940,7 +1958,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "answer": {
+                    "data": {
                       "type": "object",
                       "properties": {
                         "id": {
@@ -1948,10 +1966,13 @@
                           "format": "uuid"
                         },
                         "questionId": {
-                          "$ref": "#/properties/answer/properties/id"
+                          "$ref": "#/properties/data/properties/id"
                         },
                         "authorId": {
-                          "$ref": "#/properties/answer/properties/id"
+                          "$ref": "#/properties/data/properties/id"
+                        },
+                        "authorName": {
+                          "type": "string"
                         },
                         "body": {
                           "type": "string",
@@ -1965,18 +1986,31 @@
                           "type": "boolean",
                           "default": false
                         },
+                        "isPinned": {
+                          "type": "boolean",
+                          "default": false
+                        },
+                        "userVote": {
+                          "type": "string",
+                          "enum": [
+                            "upvote",
+                            "downvote"
+                          ],
+                          "nullable": true
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
                         },
                         "updatedAt": {
-                          "$ref": "#/properties/answer/properties/createdAt"
+                          "$ref": "#/properties/data/properties/createdAt"
                         }
                       },
                       "required": [
                         "id",
                         "questionId",
                         "authorId",
+                        "authorName",
                         "body",
                         "voteCount",
                         "createdAt",
@@ -1986,7 +2020,7 @@
                     }
                   },
                   "required": [
-                    "answer"
+                    "data"
                   ],
                   "additionalProperties": false
                 }
@@ -2035,7 +2069,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "answers": {
+                    "data": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -2045,10 +2079,13 @@
                             "format": "uuid"
                           },
                           "questionId": {
-                            "$ref": "#/properties/answers/items/properties/id"
+                            "$ref": "#/properties/data/items/properties/id"
                           },
                           "authorId": {
-                            "$ref": "#/properties/answers/items/properties/id"
+                            "$ref": "#/properties/data/items/properties/id"
+                          },
+                          "authorName": {
+                            "type": "string"
                           },
                           "body": {
                             "type": "string",
@@ -2062,18 +2099,31 @@
                             "type": "boolean",
                             "default": false
                           },
+                          "isPinned": {
+                            "type": "boolean",
+                            "default": false
+                          },
+                          "userVote": {
+                            "type": "string",
+                            "enum": [
+                              "upvote",
+                              "downvote"
+                            ],
+                            "nullable": true
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time"
                           },
                           "updatedAt": {
-                            "$ref": "#/properties/answers/items/properties/createdAt"
+                            "$ref": "#/properties/data/items/properties/createdAt"
                           }
                         },
                         "required": [
                           "id",
                           "questionId",
                           "authorId",
+                          "authorName",
                           "body",
                           "voteCount",
                           "createdAt",
@@ -2084,7 +2134,7 @@
                     }
                   },
                   "required": [
-                    "answers"
+                    "data"
                   ],
                   "additionalProperties": false
                 }
@@ -2160,12 +2210,21 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "voteCount": {
-                      "type": "integer"
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "voteCount": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "voteCount"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
-                    "voteCount"
+                    "data"
                   ],
                   "additionalProperties": false
                 }
@@ -2236,15 +2295,21 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "enum": [
-                        true
-                      ]
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "message"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
-                    "success"
+                    "data"
                   ],
                   "additionalProperties": false
                 }

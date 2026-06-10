@@ -109,6 +109,9 @@ export function mapCampusEventApiToUI(e: CampusEventApi): CampusEventUI {
     createdBy: e.created_by ?? null,
     createdAt: e.created_at,
     updatedAt: e.updated_at,
+    status: e.status ?? "draft",
+    maxCapacity: e.max_capacity ?? null,
+    registeredCount: e.registered_count ?? 0,
     creator: e.creator ? { fullName: (e.creator as any).full_name } : null,
   };
 }

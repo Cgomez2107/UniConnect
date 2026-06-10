@@ -374,11 +374,11 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
 
   const handleSendMessage = useCallback(
     async (content: string, mentions?: any[], media?: { url: string; type: string; filename: string }) => {
-      if (!activeRequestId) return;
+      if (!activeRequestId) return false;
 
       const trimmed = content.trim();
       // Permitir enviar solo archivos sin texto
-      if (!trimmed && !media) return;
+      if (!trimmed && !media) return false;
 
       setSendingMessage(true);
       try {
@@ -404,12 +404,14 @@ export function useStudyGroupDashboard({ requestId }: UseStudyGroupDashboardOpti
           if (prev.some((m) => m.id === mapped.id)) return prev;
           return [...prev, mapped];
         });
+        return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : "No se pudo enviar el mensaje.";
         setToast({
           title: "Error de envio",
           message,
         });
+        return false;
       } finally {
         setSendingMessage(false);
       }

@@ -13,6 +13,7 @@ export class EventsClient extends BaseClient {
             params: {
                 ...(filters?.page !== undefined && { page: filters.page }),
                 ...(filters?.perPage !== undefined && { per_page: filters.perPage }),
+                ...(filters?.createdBy !== undefined && { created_by: filters.createdBy }),
             },
         });
         return this.ensureArray(response.data).map((dto) => mapEventDtoToDomain(dto));
@@ -65,6 +66,26 @@ export class EventsClient extends BaseClient {
             method: "DELETE",
             url: `/events/${id}`,
         });
+    }
+    async register(eventId) {
+        await this.transport.request({
+            method: "POST",
+            url: `/events/${eventId}/register`,
+        });
+    }
+    async publish(eventId) {
+        const response = await this.transport.request({
+            method: "POST",
+            url: `/events/${eventId}/publish`,
+        });
+        return mapEventDtoToDomain(response.data);
+    }
+    async cancel(eventId) {
+        const response = await this.transport.request({
+            method: "POST",
+            url: `/events/${eventId}/cancel`,
+        });
+        return mapEventDtoToDomain(response.data);
     }
 }
 //# sourceMappingURL=EventsClient.js.map

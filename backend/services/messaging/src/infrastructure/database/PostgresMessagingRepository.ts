@@ -178,6 +178,10 @@ function parseJsonColumn<T>(raw: unknown): T {
 }
 
 export class PostgresMessagingRepository implements IMessagingRepository {
+  private readonly messageTimestamps = new Map<string, Date[]>();
+  private readonly blockedUsers = new Map<string, { until: Date; reason: string }>();
+  private readonly blockHistory: { userId: string; reason: string; timestamp: Date }[] = [];
+
   constructor(private readonly pool: Pool) {}
 
   async getConversationById(id: string, currentUserId: string): Promise<ConversationSummary | null> {
@@ -814,5 +818,52 @@ export class PostgresMessagingRepository implements IMessagingRepository {
     }
 
     return result.rows[0].group_id;
+  }
+
+  async isUserBlocked(userId: string): Promise<boolean> {
+    const expiration = await this.getUserBlockExpiration(userId);
+    return !!expiration;
+  }
+
+  async getUserBlockExpiration(userId: string): Promise<Date | null> {
+    const block = this.blockedUsers.get(userId);
+    if (!block) {
+      return null;
+    }
+
+    if (new Date() < block.until) {
+      return block.until;
+    }
+
+    this.blockedUsers.delete(userId);
+    return null;
+  }
+
+
+  async blockUser(userId: string, durationMinutes: number, reason: string): Promise<void> {
+    const until = new Date(Date.now() + durationMinutes * 60000);
+    this.blockedUsers.set(userId, { until, reason });
+    console.warn(`[Moderación] Usuario ${userId} bloqueado por ${durationMinutes} minutos. Razón: ${reason}`);
+  }
+
+  async recordMessageTimestamp(userId: string): Promise<number> {
+    const now = new Date();
+    const limitTime = new Date(now.getTime() - 30000);
+
+    const userTimestamps = this.messageTimestamps.get(userId) ?? [];
+    const recentTimestamps = userTimestamps.filter((t) => t >= limitTime);
+    recentTimestamps.push(now);
+
+    this.messageTimestamps.set(userId, recentTimestamps);
+    return recentTimestamps.length;
+  }
+
+  async recordBlockEvent(userId: string, reason: string): Promise<void> {
+    this.blockHistory.push({ userId, reason, timestamp: new Date() });
+  }
+
+  async countBlocksInLastHour(userId: string): Promise<number> {
+    const limitTime = new Date(Date.now() - 60 * 60 * 1000);
+    return this.blockHistory.filter((item) => item.userId === userId && item.timestamp >= limitTime).length;
   }
 }

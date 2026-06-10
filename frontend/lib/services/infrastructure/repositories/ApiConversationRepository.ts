@@ -45,7 +45,7 @@ function mapConversation(raw: ApiConversation): Conversation {
 export class ApiConversationRepository implements IConversationRepository {
   async getById(id: string): Promise<Conversation | null> {
     try {
-      const data = await fetchApi<ApiConversation>(`/api/v1/conversations/${id}`);
+      const data = await fetchApi<ApiConversation>(`/conversations/${id}`);
       return data ? mapConversation(data) : null;
     } catch (error) {
       if (error instanceof Error && error.message.toLowerCase().includes("no encontrada")) {
@@ -56,13 +56,13 @@ export class ApiConversationRepository implements IConversationRepository {
   }
 
   async getByUser(_userId: string): Promise<Conversation[]> {
-    const data = await fetchApi<ApiConversation[]>("/api/v1/conversations");
+    const data = await fetchApi<ApiConversation[]>("/conversations");
     return (data ?? []).map(mapConversation);
   }
 
   async getOrCreate(participantA: string, participantB: string): Promise<Conversation> {
     void participantA;
-    const data = await fetchApi<ApiConversation>("/api/v1/conversations", {
+    const data = await fetchApi<ApiConversation>("/conversations", {
       method: "POST",
       body: JSON.stringify({
         participantB,
@@ -73,7 +73,7 @@ export class ApiConversationRepository implements IConversationRepository {
   }
 
   async updateLastActivity(id: string): Promise<void> {
-    await fetchApi(`/api/v1/conversations/${id}/touch`, {
+    await fetchApi(`/conversations/${id}/touch`, {
       method: "PATCH",
     });
   }

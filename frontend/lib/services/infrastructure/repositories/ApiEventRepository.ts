@@ -14,18 +14,26 @@ export class ApiEventRepository implements IEventRepository {
   private readonly fallback = new SupabaseEventRepository();
 
   async getAllEvents(): Promise<CampusEvent[]> {
-    const data = await fetchApi<CampusEvent[]>("/api/v1/events");
-    return (data ?? []).map(mapEventFromApi);
+    try {
+      const data = await fetchApi<CampusEvent[]>("/events");
+      return (data ?? []).map(mapEventFromApi);
+    } catch {
+      return this.fallback.getAllEvents();
+    }
   }
 
   async getUpcoming(): Promise<CampusEvent[]> {
-    const data = await fetchApi<CampusEvent[]>("/api/v1/events?upcoming=true");
-    return (data ?? []).map(mapEventFromApi);
+    try {
+      const data = await fetchApi<CampusEvent[]>("/events?upcoming=true");
+      return (data ?? []).map(mapEventFromApi);
+    } catch {
+      return this.fallback.getUpcoming();
+    }
   }
 
   async getById(eventId: string): Promise<CampusEvent | null> {
     try {
-      const data = await fetchApi<CampusEvent>(`/api/v1/events/${eventId}`);
+      const data = await fetchApi<CampusEvent>(`/events/${eventId}`);
       return data ? mapEventFromApi(data) : null;
     } catch (error) {
       if (error instanceof Error && error.message.toLowerCase().includes("not found")) {
@@ -41,25 +49,25 @@ export class ApiEventRepository implements IEventRepository {
       title: string;
       description: string;
       location: string;
-      startAt: string;
-      endAt: string;
+      eventDate: string;
       maxCapacity?: number;
       category?: string;
-      imageUrl?: string;
     },
   ): Promise<CampusEvent> {
-    const data = await fetchApi<CampusEvent>("/api/v1/events", {
+    const body: Record<string, unknown> = {
+      title: payload.title,
+      eventDate: payload.eventDate,
+      category: payload.category || "academico",
+    };
+    if (payload.description) body.description = payload.description;
+    if (payload.location) body.location = payload.location;
+    if (payload.maxCapacity !== undefined && payload.maxCapacity > 0) {
+      body.capacity = payload.maxCapacity;
+    }
+
+    const data = await fetchApi<CampusEvent>("/events", {
       method: "POST",
-      body: JSON.stringify({
-        title: payload.title,
-        description: payload.description,
-        location: payload.location,
-        startAt: payload.startAt,
-        endAt: payload.endAt,
-        category: payload.category,
-        imageUrl: payload.imageUrl,
-        maxCapacity: payload.maxCapacity,
-      }),
+      body: JSON.stringify(body),
     });
 
     return mapEventFromApi(data);
@@ -79,25 +87,41 @@ export class ApiEventRepository implements IEventRepository {
       imageUrl?: string;
     },
   ): Promise<void> {
-    await fetchApi(`/api/v1/events/${eventId}`, {
+    await fetchApi(`/events/${eventId}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     });
   }
 
   async delete(eventId: string, _userId: string): Promise<void> {
-    await fetchApi(`/api/v1/events/${eventId}`, {
+    await fetchApi(`/events/${eventId}`, {
       method: "DELETE",
     });
   }
 
-  // Operaciones pendientes — fallback a Supabase
   async getByAuthor(userId: string): Promise<CampusEvent[]> {
-    return this.fallback.getByAuthor(userId);
+    try {
+      const data = await fetchApi<CampusEvent[]>(`/events?createdBy=${userId}`);
+      return (data ?? []).map(mapEventFromApi);
+    } catch {
+      return this.fallback.getByAuthor(userId);
+    }
   }
 
   async updateStatus(eventId: string, status: string): Promise<void> {
     return this.fallback.updateStatus(eventId, status);
+  }
+
+  async publish(eventId: string): Promise<void> {
+    await fetchApi(`/events/${eventId}/publish`, { method: "POST" });
+  }
+
+  async cancel(eventId: string): Promise<void> {
+    await fetchApi(`/events/${eventId}/cancel`, { method: "POST" });
+  }
+
+  async registerForEvent(eventId: string, _userId: string): Promise<void> {
+    await fetchApi(`/events/${eventId}/register`, { method: "POST" });
   }
 }
 
@@ -118,10 +142,14 @@ function mapEventFromApi(raw: any): CampusEvent {
     // event_date del schema → startAt en el backend → event_date en el frontend
     event_date: raw.startAt ?? raw.eventDate ?? raw.event_date,
     category: raw.category ?? "academico",
+    category_id: raw.categoryId ?? raw.category_id,
     image_url: raw.imageUrl ?? raw.image_url ?? null,
     created_by: raw.organizerId ?? raw.createdBy ?? raw.created_by,
     created_at: raw.createdAt ?? raw.created_at,
     updated_at: raw.updatedAt ?? raw.updated_at,
+    status: raw.status ?? "published",
+    capacity: raw.maxCapacity ?? raw.capacity ?? null,
+    isRegistered: raw.isRegistered ?? false,
     creator: raw.organizerName
       ? { full_name: raw.organizerName }
       : undefined,

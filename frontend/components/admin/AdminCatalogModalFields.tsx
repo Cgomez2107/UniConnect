@@ -1,9 +1,10 @@
 import { FieldLabel } from "@/components/admin/CrudModal";
 import { Colors } from "@/constants/Colors";
 import type { EventModalState, FacultyModalState, ProgramModalState, SubjectModalState } from "@/hooks/application/useAdmin";
-import { EventCategory, Faculty, Program } from "@/types";
-import { Dispatch, SetStateAction } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import type { EventCategoryRow, Faculty, Program } from "@/types";
+import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import { Dispatch, SetStateAction, useState } from "react";
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 interface BaseProps {
   C: (typeof Colors)["light"];
@@ -148,14 +149,67 @@ export function SubjectModalFields({ C, modal, setModal, programs }: SubjectFiel
   );
 }
 
-const EVENT_CATEGORIES: EventCategory[] = ["academico", "cultural", "deportivo", "otro"];
-
 interface EventFieldsProps extends BaseProps {
   modal: EventModalState;
   setModal: Dispatch<SetStateAction<EventModalState>>;
+  categories: EventCategoryRow[];
 }
 
-export function EventModalFields({ C, modal, setModal }: EventFieldsProps) {
+export function EventModalFields({ C, modal, setModal, categories }: EventFieldsProps) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const parsedDate = modal.form.event_date
+    ? new Date(modal.form.event_date)
+    : new Date();
+
+  const formatDisplayDate = (iso: string): string => {
+    if (!iso) return "Seleccionar fecha y hora";
+    const d = new Date(iso);
+    return d.toLocaleDateString("es-CO", {
+      year: "numeric",
+      month: "long",
+      day: "2-digit",
+    }) + " " + d.toLocaleTimeString("es-CO", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const onDateChange = (_: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (!selectedDate) return;
+
+    const current = new Date(modal.form.event_date ? new Date(modal.form.event_date) : new Date());
+    current.setFullYear(selectedDate.getFullYear());
+    current.setMonth(selectedDate.getMonth());
+    current.setDate(selectedDate.getDate());
+
+    setModal((p) => ({
+      ...p,
+      form: { ...p.form, event_date: current.toISOString().slice(0, 16) },
+      error: "",
+    }));
+
+    // Show time picker after date is selected
+    setTimeout(() => setShowTimePicker(true), 300);
+  };
+
+  const onTimeChange = (_: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowTimePicker(false);
+    if (!selectedDate) return;
+
+    const current = new Date(modal.form.event_date ? new Date(modal.form.event_date) : new Date());
+    current.setHours(selectedDate.getHours());
+    current.setMinutes(selectedDate.getMinutes());
+
+    setModal((p) => ({
+      ...p,
+      form: { ...p.form, event_date: current.toISOString().slice(0, 16) },
+      error: "",
+    }));
+  };
+
   return (
     <>
       <FieldLabel text="Título *" />
@@ -182,16 +236,34 @@ export function EventModalFields({ C, modal, setModal }: EventFieldsProps) {
         }
       />
 
-      <FieldLabel text="Fecha y hora * (AAAA-MM-DDTHH:mm)" style={{ marginTop: 14 }} />
-      <TextInput
-        style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
-        placeholder="2025-06-15T10:00"
-        placeholderTextColor={C.textPlaceholder}
-        value={modal.form.event_date}
-        keyboardType="default"
-        autoCapitalize="none"
-        onChangeText={(value) => setModal((p) => ({ ...p, form: { ...p.form, event_date: value }, error: "" }))}
-      />
+      <FieldLabel text="Fecha y hora *" style={{ marginTop: 14 }} />
+      <TouchableOpacity
+        style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, justifyContent: "center" }]}
+        onPress={() => setShowDatePicker(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={{ color: modal.form.event_date ? C.textPrimary : C.textPlaceholder, fontSize: 15 }}>
+          {formatDisplayDate(modal.form.event_date)}
+        </Text>
+      </TouchableOpacity>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={parsedDate}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={onDateChange}
+        />
+      )}
+
+      {showTimePicker && (
+        <DateTimePicker
+          value={parsedDate}
+          mode="time"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={onTimeChange}
+        />
+      )}
 
       <FieldLabel text="Lugar (opcional)" style={{ marginTop: 14 }} />
       <TextInput
@@ -204,32 +276,75 @@ export function EventModalFields({ C, modal, setModal }: EventFieldsProps) {
       />
 
       <FieldLabel text="Categoría *" style={{ marginTop: 14 }} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 2 }}>
-        {EVENT_CATEGORIES.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: modal.form.category === category ? C.primary : C.background,
-                borderColor: modal.form.category === category ? C.primary : C.border,
-              },
-            ]}
-            onPress={() => setModal((p) => ({ ...p, form: { ...p.form, category }, error: "" }))}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.chipText, { color: modal.form.category === category ? "#fff" : C.textSecondary }]}>
-              {category === "academico"
-                ? "🎓 Académico"
-                : category === "cultural"
-                  ? "🎭 Cultural"
-                  : category === "deportivo"
-                    ? "⚽ Deportivo"
-                    : "📌 Otro"}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {categories.length === 0 ? (
+        <Text style={[styles.chipText, { color: C.textSecondary, marginTop: 4 }]}>
+          No hay categorías disponibles. Crea una desde la gestión de categorías.
+        </Text>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 2 }}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: modal.form.category === cat.slug ? C.primary : C.background,
+                  borderColor: modal.form.category === cat.slug ? C.primary : C.border,
+                },
+              ]}
+              onPress={() => setModal((p) => ({ ...p, form: { ...p.form, category: cat.slug }, error: "" }))}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.chipText, { color: modal.form.category === cat.slug ? "#fff" : C.textSecondary }]}>
+                {cat.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      <FieldLabel text="Cupo Máximo (opcional)" style={{ marginTop: 14 }} />
+      <TextInput
+        style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
+        placeholder="Ej: 100"
+        placeholderTextColor={C.textPlaceholder}
+        value={modal.form.maxCapacity}
+        keyboardType="number-pad"
+        onChangeText={(value) => setModal((p) => ({ ...p, form: { ...p.form, maxCapacity: value }, error: "" }))}
+      />
+    </>
+  );
+}
+
+interface CategoryFieldsProps extends BaseProps {
+  modal: { form: { name: string; description: string }; error: string };
+  setModal: Dispatch<SetStateAction<any>>;
+}
+
+export function CategoryModalFields({ C, modal, setModal }: CategoryFieldsProps) {
+  return (
+    <>
+      <FieldLabel text="Nombre de la categoría *" />
+      <TextInput
+        style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
+        placeholder="Ej: Conferencia"
+        placeholderTextColor={C.textPlaceholder}
+        value={modal.form.name}
+        autoCapitalize="sentences"
+        autoFocus
+        onChangeText={(value) => setModal((p: any) => ({ ...p, form: { ...p.form, name: value }, error: "" }))}
+      />
+
+      <FieldLabel text="Descripción (opcional)" style={{ marginTop: 14 }} />
+      <TextInput
+        style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary, height: 80 }]}
+        placeholder="Breve descripción de la categoría..."
+        placeholderTextColor={C.textPlaceholder}
+        value={modal.form.description}
+        multiline
+        numberOfLines={3}
+        onChangeText={(value) => setModal((p: any) => ({ ...p, form: { ...p.form, description: value }, error: "" }))}
+      />
     </>
   );
 }

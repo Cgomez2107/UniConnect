@@ -401,7 +401,25 @@ export interface AdminMetrics {
 // EVENTOS DEL CAMPUS
 // ============================================================================
 
-export type EventCategory = "academico" | "cultural" | "deportivo" | "otro";
+export type EventCategory = string;
+
+/** Payload para crear una categoría de evento */
+export interface CreateEventCategoryPayload {
+  name: string;
+  description?: string;
+}
+
+/** Fila de la tabla event_categories (gestión dinámica desde admin) */
+export interface EventCategoryRow {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  created_at: string;
+}
+
+/** Estados del ciclo de vida de eventos (State pattern del backend) */
+export type EventStatus = "draft" | "published" | "cancelled" | "finished";
 
 /** Evento del campus (vista estudiante y admin) */
 export interface CampusEvent {
@@ -415,29 +433,51 @@ export interface CampusEvent {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  status: EventStatus;
+  max_capacity: number | null;
+  registered_count: number;
   // join opcional
   creator?: { full_name: string } | null;
 }
 
-/** Payload para crear/editar un evento */
+/** Payload para crear/editar un evento (admin) */
 export interface CreateEventPayload {
   title: string;
   description?: string;
   event_date: string;
   location?: string;
-  category: EventCategory;
+  category_id: string;
   image_url?: string;
+  max_capacity?: number | null;
 }
 
 /** Evento visto desde el panel de admin (con nombre del creador aplanado) */
 export interface AdminEvent {
   id: string;
   title: string;
+  description: string | null;
   event_date: string;
   location: string | null;
   category: EventCategory;
+  category_id: string;
+  status: EventStatus;
+  max_capacity: number | null;
+  registered_count: number;
+  image_url: string | null;
+  created_by: string | null;
   created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
   creator_name: string;
+}
+
+/** Resultado paginado de eventos desde el backend */
+export interface PaginatedAdminResult {
+  data: AdminEvent[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 // ============================================================================

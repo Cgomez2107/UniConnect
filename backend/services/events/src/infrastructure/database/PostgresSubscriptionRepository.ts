@@ -57,4 +57,16 @@ export class PostgresSubscriptionRepository implements ISubscriptionRepository {
     );
     return result.rows.map(r => r.category as EventCategory);
   }
+
+  async getAllUserIds(): Promise<string[]> {
+    try {
+      const result = await this.pool.query<{ id: string }>(
+        `SELECT id FROM profiles`,
+      );
+      return result.rows.map(r => r.id);
+    } catch (err) {
+      console.error("[PostgresSubscriptionRepository] getAllUserIds failed:", err);
+      return [];
+    }
+  }
 }

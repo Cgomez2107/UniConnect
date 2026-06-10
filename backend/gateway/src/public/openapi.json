@@ -4236,13 +4236,7 @@
             "maxLength": 5000
           },
           "category": {
-            "type": "string",
-            "enum": [
-              "academico",
-              "cultural",
-              "deportivo",
-              "otro"
-            ]
+            "type": "string"
           },
           "eventDate": {
             "type": "string",
@@ -4563,13 +4557,7 @@
         "type": "object",
         "properties": {
           "categoria": {
-            "type": "string",
-            "enum": [
-              "academico",
-              "cultural",
-              "deportivo",
-              "otro"
-            ]
+            "type": "string"
           }
         },
         "required": [
@@ -4634,13 +4622,7 @@
         "type": "object",
         "properties": {
           "categoria": {
-            "type": "string",
-            "enum": [
-              "academico",
-              "cultural",
-              "deportivo",
-              "otro"
-            ]
+            "type": "string"
           }
         },
         "required": [

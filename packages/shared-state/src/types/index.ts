@@ -21,6 +21,7 @@ export interface StoreDeps {
   };
   storage: IStorageAdapter;
   logger?: Logger;
+  onSessionCreated?: (tokens: { accessToken: string; refreshToken: string }) => void;
 }
 
 /**

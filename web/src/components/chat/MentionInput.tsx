@@ -5,6 +5,9 @@ import { useMessageValidation, useFileValidation } from "@/hooks/useMessageValid
 import { useMessageAutocomplete, useFilePicker } from "@/hooks/useMessageAutocomplete";
 import { ValidationErrorCode } from "@uniconnect/shared-types";
 import { PollCreator } from "./PollCreator";
+import { useSpamStore } from "@/store/useSpamStore";
+import { useNotificationStore } from "@/store/useNotificationStore";
+import { CommunityGuidelinesDialog } from "./CommunityGuidelinesDialog";
 
 interface PollData {
   question: string;
@@ -87,11 +90,40 @@ export function MentionInput({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mentionMapRef = useRef<Map<string, string>>(new Map());
 
+  const { isBlocked, remainingTime, blockReason, checkBlockStatus } = useSpamStore();
+  const { addNotification } = useNotificationStore();
+  const [guidelinesOpen, setGuidelinesOpen] = useState(false);
+  const [guidelinesErrorCode, setGuidelinesErrorCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    checkBlockStatus();
+    const interval = setInterval(() => {
+      checkBlockStatus();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [checkBlockStatus]);
+
   // Hooks de validación
-  const { validationState, validateMessage, clearValidation } = useMessageValidation({
-    maxLength: 5000,
+  const { validationState: localValidationState, validateMessage, clearValidation } = useMessageValidation({
+    maxLength: 1000,
     debounceMs: 300,
   });
+
+  const [backendValidationError, setBackendValidationError] = useState<{
+    code: string;
+    message: string;
+  } | null>(null);
+
+  const validationState = backendValidationError
+    ? {
+        ...localValidationState,
+        isValid: false,
+        error: {
+          code: backendValidationError.code,
+          message: backendValidationError.message,
+        },
+      }
+    : localValidationState;
 
   const { validateFile } = useFileValidation({ maxSizeMb: 10 });
 
@@ -129,6 +161,7 @@ export function MentionInput({
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setText(value);
+    setBackendValidationError(null);
 
     // Validar mensaje en tiempo real
     validateMessage(value).catch(() => {
@@ -244,10 +277,61 @@ export function MentionInput({
       await onSend(fullContent, mentions);
       setText("");
       clearValidation();
-    } catch (err) {
+      setBackendValidationError(null);
+    } catch (err: any) {
       console.error("Error al enviar mensaje:", err);
+
+      const rawErrorStr = JSON.stringify(err?.response?.data || err?.data || err || "");
+      const isMo001 = rawErrorStr.includes("MO_001") || rawErrorStr.toLowerCase().includes("límite");
+      const isMo002 = rawErrorStr.includes("MO_002") || rawErrorStr.toLowerCase().includes("palabra");
+      const isSpamBlock = err?.status === 429 || err?.response?.status === 429
+        || rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004");
+
+      if (isMo001) {
+        setBackendValidationError({
+          code: "MO_001",
+          message: "Tu mensaje supera el límite permitido de caracteres (1000).",
+        });
+        return;
+      } else if (isMo002) {
+        setBackendValidationError({
+          code: "MO_002",
+          message: "Tu mensaje contiene palabras que infringen las normas de la comunidad.",
+        });
+        return;
+      }
+
+      if (isSpamBlock) {
+        let remainingMs = 5 * 60 * 1000;
+        const errorMsg = typeof err?.message === "string" ? err.message : rawErrorStr;
+        const match = errorMsg.match(/Restante:\s*(\d+)/i);
+        if (match) remainingMs = parseInt(match[1], 10);
+        const errorCode = rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
+        useSpamStore.getState().setBlocked(remainingMs, errorCode);
+        return;
+      }
+
+      // Mostrar mensaje de error genérico del backend al usuario
+      let errorMessage = "Error al enviar mensaje";
+      if (err?.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err?.data?.error) {
+        errorMessage = err.data.error;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      addNotification({
+        id: `toast-${Date.now()}`,
+        userId: "system",
+        type: "system",
+        title: errorMessage,
+        description: "",
+        createdAt: new Date().toISOString(),
+        read: false,
+      });
     }
-  }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions, validateMessage, clearValidation, pendingPoll]);
+  }, [text, sending, uploadingFile, pendingFile, onSend, onUploadFile, buildContentWithMentions, extractMentions, validateMessage, clearValidation, pendingPoll, setBackendValidationError]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -300,7 +384,7 @@ export function MentionInput({
     };
   }, []);
 
-  const canSubmit = (text.trim().length > 0 || !!pendingFile || !!pendingPoll) && !sending && !uploadingFile;
+  const canSubmit = (text.trim().length > 0 || !!pendingFile || !!pendingPoll) && !sending && !uploadingFile && !isBlocked;
 
   return (
     <div className="relative">
@@ -405,6 +489,47 @@ export function MentionInput({
       )}
 
       <div className="bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 p-3">
+        {/* Spam block warning banner */}
+        {isBlocked && (
+          <div className="mb-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3 text-red-600 dark:text-red-400">
+            <span className="text-lg mt-0.5">{blockReason === 'MO_004' ? '🚨' : '🚫'}</span>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-red-800 dark:text-red-300">
+                {blockReason === 'MO_004' ? 'Caso escalado a revisión humana' : 'Chat suspendido temporalmente'}
+              </p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                {blockReason === 'MO_004'
+                  ? <>Has acumulado múltiples infracciones. Tu caso fue escalado a revisión humana. Podrás enviar mensajes de nuevo en:{" "}
+                    <span className="font-bold text-red-600 dark:text-red-400">
+                      {Math.floor(remainingTime / 60)}:{String(remainingTime % 60).padStart(2, "0")}
+                    </span>
+                  </>
+                  : <>Has sido bloqueado por comportamiento de spam. Podrás enviar mensajes de nuevo en:{" "}
+                    <span className="font-bold text-red-600 dark:text-red-400">
+                      {Math.floor(remainingTime / 60)}:{String(remainingTime % 60).padStart(2, "0")}
+                    </span>
+                  </>}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setGuidelinesErrorCode(blockReason);
+                setGuidelinesOpen(true);
+              }}
+              className="ml-1 shrink-0 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors self-center"
+              title="Ver normas infringidas"
+            >
+              🤔 ¿Por qué?
+            </button>
+          </div>
+        )}
+
+        <CommunityGuidelinesDialog
+          open={guidelinesOpen}
+          onClose={() => setGuidelinesOpen(false)}
+          errorCode={guidelinesErrorCode}
+        />
+
         {/* Validation error display */}
         {validationState.error && (
           <div className="mb-2 p-2 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg flex items-start gap-2">
@@ -414,6 +539,16 @@ export function MentionInput({
                 {validationState.error.message}
               </p>
             </div>
+            <button
+              onClick={() => {
+                setGuidelinesErrorCode(validationState.error?.code || null);
+                setGuidelinesOpen(true);
+              }}
+              className="ml-1 shrink-0 text-xs font-semibold text-error-600 dark:text-error-400 border border-error-300 dark:border-error-700 rounded-lg px-2 py-1 hover:bg-error-100 dark:hover:bg-error-900/30 transition-colors self-center"
+              title="Ver normas infringidas"
+            >
+              🤔 ¿Por qué?
+            </button>
           </div>
         )}
 
@@ -479,7 +614,7 @@ export function MentionInput({
           <button
             type="button"
             onClick={() => imgInputRef.current?.click()}
-            disabled={uploadingImage || sending || uploadingFile || !onSendImage}
+            disabled={uploadingImage || sending || uploadingFile || !onSendImage || isBlocked}
             className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-50"
             title="Adjuntar imagen"
           >
@@ -495,7 +630,7 @@ export function MentionInput({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={sending || uploadingFile || !onUploadFile}
+            disabled={sending || uploadingFile || !onUploadFile || isBlocked}
             className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-50"
             title="Adjuntar archivo"
           >
@@ -511,7 +646,7 @@ export function MentionInput({
           <button
             type="button"
             onClick={() => setShowPollCreator(true)}
-            disabled={showPollCreator || sending}
+            disabled={showPollCreator || sending || isBlocked}
             className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
               showPollCreator
                 ? "bg-primary-100 text-primary-600"
@@ -532,7 +667,7 @@ export function MentionInput({
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder={pendingFile ? "Añade un mensaje..." : placeholder}
-            disabled={disabled || uploadingFile}
+            disabled={disabled || uploadingFile || isBlocked}
             className={`flex-1 px-4 py-2 border bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
               validationState.error
                 ? "border-error-500 dark:border-error-500 focus:ring-error-200 dark:focus:ring-error-800"
@@ -544,12 +679,12 @@ export function MentionInput({
           <div className="flex items-center gap-2">
             {/* Character counter */}
             <div className="text-[10px] text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-              <span className={text.length > 4500 ? "text-warning-600" : ""}>
+              <span className={text.length > 900 ? "text-warning-600" : ""}>
                 {text.length}
               </span>
               /{" "}
-              <span className={text.length > 4500 ? "text-warning-600" : ""}>
-                5000
+              <span className={text.length > 900 ? "text-warning-600" : ""}>
+                1000
               </span>
             </div>
             <Button

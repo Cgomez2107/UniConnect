@@ -398,6 +398,7 @@ function bootstrap(): void {
     groupChatNotificationObserver,
     groupPermissionRepo,
     groupPermissionRepo,
+    messageRepository,
     pollTimerService,
     onClosePoll,
   );
@@ -491,6 +492,31 @@ function bootstrap(): void {
     cancelStudySessionUC,
     updateAvailabilityUC,
     listSessionsByGroupUC,
+    notificationService,
+    async (): Promise<string[]> => {
+      if (!pool) return [];
+      try {
+        const result = await pool.query(
+          "SELECT id FROM profiles WHERE role = 'admin'"
+        );
+        return result.rows.map((r) => r.id);
+      } catch (error) {
+        console.error("[getAdminUserIds] Failed to fetch admins:", error);
+        return [];
+      }
+    },
+    async (userId: string): Promise<string | null> => {
+      if (!pool) return null;
+      try {
+        const result = await pool.query(
+          "SELECT full_name FROM profiles WHERE id = $1",
+          [userId]
+        );
+        return result.rows[0]?.full_name as string | null;
+      } catch {
+        return null;
+      }
+    },
   );
   const createStudySessionSeriesUC = new CreateStudySessionSeries(
     sessionRepos.session,

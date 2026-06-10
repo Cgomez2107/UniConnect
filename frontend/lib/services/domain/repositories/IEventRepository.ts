@@ -14,4 +14,7 @@ export interface IEventRepository {
   delete(eventId: string, userId: string): Promise<void>
   getByAuthor(userId: string): Promise<CampusEvent[]>
   updateStatus(eventId: string, status: string): Promise<void>
+  publish(eventId: string): Promise<void>
+  cancel(eventId: string): Promise<void>
+  registerForEvent(eventId: string, userId: string): Promise<void>
 }

@@ -8,6 +8,7 @@ import { File } from "expo-file-system";
 import { RequestDetailActionBar } from "@/components/solicitud/RequestDetailActionBar";
 import { RequestDetailContent } from "@/components/solicitud/RequestDetailContent";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { useMessageValidation } from "@/hooks/useMessageValidation";
 import { GroupContext } from "@/lib/patterns/state";
 import { GroupStateBadge } from "@/components/groups/GroupStateBadge";
 import { Colors } from "@/constants/Colors";
@@ -102,6 +103,11 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
       requestId: request?.id ?? requestId,
     });
 
+  const { validationState, validateMessage, clearValidation } = useMessageValidation({
+    maxLength: 1000,
+    debounceMs: 300,
+  });
+
   const isPrimaryAdmin = Boolean(user?.id && request?.author_id === user.id);
   const adminTabLabel = isPrimaryAdmin ? "Administracion" : "Info";
   const canAccessChat = canManageRequest || applicationStatus === "aceptada";
@@ -126,17 +132,27 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
   const formatTime = (value: string) =>
     new Date(value).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     if (!messageDraft.trim() && !pendingMedia) return;
+
+    // Validar localmente (ej: longitud)
+    const state = await validateMessage(messageDraft);
+    if (!state.isValid) {
+      return;
+    }
+
     const finalMentions = selectedMentions.filter(m =>
       messageDraft.includes(`@${m.displayName}`)
     );
-    handleSendMessage(messageDraft.trim(), finalMentions, pendingMedia || undefined);
-    setMessageDraft("");
-    setSelectedMentions([]);
-    setPendingMedia(null);
-    setMediaPreviewUri(null);
-  }, [handleSendMessage, messageDraft, pendingMedia, selectedMentions]);
+    const success = await handleSendMessage(messageDraft.trim(), finalMentions, pendingMedia || undefined);
+    if (success) {
+      setMessageDraft("");
+      setSelectedMentions([]);
+      setPendingMedia(null);
+      setMediaPreviewUri(null);
+      clearValidation();
+    }
+  }, [handleSendMessage, messageDraft, pendingMedia, selectedMentions, validateMessage, clearValidation]);
 
   const handleInputChange = useCallback((text: string) => {
     setMessageDraft(text);
@@ -147,7 +163,8 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
     } else {
       setShowMentions(false);
     }
-  }, []);
+    void validateMessage(text);
+  }, [validateMessage]);
 
   const insertMention = useCallback((member: StudyGroupMember) => {
     const words = messageDraft.split(" ");
@@ -635,6 +652,7 @@ export function StudyGroupDetailScreen({ requestId }: StudyGroupDetailScreenProp
               }}
               send={{ sending: sendingMessage || uploadingFile, onSend: handleSend }}
               voice={{ recording: false, elapsedSec: 0, onPress: () => undefined }}
+              validationState={validationState}
               backgroundColorOverride="#ffffff"
               borderTopColorOverride="#e5e7eb"
               paddingBottomOverride={insets.bottom + 12}

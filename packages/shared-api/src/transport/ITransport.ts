@@ -19,6 +19,7 @@ export abstract class BaseTransport implements ITransport {
   protected baseURL: string;
   protected defaultTimeout: number = 30000; // 30 seconds
   protected onSessionExpired: (() => void) | null = null;
+  public onError: ((error: { status: number; data: any }) => void) | null = null;
 
   constructor(baseURL: string = "") {
     this.baseURL = baseURL;
@@ -29,6 +30,13 @@ export abstract class BaseTransport implements ITransport {
    */
   setOnSessionExpired(callback: (() => void) | null): void {
     this.onSessionExpired = callback;
+  }
+
+  /**
+   * Set error callback (invoked on any error response)
+   */
+  setOnError(callback: ((error: { status: number; data: any }) => void) | null): void {
+    this.onError = callback;
   }
 
   /**

@@ -6,7 +6,7 @@ export const CreateEventRequestSchema = z.object({
         description: z.string().min(1).max(2000),
         eventDate: z.string().datetime(),
         location: z.string().max(200).optional(),
-        category: z.enum(["academico", "cultural", "deportivo", "otro"]).default("academico"),
+        category: z.string().default("academico"),
         capacity: z.number().int().positive().optional(),
         isOnline: z.boolean().default(false),
         eventUrl: z.string().url().optional(),

@@ -35,6 +35,13 @@ export declare class FetchTransport extends BaseTransport {
      * Set token refresh provider (called when 401 is received)
      */
     setTokenRefreshProvider(provider: () => Promise<string | null>): void;
+    /**
+     * Set error callback (invoked on any error response)
+     */
+    setOnError(callback: ((error: {
+        status: number;
+        data: any;
+    }) => void) | null): void;
     request<TResponse = any>(options: RequestOptions): Promise<ResponseData<TResponse>>;
     private executeWithRetry;
     private handleTokenRefresh;

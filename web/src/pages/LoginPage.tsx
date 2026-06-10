@@ -25,15 +25,11 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      // Redirect based on user role from store
-      const destination = user?.role === "admin" ? "/admin" : "/solicitudes";
-      navigate(destination);
+      const currentUser = useAuthStore.getState().user;
+      const destination = currentUser?.role === "admin" ? "/admin" : "/solicitudes";
+      navigate(destination, { replace: true });
     } catch (err: any) {
-      if (err?.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError("Credenciales incorrectas");
-      }
+      setError(err?.message || "Credenciales incorrectas");
     }
   };
 

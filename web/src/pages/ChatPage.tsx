@@ -11,6 +11,7 @@ import { getStorageService, uploadChatImageFile } from "@/lib/supabase";
 import { snakeToCamel } from "@uniconnect/shared-api";
 import { groupReactions } from "@/lib/services/messaging.service";
 import { useConversationsStore } from "@/store/useConversationsStore";
+import { useNotificationStore } from "@/store/useNotificationStore";
 import { isForbiddenContent } from "@/hooks/useMessageValidation";
 import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 import { getWsUrl } from "@/lib/wsUrl";
@@ -49,6 +50,7 @@ export const ChatPage: React.FC = () => {
   const { user } = useAuthStore();
   const { user: userUI } = useAuth();
   const navigate = useNavigate();
+  const { addNotification } = useNotificationStore();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -228,6 +230,20 @@ export const ChatPage: React.FC = () => {
   ) => {
     if (!content.trim() && !options?.poll) return;
 
+    // Validar contenido prohibido antes de enviar
+    if (isForbiddenContent(content)) {
+      addNotification({
+        id: `toast-${Date.now()}`,
+        userId: "system",
+        type: "system",
+        title: ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT],
+        description: "",
+        createdAt: new Date().toISOString(),
+        read: false,
+      });
+      return;
+    }
+
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: Message = {
       id: tempId,
@@ -279,13 +295,33 @@ export const ChatPage: React.FC = () => {
         );
       });
       loadConversations();
-    } catch {
+    } catch (err: any) {
       pendingTempIds.current.delete(tempId);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId ? { ...m, clientStatus: "failed" } : m
         )
       );
+
+      // Mostrar mensaje de error del backend al usuario usando toast notification
+      let errorMessage = "Error al enviar mensaje";
+      if (err?.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err?.data?.error) {
+        errorMessage = err.data.error;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      addNotification({
+        id: `toast-${Date.now()}`,
+        userId: "system",
+        type: "system",
+        title: errorMessage,
+        description: "",
+        createdAt: new Date().toISOString(),
+        read: false,
+      });
     } finally {
       setIsSending(false);
     }
@@ -293,7 +329,15 @@ export const ChatPage: React.FC = () => {
 
   const handleRetry = async (failedMsg: any) => {
     if (isForbiddenContent(failedMsg.content || "")) {
-      alert(ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT]);
+      addNotification({
+        id: `toast-${Date.now()}`,
+        userId: "system",
+        type: "system",
+        title: ValidationErrorMessages[ValidationErrorCode.BANNED_CONTENT],
+        description: "",
+        createdAt: new Date().toISOString(),
+        read: false,
+      });
       setMessages((prev) =>
         prev.map((m) =>
           m.id === failedMsg.id ? { ...m, clientStatus: "failed" } : m

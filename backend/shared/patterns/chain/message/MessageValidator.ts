@@ -13,7 +13,11 @@ export abstract class MessageValidator {
   protected next: MessageValidator | null = null;
 
   setSiguiente(handler: MessageValidator): this {
-    this.next = handler;
+    if (this.next === null) {
+      this.next = handler;
+    } else {
+      this.next.setSiguiente(handler);
+    }
     return this;
   }
 

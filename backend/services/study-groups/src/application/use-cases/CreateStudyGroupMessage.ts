@@ -14,7 +14,8 @@ import {
 } from "../../../../messaging/src/domain/decorators/index.js";
 import { PollTimerService } from "../../../../messaging/src/domain/services/PollTimerService.js";
 import { requireTrimmed } from "../../../../../shared/libs/validation/index.js";
-import { ValidatorFactory, type IGroupPermissionRepository, type IAdminResolver } from "../../../../../shared/patterns/chain/message/index.js";
+import { ValidatorFactory, type IGroupPermissionRepository, type IAdminResolver, type IModerationRepository } from "../../../../../shared/patterns/chain/message/index.js";
+import { ModerationError } from "../../../../../shared/libs/errors/ModerationError.js";
 
 export interface CreateStudyGroupMessageInput {
   readonly requestId: string;
@@ -44,10 +45,11 @@ export class CreateStudyGroupMessage {
     private readonly chatNotificationObserver: IChatObserver | null,
     permissionRepo: IGroupPermissionRepository,
     adminResolver: IAdminResolver,
+    moderationRepo: IModerationRepository,
     private readonly pollTimerService: PollTimerService,
     private readonly onClosePoll: (messageId: string) => Promise<void>,
   ) {
-    this.validator = ValidatorFactory.createChain(5000, undefined, permissionRepo, adminResolver);
+    this.validator = ValidatorFactory.createChain(1000, undefined, permissionRepo, adminResolver, moderationRepo);
   }
 
   async execute(input: CreateStudyGroupMessageInput): Promise<StudyGroupMessage> {
@@ -65,6 +67,10 @@ export class CreateStudyGroupMessage {
     });
 
     if (!validationResult.valido) {
+      if (validationResult.codigoError && validationResult.codigoError.startsWith("MO_")) {
+        console.warn(`[CreateStudyGroupMessage] Moderación falló (${validationResult.codigoError}), lanzando ModerationError:`, validationResult.mensajeError);
+        throw new ModerationError(validationResult.mensajeError ?? "Moderación falló", validationResult.codigoError);
+      }
       throw new Error(validationResult.mensajeError ?? "Error de validación");
     }
 

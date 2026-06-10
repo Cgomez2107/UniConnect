@@ -8,8 +8,9 @@ import type {
   AdminRequest,
   AdminResource,
   AdminUser,
+  CreateEventCategoryPayload,
   CreateEventPayload,
-  EventCategory,
+  EventCategoryRow,
   Faculty,
   Program,
   Subject,
@@ -53,8 +54,17 @@ export interface EventModalState {
     description: string
     event_date: string      // ISO string (YYYY-MM-DDTHH:mm)
     location: string
-    category: EventCategory
+    category: string
+    maxCapacity: string
   }
+  error: string
+}
+
+export interface CategoryModalState {
+  visible: boolean
+  mode: "create" | "edit"
+  item: EventCategoryRow | null
+  form: { name: string; description: string }
   error: string
 }
 
@@ -73,8 +83,12 @@ const EVENT_MODAL_INIT: EventModalState = {
   visible: false,
   mode: "create",
   item: null,
-  form: { title: "", description: "", event_date: "", location: "", category: "academico" },
+  form: { title: "", description: "", event_date: "", location: "", category: "", maxCapacity: "" },
   error: "",
+}
+
+const CATEGORY_MODAL_INIT: CategoryModalState = {
+  visible: false, mode: "create", item: null, form: { name: "", description: "" }, error: "",
 }
 
 
@@ -101,10 +115,18 @@ export function useAdmin(search: string) {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null)
   const [events, setEvents] = useState<AdminEvent[]>([])
 
+  // Filtros para eventos
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [includeDeleted, setIncludeDeleted] = useState(false)
+
   const [facultyModal, setFacultyModal] = useState<FacultyModalState>(FACULTY_MODAL_INIT)
   const [programModal, setProgramModal] = useState<ProgramModalState>(PROGRAM_MODAL_INIT)
   const [subjectModal, setSubjectModal] = useState<SubjectModalState>(SUBJECT_MODAL_INIT)
   const [eventModal, setEventModal] = useState<EventModalState>(EVENT_MODAL_INIT)
+
+  const [eventCategories, setEventCategories] = useState<EventCategoryRow[]>([])
+  const [categoryModal, setCategoryModal] = useState<CategoryModalState>(CATEGORY_MODAL_INIT)
 
   const formatAdminError = (error: unknown) => {
     const raw = error instanceof Error ? error.message : String(error ?? "")
@@ -122,6 +144,11 @@ export function useAdmin(search: string) {
       return "Tu sesión no tiene permisos para esta acción. Cierra sesión y vuelve a ingresar."
     }
 
+    // Category-specific errors already have user-friendly messages from the repository
+    if (msg.includes("no se puede eliminar la categoría") || msg.includes("ya existe una categoría")) {
+      return raw
+    }
+
     return raw || "Ocurrió un error inesperado."
   }
 
@@ -137,10 +164,10 @@ export function useAdmin(search: string) {
         adminGateway.getAllRequests(),
         adminGateway.getAllResources(),
         adminGateway.getAdminMetrics(),
-        adminGateway.getAllEvents(),
+        adminGateway.getAllEventCategories(),
       ])
 
-      const [facs, progs, subs, usrs, reqs, ress, mets, evts] = result
+      const [facs, progs, subs, usrs, reqs, ress, mets, cats] = result
 
       if (facs.status === "fulfilled") setFaculties(facs.value)
       if (progs.status === "fulfilled") setPrograms(progs.value as Program[])
@@ -149,7 +176,7 @@ export function useAdmin(search: string) {
       if (reqs.status === "fulfilled") setRequests(reqs.value)
       if (ress.status === "fulfilled") setResources(ress.value)
       if (mets.status === "fulfilled") setMetrics(mets.value)
-      if (evts.status === "fulfilled") setEvents(evts.value)
+      if (cats.status === "fulfilled") setEventCategories(cats.value)
 
       const failedSections = [
         facs.status === "rejected" ? "facultades" : null,
@@ -159,7 +186,6 @@ export function useAdmin(search: string) {
         reqs.status === "rejected" ? "solicitudes" : null,
         ress.status === "rejected" ? "recursos" : null,
         mets.status === "rejected" ? "métricas" : null,
-        evts.status === "rejected" ? "eventos" : null,
       ].filter(Boolean)
 
       if (failedSections.length > 0) {
@@ -174,6 +200,17 @@ export function useAdmin(search: string) {
     }
     load()
   }, [adminGateway])
+
+  // Refetch eventos cuando cambia includeDeleted
+  useEffect(() => {
+    const refetch = async () => {
+      try {
+        const raw = await adminGateway.getAllEvents(includeDeleted)
+        setEvents(raw)
+      } catch { /* silencioso */ }
+    }
+    refetch()
+  }, [adminGateway, includeDeleted])
 
   // Filtrados
   const filteredFaculties = useMemo(() => {
@@ -470,13 +507,21 @@ export function useAdmin(search: string) {
 
   const filteredEvents = useMemo(() => {
     const q = search.toLowerCase()
-    return events.filter(
-      (e) =>
+    return events.filter((e) => {
+      if (includeDeleted) {
+        if (!e.deleted_at) return false
+      } else {
+        if (e.deleted_at) return false
+      }
+      if (statusFilter !== "all" && (e.status ?? "published") !== statusFilter) return false
+      if (categoryFilter !== "all" && e.category_id !== categoryFilter) return false
+      return (
         e.title.toLowerCase().includes(q) ||
         (e.location ?? "").toLowerCase().includes(q) ||
         e.creator_name.toLowerCase().includes(q)
-    )
-  }, [events, search])
+      )
+    })
+  }, [events, search, statusFilter, categoryFilter, includeDeleted])
 
   // Acciones Usuarios
   const handleToggleUserRole = (item: AdminUser) => {
@@ -597,17 +642,24 @@ export function useAdmin(search: string) {
         event_date: item.event_date.slice(0, 16), // "YYYY-MM-DDTHH:mm"
         location: item.location ?? "",
         category: item.category,
+        maxCapacity: item.max_capacity ? String(item.max_capacity) : "",
       },
       error: "",
     })
   const closeEventModal = () => setEventModal((p) => ({ ...p, visible: false }))
 
   const saveEvent = async () => {
-    const { title, description, event_date, location, category } = eventModal.form
+    const { title, description, event_date, location, category, maxCapacity } = eventModal.form
     if (!title.trim())
       return setEventModal((p) => ({ ...p, error: "El título no puede estar vacío." }))
     if (!event_date)
       return setEventModal((p) => ({ ...p, error: "La fecha del evento es obligatoria." }))
+
+    const parsedCapacity = maxCapacity.trim()
+      ? (() => { const n = parseInt(maxCapacity.trim(), 10); return Number.isFinite(n) && !isNaN(n) ? n : undefined; })()
+      : undefined
+    if (parsedCapacity !== undefined && (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0))
+      return setEventModal((p) => ({ ...p, error: "La capacidad máxima debe ser un número mayor a 0." }))
 
     const payload: CreateEventPayload = {
       title: title.trim(),
@@ -615,21 +667,25 @@ export function useAdmin(search: string) {
       event_date: new Date(event_date).toISOString(),
       location: location.trim() || undefined,
       category,
+      maxCapacity: parsedCapacity,
     }
 
     setIsSubmitting(true)
     try {
       if (eventModal.mode === "create") {
         const nuevo = await adminGateway.createEvent(payload)
-        // Construir AdminEvent aplanado
         const adminEvt: AdminEvent = {
           id: nuevo.id,
           title: nuevo.title,
           event_date: nuevo.event_date,
           location: nuevo.location,
           category: nuevo.category,
+          category_id: nuevo.category_id,
           created_at: nuevo.created_at,
           creator_name: nuevo.creator?.full_name ?? "Admin",
+          status: nuevo.status ?? "draft",
+          deleted_at: null,
+          max_capacity: (nuevo as any).max_capacity ?? (nuevo as any).maxCapacity ?? parsedCapacity ?? null,
         }
         setEvents((p) => [...p, adminEvt].sort(
           (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
@@ -642,8 +698,12 @@ export function useAdmin(search: string) {
           event_date: actualizado.event_date,
           location: actualizado.location,
           category: actualizado.category,
+          category_id: actualizado.category_id,
           created_at: actualizado.created_at,
           creator_name: actualizado.creator?.full_name ?? "Admin",
+          status: (actualizado as any).status ?? eventModal.item?.status ?? "published",
+          deleted_at: (actualizado as any).deleted_at ?? eventModal.item?.deleted_at ?? null,
+          max_capacity: (actualizado as any).max_capacity ?? (actualizado as any).maxCapacity ?? eventModal.item?.max_capacity ?? null,
         }
         setEvents((p) => p.map((e) => (e.id === adminEvt.id ? adminEvt : e)))
       }
@@ -653,6 +713,68 @@ export function useAdmin(search: string) {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // ── Category CRUD ────────────────────────────────────────
+  const openCreateCategory = () => setCategoryModal({ ...CATEGORY_MODAL_INIT, visible: true })
+  const openEditCategory = (item: EventCategoryRow) =>
+    setCategoryModal({
+      visible: true, mode: "edit", item,
+      form: { name: item.name, description: item.description ?? "" }, error: "",
+    })
+  const closeCategoryModal = () => setCategoryModal((p) => ({ ...p, visible: false }))
+
+  const saveCategory = async () => {
+    const name = categoryModal.form.name.trim()
+    if (!name)
+      return setCategoryModal((p) => ({ ...p, error: "El nombre no puede estar vacío." }))
+    if (
+      eventCategories.find(
+        (c) => c.name.toLowerCase() === name.toLowerCase() && c.id !== categoryModal.item?.id
+      )
+    )
+      return setCategoryModal((p) => ({ ...p, error: "Ya existe una categoría con ese nombre." }))
+
+    setIsSubmitting(true)
+    try {
+      const payload: CreateEventCategoryPayload = {
+        name,
+        description: categoryModal.form.description.trim() || undefined,
+      }
+      if (categoryModal.mode === "create") {
+        const nueva = await adminGateway.createEventCategory(payload)
+        setEventCategories((p) => [...p, nueva])
+      } else {
+        const actualizada = await adminGateway.updateEventCategory(categoryModal.item!.id, payload)
+        setEventCategories((p) => p.map((c) => (c.id === actualizada.id ? actualizada : c)))
+      }
+      closeCategoryModal()
+    } catch (error: unknown) {
+      setCategoryModal((p) => ({ ...p, error: formatAdminError(error) }))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteCategory = (item: EventCategoryRow) => {
+    Alert.alert(
+      "Eliminar categoría",
+      `¿Eliminar "${item.name}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar", style: "destructive", onPress: async () => {
+            try {
+              await adminGateway.deleteEventCategory(item.id)
+              setEventCategories((p) => p.filter((c) => c.id !== item.id))
+            } catch (error: unknown) {
+              const message = formatAdminError(error)
+              Alert.alert("No se puede eliminar", message)
+            }
+          },
+        },
+      ]
+    )
   }
 
   const handleDeleteEvent = (item: AdminEvent) => {
@@ -665,7 +787,47 @@ export function useAdmin(search: string) {
           text: "Eliminar", style: "destructive", onPress: async () => {
             try {
               await adminGateway.deleteEvent(item.id)
-              setEvents((p) => p.filter((e) => e.id !== item.id))
+              setEvents((p) => p.map((e) => e.id === item.id ? { ...e, deleted_at: new Date().toISOString() } : e))
+            } catch (e: any) {
+              Alert.alert("Error", e.message)
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const handlePublishEvent = (item: AdminEvent) => {
+    Alert.alert(
+      "Publicar evento",
+      `¿Publicar "${item.title}"?\nEl evento será visible para todos los estudiantes.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Publicar", onPress: async () => {
+            try {
+              await adminGateway.publishEvent(item.id)
+              setEvents((p) => p.map((e) => e.id === item.id ? { ...e, status: "published" } : e))
+            } catch (e: any) {
+              Alert.alert("Error", e.message)
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const handleCancelEvent = (item: AdminEvent) => {
+    Alert.alert(
+      "Cancelar evento",
+      `¿Cancelar "${item.title}"?\nLos estudiantes ya no podrán acceder a este evento.`,
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Sí, cancelar", style: "destructive", onPress: async () => {
+            try {
+              await adminGateway.cancelEvent(item.id)
+              setEvents((p) => p.map((e) => e.id === item.id ? { ...e, status: "cancelled" } : e))
             } catch (e: any) {
               Alert.alert("Error", e.message)
             }
@@ -736,5 +898,23 @@ export function useAdmin(search: string) {
     closeEventModal,
     saveEvent,
     handleDeleteEvent,
+    handlePublishEvent,
+    handleCancelEvent,
+    // Filtros de eventos
+    statusFilter,
+    setStatusFilter,
+    categoryFilter,
+    setCategoryFilter,
+    includeDeleted,
+    setIncludeDeleted,
+    // Categorías
+    eventCategories,
+    categoryModal,
+    setCategoryModal,
+    openCreateCategory,
+    openEditCategory,
+    closeCategoryModal,
+    saveCategory,
+    handleDeleteCategory,
   }
 }

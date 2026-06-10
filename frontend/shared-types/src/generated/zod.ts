@@ -241,7 +241,7 @@ export const Get_events_200ResponseSchema = z.object({
 export const Post_events_RequestBodySchema = z.object({
   "title": z.string().min(1).max(300),
   "description": z.string().max(5000).optional(),
-  "category": z.enum(["academico", "cultural", "deportivo", "otro"]),
+  "category": z.string(),
   "eventDate": z.string().datetime(),
   "endAt": z.string().datetime().optional(),
   "location": z.string().max(300).optional(),
@@ -320,7 +320,7 @@ export const Delete_events_id_200ResponseSchema = z.object({
 })
 });
 export const Post_eventos_suscribir_RequestBodySchema = z.object({
-  "categoria": z.enum(["academico", "cultural", "deportivo", "otro"])
+  "categoria": z.string()
 });
 export const Post_eventos_suscribir_201ResponseSchema = z.object({
   "data": z.object({
@@ -335,7 +335,7 @@ export const Get_eventos_suscripciones_200ResponseSchema = z.object({
 })
 });
 export const Delete_eventos_suscribir_RequestBodySchema = z.object({
-  "categoria": z.enum(["academico", "cultural", "deportivo", "otro"])
+  "categoria": z.string()
 });
 export const Delete_eventos_suscribir_200ResponseSchema = z.object({
   "data": z.object({

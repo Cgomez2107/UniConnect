@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { useStudyGroupDashboard } from "@/hooks/useStudyGroupDashboard";
+import { useMessageValidation } from "@/hooks/useMessageValidation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
 import { useMessaging } from "@/hooks/application/useMessaging";
@@ -88,6 +89,11 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     voteInPoll,
   } = useStudyGroupDashboard({ requestId });
 
+  const { validationState, validateMessage, clearValidation } = useMessageValidation({
+    maxLength: 1000,
+    debounceMs: 300,
+  });
+
   const [activeTab, setActiveTab] = useState<"pendientes" | "aceptadas" | "rechazadas">("pendientes");
   const [newMessage, setNewMessage] = useState("");
   const [isEditingDesc, setIsEditingDesc] = useState(false);
@@ -135,6 +141,11 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
 
   const perms = useMemo(() => getGroupPermissions(groupState), [groupState]);
 
+  const hasValidationError = Boolean(validationState?.error);
+  const hasWarning = Boolean(validationState?.warnings && validationState.warnings.length > 0);
+  const charCount = newMessage.length;
+  const isNearLimit = charCount > 900;
+
   const filteredApps = useMemo(() => {
     return applications.filter((app) => {
       if (activeTab === "pendientes") return app.status === "pendiente";
@@ -152,6 +163,7 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     } else {
       setShowMentions(false);
     }
+    void validateMessage(text);
   };
 
   const insertMention = (member: any) => {
@@ -166,18 +178,26 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if ((!newMessage.trim() && !pendingAttachment) || sendingMessage) return;
+
+    // Validar localmente (ej: longitud)
+    const state = await validateMessage(newMessage);
+    if (!state.isValid) {
+      return;
+    }
 
     const finalMentions = selectedMentions.filter((m) =>
       newMessage.includes(`@${m.displayName}`)
     );
 
-    handleSendMessage(newMessage, finalMentions, pendingAttachment || undefined);
-
-    setNewMessage("");
-    setSelectedMentions([]);
-    setPendingAttachment(null);
+    const success = await handleSendMessage(newMessage, finalMentions, pendingAttachment || undefined);
+    if (success) {
+      setNewMessage("");
+      setSelectedMentions([]);
+      setPendingAttachment(null);
+      clearValidation();
+    }
   };
 
   const handleFileSelect = async () => {
@@ -480,6 +500,23 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                 </TouchableOpacity>
               </View>
             )}
+            {hasValidationError && (
+              <View style={styles.validationErrorCard}>
+                <Ionicons name="warning-outline" size={16} color="#EF4444" />
+                <Text style={styles.validationErrorText}>
+                  {validationState?.error?.message || "Error de validación"}
+                </Text>
+              </View>
+            )}
+
+            {hasWarning && (
+              <View style={styles.validationWarningCard}>
+                <Ionicons name="information-circle-outline" size={16} color="#FFA500" />
+                <Text style={styles.validationWarningText}>
+                  {validationState?.warnings?.[0]?.message || "Advertencia"}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.inputRow}>
               <TouchableOpacity
@@ -504,6 +541,14 @@ export function AdminDashboardLayout({ requestId }: AdminDashboardLayoutProps) {
                 returnKeyType="send"
               />
               <View style={styles.inputRight}>
+                {charCount > 0 && (
+                  <Text style={[
+                    styles.charCounter,
+                    { color: isNearLimit || hasValidationError ? "#EF4444" : COLORS.textDim }
+                  ]}>
+                    {charCount}/1000
+                  </Text>
+                )}
                 <Ionicons name="happy-outline" size={22} color={COLORS.textDim} />
                 <TouchableOpacity
                   onPress={handleSend}
@@ -1779,5 +1824,44 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderWidth: 1,
     borderColor: "rgba(0,71,171,0.2)",
+  },
+  validationErrorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#EF4444",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    marginBottom: 8,
+    gap: 8,
+  },
+  validationWarningCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FFA500",
+    backgroundColor: "rgba(255, 165, 0, 0.1)",
+    marginBottom: 8,
+    gap: 8,
+  },
+  validationErrorText: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "600",
+    flex: 1,
+  },
+  validationWarningText: {
+    color: "#FF9500",
+    fontSize: 12,
+    fontWeight: "600",
+    flex: 1,
+  },
+  charCounter: {
+    fontSize: 10,
+    alignSelf: "center",
+    marginRight: 8,
   },
 });

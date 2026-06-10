@@ -599,6 +599,8 @@ function onEventsResponse(
   if (info.method === "POST" && info.pathname === "/api/v1/events" && info.status === 201) {
     let payload: any;
     try { const p = JSON.parse(info.body); payload = p?.data || p; } catch { payload = info.body; }
+    // Only broadcast published events to the public feed — drafts are private to the creator
+    if (payload?.status !== "published") return;
     console.log(JSON.stringify({ service: "gateway", level: "info", message: "onEventsResponse: broadcasting new_event", id: payload?.id }));
     broadcastToEvents("new_event", payload);
     return;
@@ -609,6 +611,8 @@ function onEventsResponse(
   if (info.method === "PATCH" && updateMatch && info.status === 200) {
     let payload: any;
     try { const p = JSON.parse(info.body); payload = p?.data || p; } catch { payload = info.body; }
+    // Only broadcast published events — non-published status changes are private
+    if (payload?.status !== "published") return;
     console.log(JSON.stringify({ service: "gateway", level: "info", message: "onEventsResponse: broadcasting event_updated", id: updateMatch[1] }));
     broadcastToEvents("event_updated", payload);
     return;
@@ -717,10 +721,9 @@ function onForumResponse(
   }
 }
 
-function setCorsHeaders(
-  res: NodeServerResponse,
-  origin: string,
-): boolean {
+const DEV_ORIGIN_PATTERN = /^https?:\/\/192\.168\.\d{1,3}\.\d{1,3}:(8081|8082)$/;
+
+function isOriginAllowed(origin: string): boolean {
   const allowedOrigins = [
     "http://localhost:8081",
     "http://localhost:8082",
@@ -731,7 +734,20 @@ function setCorsHeaders(
     "https://uniconnect-dashboard-web.fly.dev",
   ];
 
-  if (origin && allowedOrigins.includes(origin)) {
+  if (allowedOrigins.includes(origin)) return true;
+
+  if (process.env.NODE_ENV !== "production" && DEV_ORIGIN_PATTERN.test(origin)) {
+    return true;
+  }
+
+  return false;
+}
+
+function setCorsHeaders(
+  res: NodeServerResponse,
+  origin: string,
+): boolean {
+  if (origin && isOriginAllowed(origin)) {
     setHeader(res, "Access-Control-Allow-Origin", origin);
     setHeader(res, "Access-Control-Allow-Credentials", "true");
     setHeader(res, "Vary", "Origin");
