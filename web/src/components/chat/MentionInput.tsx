@@ -284,6 +284,8 @@ export function MentionInput({
       const rawErrorStr = JSON.stringify(err?.response?.data || err?.data || err || "");
       const isMo001 = rawErrorStr.includes("MO_001") || rawErrorStr.toLowerCase().includes("límite");
       const isMo002 = rawErrorStr.includes("MO_002") || rawErrorStr.toLowerCase().includes("palabra");
+      const isSpamBlock = err?.status === 429 || err?.response?.status === 429
+        || rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004");
 
       if (isMo001) {
         setBackendValidationError({
@@ -296,6 +298,16 @@ export function MentionInput({
           code: "MO_002",
           message: "Tu mensaje contiene palabras que infringen las normas de la comunidad.",
         });
+        return;
+      }
+
+      if (isSpamBlock) {
+        let remainingMs = 5 * 60 * 1000;
+        const errorMsg = typeof err?.message === "string" ? err.message : rawErrorStr;
+        const match = errorMsg.match(/Restante:\s*(\d+)/i);
+        if (match) remainingMs = parseInt(match[1], 10);
+        const errorCode = rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
+        useSpamStore.getState().setBlocked(remainingMs, errorCode);
         return;
       }
 
