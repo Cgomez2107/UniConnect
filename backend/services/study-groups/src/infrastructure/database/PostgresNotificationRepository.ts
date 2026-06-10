@@ -95,12 +95,17 @@ export class PostgresNotificationRepository implements INotificationRepository {
     page: number;
     pageSize: number;
   }): Promise<UserNotification[]> {
-    const offset = input.page * input.pageSize;
-    const result = await this.pool.query<NotificationRow>(
-      "SELECT * FROM get_user_notifications($1, $2, $3)",
-      [input.actorUserId, input.pageSize, offset],
-    );
+    try {
+      const offset = input.page * input.pageSize;
+      const result = await this.pool.query<NotificationRow>(
+        "SELECT * FROM get_user_notifications($1, $2, $3)",
+        [input.actorUserId, input.pageSize, offset],
+      );
 
-    return result.rows.map(mapNotification);
+      return result.rows.map(mapNotification);
+    } catch (err) {
+      console.error("[PostgresNotificationRepository] listByUser failed:", err);
+      return [];
+    }
   }
 }

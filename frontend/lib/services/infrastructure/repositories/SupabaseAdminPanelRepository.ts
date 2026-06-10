@@ -268,15 +268,15 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
     if (error) throw new Error(error.message)
   }
 
-  async getAllEvents(): Promise<AdminEvent[]> {
+  async getAllEvents(includeDeleted?: boolean): Promise<AdminEvent[]> {
     const { data, error } = await supabase
       .from("events")
-      .select("id, title, event_date, location, category, category_id, created_at, creator:created_by ( full_name )")
+      .select("id, title, event_date, location, category, category_id, created_at, status, deleted_at, max_capacity, creator:created_by ( full_name )")
       .order("event_date", { ascending: true })
 
     if (error) throw new Error(error.message)
 
-    return (data ?? []).map((e: any) => ({
+    const mapped = (data ?? []).map((e: any) => ({
       id: e.id,
       title: e.title,
       event_date: e.event_date,
@@ -285,7 +285,15 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
       category_id: e.category_id,
       created_at: e.created_at,
       creator_name: e.creator?.full_name ?? "Admin",
+      status: e.status,
+      deleted_at: e.deleted_at ?? null,
+      max_capacity: e.max_capacity ?? null,
     })) as AdminEvent[]
+
+    if (includeDeleted) {
+      return mapped.filter((e) => e.deleted_at)
+    }
+    return mapped.filter((e) => !e.deleted_at)
   }
 
   async createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
@@ -297,6 +305,14 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
       .maybeSingle()
 
     const insertPayload: any = { ...payload }
+    if (insertPayload.maxCapacity !== undefined) {
+      if (!Number.isFinite(insertPayload.maxCapacity) || isNaN(insertPayload.maxCapacity)) {
+        delete insertPayload.maxCapacity
+      } else {
+        insertPayload.max_capacity = insertPayload.maxCapacity
+        delete insertPayload.maxCapacity
+      }
+    }
     if (cat?.id) {
       insertPayload.category_id = cat.id
       insertPayload.category = slug
@@ -314,6 +330,14 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
 
   async updateEvent(id: string, payload: Partial<CreateEventPayload>): Promise<CampusEvent> {
     const updatePayload: any = { ...payload }
+    if (updatePayload.maxCapacity !== undefined) {
+      if (!Number.isFinite(updatePayload.maxCapacity) || isNaN(updatePayload.maxCapacity)) {
+        delete updatePayload.maxCapacity
+      } else {
+        updatePayload.max_capacity = updatePayload.maxCapacity
+        delete updatePayload.maxCapacity
+      }
+    }
     if (payload.category) {
       const slug = slugify(payload.category)
       const { data: cat } = await supabase
@@ -340,7 +364,20 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
   }
 
   async deleteEvent(id: string): Promise<void> {
-    const { error } = await supabase.from("events").delete().eq("id", id)
+    const { error } = await supabase
+      .from("events")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id)
+    if (error) throw new Error(error.message)
+  }
+
+  async publishEvent(id: string): Promise<void> {
+    const { error } = await supabase.from("events").update({ status: "published" }).eq("id", id)
+    if (error) throw new Error(error.message)
+  }
+
+  async cancelEvent(id: string): Promise<void> {
+    const { error } = await supabase.from("events").update({ status: "cancelled" }).eq("id", id)
     if (error) throw new Error(error.message)
   }
 

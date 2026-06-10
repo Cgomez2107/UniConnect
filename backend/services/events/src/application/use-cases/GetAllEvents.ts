@@ -1,14 +1,17 @@
-import type { Event } from "../../domain/entities/Event.js";
+import type { Event, PaginatedResult } from "../../domain/entities/Event.js";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
+import type { EventStatus } from "../../domain/state/EventStatus.js";
 
-/**
- * Caso de uso: obtener lista de todos los eventos
- * Visible para cualquier usuario
- */
 export class GetAllEvents {
   constructor(private readonly repository: IEventRepository) {}
 
-  async execute(): Promise<Event[]> {
-    return this.repository.getAllEvents();
+  async execute(
+    page?: number,
+    limit?: number,
+    includeDeleted?: boolean,
+    status?: EventStatus | EventStatus[],
+    createdBy?: string,
+  ): Promise<PaginatedResult<Event>> {
+    return this.repository.list(page, limit, includeDeleted, status, createdBy);
   }
 }

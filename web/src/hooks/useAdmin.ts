@@ -1,6 +1,17 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { AUTH_SESSION_KEY } from "@/store/deps";
 import type { Faculty, Program, Subject, AdminUser, AdminRequest, AdminResource, AdminEvent, AdminMetrics, CreateEventPayload, CreateEventCategoryPayload, EventCategoryRow, UserRole } from "@/types";
+
+function getCurrentUserId(): string | null {
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw)?.state?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function generateSlug(name: string): string {
   return name
@@ -577,6 +588,8 @@ export default function useAdmin() {
           category_id: payload.category_id,
           category: slug,
           image_url: payload.image_url,
+          created_by: getCurrentUserId(),
+          max_capacity: (payload as any).max_capacity ?? null,
         })
         .select("*, creator:created_by ( full_name )")
         .single();
@@ -588,6 +601,9 @@ export default function useAdmin() {
         location: data.location,
         category: data.category,
         category_id: data.category_id,
+        status: data.status ?? "draft",
+        max_capacity: data.max_capacity ?? null,
+        registered_count: data.registered_count ?? 0,
         created_at: data.created_at,
         creator_name: data.creator?.full_name ?? "Admin",
       } as AdminEvent;
@@ -619,6 +635,7 @@ export default function useAdmin() {
         updates.category = (cat as any)?.slug ?? null;
       }
       if (payload.image_url !== undefined) updates.image_url = payload.image_url;
+      if ((payload as any).max_capacity !== undefined) updates.max_capacity = (payload as any).max_capacity;
 
       const { data, error: err } = await supabase
         .from("events")
@@ -634,6 +651,9 @@ export default function useAdmin() {
         location: data.location,
         category: data.category,
         category_id: data.category_id,
+        status: data.status ?? "draft",
+        max_capacity: data.max_capacity ?? null,
+        registered_count: data.registered_count ?? 0,
         created_at: data.created_at,
         creator_name: data.creator?.full_name ?? "Admin",
       } as AdminEvent;

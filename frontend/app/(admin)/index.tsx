@@ -200,6 +200,8 @@ export default function AdminPanelScreen() {
         item={item}
         onEdit={() => admin.openEditEvent(item)}
         onDelete={() => admin.handleDeleteEvent(item)}
+        onPublish={item.status === "draft" ? () => admin.handlePublishEvent(item) : undefined}
+        onCancel={item.status === "published" ? () => admin.handleCancelEvent(item) : undefined}
         C={C}
       />
     ),
@@ -310,43 +312,132 @@ export default function AdminPanelScreen() {
               showsVerticalScrollIndicator={false}
               renderItem={renderEventItem}
               ListHeaderComponent={
-                <View style={[styles.categorySection, { borderColor: C.border, marginBottom: 12 }]}>
-                  <Text style={[styles.categorySectionTitle, { color: C.textPrimary }]}>
-                    Gestión de Categorías
-                  </Text>
-                  <Text style={[styles.categorySectionSub, { color: C.textSecondary }]}>
-                    {admin.eventCategories.length} categoría(s) disponibles
-                  </Text>
-                  <View style={styles.categoryChipsRow}>
-                    {admin.eventCategories.map((cat: EventCategoryRow) => (
-                      <View key={cat.id} style={[styles.categoryChip, { backgroundColor: C.primary + "15", borderColor: C.border }]}>
-                        <Text style={[styles.categoryChipText, { color: C.textPrimary }]}>{cat.name}</Text>
-                        <TouchableOpacity
-                          onPress={() => admin.openEditCategory(cat)}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Text style={[styles.categoryAction, { color: C.primary }]}>✎</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => admin.handleDeleteCategory(cat)}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Text style={[styles.categoryAction, { color: C.error }]}>✕</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                    <TouchableOpacity
-                      style={[styles.addCategoryChip, { borderColor: C.primary }]}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                        admin.openCreateCategory()
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.addCategoryChipText, { color: C.primary }]}>+ Nueva</Text>
-                    </TouchableOpacity>
+                <>
+                  <View style={[styles.categorySection, { borderColor: C.border, marginBottom: 12 }]}>
+                    <Text style={[styles.categorySectionTitle, { color: C.textPrimary }]}>
+                      Gestión de Categorías
+                    </Text>
+                    <Text style={[styles.categorySectionSub, { color: C.textSecondary }]}>
+                      {admin.eventCategories.length} categoría(s) disponibles
+                    </Text>
+                    <View style={styles.categoryChipsRow}>
+                      {admin.eventCategories.map((cat: EventCategoryRow) => (
+                        <View key={cat.id} style={[styles.categoryChip, { backgroundColor: C.primary + "15", borderColor: C.border }]}>
+                          <Text style={[styles.categoryChipText, { color: C.textPrimary }]}>{cat.name}</Text>
+                          <TouchableOpacity
+                            onPress={() => admin.openEditCategory(cat)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Text style={[styles.categoryAction, { color: C.primary }]}>✎</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => admin.handleDeleteCategory(cat)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Text style={[styles.categoryAction, { color: C.error }]}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      <TouchableOpacity
+                        style={[styles.addCategoryChip, { borderColor: C.primary }]}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                          admin.openCreateCategory()
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.addCategoryChipText, { color: C.primary }]}>+ Nueva</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
+
+                  {/* Filtros */}
+                  <View style={[styles.filterSection, { borderColor: C.border, marginBottom: 12 }]}>
+                    <View style={styles.filterRow}>
+                      <Text style={[styles.filterLabel, { color: C.textSecondary }]}>Estado:</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {[["all", "Todos"], ["draft", "Borrador"], ["published", "Publicado"], ["cancelled", "Cancelado"], ["finished", "Finalizado"]].map(([key, label]) => (
+                          <TouchableOpacity
+                            key={key}
+                            style={[styles.filterChip, {
+                              backgroundColor: admin.statusFilter === key ? C.primary : C.surface,
+                              borderColor: admin.statusFilter === key ? C.primary : C.border,
+                            }]}
+                            onPress={() => admin.setStatusFilter(key)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[styles.filterChipText, {
+                              color: admin.statusFilter === key ? "#fff" : C.textSecondary,
+                            }]}>{label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+
+                    <View style={styles.filterRow}>
+                      <Text style={[styles.filterLabel, { color: C.textSecondary }]}>Categoría:</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <TouchableOpacity
+                          style={[styles.filterChip, {
+                            backgroundColor: admin.categoryFilter === "all" ? C.primary : C.surface,
+                            borderColor: admin.categoryFilter === "all" ? C.primary : C.border,
+                          }]}
+                          onPress={() => admin.setCategoryFilter("all")}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.filterChipText, {
+                            color: admin.categoryFilter === "all" ? "#fff" : C.textSecondary,
+                          }]}>Todas</Text>
+                        </TouchableOpacity>
+                        {admin.eventCategories.map((cat: EventCategoryRow) => (
+                          <TouchableOpacity
+                            key={cat.id}
+                            style={[styles.filterChip, {
+                              backgroundColor: admin.categoryFilter === cat.id ? C.primary : C.surface,
+                              borderColor: admin.categoryFilter === cat.id ? C.primary : C.border,
+                            }]}
+                            onPress={() => admin.setCategoryFilter(cat.id)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[styles.filterChipText, {
+                              color: admin.categoryFilter === cat.id ? "#fff" : C.textSecondary,
+                            }]}>{cat.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+
+                    <View style={styles.filterRow}>
+                      <Text style={[styles.filterLabel, { color: C.textSecondary }]}>Otros:</Text>
+                      <TouchableOpacity
+                        style={[styles.filterChip, {
+                          backgroundColor: admin.includeDeleted ? "#ef4444" : C.surface,
+                          borderColor: admin.includeDeleted ? "#ef4444" : C.border,
+                        }]}
+                        onPress={() => admin.setIncludeDeleted(!admin.includeDeleted)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.filterChipText, {
+                          color: admin.includeDeleted ? "#fff" : C.textSecondary,
+                        }]}>Ver eliminados</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {(admin.statusFilter !== "all" || admin.categoryFilter !== "all" || admin.includeDeleted) && (
+                      <TouchableOpacity
+                        style={[styles.clearFilterBtn, { borderColor: C.error }]}
+                        onPress={() => {
+                          admin.setStatusFilter("all")
+                          admin.setCategoryFilter("all")
+                          admin.setIncludeDeleted(false)
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.clearFilterBtnText, { color: C.error }]}>✕ Limpiar filtros</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </>
               }
               ListEmptyComponent={<EmptyState emoji="📅" iconName="calendar-outline" title="No hay eventos" body="Crea el primer evento del campus" />}
             />
@@ -466,4 +557,33 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   addCategoryChipText: { fontSize: 13, fontWeight: "600" },
+  // Filtros
+  filterSection: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  filterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  filterLabel: { fontSize: 13, fontWeight: "600", minWidth: 60 },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginRight: 6,
+  },
+  filterChipText: { fontSize: 12, fontWeight: "600" },
+  clearFilterBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: "flex-end",
+  },
+  clearFilterBtnText: { fontSize: 12, fontWeight: "600" },
 })

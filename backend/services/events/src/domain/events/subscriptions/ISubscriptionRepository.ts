@@ -5,4 +5,5 @@ export interface ISubscriptionRepository {
   unsubscribe(userId: string, category: EventCategory): Promise<void>;
   getSubscribersByCategory(category: EventCategory): Promise<string[]>;
   getUserSubscriptions(userId: string): Promise<EventCategory[]>;
+  getAllUserIds(): Promise<string[]>;
 }

@@ -422,6 +422,9 @@ export interface CampusEvent {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  status?: string;          // draft | published | cancelled | finished
+  capacity?: number | null; // max capacity for the event
+  isRegistered?: boolean;   // true si el usuario autenticado ya se inscribió
   // join opcional
   creator?: { full_name: string } | null;
 }
@@ -435,6 +438,7 @@ export interface CreateEventPayload {
   category: EventCategory;
   category_id?: string;
   image_url?: string;
+  maxCapacity?: number;
 }
 
 /** Evento visto desde el panel de admin (con nombre del creador aplanado) */
@@ -447,6 +451,9 @@ export interface AdminEvent {
   category_id: string;
   created_at: string;
   creator_name: string;
+  status?: string;          // draft | published | cancelled | finished
+  deleted_at?: string | null;
+  max_capacity?: number | null;
 }
 
 

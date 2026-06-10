@@ -1,16 +1,37 @@
-/**
- * app/eventos/[id].tsx
- * Pantalla: Ver detalles de un evento (US-008)
- */
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
+import { DIContainer } from "@/lib/services/di/container"
+import { useAuthStore } from "@/store/useAuthStore"
 import { useEventDetailScreen } from "@/hooks/application/useEventDetailScreen"
 import { Ionicons } from "@expo/vector-icons"
 import { router, useLocalSearchParams } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native"
+import { useCallback, useState } from "react"
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Borrador",
+  published: "Publicado",
+  cancelled: "Cancelado",
+  finished: "Finalizado",
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  draft: "#f59e0b",
+  published: "#22c55e",
+  cancelled: "#ef4444",
+  finished: "#6b7280",
+}
 
 const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   academico: "school-outline",
@@ -49,15 +70,76 @@ export default function EventDetail() {
   const insets = useSafeAreaInsets()
   const { id } = useLocalSearchParams<{ id?: string }>()
   const { loading, event, formattedDate } = useEventDetailScreen(id)
+  const userId = useAuthStore((s) => s.user?.id)
+
+  const [justRegistered, setJustRegistered] = useState(false)
+  const isRegistered = justRegistered || event?.isRegistered === true
 
   const categorySlug = event?.category ?? "otro"
   const catColor = categoryColor(categorySlug)
+  const status = event?.status ?? "published"
+  const statusColor = STATUS_COLORS[status] ?? "#6b7280"
+  const isOwner = !!userId && !!event?.created_by && userId === event.created_by
+
+  const handlePublish = useCallback(async () => {
+    if (!id) return
+    try {
+      const repo = DIContainer.getInstance().getEventRepository()
+      await repo.publish(id)
+      Alert.alert("Evento publicado", "Tu evento ahora es visible para todos.", [
+        { text: "OK", onPress: () => router.back() },
+      ])
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo publicar el evento")
+    }
+  }, [id])
+
+  const handleCancel = useCallback(async () => {
+    if (!id) return
+    Alert.alert(
+      "Cancelar evento",
+      "¿Seguro que quieres cancelar este evento?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Sí, cancelar", style: "destructive",
+          onPress: async () => {
+            try {
+              const repo = DIContainer.getInstance().getEventRepository()
+              await repo.cancel(id)
+              Alert.alert("Evento cancelado", "El evento ha sido cancelado.", [
+                { text: "OK", onPress: () => router.back() },
+              ])
+            } catch (e: any) {
+              Alert.alert("Error", e?.message ?? "No se pudo cancelar el evento")
+            }
+          },
+        },
+      ]
+    )
+  }, [id])
+
+  const handleEdit = useCallback(() => {
+    if (id) router.push(`/editar-evento/${id}` as any)
+  }, [id])
+
+  const handleRegister = useCallback(async () => {
+    if (!id || !userId) return
+    try {
+      const repo = DIContainer.getInstance().getEventRepository()
+      await repo.registerForEvent(id, userId)
+      setJustRegistered(true)
+      Alert.alert("Inscripción exitosa", "Te has inscrito al evento.")
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo completar la inscripción")
+    }
+  }, [id, userId])
 
   return (
-    <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}> 
+    <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
 
-      <View style={[styles.header, { borderBottomColor: C.border }]}> 
+      <View style={[styles.header, { borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.75}>
           <Ionicons name="arrow-back" size={22} color={C.textPrimary} />
         </TouchableOpacity>
@@ -78,9 +160,17 @@ export default function EventDetail() {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.categoryBadge, { backgroundColor: catColor + "18" }]}> 
-            <Ionicons name={categoryIcon(categorySlug)} size={14} color={catColor} />
-            <Text style={[styles.categoryText, { color: catColor }]}>{categoryLabel(categorySlug)}</Text>
+          {/* Status badge */}
+          <View style={styles.topRow}>
+            <View style={[styles.categoryBadge, { backgroundColor: catColor + "18" }]}>
+              <Ionicons name={categoryIcon(categorySlug)} size={14} color={catColor} />
+              <Text style={[styles.categoryText, { color: catColor }]}>{categoryLabel(categorySlug)}</Text>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: statusColor + "20" }]}>
+              <Text style={[styles.statusText, { color: statusColor }]}>
+                {STATUS_LABELS[status] ?? status}
+              </Text>
+            </View>
           </View>
 
           <Text style={[styles.title, { color: C.textPrimary }]}>{event.title}</Text>
@@ -97,19 +187,81 @@ export default function EventDetail() {
             </View>
           ) : null}
 
-          {event.creator?.full_name ? (
+          {event.capacity ? (
             <View style={styles.metaRow}>
-              <Ionicons name="person-outline" size={15} color={C.textSecondary} />
-              <Text style={[styles.metaText, { color: C.textSecondary }]}>Publicado por {event.creator.full_name}</Text>
+              <Ionicons name="people-outline" size={15} color={C.textSecondary} />
+              <Text style={[styles.metaText, { color: C.textSecondary }]}>
+                Capacidad: {event.capacity} personas
+              </Text>
             </View>
           ) : null}
 
-          <View style={[styles.descriptionCard, { backgroundColor: C.surface, borderColor: C.border }]}> 
-            <Text style={[styles.descriptionTitle, { color: C.textPrimary }]}>Descripcion</Text>
+          {event.creator?.full_name ? (
+            <View style={styles.metaRow}>
+              <Ionicons name="person-outline" size={15} color={C.textSecondary} />
+              <Text style={[styles.metaText, { color: C.textSecondary }]}>
+                {isOwner ? "Creado por ti" : `Publicado por ${event.creator.full_name}`}
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={[styles.descriptionCard, { backgroundColor: C.surface, borderColor: C.border }]}>
+            <Text style={[styles.descriptionTitle, { color: C.textPrimary }]}>Descripción</Text>
             <Text style={[styles.descriptionBody, { color: C.textSecondary }]}>
-              {event.description?.trim() || "Este evento no tiene descripcion adicional."}
+              {event.description?.trim() || "Este evento no tiene descripción adicional."}
             </Text>
           </View>
+
+          {/* Owner controls */}
+          {isOwner && status === "draft" && (
+            <View style={styles.ownerActions}>
+              <TouchableOpacity
+                style={[styles.ownerBtn, { backgroundColor: C.primary }]}
+                onPress={handleEdit}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="create-outline" size={18} color="#fff" />
+                <Text style={styles.ownerBtnText}>Editar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ownerBtn, { backgroundColor: "#22c55e" }]}
+                onPress={handlePublish}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="paper-plane-outline" size={18} color="#fff" />
+                <Text style={styles.ownerBtnText}>Publicar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {isOwner && status === "published" && (
+            <TouchableOpacity
+              style={[styles.ownerBtn, { backgroundColor: "#ef4444" }]}
+              onPress={handleCancel}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="close-circle-outline" size={18} color="#fff" />
+              <Text style={styles.ownerBtnText}>Cancelar evento</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Register / Already registered button for non-owners */}
+          {!isOwner && status === "published" && !isRegistered && (
+            <TouchableOpacity
+              style={[styles.registerBtn, { backgroundColor: C.primary }]}
+              onPress={handleRegister}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+              <Text style={styles.registerBtnText}>Registrarse al evento</Text>
+            </TouchableOpacity>
+          )}
+          {!isOwner && status === "published" && isRegistered && (
+            <View style={[styles.registerBtn, { backgroundColor: "#22c55e" }]}>
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={styles.registerBtnText}>Ya inscrito</Text>
+            </View>
+          )}
         </ScrollView>
       )}
     </View>
@@ -135,6 +287,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 17, fontWeight: "700" },
   content: { padding: 16, gap: 10 },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   categoryBadge: {
     alignSelf: "flex-start",
     borderRadius: 20,
@@ -145,6 +302,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   categoryText: { fontSize: 12, fontWeight: "700" },
+  statusBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  statusText: { fontSize: 12, fontWeight: "700" },
   title: { fontSize: 24, fontWeight: "800", lineHeight: 30, marginTop: 2 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 7 },
   metaText: { fontSize: 14 },
@@ -157,4 +320,29 @@ const styles = StyleSheet.create({
   },
   descriptionTitle: { fontSize: 15, fontWeight: "700" },
   descriptionBody: { fontSize: 14, lineHeight: 20 },
+  ownerActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 16,
+  },
+  ownerBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  ownerBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  registerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  registerBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 })

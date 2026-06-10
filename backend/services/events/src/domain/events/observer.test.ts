@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { UniversityEventSubject } from "./UniversityEventSubject.js";
 import { UniversityEventObserver, type IEventSocketGateway } from "./UniversityEventObserver.js";
 import { InMemorySubscriptionRepository } from "./subscriptions/InMemorySubscriptionRepository.js";
-import type { UniversityEvent } from "./UniversityEvents.js";
+import type { UniversityEvent, NuevoEventoUniversidadEvent } from "./UniversityEvents.js";
 
 const baseEvent: UniversityEvent = {
   type: "NUEVO_EVENTO",
@@ -40,7 +40,7 @@ describe("AC-01: UniversityEventSubject emite NUEVO_EVENTO", () => {
 
     assert.notEqual(received, null);
     assert.equal(received!.type, "NUEVO_EVENTO");
-    assert.equal(received!.category, "academico");
+    assert.equal((received as unknown as NuevoEventoUniversidadEvent).category, "academico");
     assert.equal(received!.eventId, baseEvent.eventId);
   });
 
@@ -293,7 +293,7 @@ describe("CreateEvent con subject integrado", () => {
     } as any;
 
     const { CreateEvent } = await import("../../application/use-cases/CreateEvent.js");
-    const useCase = new CreateEvent(mockRepo, subject);
+    const useCase = new CreateEvent(mockRepo);
 
     await useCase.execute({
       actorUserId: "admin_1",
@@ -306,7 +306,7 @@ describe("CreateEvent con subject integrado", () => {
 
     assert.notEqual(eventReceived, null);
     assert.equal(eventReceived!.type, "NUEVO_EVENTO");
-    assert.equal(eventReceived!.category, "academico");
+    assert.equal((eventReceived as unknown as NuevoEventoUniversidadEvent).category, "academico");
     assert.equal(eventReceived!.title, "Nuevo Evento Test");
   });
 });

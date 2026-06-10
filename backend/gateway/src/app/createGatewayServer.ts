@@ -599,6 +599,8 @@ function onEventsResponse(
   if (info.method === "POST" && info.pathname === "/api/v1/events" && info.status === 201) {
     let payload: any;
     try { const p = JSON.parse(info.body); payload = p?.data || p; } catch { payload = info.body; }
+    // Only broadcast published events to the public feed — drafts are private to the creator
+    if (payload?.status !== "published") return;
     console.log(JSON.stringify({ service: "gateway", level: "info", message: "onEventsResponse: broadcasting new_event", id: payload?.id }));
     broadcastToEvents("new_event", payload);
     return;
@@ -609,6 +611,8 @@ function onEventsResponse(
   if (info.method === "PATCH" && updateMatch && info.status === 200) {
     let payload: any;
     try { const p = JSON.parse(info.body); payload = p?.data || p; } catch { payload = info.body; }
+    // Only broadcast published events — non-published status changes are private
+    if (payload?.status !== "published") return;
     console.log(JSON.stringify({ service: "gateway", level: "info", message: "onEventsResponse: broadcasting event_updated", id: updateMatch[1] }));
     broadcastToEvents("event_updated", payload);
     return;

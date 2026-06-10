@@ -1,7 +1,13 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, REALTIME_CHANNEL_STATES } from "@supabase/supabase-js";
 import type { IEventSocketGateway } from "../../domain/events/UniversityEventObserver.js";
 
 const CHANNEL_PREFIX = "event-notifications:";
+
+function isChannelUsable(channel: ReturnType<SupabaseClient["channel"]>): boolean {
+  const state = (channel as any).state;
+  return state === REALTIME_CHANNEL_STATES.joined
+    || state === REALTIME_CHANNEL_STATES.joining;
+}
 
 export class SupabaseRealtimeEventGateway implements IEventSocketGateway {
   private readonly supabase: SupabaseClient;
@@ -35,6 +41,19 @@ export class SupabaseRealtimeEventGateway implements IEventSocketGateway {
         }
       });
       this.channels.set(channelName, channel);
+    }
+
+    if (!isChannelUsable(channel)) {
+      console.warn(
+        JSON.stringify({
+          gateway: "SupabaseRealtimeEventGateway",
+          event: "channel_not_usable",
+          channel: channelName,
+          state: (channel as any).state,
+          message: "Skipping broadcast — channel not in a usable state",
+        }),
+      );
+      return;
     }
 
     await channel.send({

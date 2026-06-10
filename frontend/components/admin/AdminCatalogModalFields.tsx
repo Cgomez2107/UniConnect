@@ -302,6 +302,16 @@ export function EventModalFields({ C, modal, setModal, categories }: EventFields
           ))}
         </ScrollView>
       )}
+
+      <FieldLabel text="Cupo Máximo (opcional)" style={{ marginTop: 14 }} />
+      <TextInput
+        style={[styles.fieldInput, { backgroundColor: C.background, borderColor: C.border, color: C.textPrimary }]}
+        placeholder="Ej: 100"
+        placeholderTextColor={C.textPlaceholder}
+        value={modal.form.maxCapacity}
+        keyboardType="number-pad"
+        onChangeText={(value) => setModal((p) => ({ ...p, form: { ...p.form, maxCapacity: value }, error: "" }))}
+      />
     </>
   );
 }

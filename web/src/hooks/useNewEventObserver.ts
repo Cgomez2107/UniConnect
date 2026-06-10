@@ -30,6 +30,8 @@ export function useNewEventObserver(subscribedCategories: string[]) {
           const newEvent = snakeToCamel(payload.new) as any;
           if (!newEvent?.id) return;
 
+          if (newEvent.status !== "published") return;
+
           const category = newEvent.category;
           if (!category || !subsRef.current.includes(category)) return;
 

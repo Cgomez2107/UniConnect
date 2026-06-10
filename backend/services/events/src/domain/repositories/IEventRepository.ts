@@ -1,41 +1,42 @@
-import type { Event } from "../entities/Event.js";
+import type { Event, PaginatedResult } from "../entities/Event.js";
+import type { EventStatus } from "../state/EventStatus.js";
 
-/**
- * Contrato: acceso a datos de eventos
- * Schema real de Supabase: event_date, created_by, category, image_url
- */
 export interface IEventRepository {
-  getAllEvents(): Promise<Event[]>;
+  list(
+    page?: number,
+    limit?: number,
+    includeDeleted?: boolean,
+    status?: EventStatus | EventStatus[],
+    createdBy?: string,
+  ): Promise<PaginatedResult<Event>>;
+
   getUpcomingEvents(limit?: number): Promise<Event[]>;
+
   getById(id: string): Promise<Event | null>;
 
   create(input: {
     title: string;
     description: string;
     location: string;
-    startAt: string;       // Se guarda como event_date
-    endAt?: string;        // Ignorado (tabla no tiene end_at)
-    organizerId: string;   // Se guarda como created_by
+    startAt: string;
+    endAt?: string;
+    organizerId: string;
     category?: string;
     imageUrl?: string;
-    maxCapacity?: number;  // Ignorado (tabla no tiene max_capacity)
+    maxCapacity?: number | null;
   }): Promise<Event>;
 
   update(
     id: string,
     organizerId: string,
-    input: {
-      title?: string;
-      description?: string;
-      location?: string;
-      startAt?: string;
-      endAt?: string;
-      category?: string;
-      imageUrl?: string;
-      maxCapacity?: number | null;
-    },
+    input: Record<string, unknown>,
   ): Promise<Event>;
 
-  updateStatus(id: string, organizerId: string, status: string): Promise<void>;
-  delete(id: string, organizerId: string): Promise<void>;
+  updateStatus(id: string, status: EventStatus): Promise<void>;
+
+  softDelete(id: string): Promise<void>;
+
+  getRegisteredUsers(eventId: string): Promise<string[]>;
+
+  registerForEvent(eventId: string, userId: string): Promise<void>;
 }

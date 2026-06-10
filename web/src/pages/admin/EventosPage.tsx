@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import useAdmin from "@/hooks/useAdmin";
+import { useAdminEvents } from "@/hooks/useAdminEvents";
 import AdminModal from "@/components/admin/AdminModal";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useTableControls } from "@/hooks/useTableControls";
-import { TablePagination } from "@/components/shared/TablePagination";
-import type { EventCategoryRow, AdminEvent } from "@/types";
+import type { EventCategoryRow, EventStatus, AdminEvent } from "@/types";
 
 const CATEGORY_COLORS = [
   "bg-blue-50 text-blue-700",
@@ -17,19 +17,66 @@ const CATEGORY_COLORS = [
   "bg-teal-50 text-teal-700",
 ];
 
-function getCategoryColor(categories: EventCategoryRow[], id: string): string {
-  const idx = categories.findIndex((c) => c.id === id);
+const STATUS_BADGES: Record<EventStatus, { label: string; style: string }> = {
+  draft: { label: "Borrador", style: "bg-neutral-100 text-neutral-600" },
+  published: { label: "Publicado", style: "bg-green-100 text-green-700" },
+  cancelled: { label: "Cancelado", style: "bg-red-100 text-red-700" },
+  finished: { label: "Finalizado", style: "bg-blue-100 text-blue-700" },
+};
+
+function getCategoryColor(categories: EventCategoryRow[] | undefined, id: string | null | undefined): string {
+  if (!id || !Array.isArray(categories)) return CATEGORY_COLORS[0];
+  const idx = categories.findIndex((c) => c && (c.id === id || c.slug === id));
   return CATEGORY_COLORS[idx >= 0 ? idx % CATEGORY_COLORS.length : 0];
 }
 
-function getCategoryName(categories: EventCategoryRow[], id: string): string {
-  const cat = categories.find((c) => c.id === id);
-  return cat?.name ?? id.slice(0, 8);
+function getCategoryName(categories: EventCategoryRow[] | undefined, id: string | null | undefined, slug?: string | null): string {
+  if (!id && !slug) return 'Sin categoría';
+  if (!Array.isArray(categories)) return 'Sin categoría';
+  const cat = categories.find((c) => c && (c.id === id || c.slug === id || c.slug === slug));
+  if (cat?.name) return cat.name;
+  if (slug) {
+    const bySlug = categories.find((c) => c.slug === slug);
+    if (bySlug?.name) return bySlug.name;
+  }
+  return slug ? slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ") : (id ? id.slice(0, 8) : 'Sin categoría');
 }
 
 export function AdminEventosPage() {
-  const { events, eventCategories, loading, error, getEvents, getEventCategories, createEvent, updateEvent, deleteEvent, createEventCategory, updateEventCategory, deleteEventCategory, submitting } = useAdmin();
+  const {
+    eventCategories,
+    loading: adminLoading,
+    error: adminError,
+    getEventCategories,
+    createEventCategory,
+    updateEventCategory,
+    deleteEventCategory,
+    submitting,
+  } = useAdmin();
 
+  const {
+    events,
+    total,
+    loading: eventsLoading,
+    error: eventsError,
+    fetchEvents,
+    publishEvent,
+    cancelEvent,
+    finishEvent,
+    softDeleteEvent,
+    createEvent,
+    updateEvent,
+  } = useAdminEvents();
+
+  const [includeDeleted, setIncludeDeleted] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | EventStatus>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchText, setSearchText] = useState("");
+
+  const loading = adminLoading || eventsLoading;
+  const error = adminError || eventsError;
+
+  // Event form state
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState("");
@@ -37,25 +84,65 @@ export function AdminEventosPage() {
   const [formDate, setFormDate] = useState("");
   const [formLocation, setFormLocation] = useState("");
   const [formCategoryId, setFormCategoryId] = useState("");
+  const [formMaxCapacity, setFormMaxCapacity] = useState("");
   const [modalError, setModalError] = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
+  // Category form state
   const [catModalVisible, setCatModalVisible] = useState(false);
   const [catEditId, setCatEditId] = useState<string | null>(null);
   const [catName, setCatName] = useState("");
   const [catDescription, setCatDescription] = useState("");
   const [catModalError, setCatModalError] = useState("");
 
-  const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string; type: "event" | "category" } | null>(null);
-  const [deleteError, setDeleteError] = useState("");
-  const [deleting, setDeleting] = useState(false);
+  // Confirmation state
+  const [confirmAction, setConfirmAction] = useState<{
+    type: "publish" | "cancel" | "finish" | "eventDelete";
+    id: string;
+    title: string;
+  } | null>(null);
+  const [confirmError, setConfirmError] = useState("");
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const eventsTable = useTableControls<AdminEvent>(events, ["title", "location", "creator_name"]);
+  const [categoryConfirmDelete, setCategoryConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  const [catDeleteError, setCatDeleteError] = useState("");
+  const [catDeleting, setCatDeleting] = useState(false);
+
+  const refreshEvents = useCallback(() => {
+    fetchEvents(includeDeleted);
+  }, [fetchEvents, includeDeleted]);
+
+  const processedEvents = useMemo(() => {
+    let filtered = events;
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((e) => e.status?.toLowerCase() === statusFilter);
+    }
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter((e) => e.category_id === categoryFilter);
+    }
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase();
+      filtered = filtered.filter((e) =>
+        [e.title, e.location, e.creator_name].some((v) => v && v.toLowerCase().includes(q)),
+      );
+    }
+    return [...filtered].sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [events, statusFilter, categoryFilter, searchText, includeDeleted]);
+
   const catSearch = useTableControls<EventCategoryRow>(eventCategories, ["name", "slug", "description"]);
 
   useEffect(() => {
-    getEvents();
     getEventCategories();
-  }, [getEvents, getEventCategories]);
+  }, [getEventCategories]);
+
+  useEffect(() => {
+    fetchEvents(includeDeleted);
+  }, [fetchEvents, includeDeleted]);
 
   const firstCategoryId = eventCategories.length > 0 ? eventCategories[0].id : "";
 
@@ -66,22 +153,24 @@ export function AdminEventosPage() {
     setFormDate("");
     setFormLocation("");
     setFormCategoryId(firstCategoryId);
+    setFormMaxCapacity("");
     setModalError("");
     setModalVisible(true);
   };
 
-  const openEdit = (item: { id: string; title: string; event_date: string; location: string | null; category_id: string }) => {
-    setEditId(item.id);
-    setFormTitle(item.title);
-    setFormDescription("");
-    setFormDate(item.event_date.slice(0, 16));
+  const openEdit = (item: { id?: string; title?: string; event_date?: string; description?: string | null; location?: string | null; category_id?: string | null; max_capacity?: number | null }) => {
+    setEditId(item.id ?? null);
+    setFormTitle(item.title ?? "");
+    setFormDescription(item.description ?? "");
+    setFormDate(item.event_date?.slice(0, 16) ?? "");
     setFormLocation(item.location ?? "");
-    setFormCategoryId(item.category_id);
+    setFormCategoryId(item.category_id ?? firstCategoryId);
+    setFormMaxCapacity(item.max_capacity?.toString() ?? "");
     setModalError("");
     setModalVisible(true);
   };
 
-  const handleSave = async () => {
+  const handleSaveEvent = async () => {
     if (!formTitle.trim()) {
       setModalError("El título no puede estar vacío.");
       return;
@@ -94,13 +183,27 @@ export function AdminEventosPage() {
       setModalError("Selecciona una categoría.");
       return;
     }
+    const parsedCapacity = formMaxCapacity
+      ? (() => { const n = parseInt(formMaxCapacity, 10); return Number.isFinite(n) && !isNaN(n) ? n : null; })()
+      : null;
+    if (parsedCapacity !== null && (!Number.isFinite(parsedCapacity) || parsedCapacity < 1)) {
+      setModalError("El cupo máximo debe ser un número mayor a 0.");
+      return;
+    }
+    setFormSubmitting(true);
+    setModalError("");
     try {
+      // Resolver slug de categoría
+      const cat = eventCategories.find((c) => c.id === formCategoryId);
+      const category = cat?.slug ?? "otro";
+
       const payload = {
         title: formTitle.trim(),
         description: formDescription.trim() || undefined,
-        event_date: new Date(formDate).toISOString(),
+        startAt: new Date(formDate).toISOString(),
         location: formLocation.trim() || undefined,
-        category_id: formCategoryId,
+        category,
+        maxCapacity: parsedCapacity,
       };
       if (editId) {
         await updateEvent(editId, payload);
@@ -108,11 +211,15 @@ export function AdminEventosPage() {
         await createEvent(payload);
       }
       setModalVisible(false);
+      refreshEvents();
     } catch (e) {
       setModalError(e instanceof Error ? e.message : "Error al guardar");
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
+  // Category handlers
   const openCreateCategory = () => {
     setCatEditId(null);
     setCatName("");
@@ -146,23 +253,153 @@ export function AdminEventosPage() {
     }
   };
 
-  const handleConfirmDelete = async () => {
-    if (!confirmDelete) return;
-    setDeleting(true);
-    setDeleteError("");
+  // Lifecycle action handlers
+  const handleLifecycleAction = async () => {
+    if (!confirmAction) return;
+    setConfirmLoading(true);
+    setConfirmError("");
     try {
-      if (confirmDelete.type === "event") {
-        await deleteEvent(confirmDelete.id);
-      } else {
-        await deleteEventCategory(confirmDelete.id);
+      switch (confirmAction.type) {
+        case "publish":
+          await publishEvent(confirmAction.id);
+          break;
+        case "cancel":
+          await cancelEvent(confirmAction.id);
+          break;
+        case "finish":
+          await finishEvent(confirmAction.id);
+          break;
+        case "eventDelete":
+          await softDeleteEvent(confirmAction.id);
+          break;
       }
-      setConfirmDelete(null);
+      setConfirmAction(null);
+      refreshEvents();
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : "Error al eliminar");
+      setConfirmError(e instanceof Error ? e.message : "Error al ejecutar acción");
     } finally {
-      setDeleting(false);
+      setConfirmLoading(false);
     }
   };
+
+  const handleCategoryDelete = async () => {
+    if (!categoryConfirmDelete) return;
+    setCatDeleting(true);
+    setCatDeleteError("");
+    try {
+      await deleteEventCategory(categoryConfirmDelete.id);
+      setCategoryConfirmDelete(null);
+    } catch (e) {
+      setCatDeleteError(e instanceof Error ? e.message : "Error al eliminar categoría");
+    } finally {
+      setCatDeleting(false);
+    }
+  };
+
+  const confirmDelete = (id: string, title: string) => {
+    setConfirmAction({ type: "eventDelete", id, title });
+    setConfirmError("");
+  };
+
+  const confirmPublish = (id: string, title: string) => {
+    setConfirmAction({ type: "publish", id, title });
+    setConfirmError("");
+  };
+
+  const confirmCancel = (id: string, title: string) => {
+    setConfirmAction({ type: "cancel", id, title });
+    setConfirmError("");
+  };
+
+  const confirmFinish = (id: string, title: string) => {
+    setConfirmAction({ type: "finish", id, title });
+    setConfirmError("");
+  };
+
+  const toggleIncludeDeleted = () => {
+    setIncludeDeleted((prev) => !prev);
+  };
+
+  const getStatusBadge = (e: { status: EventStatus; deleted_at?: string | null }) => {
+    if (e.deleted_at) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-300 text-neutral-700">
+          Eliminado
+        </span>
+      );
+    }
+    const s = STATUS_BADGES[e.status] ?? STATUS_BADGES.draft;
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${s.style}`}>
+        {s.label}
+      </span>
+    );
+  };
+
+  const getActionButtons = (e: { id: string; title: string; status: EventStatus; description: string | null; event_date: string; location: string | null; category_id: string; deleted_at?: string | null }) => {
+    if (e.deleted_at) return <span className="text-sm text-neutral-400">—</span>;
+    switch (e.status) {
+      case "draft":
+        return (
+          <>
+            <button onClick={() => openEdit(e)} className="text-sm text-primary-600 hover:text-primary-800 mr-2">
+              Editar
+            </button>
+            <button onClick={() => confirmPublish(e.id, e.title)} className="text-sm text-green-600 hover:text-green-800 mr-2">
+              Publicar
+            </button>
+            <button onClick={() => confirmDelete(e.id, e.title)} className="text-sm text-error-600 hover:text-error-800">
+              Eliminar
+            </button>
+          </>
+        );
+      case "published":
+        return (
+          <button onClick={() => confirmCancel(e.id, e.title)} className="text-sm text-red-600 hover:text-red-800">
+            Cancelar
+          </button>
+        );
+      case "cancelled":
+      case "finished":
+        return <span className="text-sm text-neutral-400">—</span>;
+    }
+  };
+
+  const getConfirmContent = () => {
+    if (!confirmAction) return { title: "", message: "", confirmLabel: "Confirmar", variant: "danger" as const };
+    switch (confirmAction.type) {
+      case "eventDelete":
+        return {
+          title: "Eliminar evento",
+          message: confirmError || `¿Eliminar "${confirmAction.title}"?\n\nSe marcará como eliminado pero los datos se conservan.`,
+          confirmLabel: confirmError ? "Cerrar" : "Eliminar",
+          variant: "danger" as const,
+        };
+      case "publish":
+        return {
+          title: "Publicar evento",
+          message: confirmError || `¿Publicar "${confirmAction.title}"?\n\nEl evento será visible para todos los estudiantes.`,
+          confirmLabel: confirmError ? "Cerrar" : "Publicar",
+          variant: "default" as const,
+        };
+      case "cancel":
+        return {
+          title: "Cancelar evento",
+          message: confirmError || `¿Cancelar "${confirmAction.title}"?\n\nLos estudiantes registrados serán notificados.`,
+          confirmLabel: confirmError ? "Cerrar" : "Cancelar evento",
+          variant: "danger" as const,
+        };
+      case "finish":
+        return {
+          title: "Finalizar evento",
+          message: confirmError || `¿Finalizar "${confirmAction.title}"?\n\nEl evento se marcará como finalizado.`,
+          confirmLabel: confirmError ? "Cerrar" : "Finalizar",
+          variant: "default" as const,
+        };
+    }
+  };
+
+  const confirmContent = getConfirmContent();
 
   return (
     <div>
@@ -172,7 +409,7 @@ export function AdminEventosPage() {
         </h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">
-            {events.length} eventos
+            {total} eventos
           </span>
           <button
             onClick={openCreate}
@@ -214,7 +451,7 @@ export function AdminEventosPage() {
                   Editar
                 </button>
                 <button
-                  onClick={() => setConfirmDelete({ id: c.id, title: c.name, type: "category" })}
+                  onClick={() => setCategoryConfirmDelete({ id: c.id, title: c.name })}
                   className="text-xs text-error-600 hover:text-error-800"
                 >
                   Eliminar
@@ -237,114 +474,143 @@ export function AdminEventosPage() {
         </div>
       )}
 
-      {error && (
+      {error && !loading && (
         <div className="bg-error-50 border border-error-200 text-error-700 p-4 rounded-lg mb-4">
           {error}
         </div>
       )}
 
-      {!loading && !error && events.length === 0 && (
-        <div className="bg-white rounded-lg border border-neutral-200 p-12 flex flex-col items-center justify-center text-center">
-          <div className="text-neutral-300 mb-4">
-            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <p className="text-neutral-500 text-lg font-medium">No hay eventos</p>
-          <p className="text-neutral-400 text-sm mt-1">Crea el primer evento del campus</p>
-        </div>
-      )}
-
-      {!loading && !error && events.length > 0 && (
+      {!loading && !error && (
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
           <div className="px-5 py-3 border-b border-neutral-200 bg-white">
-            <input
-              type="text"
-              value={eventsTable.search}
-              onChange={(e) => eventsTable.setSearch(e.target.value)}
-              placeholder="Buscar por título, lugar o creador..."
-              className="w-full max-w-xs px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Buscar por título, lugar o creador..."
+                className="w-full max-w-xs px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+
+              <select
+                value={statusFilter}
+                onChange={(e) => { const v = e.target.value; if (v === "all" || v === "draft" || v === "published" || v === "cancelled" || v === "finished") { setStatusFilter(v as EventStatus); } }}
+                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="draft">Borrador</option>
+                <option value="published">Publicado</option>
+                <option value="cancelled">Cancelado</option>
+                <option value="finished">Finalizado</option>
+              </select>
+
+              <select
+                value={categoryFilter}
+                onChange={(e) => { setCategoryFilter(e.target.value); }}
+                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+              >
+                <option value="all">Todas las categorías</option>
+                {eventCategories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer select-none ml-auto">
+                <input
+                  type="checkbox"
+                  checked={includeDeleted}
+                  onChange={toggleIncludeDeleted}
+                  className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                />
+                Ver eliminados
+              </label>
+            </div>
           </div>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Título</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Fecha</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Lugar</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Categoría</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Creador</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Registrado</th>
-                <th className="text-right text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {eventsTable.pageData.map((e) => (
-                <tr key={e.id} className="hover:bg-neutral-50 transition-colors">
-                  <td className="px-5 py-3 text-sm font-medium text-neutral-800">
-                    {e.title}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-neutral-600">
-                    {new Date(e.event_date).toLocaleDateString("es-CO", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-neutral-500">
-                    {e.location || "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(eventCategories, e.category_id)}`}>
-                      {getCategoryName(eventCategories, e.category_id)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-sm text-neutral-600">
-                    {e.creator_name}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-neutral-400">
-                    {new Date(e.created_at).toLocaleDateString("es-CO", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => openEdit(e)}
-                      className="text-sm text-primary-600 hover:text-primary-800 mr-3"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete({ id: e.id, title: e.title, type: "event" })}
-                      className="text-sm text-error-600 hover:text-error-800"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
+
+          {processedEvents.length === 0 ? (
+            <div className="p-12 flex flex-col items-center justify-center text-center">
+              <div className="text-neutral-300 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p className="text-neutral-500 text-lg font-medium">No hay eventos</p>
+              <p className="text-neutral-400 text-sm mt-1">
+                {includeDeleted ? "No se encontraron eventos eliminados." : statusFilter !== "all" || categoryFilter !== "all" || searchText ? "No hay eventos con los filtros seleccionados." : "Crea el primer evento del campus"}
+              </p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-neutral-200 bg-neutral-50">
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Título</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Fecha</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Lugar</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Categoría</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Estado</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Creador</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Registrado</th>
+                  <th className="text-right text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <TablePagination
-            page={eventsTable.page}
-            totalPages={eventsTable.totalPages}
-            totalFiltered={eventsTable.totalFiltered}
-            onPageChange={eventsTable.setPage}
-            onPrev={eventsTable.prevPage}
-            onNext={eventsTable.nextPage}
-          />
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {processedEvents.map((e, idx) => {
+                  if (!e || !e.id) return null;
+                  const eventDate = e.event_date ? new Date(e.event_date) : null;
+                  const createdDate = e.created_at ? new Date(e.created_at) : null;
+                  return (
+                  <tr key={e.id} className={`hover:bg-neutral-50 transition-colors ${e.deleted_at ? "opacity-60" : ""}`}>
+                    <td className="px-5 py-3 text-sm font-medium text-neutral-800">
+                      {e.title ?? "—"}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-neutral-600">
+                      {eventDate ? eventDate.toLocaleDateString("es-CO", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      }) : "—"}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-neutral-500">
+                      {e.location || "—"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(eventCategories, e.category_id)}`}>
+                        {getCategoryName(eventCategories, e.category_id, e.category)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      {getStatusBadge(e)}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-neutral-600">
+                      {e.creator_name ?? "—"}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-neutral-400">
+                      {createdDate ? createdDate.toLocaleDateString("es-CO", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      }) : "—"}
+                    </td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      {getActionButtons(e)}
+                    </td>
+                  </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
+      {/* Event create/edit modal */}
       <AdminModal
         visible={modalVisible}
         title={editId ? "Editar evento" : "Nuevo evento"}
         error={modalError}
-        submitting={submitting}
+        submitting={formSubmitting}
         onClose={() => setModalVisible(false)}
-        onSave={handleSave}
+        onSave={handleSaveEvent}
       >
         <label className="block text-sm font-medium text-neutral-700 mb-1">
           Título *
@@ -390,6 +656,18 @@ export function AdminEventosPage() {
           className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-4"
         />
 
+        <label className="block text-sm font-medium text-neutral-700 mb-1">
+          Cupo Máximo (opcional)
+        </label>
+        <input
+          type="number"
+          min={1}
+          value={formMaxCapacity}
+          onChange={(e) => setFormMaxCapacity(e.target.value)}
+          placeholder="Ej: 100"
+          className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-4"
+        />
+
         <label className="block text-sm font-medium text-neutral-700 mb-2">
           Categoría *
         </label>
@@ -410,6 +688,7 @@ export function AdminEventosPage() {
         )}
       </AdminModal>
 
+      {/* Category create/edit modal */}
       <AdminModal
         visible={catModalVisible}
         title={catEditId ? "Editar categoría" : "Nueva categoría"}
@@ -446,21 +725,32 @@ export function AdminEventosPage() {
         </p>
       </AdminModal>
 
+      {/* Event lifecycle confirmation dialog */}
       <ConfirmDialog
-        visible={confirmDelete !== null}
-        title={confirmDelete?.type === "category" ? "Eliminar categoría" : "Eliminar evento"}
+        visible={confirmAction !== null}
+        title={confirmContent.title}
+        message={confirmContent.message}
+        confirmLabel={confirmContent.confirmLabel}
+        variant={confirmError ? "default" : confirmContent.variant}
+        loading={confirmLoading}
+        onConfirm={confirmError ? () => { setConfirmAction(null); setConfirmError(""); } : handleLifecycleAction}
+        onCancel={() => { setConfirmAction(null); setConfirmError(""); }}
+      />
+
+      {/* Category delete confirmation dialog */}
+      <ConfirmDialog
+        visible={categoryConfirmDelete !== null}
+        title="Eliminar categoría"
         message={
-          deleteError
-            ? deleteError
-            : confirmDelete?.type === "category"
-              ? `¿Eliminar la categoría "${confirmDelete?.title}"?\n\nLos eventos que la usan quedarán sin categoría asignada.`
-              : `¿Eliminar "${confirmDelete?.title}"?\n\nEsta acción no se puede deshacer.`
+          catDeleteError
+            ? catDeleteError
+            : `¿Eliminar la categoría "${categoryConfirmDelete?.title}"?\n\nLos eventos que la usan quedarán sin categoría asignada.`
         }
-        confirmLabel={deleteError ? "Cerrar" : "Eliminar"}
-        variant={deleteError ? "default" : "danger"}
-        loading={deleting}
-        onConfirm={deleteError ? () => { setConfirmDelete(null); setDeleteError(""); } : handleConfirmDelete}
-        onCancel={() => { setConfirmDelete(null); setDeleteError(""); }}
+        confirmLabel={catDeleteError ? "Cerrar" : "Eliminar"}
+        variant={catDeleteError ? "default" : "danger"}
+        loading={catDeleting}
+        onConfirm={catDeleteError ? () => { setCategoryConfirmDelete(null); setCatDeleteError(""); } : handleCategoryDelete}
+        onCancel={() => { setCategoryConfirmDelete(null); setCatDeleteError(""); }}
       />
     </div>
   );

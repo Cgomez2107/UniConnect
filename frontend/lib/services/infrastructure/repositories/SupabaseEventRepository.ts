@@ -73,7 +73,30 @@ export class SupabaseEventRepository implements IEventRepository {
     return (data ?? []) as CampusEvent[]
   }
 
+  async publish(eventId: string): Promise<void> {
+    const { error } = await supabase
+      .from("events")
+      .update({ status: "published" })
+      .eq("id", eventId)
+    if (error) throw new Error(error.message)
+  }
+
+  async cancel(eventId: string): Promise<void> {
+    const { error } = await supabase
+      .from("events")
+      .update({ status: "cancelled" })
+      .eq("id", eventId)
+    if (error) throw new Error(error.message)
+  }
+
   async updateStatus(_eventId: string, _status: string): Promise<void> {
     throw new Error("Not implemented in Supabase fallback")
+  }
+
+  async registerForEvent(eventId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from("event_registrations")
+      .insert({ event_id: eventId, user_id: userId })
+    if (error) throw new Error(error.message)
   }
 }

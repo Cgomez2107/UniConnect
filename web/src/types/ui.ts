@@ -96,6 +96,8 @@ export interface ConversationUI {
   unreadCount: number;
 }
 
+import type { EventStatus } from "@/types";
+
 export type EventCategoryUI = string;
 
 export interface CampusEventUI {
@@ -109,6 +111,9 @@ export interface CampusEventUI {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  status: EventStatus;
+  maxCapacity: number | null;
+  registeredCount: number;
   creator?: { fullName: string } | null;
 }
 

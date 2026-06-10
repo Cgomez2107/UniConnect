@@ -28,4 +28,8 @@ export class InMemorySubscriptionRepository implements ISubscriptionRepository {
   async getUserSubscriptions(userId: string): Promise<EventCategory[]> {
     return [...(this.subs.get(userId) ?? [])];
   }
+
+  async getAllUserIds(): Promise<string[]> {
+    return [...this.subs.keys()];
+  }
 }
