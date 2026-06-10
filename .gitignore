@@ -1,2 +1,65 @@
-﻿design.md
-tasks.md
+﻿# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+/dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+**/.turbo/
+
+app-examples/
+
+openspec/*
+.agent/*
+.agents/*
+.gpt/*
+.gemini/*
+.github/prompts/*
+.github/skills/*
+
+.opencode/*
+skills-lock.json
+
+test-results/
+playwright-report/
+# Turbo cache logs
+.turbo/
+
+# Temp test files
+*%TEMP%*
+
+# Windows reserved device names
+nul
+backend/nul
