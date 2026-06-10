@@ -348,6 +348,138 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
     });
   });
 
+  describe("DELETE /api/v1/admin/events/:id — strict admin-only route", () => {
+    it("ADM-DEL-C1: retorna 403 cuando x-user-role es estudiante", async () => {
+      const { server, deleteEvent } = buildEventsServer();
+
+      const res = await request(server as any)
+        .delete(`/api/v1/admin/events/${UUID}`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "estudiante")
+        .expect(403);
+
+      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(deleteEvent.execute).not.toHaveBeenCalled();
+    });
+
+    it("ADM-DEL-C2: retorna 403 cuando NO hay x-user-role", async () => {
+      const { server, deleteEvent } = buildEventsServer();
+
+      const res = await request(server as any)
+        .delete(`/api/v1/admin/events/${UUID}`)
+        .set("x-user-id", USER_ID)
+        .expect(403);
+
+      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(deleteEvent.execute).not.toHaveBeenCalled();
+    });
+
+    it("ADM-DEL-C3: retorna 200 cuando x-user-role es admin (zero DB query via header)", async () => {
+      const { server, deleteEvent } = buildEventsServer();
+
+      await request(server as any)
+        .delete(`/api/v1/admin/events/${UUID}`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "admin")
+        .expect(200);
+
+      expect(deleteEvent.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it("ADM-DEL-C4: retorna 200 cuando x-user-role es super_admin", async () => {
+      const { server, deleteEvent } = buildEventsServer();
+
+      await request(server as any)
+        .delete(`/api/v1/admin/events/${UUID}`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "super_admin")
+        .expect(200);
+
+      expect(deleteEvent.execute).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("POST /api/v1/admin/events/:id/publish — strict admin route", () => {
+    it("ADM-PUB-C1: retorna 403 para estudiante", async () => {
+      const { server, publishEvent } = buildEventsServer();
+
+      const res = await request(server as any)
+        .post(`/api/v1/admin/events/${UUID}/publish`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "estudiante")
+        .expect(403);
+
+      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(publishEvent.execute).not.toHaveBeenCalled();
+    });
+
+    it("ADM-PUB-C2: retorna 200 para admin", async () => {
+      const { server, publishEvent } = buildEventsServer();
+
+      await request(server as any)
+        .post(`/api/v1/admin/events/${UUID}/publish`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "admin")
+        .expect(200);
+
+      expect(publishEvent.execute).toHaveBeenCalled();
+    });
+  });
+
+  describe("POST /api/v1/admin/events/:id/cancel — strict admin route", () => {
+    it("ADM-CAN-C1: retorna 403 para estudiante", async () => {
+      const { server, cancelEvent } = buildEventsServer();
+
+      const res = await request(server as any)
+        .post(`/api/v1/admin/events/${UUID}/cancel`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "estudiante")
+        .expect(403);
+
+      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(cancelEvent.execute).not.toHaveBeenCalled();
+    });
+
+    it("ADM-CAN-C2: retorna 200 para admin", async () => {
+      const { server, cancelEvent } = buildEventsServer();
+
+      await request(server as any)
+        .post(`/api/v1/admin/events/${UUID}/cancel`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "admin")
+        .expect(200);
+
+      expect(cancelEvent.execute).toHaveBeenCalled();
+    });
+  });
+
+  describe("POST /api/v1/admin/events/:id/finish — strict admin route", () => {
+    it("ADM-FIN-C1: retorna 403 para estudiante", async () => {
+      const { server, finishEvent } = buildEventsServer();
+
+      const res = await request(server as any)
+        .post(`/api/v1/admin/events/${UUID}/finish`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "estudiante")
+        .expect(403);
+
+      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(finishEvent.execute).not.toHaveBeenCalled();
+    });
+
+    it("ADM-FIN-C2: retorna 200 para admin", async () => {
+      const { server, finishEvent } = buildEventsServer();
+
+      await request(server as any)
+        .post(`/api/v1/admin/events/${UUID}/finish`)
+        .set("x-user-id", USER_ID)
+        .set("x-user-role", "admin")
+        .expect(200);
+
+      expect(finishEvent.execute).toHaveBeenCalled();
+    });
+  });
+
   describe("Sin autenticación", () => {
     it("C10: retorna 401 para DELETE sin x-user-id", async () => {
       const { server } = buildEventsServer();
