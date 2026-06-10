@@ -31,3 +31,13 @@ coverage/
 .idea/
 *.swp
 *.swo
+
+
+# Agent
+.agent/
+.agents/
+.opencode/
+.gpt/
+.gemini/
+.github/prompts/*
+.github/skills/*

@@ -42,6 +42,7 @@ export class EventsController {
     const createdBy = requestUrl.searchParams.get("created_by") ?? requestUrl.searchParams.get("createdBy") ?? undefined;
 
     const isAdmin = await isAdminUser(req, this.pool);
+    const effectiveIncludeDeleted = isAdmin ? includeDeleted : false;
 
     try {
       if (upcoming) {
@@ -52,7 +53,7 @@ export class EventsController {
         // Private feed (createdBy set): all statuses for that user
         // Admin feed (isAdmin): all statuses
         let statusFilter: EventStatus | EventStatus[] | undefined;
-        if (includeDeleted) {
+        if (effectiveIncludeDeleted) {
           statusFilter = undefined;
         } else if (createdBy) {
           statusFilter = undefined;
@@ -62,7 +63,7 @@ export class EventsController {
           statusFilter = ["published", "cancelled"];
         }
 
-        const result = await this.getAllEvents.execute(page, limit, includeDeleted, statusFilter, createdBy);
+        const result = await this.getAllEvents.execute(page, limit, effectiveIncludeDeleted, statusFilter, createdBy);
         sendData(res, 200, result.data, {
           total: result.total,
           page: result.page,
@@ -149,6 +150,7 @@ export class EventsController {
       const result = await this.updateEvent.execute({
         actorUserId,
         eventId,
+        isAdmin: await isAdminUser(req, this.pool),
         title: body.title,
         description: body.description,
         location: body.location,
@@ -176,7 +178,6 @@ export class EventsController {
     try {
       await this.deleteEvent.execute({
         eventId,
-        actorUserId,
         isAdmin: await isAdminUser(req, this.pool),
       });
       sendData(res, 200, { message: "Event deleted successfully" });
