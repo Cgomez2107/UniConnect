@@ -137,17 +137,14 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
   }
 
   async getAllUsers(): Promise<AdminUser[]> {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, role, is_active, semester, avatar_url, created_at")
-      .order("created_at", { ascending: false })
+    const { data, error } = await supabase.rpc("get_admin_users_with_email")
 
     if (error) throw new Error(error.message)
 
     return (data ?? []).map((u: any) => ({
       id: u.id,
       full_name: u.full_name,
-      email: "Correo no disponible",
+      email: u.email || "Correo no disponible",
       role: u.role,
       is_active: u.is_active,
       semester: u.semester,
