@@ -49,25 +49,25 @@ export class ApiEventRepository implements IEventRepository {
       title: string;
       description: string;
       location: string;
-      startAt: string;
-      endAt: string;
+      eventDate: string;
       maxCapacity?: number;
       category?: string;
-      imageUrl?: string;
     },
   ): Promise<CampusEvent> {
+    const body: Record<string, unknown> = {
+      title: payload.title,
+      eventDate: payload.eventDate,
+      category: payload.category || "academico",
+    };
+    if (payload.description) body.description = payload.description;
+    if (payload.location) body.location = payload.location;
+    if (payload.maxCapacity !== undefined && payload.maxCapacity > 0) {
+      body.capacity = payload.maxCapacity;
+    }
+
     const data = await fetchApi<CampusEvent>("/events", {
       method: "POST",
-      body: JSON.stringify({
-        title: payload.title,
-        description: payload.description,
-        location: payload.location,
-        startAt: payload.startAt,
-        endAt: payload.endAt,
-        category: payload.category,
-        imageUrl: payload.imageUrl,
-        maxCapacity: payload.maxCapacity,
-      }),
+      body: JSON.stringify(body),
     });
 
     return mapEventFromApi(data);
@@ -99,13 +99,25 @@ export class ApiEventRepository implements IEventRepository {
     });
   }
 
-  // Operaciones pendientes — fallback a Supabase
   async getByAuthor(userId: string): Promise<CampusEvent[]> {
-    return this.fallback.getByAuthor(userId);
+    try {
+      const data = await fetchApi<CampusEvent[]>(`/events?createdBy=${userId}`);
+      return (data ?? []).map(mapEventFromApi);
+    } catch {
+      return this.fallback.getByAuthor(userId);
+    }
   }
 
   async updateStatus(eventId: string, status: string): Promise<void> {
     return this.fallback.updateStatus(eventId, status);
+  }
+
+  async publish(eventId: string): Promise<void> {
+    await fetchApi(`/events/${eventId}/publish`, { method: "POST" });
+  }
+
+  async cancel(eventId: string): Promise<void> {
+    await fetchApi(`/events/${eventId}/cancel`, { method: "POST" });
   }
 }
 
@@ -131,6 +143,8 @@ function mapEventFromApi(raw: any): CampusEvent {
     created_by: raw.organizerId ?? raw.createdBy ?? raw.created_by,
     created_at: raw.createdAt ?? raw.created_at,
     updated_at: raw.updatedAt ?? raw.updated_at,
+    status: raw.status ?? "published",
+    capacity: raw.maxCapacity ?? raw.capacity ?? null,
     creator: raw.organizerName
       ? { full_name: raw.organizerName }
       : undefined,

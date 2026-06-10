@@ -39,7 +39,7 @@ export class EventsController {
     const page = parseInt(requestUrl.searchParams.get("page") ?? "1", 10);
     const limit = parseInt(requestUrl.searchParams.get("limit") ?? "20", 10);
     const includeDeleted = requestUrl.searchParams.get("include_deleted") === "true";
-    const createdBy = requestUrl.searchParams.get("created_by") || undefined;
+    const createdBy = requestUrl.searchParams.get("created_by") ?? requestUrl.searchParams.get("createdBy") ?? undefined;
 
     const isAdmin = await isAdminUser(req, this.pool);
 

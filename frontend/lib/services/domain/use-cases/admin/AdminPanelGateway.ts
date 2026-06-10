@@ -102,8 +102,8 @@ export class AdminPanelGateway {
     return this.repository.deleteResource(resourceId)
   }
 
-  getAllEvents(): Promise<AdminEvent[]> {
-    return this.repository.getAllEvents()
+  getAllEvents(includeDeleted?: boolean): Promise<AdminEvent[]> {
+    return this.repository.getAllEvents(includeDeleted)
   }
 
   createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
@@ -116,6 +116,14 @@ export class AdminPanelGateway {
 
   deleteEvent(id: string): Promise<void> {
     return this.repository.deleteEvent(id)
+  }
+
+  publishEvent(id: string): Promise<void> {
+    return this.repository.publishEvent(id)
+  }
+
+  cancelEvent(id: string): Promise<void> {
+    return this.repository.cancelEvent(id)
   }
 
   getAllEventCategories(): Promise<EventCategoryRow[]> {

@@ -114,6 +114,11 @@ export function useAdmin(search: string) {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null)
   const [events, setEvents] = useState<AdminEvent[]>([])
 
+  // Filtros para eventos
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [includeDeleted, setIncludeDeleted] = useState(false)
+
   const [facultyModal, setFacultyModal] = useState<FacultyModalState>(FACULTY_MODAL_INIT)
   const [programModal, setProgramModal] = useState<ProgramModalState>(PROGRAM_MODAL_INIT)
   const [subjectModal, setSubjectModal] = useState<SubjectModalState>(SUBJECT_MODAL_INIT)
@@ -171,7 +176,10 @@ export function useAdmin(search: string) {
       if (reqs.status === "fulfilled") setRequests(reqs.value)
       if (ress.status === "fulfilled") setResources(ress.value)
       if (mets.status === "fulfilled") setMetrics(mets.value)
-      if (evts.status === "fulfilled") setEvents(evts.value)
+      if (evts.status === "fulfilled") {
+        const raw = evts.value as AdminEvent[]
+        setEvents(raw.filter((e) => !e.deleted_at))
+      }
       if (cats.status === "fulfilled") setEventCategories(cats.value)
 
       const failedSections = [
@@ -197,6 +205,17 @@ export function useAdmin(search: string) {
     }
     load()
   }, [adminGateway])
+
+  // Refetch eventos cuando cambia includeDeleted
+  useEffect(() => {
+    const refetch = async () => {
+      try {
+        const raw = await adminGateway.getAllEvents(includeDeleted)
+        setEvents(raw)
+      } catch { /* silencioso */ }
+    }
+    refetch()
+  }, [adminGateway, includeDeleted])
 
   // Filtrados
   const filteredFaculties = useMemo(() => {
@@ -493,13 +512,16 @@ export function useAdmin(search: string) {
 
   const filteredEvents = useMemo(() => {
     const q = search.toLowerCase()
-    return events.filter(
-      (e) =>
+    return events.filter((e) => {
+      if (statusFilter !== "all" && (e.status ?? "published") !== statusFilter) return false
+      if (categoryFilter !== "all" && e.category_id !== categoryFilter) return false
+      return (
         e.title.toLowerCase().includes(q) ||
         (e.location ?? "").toLowerCase().includes(q) ||
         e.creator_name.toLowerCase().includes(q)
-    )
-  }, [events, search])
+      )
+    })
+  }, [events, search, statusFilter, categoryFilter])
 
   // Acciones Usuarios
   const handleToggleUserRole = (item: AdminUser) => {
@@ -762,6 +784,46 @@ export function useAdmin(search: string) {
     )
   }
 
+  const handlePublishEvent = (item: AdminEvent) => {
+    Alert.alert(
+      "Publicar evento",
+      `¿Publicar "${item.title}"?\nEl evento será visible para todos los estudiantes.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Publicar", onPress: async () => {
+            try {
+              await adminGateway.publishEvent(item.id)
+              setEvents((p) => p.map((e) => e.id === item.id ? { ...e, status: "published" } : e))
+            } catch (e: any) {
+              Alert.alert("Error", e.message)
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const handleCancelEvent = (item: AdminEvent) => {
+    Alert.alert(
+      "Cancelar evento",
+      `¿Cancelar "${item.title}"?\nLos estudiantes ya no podrán acceder a este evento.`,
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Sí, cancelar", style: "destructive", onPress: async () => {
+            try {
+              await adminGateway.cancelEvent(item.id)
+              setEvents((p) => p.map((e) => e.id === item.id ? { ...e, status: "cancelled" } : e))
+            } catch (e: any) {
+              Alert.alert("Error", e.message)
+            }
+          },
+        },
+      ]
+    )
+  }
+
   return {
     // Estado
     isLoading,
@@ -823,6 +885,15 @@ export function useAdmin(search: string) {
     closeEventModal,
     saveEvent,
     handleDeleteEvent,
+    handlePublishEvent,
+    handleCancelEvent,
+    // Filtros de eventos
+    statusFilter,
+    setStatusFilter,
+    categoryFilter,
+    setCategoryFilter,
+    includeDeleted,
+    setIncludeDeleted,
     // Categorías
     eventCategories,
     categoryModal,

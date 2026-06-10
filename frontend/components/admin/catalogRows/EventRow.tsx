@@ -18,6 +18,20 @@ const CATEGORY_COLORS: Record<string, string> = {
   otro: "#f59e0b",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Borrador",
+  published: "Publicado",
+  cancelled: "Cancelado",
+  finished: "Finalizado",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  draft: "#f59e0b",
+  published: "#22c55e",
+  cancelled: "#ef4444",
+  finished: "#6b7280",
+};
+
 const FALLBACK_ICONS = ["📅", "🎯", "📚", "💡", "🎪", "🏆", "🔬", "🎨"];
 
 function categoryIcon(slug: string, index?: number): string {
@@ -47,12 +61,15 @@ interface EventRowProps {
   item: AdminEvent;
   onEdit: () => void;
   onDelete: () => void;
+  onPublish?: () => void;
+  onCancel?: () => void;
   C: typeof Colors["light"];
 }
 
-export function EventRow({ item, onEdit, onDelete, C }: EventRowProps) {
+export function EventRow({ item, onEdit, onDelete, onPublish, onCancel, C }: EventRowProps) {
   const { fadeAnim, slideAnim } = useEntryAnim();
   const catColor = categoryColor(item.category);
+  const st = item.status ?? "published";
 
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
@@ -78,6 +95,11 @@ export function EventRow({ item, onEdit, onDelete, C }: EventRowProps) {
           ) : null}
 
           <View style={[styles.tagsRow, { marginTop: 6 }]}> 
+            <View style={[styles.badge, { backgroundColor: (STATUS_COLORS[st] ?? "#6b7280") + "18" }]}>
+              <Text style={[styles.badgeText, { color: STATUS_COLORS[st] ?? "#6b7280" }]}>
+                {STATUS_LABELS[st] ?? st}
+              </Text>
+            </View>
             <View style={[styles.badge, { backgroundColor: catColor + "18" }]}>
               <Text style={[styles.badgeText, { color: catColor }]}>{categoryLabel(item.category)}</Text>
             </View>
@@ -87,27 +109,54 @@ export function EventRow({ item, onEdit, onDelete, C }: EventRowProps) {
           </View>
 
           <View style={[styles.tagsRow, { marginTop: 8 }]}> 
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: C.primary + "15" }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onEdit();
-              }}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.actionText, { color: C.primary }]}>Editar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: C.errorBackground }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                onDelete();
-              }}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.actionText, { color: C.error }]}>Eliminar</Text>
-            </TouchableOpacity>
+            {st === "draft" && onPublish && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: "#22c55e20" }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onPublish();
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.actionText, { color: "#22c55e" }]}>Publicar</Text>
+              </TouchableOpacity>
+            )}
+            {st === "published" && onCancel && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: "#ef444420" }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  onCancel();
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.actionText, { color: "#ef4444" }]}>Cancelar</Text>
+              </TouchableOpacity>
+            )}
+            {st === "draft" && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: C.primary + "15" }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onEdit();
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.actionText, { color: C.primary }]}>Editar</Text>
+              </TouchableOpacity>
+            )}
+            {st !== "published" && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: C.errorBackground }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  onDelete();
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.actionText, { color: C.error }]}>Eliminar</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

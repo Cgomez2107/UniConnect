@@ -268,11 +268,16 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
     if (error) throw new Error(error.message)
   }
 
-  async getAllEvents(): Promise<AdminEvent[]> {
-    const { data, error } = await supabase
+  async getAllEvents(includeDeleted?: boolean): Promise<AdminEvent[]> {
+    let query = supabase
       .from("events")
-      .select("id, title, event_date, location, category, category_id, created_at, creator:created_by ( full_name )")
-      .order("event_date", { ascending: true })
+      .select("id, title, event_date, location, category, category_id, created_at, status, deleted_at, creator:created_by ( full_name )")
+
+    if (!includeDeleted) {
+      query = query.is("deleted_at", null)
+    }
+
+    const { data, error } = await query.order("event_date", { ascending: true })
 
     if (error) throw new Error(error.message)
 
@@ -285,6 +290,8 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
       category_id: e.category_id,
       created_at: e.created_at,
       creator_name: e.creator?.full_name ?? "Admin",
+      status: e.status,
+      deleted_at: e.deleted_at ?? null,
     })) as AdminEvent[]
   }
 
@@ -341,6 +348,16 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
 
   async deleteEvent(id: string): Promise<void> {
     const { error } = await supabase.from("events").delete().eq("id", id)
+    if (error) throw new Error(error.message)
+  }
+
+  async publishEvent(id: string): Promise<void> {
+    const { error } = await supabase.from("events").update({ status: "published" }).eq("id", id)
+    if (error) throw new Error(error.message)
+  }
+
+  async cancelEvent(id: string): Promise<void> {
+    const { error } = await supabase.from("events").update({ status: "cancelled" }).eq("id", id)
     if (error) throw new Error(error.message)
   }
 
