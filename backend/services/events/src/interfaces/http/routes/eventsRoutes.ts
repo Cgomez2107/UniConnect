@@ -97,6 +97,11 @@ export async function handleEventsRoutes(
     return true;
   }
 
+  if (req.method === "PATCH" && eventDetailMatch) {
+    await controller.update(req, res, eventDetailMatch[1]);
+    return true;
+  }
+
   if (req.method === "DELETE" && eventDetailMatch) {
     await controller.delete(req, res, eventDetailMatch[1]);
     return true;

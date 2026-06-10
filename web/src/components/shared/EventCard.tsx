@@ -8,6 +8,9 @@ interface EventCardProps {
   onViewDetails: (id: string) => void;
   onAttend?: (id: string) => void;
   isAttending?: boolean;
+  onPublish?: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onCancel?: (id: string) => void;
 }
 
 /**
@@ -18,6 +21,9 @@ export function EventCard({
   onViewDetails,
   onAttend,
   isAttending = false,
+  onPublish,
+  onEdit,
+  onCancel,
 }: EventCardProps) {
   const categories = useEventCategories();
 
@@ -25,6 +31,13 @@ export function EventCard({
     categories.find((c) => c.slug === event.category)?.name
     ?? event.category
     ?? "Otro";
+
+  const statusColors: Record<string, string> = {
+    draft: "bg-amber-100 text-amber-800",
+    published: "bg-green-100 text-green-800",
+    cancelled: "bg-red-100 text-red-800",
+    finished: "bg-neutral-200 text-neutral-600",
+  };
 
   return (
     <div className="card-hover overflow-hidden">
@@ -37,7 +50,14 @@ export function EventCard({
           <h3 className="font-semibold text-base text-neutral-900 flex-1">
             {event.title}
           </h3>
-          <Badge>{categoryName}</Badge>
+          <div className="flex gap-1.5">
+            {event.status && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[event.status] || "bg-neutral-100 text-neutral-600"}`}>
+                {event.status === "draft" ? "Borrador" : event.status === "published" ? "Publicado" : event.status === "cancelled" ? "Cancelado" : event.status === "finished" ? "Finalizado" : event.status}
+              </span>
+            )}
+            <Badge>{categoryName}</Badge>
+          </div>
         </div>
 
         <p className="text-sm text-neutral-600 mb-3 line-clamp-2">{event.description}</p>
@@ -58,13 +78,23 @@ export function EventCard({
         </div>
 
         <div className="flex gap-2">
-          <button
-            onClick={() => onViewDetails(event.id)}
-            className="flex-1 px-3 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 transition-colors"
-          >
-            Ver detalles
-          </button>
-          {onAttend && (
+          {event.status === "draft" && onEdit && (
+            <button
+              onClick={() => onEdit(event.id)}
+              className="flex-1 px-3 py-2 bg-neutral-100 text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-200 transition-colors"
+            >
+              Editar
+            </button>
+          )}
+          {event.status === "draft" && onPublish && (
+            <button
+              onClick={() => onPublish(event.id)}
+              className="flex-1 px-3 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+            >
+              Publicar
+            </button>
+          )}
+          {event.status === "published" && onAttend && (
             <button
               onClick={() => onAttend(event.id)}
               className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -76,6 +106,20 @@ export function EventCard({
               {isAttending ? "Asistiendo" : "Asistir"}
             </button>
           )}
+          {event.status === "published" && onCancel && (
+            <button
+              onClick={() => onCancel(event.id)}
+              className="flex-1 px-3 py-2 bg-red-100 text-red-700 rounded-md text-sm font-medium hover:bg-red-200 transition-colors"
+            >
+              Cancelar
+            </button>
+          )}
+          <button
+            onClick={() => onViewDetails(event.id)}
+            className="flex-1 px-3 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 transition-colors"
+          >
+            Ver detalles
+          </button>
         </div>
       </div>
     </div>

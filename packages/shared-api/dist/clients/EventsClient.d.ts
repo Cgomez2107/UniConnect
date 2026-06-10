@@ -15,6 +15,7 @@ export interface CreateEventPayload {
 export interface ListEventsFilters {
     page?: number;
     perPage?: number;
+    createdBy?: string;
 }
 export declare class EventsClient extends BaseClient {
     private transport;
@@ -24,5 +25,8 @@ export declare class EventsClient extends BaseClient {
     create(payload: CreateEventPayload): Promise<Event>;
     update(id: string, payload: Partial<CreateEventPayload>): Promise<Event>;
     delete(id: string): Promise<void>;
+    register(eventId: string): Promise<void>;
+    publish(eventId: string): Promise<Event>;
+    cancel(eventId: string): Promise<Event>;
 }
 //# sourceMappingURL=EventsClient.d.ts.map

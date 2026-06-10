@@ -47,11 +47,18 @@ export function useEventsSync() {
 
           switch (data.event) {
             case "new_event": {
+              // Only add published events to the global store — drafts are private to the creator
+              if (data.payload?.status !== "published") return;
               store.addEvent(data.payload);
               fetchNotifications();
               break;
             }
             case "event_updated": {
+              // If the event is no longer published (cancelled/finished), remove it from the public store
+              if (data.payload?.status !== "published") {
+                store.removeEvent(data.payload.id);
+                return;
+              }
               store.updateEvent(data.payload);
               fetchNotifications();
               break;

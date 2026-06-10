@@ -1,20 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import eventsService from "@/lib/services/events.service";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useEventCategories } from "@/hooks/useEventCategories";
+import { useAuthStore } from "@/store/useAuthStore";
+import useNotifications from "@/hooks/useNotifications";
 
 export function EventoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const categories = useEventCategories();
+  const user = useAuthStore((s) => s.user);
+  const { success, error: showError } = useNotifications();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [registerMsg, setRegisterMsg] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -46,12 +51,50 @@ export function EventoDetallePage() {
     }
   };
 
+  const handlePublish = useCallback(async () => {
+    if (!id || actionLoading) return;
+    setActionLoading(true);
+    try {
+      const updated = await eventsService.publishEvent(id);
+      setEvent((prev: any) => ({ ...prev, ...updated }));
+      success("Evento publicado exitosamente");
+    } catch (err: any) {
+      showError(err?.message || "Error al publicar el evento");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [id, actionLoading, success, showError]);
+
+  const handleCancel = useCallback(async () => {
+    if (!id || actionLoading) return;
+    setActionLoading(true);
+    try {
+      const updated = await eventsService.cancelEvent(id);
+      setEvent((prev: any) => ({ ...prev, ...updated }));
+      success("Evento cancelado exitosamente");
+    } catch (err: any) {
+      showError(err?.message || "Error al cancelar el evento");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [id, actionLoading, success, showError]);
+
+  const isOwner = user?.id && user.id === event?.createdBy;
   const isPublished = event?.status === "published";
+  const isDraft = event?.status === "draft";
+  const isCancelled = event?.status === "cancelled";
+  const isFinished = event?.status === "finished";
   const isFull =
     isPublished &&
     event?.maxCapacity !== null &&
     event?.registeredCount >= event?.maxCapacity;
-  const isCancelled = event?.status === "cancelled";
+
+  const statusColors: Record<string, string> = {
+    draft: "bg-amber-100 text-amber-800",
+    published: "bg-green-100 text-green-800",
+    cancelled: "bg-red-100 text-red-800",
+    finished: "bg-neutral-200 text-neutral-600",
+  };
 
   if (loading) {
     return (
@@ -96,11 +139,18 @@ export function EventoDetallePage() {
         <div className="bg-white rounded-xl border border-neutral-200 p-6">
           <div className="flex items-start justify-between mb-4">
             <h1 className="text-2xl font-bold text-neutral-900">{event.title}</h1>
-            <Badge>
-              {categories.find((c) => c.slug === event.category)?.name
-                ?? event.category
-                ?? "Otro"}
-            </Badge>
+            <div className="flex gap-1.5">
+              {event.status && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[event.status] || "bg-neutral-100 text-neutral-600"}`}>
+                  {isDraft ? "Borrador" : isPublished ? "Publicado" : isCancelled ? "Cancelado" : isFinished ? "Finalizado" : event.status}
+                </span>
+              )}
+              <Badge>
+                {categories.find((c) => c.slug === event.category)?.name
+                  ?? event.category
+                  ?? "Otro"}
+              </Badge>
+            </div>
           </div>
 
           <p className="text-neutral-600 mb-6 leading-relaxed">
@@ -151,36 +201,81 @@ export function EventoDetallePage() {
           </div>
 
           <div className="mt-6 border-t border-neutral-100 pt-4">
-            {isRegistered ? (
-              <button
-                disabled
-                className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
-              >
-                Ya estás inscrito en este evento
-              </button>
-            ) : isCancelled ? (
-              <button
-                disabled
-                className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
-              >
-                Evento Cancelado - No acepta registros
-              </button>
-            ) : isFull ? (
-              <button
-                disabled
-                className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
-              >
-                Cupo Agotado
-              </button>
-            ) : isPublished ? (
-              <button
-                onClick={handleRegister}
-                disabled={registering}
-                className="w-full px-4 py-3 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors disabled:opacity-60"
-              >
-                {registering ? "Inscribiendo..." : "Inscribirme al evento"}
-              </button>
-            ) : null}
+            {isOwner ? (
+              <div className="flex flex-col gap-3">
+                {isDraft && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => navigate(`/crear-evento?edit=${event.id}`)}
+                      variant="secondary"
+                      className="flex-1"
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      onClick={handlePublish}
+                      loading={actionLoading}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      Publicar
+                    </Button>
+                  </div>
+                )}
+                {isPublished && (
+                  <Button
+                    onClick={handleCancel}
+                    loading={actionLoading}
+                    variant="secondary"
+                    className="w-full bg-red-100 text-red-700 hover:bg-red-200 border-red-200"
+                  >
+                    Cancelar Evento
+                  </Button>
+                )}
+                {isCancelled && (
+                  <p className="text-sm text-neutral-500 text-center">
+                    Este evento fue cancelado
+                  </p>
+                )}
+                {isFinished && (
+                  <p className="text-sm text-neutral-500 text-center">
+                    Este evento ha finalizado
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                {isRegistered ? (
+                  <button
+                    disabled
+                    className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
+                  >
+                    Ya estás inscrito en este evento
+                  </button>
+                ) : isCancelled ? (
+                  <button
+                    disabled
+                    className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
+                  >
+                    Evento Cancelado - No acepta registros
+                  </button>
+                ) : isFull ? (
+                  <button
+                    disabled
+                    className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
+                  >
+                    Cupo Agotado
+                  </button>
+                ) : isPublished ? (
+                  <button
+                    onClick={handleRegister}
+                    disabled={registering}
+                    className="w-full px-4 py-3 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors disabled:opacity-60"
+                  >
+                    {registering ? "Inscribiendo..." : "Inscribirme al evento"}
+                  </button>
+                ) : null}
+              </>
+            )}
             {registerMsg && (
               <p className={`mt-2 text-sm text-center ${registerMsg.includes("exitosa") ? "text-green-600" : "text-error-600"}`}>
                 {registerMsg}

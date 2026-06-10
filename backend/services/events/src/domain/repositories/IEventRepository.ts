@@ -7,6 +7,7 @@ export interface IEventRepository {
     limit?: number,
     includeDeleted?: boolean,
     status?: EventStatus,
+    createdBy?: string,
   ): Promise<PaginatedResult<Event>>;
 
   getUpcomingEvents(limit?: number): Promise<Event[]>;

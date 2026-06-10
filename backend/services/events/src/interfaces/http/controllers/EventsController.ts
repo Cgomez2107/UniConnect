@@ -10,6 +10,7 @@ import type { PublishEvent } from "../../../application/use-cases/PublishEvent.j
 import type { CancelEvent } from "../../../application/use-cases/CancelEvent.js";
 import type { FinishEvent } from "../../../application/use-cases/FinishEvent.js";
 import type { RegisterForEvent } from "../../../application/use-cases/RegisterForEvent.js";
+import type { EventStatus } from "../../../domain/state/EventStatus.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { isAdminUser } from "../middlewares/isAdminUser.js";
@@ -38,6 +39,7 @@ export class EventsController {
     const page = parseInt(requestUrl.searchParams.get("page") ?? "1", 10);
     const limit = parseInt(requestUrl.searchParams.get("limit") ?? "20", 10);
     const includeDeleted = requestUrl.searchParams.get("include_deleted") === "true";
+    const createdBy = requestUrl.searchParams.get("created_by") || undefined;
 
     const isAdmin = await isAdminUser(req, this.pool);
 
@@ -46,8 +48,21 @@ export class EventsController {
         const result = await this.getUpcomingEvents.execute(limit);
         sendData(res, 200, result, { total: result.length });
       } else {
-        const statusFilter = includeDeleted ? undefined : (isAdmin ? undefined : "published");
-        const result = await this.getAllEvents.execute(page, limit, includeDeleted, statusFilter);
+        // Public feed (no createdBy, non-admin): only published events
+        // Private feed (createdBy set): all statuses for that user
+        // Admin feed (isAdmin): all statuses
+        let statusFilter: EventStatus | undefined;
+        if (includeDeleted) {
+          statusFilter = undefined;
+        } else if (createdBy) {
+          statusFilter = undefined;
+        } else if (isAdmin) {
+          statusFilter = undefined;
+        } else {
+          statusFilter = "published";
+        }
+
+        const result = await this.getAllEvents.execute(page, limit, includeDeleted, statusFilter, createdBy);
         sendData(res, 200, result.data, {
           total: result.total,
           page: result.page,
@@ -90,12 +105,6 @@ export class EventsController {
     const actorUserId = getActorUserId(req);
     if (!actorUserId) {
       sendError(res, 401, "Authentication required");
-      return;
-    }
-
-    const isAdmin = await isAdminUser(req, this.pool);
-    if (!isAdmin) {
-      sendError(res, 403, "Solo administradores pueden crear eventos");
       return;
     }
 

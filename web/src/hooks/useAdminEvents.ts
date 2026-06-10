@@ -59,18 +59,15 @@ function getAuthToken(): string | null {
 export function useAdminEvents() {
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEvents = useCallback(async (p: number, includeDeleted: boolean) => {
+  const fetchEvents = useCallback(async (includeDeleted: boolean) => {
     setLoading(true);
     setError(null);
     try {
       const token = getAuthToken();
-      const url = `${GATEWAY_URL}/events?page=${p}&limit=10&include_deleted=${includeDeleted}`;
+      const url = `${GATEWAY_URL}/events?limit=500&include_deleted=${includeDeleted}`;
       const response = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
@@ -81,11 +78,9 @@ export function useAdminEvents() {
         const errBody = await response.json().catch(() => null);
         throw new Error(errBody?.error ?? `HTTP ${response.status}`);
       }
-      const body: { data: BackendEvent[]; meta: { total: number; page: number; limit: number; totalPages: number } } = await response.json();
+      const body: { data: BackendEvent[]; meta: { total: number } } = await response.json();
       setEvents((body.data ?? []).map(mapBackendEvent));
       setTotal(body.meta?.total ?? 0);
-      setPage(body.meta?.page ?? 1);
-      setTotalPages(body.meta?.totalPages ?? 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar eventos");
     } finally {
@@ -173,13 +168,9 @@ export function useAdminEvents() {
   return {
     events,
     total,
-    page,
-    limit,
-    totalPages,
     loading,
     error,
     fetchEvents,
-    setPage: (p: number) => setPage(p),
     publishEvent,
     cancelEvent,
     finishEvent,

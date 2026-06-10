@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import useAdmin from "@/hooks/useAdmin";
 import { useAdminEvents } from "@/hooks/useAdminEvents";
 import AdminModal from "@/components/admin/AdminModal";
@@ -51,12 +51,9 @@ export function AdminEventosPage() {
   const {
     events,
     total,
-    page,
-    totalPages,
     loading: eventsLoading,
     error: eventsError,
     fetchEvents,
-    setPage,
     publishEvent,
     cancelEvent,
     finishEvent,
@@ -66,6 +63,9 @@ export function AdminEventosPage() {
   } = useAdminEvents();
 
   const [includeDeleted, setIncludeDeleted] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | EventStatus>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchText, setSearchText] = useState("");
 
   const loading = adminLoading || eventsLoading;
   const error = adminError || eventsError;
@@ -103,10 +103,31 @@ export function AdminEventosPage() {
   const [catDeleting, setCatDeleting] = useState(false);
 
   const refreshEvents = useCallback(() => {
-    fetchEvents(page, includeDeleted);
-  }, [fetchEvents, page, includeDeleted]);
+    fetchEvents(includeDeleted);
+  }, [fetchEvents, includeDeleted]);
 
-  const eventsTable = useTableControls<AdminEvent>(events, ["title", "location", "creator_name"]);
+  const processedEvents = useMemo(() => {
+    let filtered = events;
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((e) => e.status?.toLowerCase() === statusFilter);
+    }
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter((e) => e.category_id === categoryFilter);
+    }
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase();
+      filtered = filtered.filter((e) =>
+        [e.title, e.location, e.creator_name].some((v) => v && v.toLowerCase().includes(q)),
+      );
+    }
+    return [...filtered].sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [events, statusFilter, categoryFilter, searchText, includeDeleted]);
+
   const catSearch = useTableControls<EventCategoryRow>(eventCategories, ["name", "slug", "description"]);
 
   useEffect(() => {
@@ -114,8 +135,8 @@ export function AdminEventosPage() {
   }, [getEventCategories]);
 
   useEffect(() => {
-    fetchEvents(page, includeDeleted);
-  }, [fetchEvents, page, includeDeleted]);
+    fetchEvents(includeDeleted);
+  }, [fetchEvents, includeDeleted]);
 
   const firstCategoryId = eventCategories.length > 0 ? eventCategories[0].id : "";
 
@@ -287,15 +308,8 @@ export function AdminEventosPage() {
     setConfirmError("");
   };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setPage(newPage);
-    }
-  };
-
   const toggleIncludeDeleted = () => {
     setIncludeDeleted((prev) => !prev);
-    setPage(1);
   };
 
   const getStatusBadge = (e: { status: EventStatus; deleted_at?: string | null }) => {
@@ -446,51 +460,6 @@ export function AdminEventosPage() {
         </div>
       </details>
 
-      {/* Toggle and pagination bar */}
-      <div className="flex items-center justify-between mb-4">
-        <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={includeDeleted}
-            onChange={toggleIncludeDeleted}
-            className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
-          />
-          Ver eliminados
-        </label>
-
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page <= 1}
-              className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Anterior
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => handlePageChange(p)}
-                className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                  p === page
-                    ? "bg-primary-500 text-white border-primary-500"
-                    : "border-neutral-200 hover:bg-neutral-50"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page >= totalPages}
-              className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Siguiente
-            </button>
-          </div>
-        )}
-      </div>
-
       {loading && (
         <div className="bg-white rounded-lg border border-neutral-200 p-12 text-center">
           <p className="text-neutral-500">Cargando eventos...</p>
@@ -503,122 +472,126 @@ export function AdminEventosPage() {
         </div>
       )}
 
-      {!loading && !error && events.length === 0 && (
-        <div className="bg-white rounded-lg border border-neutral-200 p-12 flex flex-col items-center justify-center text-center">
-          <div className="text-neutral-300 mb-4">
-            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <p className="text-neutral-500 text-lg font-medium">No hay eventos</p>
-          <p className="text-neutral-400 text-sm mt-1">
-            {includeDeleted ? "No se encontraron eventos eliminados." : "Crea el primer evento del campus"}
-          </p>
-        </div>
-      )}
-
-      {!loading && !error && events.length > 0 && (
+      {!loading && !error && (
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
           <div className="px-5 py-3 border-b border-neutral-200 bg-white">
-            <input
-              type="text"
-              value={eventsTable.search}
-              onChange={(e) => eventsTable.setSearch(e.target.value)}
-              placeholder="Buscar por título, lugar o creador..."
-              className="w-full max-w-xs px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-          </div>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Título</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Fecha</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Lugar</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Categoría</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Estado</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Creador</th>
-                <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Registrado</th>
-                <th className="text-right text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {eventsTable.pageData.map((e, idx) => {
-                if (!e || !e.id) return null;
-                const eventDate = e.event_date ? new Date(e.event_date) : null;
-                const createdDate = e.created_at ? new Date(e.created_at) : null;
-                return (
-                <tr key={e.id} className={`hover:bg-neutral-50 transition-colors ${e.deleted_at ? "opacity-60" : ""}`}>
-                  <td className="px-5 py-3 text-sm font-medium text-neutral-800">
-                    {e.title ?? "—"}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-neutral-600">
-                    {eventDate ? eventDate.toLocaleDateString("es-CO", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    }) : "—"}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-neutral-500">
-                    {e.location || "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(eventCategories, e.category_id)}`}>
-                      {getCategoryName(eventCategories, e.category_id)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    {getStatusBadge(e)}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-neutral-600">
-                    {e.creator_name ?? "—"}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-neutral-400">
-                    {createdDate ? createdDate.toLocaleDateString("es-CO", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    }) : "—"}
-                  </td>
-                  <td className="px-5 py-3 text-right whitespace-nowrap">
-                    {getActionButtons(e)}
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Buscar por título, lugar o creador..."
+                className="w-full max-w-xs px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
 
-      {!loading && !error && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1 mt-4">
-          <button
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page <= 1}
-            className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Anterior
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => handlePageChange(p)}
-              className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                p === page
-                  ? "bg-primary-500 text-white border-primary-500"
-                  : "border-neutral-200 hover:bg-neutral-50"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-          <button
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page >= totalPages}
-            className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Siguiente
-          </button>
+              <select
+                value={statusFilter}
+                onChange={(e) => { const v = e.target.value; if (v === "all" || v === "draft" || v === "published" || v === "cancelled" || v === "finished") { setStatusFilter(v as EventStatus); } }}
+                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="draft">Borrador</option>
+                <option value="published">Publicado</option>
+                <option value="cancelled">Cancelado</option>
+                <option value="finished">Finalizado</option>
+              </select>
+
+              <select
+                value={categoryFilter}
+                onChange={(e) => { setCategoryFilter(e.target.value); }}
+                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+              >
+                <option value="all">Todas las categorías</option>
+                {eventCategories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer select-none ml-auto">
+                <input
+                  type="checkbox"
+                  checked={includeDeleted}
+                  onChange={toggleIncludeDeleted}
+                  className="rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
+                />
+                Ver eliminados
+              </label>
+            </div>
+          </div>
+
+          {processedEvents.length === 0 ? (
+            <div className="p-12 flex flex-col items-center justify-center text-center">
+              <div className="text-neutral-300 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p className="text-neutral-500 text-lg font-medium">No hay eventos</p>
+              <p className="text-neutral-400 text-sm mt-1">
+                {includeDeleted ? "No se encontraron eventos eliminados." : statusFilter !== "all" || categoryFilter !== "all" || searchText ? "No hay eventos con los filtros seleccionados." : "Crea el primer evento del campus"}
+              </p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-neutral-200 bg-neutral-50">
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Título</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Fecha</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Lugar</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Categoría</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Estado</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Creador</th>
+                  <th className="text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Registrado</th>
+                  <th className="text-right text-xs font-semibold text-neutral-500 uppercase tracking-wider px-5 py-3">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {processedEvents.map((e, idx) => {
+                  if (!e || !e.id) return null;
+                  const eventDate = e.event_date ? new Date(e.event_date) : null;
+                  const createdDate = e.created_at ? new Date(e.created_at) : null;
+                  return (
+                  <tr key={e.id} className={`hover:bg-neutral-50 transition-colors ${e.deleted_at ? "opacity-60" : ""}`}>
+                    <td className="px-5 py-3 text-sm font-medium text-neutral-800">
+                      {e.title ?? "—"}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-neutral-600">
+                      {eventDate ? eventDate.toLocaleDateString("es-CO", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      }) : "—"}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-neutral-500">
+                      {e.location || "—"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(eventCategories, e.category_id)}`}>
+                        {getCategoryName(eventCategories, e.category_id)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      {getStatusBadge(e)}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-neutral-600">
+                      {e.creator_name ?? "—"}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-neutral-400">
+                      {createdDate ? createdDate.toLocaleDateString("es-CO", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      }) : "—"}
+                    </td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      {getActionButtons(e)}
+                    </td>
+                  </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 

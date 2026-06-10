@@ -87,6 +87,7 @@ export class PostgresEventRepository implements IEventRepository {
     limit: number = 20,
     includeDeleted: boolean = false,
     status?: EventStatus,
+    createdBy?: string,
   ): Promise<PaginatedResult<Event>> {
     await this.finalizeExpiredEvents();
     const safePage = Math.max(1, page);
@@ -105,6 +106,10 @@ export class PostgresEventRepository implements IEventRepository {
     if (status) {
       whereClauses.push(`e.status = $${paramIndex++}`);
       params.push(status);
+    }
+    if (createdBy) {
+      whereClauses.push(`e.created_by = $${paramIndex++}`);
+      params.push(createdBy);
     }
 
     const whereSQL =
