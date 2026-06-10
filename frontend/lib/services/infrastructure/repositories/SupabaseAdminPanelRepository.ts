@@ -348,7 +348,10 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
   }
 
   async deleteEvent(id: string): Promise<void> {
-    const { error } = await supabase.from("events").delete().eq("id", id)
+    const { error } = await supabase
+      .from("events")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id)
     if (error) throw new Error(error.message)
   }
 
