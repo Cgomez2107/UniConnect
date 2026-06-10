@@ -24,7 +24,7 @@ export class RefreshTokenUseCase {
     }
 
     // Generar nuevo access token
-    const { accessToken, refreshToken } = this.jwtService.generateTokens(user.id);
+    const { accessToken, refreshToken } = this.jwtService.generateTokens(user.id, user.role);
 
     // Guardar nuevo refresh token
     await this.tokenRepository.create({

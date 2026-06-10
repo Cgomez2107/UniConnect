@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 export interface JWTPayload {
   sub: string; // user id
+  role?: string; // user role (estudiante | admin)
   iat: number;
   exp: number;
   jti: string;
@@ -26,7 +27,7 @@ export class JWTService {
     this.refreshTokenSecret = refreshTokenSecret;
   }
 
-  generateTokens(userId: string): {
+  generateTokens(userId: string, role?: string): {
     accessToken: string;
     refreshToken: string;
     accessTokenExpiry: number;
@@ -34,14 +35,24 @@ export class JWTService {
     const now = Math.floor(Date.now() / 1000);
     const jti = randomUUID();
 
+    const accessPayload: Record<string, unknown> = {
+      sub: userId, iat: now, exp: now + this.accessTokenExpiry, jti,
+    };
+    if (role) accessPayload.role = role;
+
+    const refreshPayload: Record<string, unknown> = {
+      sub: userId, iat: now, exp: now + this.refreshTokenExpiry, jti,
+    };
+    if (role) refreshPayload.role = role;
+
     const accessToken = jwt.sign(
-      { sub: userId, iat: now, exp: now + this.accessTokenExpiry, jti },
+      accessPayload,
       this.accessTokenSecret,
       { algorithm: "HS256" }
     );
 
     const refreshToken = jwt.sign(
-      { sub: userId, iat: now, exp: now + this.refreshTokenExpiry, jti },
+      refreshPayload,
       this.refreshTokenSecret,
       { algorithm: "HS256" }
     );

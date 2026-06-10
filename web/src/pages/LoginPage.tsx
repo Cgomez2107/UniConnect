@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import { useAuthStore } from "../store/useAuthStore";
 import { apiClient } from "../lib/api/client";
@@ -12,7 +12,16 @@ export const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const location = useLocation();
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    const stateError = (location.state as { error?: string } | null)?.error;
+    if (stateError) {
+      setError(stateError);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -15,7 +15,7 @@ export class SignInUseCase {
 
   async execute(request: SignInRequest): Promise<SignInResponse> {
     if (!request.email.endsWith("@ucaldas.edu.co")) {
-      throw new ValidationError("Solo se permite inicio de sesión con correo institucional @ucaldas.edu.co");
+      throw new ValidationError("Solo se permiten correos institucionales @ucaldas.edu.co");
     }
 
     // 1. Buscar usuario en nuestra BD local (auth_users)
@@ -84,7 +84,7 @@ export class SignInUseCase {
     fullName: string,
     role: string,
   ): Promise<SignInResponse> {
-    const { accessToken, refreshToken } = this.jwtService.generateTokens(userId);
+    const { accessToken, refreshToken } = this.jwtService.generateTokens(userId, role);
 
     await this.tokenRepository.create({
       userId,
