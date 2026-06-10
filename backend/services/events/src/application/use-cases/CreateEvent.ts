@@ -35,8 +35,10 @@ export class CreateEvent {
       throw new ValidationError("La fecha del evento debe ser posterior a la fecha actual.");
     }
 
-    if (input.maxCapacity !== null && input.maxCapacity !== undefined && input.maxCapacity <= 0) {
-      throw new ValidationError("La capacidad máxima debe ser mayor a 0.");
+    if (input.maxCapacity !== null && input.maxCapacity !== undefined) {
+      if (!Number.isFinite(input.maxCapacity) || input.maxCapacity <= 0) {
+        throw new ValidationError("La capacidad máxima debe ser un número entero válido mayor a 0.");
+      }
     }
 
     if (!input.category) {

@@ -183,7 +183,9 @@ export function AdminEventosPage() {
       setModalError("Selecciona una categoría.");
       return;
     }
-    const parsedCapacity = formMaxCapacity ? parseInt(formMaxCapacity, 10) : null;
+    const parsedCapacity = formMaxCapacity
+      ? (() => { const n = parseInt(formMaxCapacity, 10); return Number.isFinite(n) && !isNaN(n) ? n : null; })()
+      : null;
     if (parsedCapacity !== null && (!Number.isFinite(parsedCapacity) || parsedCapacity < 1)) {
       setModalError("El cupo máximo debe ser un número mayor a 0.");
       return;

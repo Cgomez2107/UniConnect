@@ -122,7 +122,11 @@ export class EventsController {
         endAt: body.end_at || body.endAt || "",
         category: body.category || "academico",
         imageUrl: body.imageUrl || body.image_url || "",
-        maxCapacity: body.maxCapacity ?? body.max_capacity ?? body.capacity ?? null,
+        maxCapacity: (() => {
+          const raw = body.maxCapacity ?? body.max_capacity ?? body.capacity;
+          const num = Number(raw);
+          return raw == null ? null : (Number.isFinite(num) ? num : null);
+        })(),
       });
 
       sendData(res, 201, result);

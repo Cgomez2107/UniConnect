@@ -655,8 +655,10 @@ export function useAdmin(search: string) {
     if (!event_date)
       return setEventModal((p) => ({ ...p, error: "La fecha del evento es obligatoria." }))
 
-    const parsedCapacity = maxCapacity.trim() ? parseInt(maxCapacity.trim(), 10) : undefined
-    if (maxCapacity.trim() && (isNaN(parsedCapacity!) || parsedCapacity! <= 0))
+    const parsedCapacity = maxCapacity.trim()
+      ? (() => { const n = parseInt(maxCapacity.trim(), 10); return Number.isFinite(n) && !isNaN(n) ? n : undefined; })()
+      : undefined
+    if (parsedCapacity !== undefined && (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0))
       return setEventModal((p) => ({ ...p, error: "La capacidad máxima debe ser un número mayor a 0." }))
 
     const payload: CreateEventPayload = {

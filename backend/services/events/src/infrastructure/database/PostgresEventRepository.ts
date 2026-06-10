@@ -189,7 +189,7 @@ export class PostgresEventRepository implements IEventRepository {
       )
     ).rows[0]?.id;
 
-    const maxCap = input.maxCapacity ?? null;
+    const maxCap = (input.maxCapacity !== undefined && Number.isFinite(input.maxCapacity)) ? input.maxCapacity : null;
 
     const result = await this.pool.query<{ id: string }>(
       `

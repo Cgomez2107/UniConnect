@@ -305,6 +305,9 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
       .maybeSingle()
 
     const insertPayload: any = { ...payload }
+    if (insertPayload.maxCapacity !== undefined && (!Number.isFinite(insertPayload.maxCapacity) || isNaN(insertPayload.maxCapacity))) {
+      delete insertPayload.maxCapacity
+    }
     if (cat?.id) {
       insertPayload.category_id = cat.id
       insertPayload.category = slug
@@ -322,6 +325,9 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
 
   async updateEvent(id: string, payload: Partial<CreateEventPayload>): Promise<CampusEvent> {
     const updatePayload: any = { ...payload }
+    if (updatePayload.maxCapacity !== undefined && (!Number.isFinite(updatePayload.maxCapacity) || isNaN(updatePayload.maxCapacity))) {
+      delete updatePayload.maxCapacity
+    }
     if (payload.category) {
       const slug = slugify(payload.category)
       const { data: cat } = await supabase
