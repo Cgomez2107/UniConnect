@@ -1,55 +1,51 @@
 import { test, expect, Page } from "@playwright/test";
+import { LoginPage } from "../pages/login.page";
+import { testUsers } from "../fixtures/users";
 
 const FAKE_GROUP_ID = "e2e-test-moderation-group";
-const FAKE_USER_ID = "test-user-1";
 const GATEWAY_URL = process.env.E2E_GATEWAY_URL || "http://localhost:3000";
 const API_BASE = `${GATEWAY_URL}/api/v1`;
-
-async function setupAuthenticatedSession(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem(
-      "uniconnect-auth-session",
-      JSON.stringify({
-        state: {
-          user: {
-            id: "test-user-1",
-            email: "estudiante.prueba@ucaldas.edu.co",
-            role: "estudiante",
-            firstName: "Test",
-            lastName: "User",
-          },
-          accessToken: "e2e-fake-access-token",
-          refreshToken: "e2e-fake-refresh-token",
-          isAuthenticated: true,
-        },
-        version: 0,
-      })
-    );
-  });
-  await page.goto("/login", { waitUntil: "domcontentloaded" });
-  // Wait for React to hydrate and potentially redirect
-  await page.waitForTimeout(1000);
-}
 
 type SpamMock = { code: string; remainingMs: number } | "escalate";
 
 async function clearBlock(page: Page) {
   await page.evaluate(() => {
-    const store = (window as any).__ZUSTAND_STORE__;
-    if (store) store.getState().clearBlock();
+    const clearedState = JSON.stringify({
+      state: {
+        isBlocked: false,
+        blockUntil: null,
+        remainingTime: 0,
+        blockReason: null,
+      },
+      version: 0,
+    });
+    localStorage.setItem("spam-store", clearedState);
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "spam-store",
+        newValue: clearedState,
+      })
+    );
+  });
+  await page.waitForTimeout(500);
+}
+
+async function getUserId(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const raw = localStorage.getItem("uniconnect-auth-session");
+    if (!raw) return "";
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed?.state?.user?.id ?? "";
+    } catch {
+      return "";
+    }
   });
 }
 
-async function setupMockGroupData(page: Page, spam?: SpamMock) {
+async function setupMockGroupData(page: Page, spam?: SpamMock, userId?: string) {
+  const effectiveUserId = userId || "test-user-1";
   let postCount = 0;
-
-  await page.route(`${API_BASE}/applications*`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: [] }),
-    });
-  });
 
   await page.route(`${API_BASE}/notifications*`, async (route) => {
     await route.fulfill({
@@ -59,35 +55,35 @@ async function setupMockGroupData(page: Page, spam?: SpamMock) {
     });
   });
 
-  await page.route(`${API_BASE}/auth/**`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: null }),
-    });
-  });
-
   await page.route(`${API_BASE}/study-groups/${FAKE_GROUP_ID}`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        data: {
-          id: FAKE_GROUP_ID,
-          name: "Grupo Test Moderación E2E",
-          description: "Grupo para pruebas de moderación",
-          subject_id: "math-101",
-          subject_name: "Matemáticas",
-          state: "activa",
-          status: "activa",
-          member_count: 1,
-          max_members: 10,
-          created_by: FAKE_USER_ID,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      }),
-    });
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            id: FAKE_GROUP_ID,
+            name: "Grupo Test Moderación E2E",
+            description: "Grupo para pruebas de moderación",
+            subject_id: "math-101",
+            subject_name: "Matemáticas",
+            state: "activa",
+            status: "activa",
+            member_count: 1,
+            max_members: 10,
+            created_by: effectiveUserId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        }),
+      });
+    } else {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: {} }),
+      });
+    }
   });
 
   await page.route(`${API_BASE}/study-groups/${FAKE_GROUP_ID}/messages*`, async (route) => {
@@ -133,10 +129,10 @@ async function setupMockGroupData(page: Page, spam?: SpamMock) {
           {
             id: "member-1",
             group_id: FAKE_GROUP_ID,
-            user_id: FAKE_USER_ID,
+            user_id: effectiveUserId,
             user: {
-              id: FAKE_USER_ID,
-              email: "estudiante.prueba@ucaldas.edu.co",
+              id: effectiveUserId,
+              email: testUsers.standard.email,
               firstName: "Test",
               lastName: "User",
             },
@@ -147,15 +143,28 @@ async function setupMockGroupData(page: Page, spam?: SpamMock) {
       }),
     });
   });
+
+  await page.route(`${API_BASE}/study-groups/${FAKE_GROUP_ID}/applications*`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: [] }),
+    });
+  });
 }
 
 test.describe("US-MO02 - Moderation Notifications", () => {
   test.beforeEach(async ({ page }) => {
-    await setupAuthenticatedSession(page);
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+    await loginPage.waitForNavigation();
+    await expect(page).toHaveURL(/.*\/solicitudes/);
   });
 
   test("Criterion 1: should show inline block notification within 500ms after spam detection and preserve message text", async ({ page }) => {
-    await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 });
+    const userId = await getUserId(page);
+    await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 }, userId);
 
     await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`, { waitUntil: "domcontentloaded" });
 
@@ -181,7 +190,8 @@ test.describe("US-MO02 - Moderation Notifications", () => {
   });
 
   test("Criterion 2: should show countdown timer and disable input during block", async ({ page }) => {
-    await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 });
+    const userId = await getUserId(page);
+    await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 }, userId);
 
     await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`, { waitUntil: "domcontentloaded" });
 
@@ -201,7 +211,8 @@ test.describe("US-MO02 - Moderation Notifications", () => {
   });
 
   test("Criterion 3: should escalate case to human review after accumulating 3 blocks", async ({ page }) => {
-    await setupMockGroupData(page, "escalate");
+    const userId = await getUserId(page);
+    await setupMockGroupData(page, "escalate", userId);
 
     await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`, { waitUntil: "domcontentloaded" });
 
@@ -228,7 +239,8 @@ test.describe("US-MO02 - Moderation Notifications", () => {
   });
 
   test("Criterion 4: should show community guidelines when clicking '¿Por qué?' button", async ({ page }) => {
-    await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 });
+    const userId = await getUserId(page);
+    await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 }, userId);
 
     await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`, { waitUntil: "domcontentloaded" });
 
