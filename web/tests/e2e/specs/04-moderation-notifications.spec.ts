@@ -43,15 +43,6 @@ async function clearBlock(page: Page) {
 async function setupMockGroupData(page: Page, spam?: SpamMock) {
   let postCount = 0;
 
-  // Catch-all: return 200 for any unmocked request to prevent 401 → sessionExpired → /login
-  await page.route(`${GATEWAY_URL}/**`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: null }),
-    });
-  });
-
   await page.route(`${API_BASE}/applications*`, async (route) => {
     await route.fulfill({
       status: 200,
@@ -65,6 +56,14 @@ async function setupMockGroupData(page: Page, spam?: SpamMock) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ data: [] }),
+    });
+  });
+
+  await page.route(`${API_BASE}/auth/**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: null }),
     });
   });
 
@@ -158,7 +157,7 @@ test.describe("US-MO02 - Moderation Notifications", () => {
   test("Criterion 1: should show inline block notification within 500ms after spam detection and preserve message text", async ({ page }) => {
     await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 });
 
-    await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`);
+    await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`, { waitUntil: "domcontentloaded" });
 
     const input = page.locator('input[placeholder="Escribe un mensaje..."]');
     await expect(input).toBeVisible({ timeout: 5000 });
@@ -184,7 +183,7 @@ test.describe("US-MO02 - Moderation Notifications", () => {
   test("Criterion 2: should show countdown timer and disable input during block", async ({ page }) => {
     await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 });
 
-    await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`);
+    await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`, { waitUntil: "domcontentloaded" });
 
     const input = page.locator('input[placeholder="Escribe un mensaje..."]');
     await expect(input).toBeVisible({ timeout: 5000 });
@@ -204,7 +203,7 @@ test.describe("US-MO02 - Moderation Notifications", () => {
   test("Criterion 3: should escalate case to human review after accumulating 3 blocks", async ({ page }) => {
     await setupMockGroupData(page, "escalate");
 
-    await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`);
+    await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`, { waitUntil: "domcontentloaded" });
 
     const input = page.locator('input[placeholder="Escribe un mensaje..."]');
     await expect(input).toBeVisible({ timeout: 5000 });
@@ -231,7 +230,7 @@ test.describe("US-MO02 - Moderation Notifications", () => {
   test("Criterion 4: should show community guidelines when clicking '¿Por qué?' button", async ({ page }) => {
     await setupMockGroupData(page, { code: "MO_003", remainingMs: 300000 });
 
-    await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`);
+    await page.goto(`/grupo/${FAKE_GROUP_ID}/chat`, { waitUntil: "domcontentloaded" });
 
     const input = page.locator('input[placeholder="Escribe un mensaje..."]');
     await expect(input).toBeVisible({ timeout: 5000 });
