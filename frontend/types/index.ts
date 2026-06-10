@@ -452,6 +452,7 @@ export interface AdminEvent {
   creator_name: string;
   status?: string;          // draft | published | cancelled | finished
   deleted_at?: string | null;
+  max_capacity?: number | null;
 }
 
 

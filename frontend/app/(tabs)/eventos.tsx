@@ -61,10 +61,11 @@ function categoryLabel(slug: string): string {
 }
 
 const EventCard = memo(function EventCard({
-  item, C, onOpen, showActions, onEdit, onPublish, onCancel
+  item, C, onOpen, showActions, onEdit, onPublish, onCancel, onDelete
 }: {
   item: CampusEvent; C: typeof Colors["light"]; onOpen: (eventId: string) => void;
-  showActions?: boolean; onEdit?: (id: string) => void; onPublish?: (id: string) => void; onCancel?: (id: string) => void;
+  showActions?: boolean; onEdit?: (id: string) => void; onPublish?: (id: string) => void;
+  onCancel?: (id: string) => void; onDelete?: (id: string) => void;
 }) {
   const fadeAnim  = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(14)).current
@@ -88,6 +89,7 @@ const EventCard = memo(function EventCard({
   const handleEdit = useCallback(() => { onEdit?.(item.id) }, [onEdit, item.id])
   const handlePublish = useCallback(() => { onPublish?.(item.id) }, [onPublish, item.id])
   const handleCancel = useCallback(() => { onCancel?.(item.id) }, [onCancel, item.id])
+  const handleDelete = useCallback(() => { onDelete?.(item.id) }, [onDelete, item.id])
 
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
@@ -156,6 +158,14 @@ const EventCard = memo(function EventCard({
                 <Ionicons name="paper-plane-outline" size={14} color="#22c55e" />
                 <Text style={[styles.actionBtnText, { color: "#22c55e" }]}>Publicar</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: "#ef444420" }]}
+                onPress={handleDelete}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="trash-outline" size={14} color="#ef4444" />
+                <Text style={[styles.actionBtnText, { color: "#ef4444" }]}>Eliminar</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -223,6 +233,29 @@ export default function EventosScreen() {
     } catch (e: any) {
       Alert.alert("Error", e?.message ?? "No se pudo publicar el evento")
     }
+  }, [userId])
+
+  const handleDeleteMyEvent = useCallback(async (eventId: string) => {
+    if (!userId) return
+    Alert.alert(
+      "Eliminar borrador",
+      "¿Eliminar este borrador? Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar", style: "destructive",
+          onPress: async () => {
+            try {
+              const repo = DIContainer.getInstance().getEventRepository()
+              await repo.delete(eventId, userId)
+              setMyEvents((prev) => prev.filter((e) => e.id !== eventId))
+            } catch (e: any) {
+              Alert.alert("Error", e?.message ?? "No se pudo eliminar el evento")
+            }
+          },
+        },
+      ]
+    )
   }, [userId])
 
   const handleCancelMyEvent = useCallback(async (eventId: string) => {
@@ -327,9 +360,10 @@ export default function EventosScreen() {
         onEdit={openEditEvent}
         onPublish={handlePublishMyEvent}
         onCancel={handleCancelMyEvent}
+        onDelete={handleDeleteMyEvent}
       />
     ),
-    [C, openEvent, openEditEvent, handlePublishMyEvent, handleCancelMyEvent],
+    [C, openEvent, openEditEvent, handlePublishMyEvent, handleCancelMyEvent, handleDeleteMyEvent],
   )
 
   const handleSetFilter = useCallback(

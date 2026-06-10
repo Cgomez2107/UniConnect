@@ -271,7 +271,7 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
   async getAllEvents(includeDeleted?: boolean): Promise<AdminEvent[]> {
     const { data, error } = await supabase
       .from("events")
-      .select("id, title, event_date, location, category, category_id, created_at, status, deleted_at, creator:created_by ( full_name )")
+      .select("id, title, event_date, location, category, category_id, created_at, status, deleted_at, max_capacity, creator:created_by ( full_name )")
       .order("event_date", { ascending: true })
 
     if (error) throw new Error(error.message)
@@ -287,6 +287,7 @@ export class SupabaseAdminPanelRepository implements IAdminPanelRepository {
       creator_name: e.creator?.full_name ?? "Admin",
       status: e.status,
       deleted_at: e.deleted_at ?? null,
+      max_capacity: e.max_capacity ?? null,
     })) as AdminEvent[]
 
     if (includeDeleted) {

@@ -55,6 +55,7 @@ export interface EventModalState {
     event_date: string      // ISO string (YYYY-MM-DDTHH:mm)
     location: string
     category: string
+    maxCapacity: string
   }
   error: string
 }
@@ -82,7 +83,7 @@ const EVENT_MODAL_INIT: EventModalState = {
   visible: false,
   mode: "create",
   item: null,
-  form: { title: "", description: "", event_date: "", location: "", category: "" },
+  form: { title: "", description: "", event_date: "", location: "", category: "", maxCapacity: "" },
   error: "",
 }
 
@@ -507,6 +508,11 @@ export function useAdmin(search: string) {
   const filteredEvents = useMemo(() => {
     const q = search.toLowerCase()
     return events.filter((e) => {
+      if (includeDeleted) {
+        if (!e.deleted_at) return false
+      } else {
+        if (e.deleted_at) return false
+      }
       if (statusFilter !== "all" && (e.status ?? "published") !== statusFilter) return false
       if (categoryFilter !== "all" && e.category_id !== categoryFilter) return false
       return (
@@ -515,7 +521,7 @@ export function useAdmin(search: string) {
         e.creator_name.toLowerCase().includes(q)
       )
     })
-  }, [events, search, statusFilter, categoryFilter])
+  }, [events, search, statusFilter, categoryFilter, includeDeleted])
 
   // Acciones Usuarios
   const handleToggleUserRole = (item: AdminUser) => {
@@ -636,17 +642,22 @@ export function useAdmin(search: string) {
         event_date: item.event_date.slice(0, 16), // "YYYY-MM-DDTHH:mm"
         location: item.location ?? "",
         category: item.category,
+        maxCapacity: item.max_capacity ? String(item.max_capacity) : "",
       },
       error: "",
     })
   const closeEventModal = () => setEventModal((p) => ({ ...p, visible: false }))
 
   const saveEvent = async () => {
-    const { title, description, event_date, location, category } = eventModal.form
+    const { title, description, event_date, location, category, maxCapacity } = eventModal.form
     if (!title.trim())
       return setEventModal((p) => ({ ...p, error: "El título no puede estar vacío." }))
     if (!event_date)
       return setEventModal((p) => ({ ...p, error: "La fecha del evento es obligatoria." }))
+
+    const parsedCapacity = maxCapacity.trim() ? parseInt(maxCapacity.trim(), 10) : undefined
+    if (maxCapacity.trim() && (isNaN(parsedCapacity!) || parsedCapacity! <= 0))
+      return setEventModal((p) => ({ ...p, error: "La capacidad máxima debe ser un número mayor a 0." }))
 
     const payload: CreateEventPayload = {
       title: title.trim(),
@@ -654,6 +665,7 @@ export function useAdmin(search: string) {
       event_date: new Date(event_date).toISOString(),
       location: location.trim() || undefined,
       category,
+      maxCapacity: parsedCapacity,
     }
 
     setIsSubmitting(true)
@@ -671,6 +683,7 @@ export function useAdmin(search: string) {
           creator_name: nuevo.creator?.full_name ?? "Admin",
           status: nuevo.status ?? "draft",
           deleted_at: null,
+          max_capacity: (nuevo as any).max_capacity ?? (nuevo as any).maxCapacity ?? parsedCapacity ?? null,
         }
         setEvents((p) => [...p, adminEvt].sort(
           (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
@@ -688,6 +701,7 @@ export function useAdmin(search: string) {
           creator_name: actualizado.creator?.full_name ?? "Admin",
           status: (actualizado as any).status ?? eventModal.item?.status ?? "published",
           deleted_at: (actualizado as any).deleted_at ?? eventModal.item?.deleted_at ?? null,
+          max_capacity: (actualizado as any).max_capacity ?? (actualizado as any).maxCapacity ?? eventModal.item?.max_capacity ?? null,
         }
         setEvents((p) => p.map((e) => (e.id === adminEvt.id ? adminEvt : e)))
       }
