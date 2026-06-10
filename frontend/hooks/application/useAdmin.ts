@@ -163,11 +163,10 @@ export function useAdmin(search: string) {
         adminGateway.getAllRequests(),
         adminGateway.getAllResources(),
         adminGateway.getAdminMetrics(),
-        adminGateway.getAllEvents(),
         adminGateway.getAllEventCategories(),
       ])
 
-      const [facs, progs, subs, usrs, reqs, ress, mets, evts, cats] = result
+      const [facs, progs, subs, usrs, reqs, ress, mets, cats] = result
 
       if (facs.status === "fulfilled") setFaculties(facs.value)
       if (progs.status === "fulfilled") setPrograms(progs.value as Program[])
@@ -176,10 +175,6 @@ export function useAdmin(search: string) {
       if (reqs.status === "fulfilled") setRequests(reqs.value)
       if (ress.status === "fulfilled") setResources(ress.value)
       if (mets.status === "fulfilled") setMetrics(mets.value)
-      if (evts.status === "fulfilled") {
-        const raw = evts.value as AdminEvent[]
-        setEvents(raw.filter((e) => !e.deleted_at))
-      }
       if (cats.status === "fulfilled") setEventCategories(cats.value)
 
       const failedSections = [
@@ -190,7 +185,6 @@ export function useAdmin(search: string) {
         reqs.status === "rejected" ? "solicitudes" : null,
         ress.status === "rejected" ? "recursos" : null,
         mets.status === "rejected" ? "métricas" : null,
-        evts.status === "rejected" ? "eventos" : null,
       ].filter(Boolean)
 
       if (failedSections.length > 0) {
@@ -666,7 +660,6 @@ export function useAdmin(search: string) {
     try {
       if (eventModal.mode === "create") {
         const nuevo = await adminGateway.createEvent(payload)
-        // Construir AdminEvent aplanado
         const adminEvt: AdminEvent = {
           id: nuevo.id,
           title: nuevo.title,
@@ -676,6 +669,8 @@ export function useAdmin(search: string) {
           category_id: nuevo.category_id,
           created_at: nuevo.created_at,
           creator_name: nuevo.creator?.full_name ?? "Admin",
+          status: nuevo.status ?? "draft",
+          deleted_at: null,
         }
         setEvents((p) => [...p, adminEvt].sort(
           (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
@@ -691,6 +686,8 @@ export function useAdmin(search: string) {
           category_id: actualizado.category_id,
           created_at: actualizado.created_at,
           creator_name: actualizado.creator?.full_name ?? "Admin",
+          status: (actualizado as any).status ?? eventModal.item?.status ?? "published",
+          deleted_at: (actualizado as any).deleted_at ?? eventModal.item?.deleted_at ?? null,
         }
         setEvents((p) => p.map((e) => (e.id === adminEvt.id ? adminEvt : e)))
       }

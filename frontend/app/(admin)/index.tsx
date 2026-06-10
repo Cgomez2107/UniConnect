@@ -422,6 +422,20 @@ export default function AdminPanelScreen() {
                         }]}>Ver eliminados</Text>
                       </TouchableOpacity>
                     </View>
+
+                    {(admin.statusFilter !== "all" || admin.categoryFilter !== "all" || admin.includeDeleted) && (
+                      <TouchableOpacity
+                        style={[styles.clearFilterBtn, { borderColor: C.error }]}
+                        onPress={() => {
+                          admin.setStatusFilter("all")
+                          admin.setCategoryFilter("all")
+                          admin.setIncludeDeleted(false)
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.clearFilterBtnText, { color: C.error }]}>✕ Limpiar filtros</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </>
               }
@@ -564,4 +578,12 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   filterChipText: { fontSize: 12, fontWeight: "600" },
+  clearFilterBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: "flex-end",
+  },
+  clearFilterBtnText: { fontSize: 12, fontWeight: "600" },
 })
