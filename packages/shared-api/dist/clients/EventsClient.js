@@ -73,6 +73,12 @@ export class EventsClient extends BaseClient {
             url: `/events/${eventId}/register`,
         });
     }
+    async unregister(eventId) {
+        await this.transport.request({
+            method: "POST",
+            url: `/events/${eventId}/unregister`,
+        });
+    }
     async publish(eventId) {
         const response = await this.transport.request({
             method: "POST",

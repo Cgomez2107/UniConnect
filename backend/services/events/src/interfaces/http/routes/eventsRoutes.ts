@@ -64,6 +64,9 @@ export async function handleEventsRoutes(
   const eventRegisterMatch = requestUrl.pathname.match(
     /^\/api\/v1\/events\/([^/]+)\/register$/,
   );
+  const eventUnregisterMatch = requestUrl.pathname.match(
+    /^\/api\/v1\/events\/([^/]+)\/unregister$/,
+  );
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(res, 200, {
@@ -124,6 +127,11 @@ export async function handleEventsRoutes(
 
   if (req.method === "POST" && eventRegisterMatch) {
     await controller.register(req, res, eventRegisterMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && eventUnregisterMatch) {
+    await controller.unregister(req, res, eventUnregisterMatch[1]);
     return true;
   }
 

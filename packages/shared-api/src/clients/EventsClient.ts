@@ -105,6 +105,13 @@ export class EventsClient extends BaseClient {
     });
   }
 
+  async unregister(eventId: string): Promise<void> {
+    await this.transport.request({
+      method: "POST",
+      url: `/events/${eventId}/unregister`,
+    });
+  }
+
   async publish(eventId: string): Promise<Event> {
     const response = await this.transport.request<EventDTO>({
       method: "POST",

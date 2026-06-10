@@ -2,6 +2,7 @@ import type { Pool } from "pg";
 import type { Event, PaginatedResult } from "../../domain/entities/Event.js";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
 import type { EventStatus } from "../../domain/state/EventStatus.js";
+import { ConflictError, NotFoundError, ValidationError } from "../../../../../shared/libs/errors/index.js";
 
 interface EventRow {
   id: string;
@@ -316,18 +317,15 @@ export class PostgresEventRepository implements IEventRepository {
       await client.query("BEGIN");
 
       const eventResult = await client.query<EventRow>(
-        `SELECT status, max_capacity, registered_count FROM events WHERE id = $1 FOR UPDATE`,
+        `SELECT status, max_capacity, registered_count FROM events WHERE id = $1 AND deleted_at IS NULL`,
         [eventId],
       );
       if (eventResult.rows.length === 0) {
-        throw new Error("Event not found");
+        throw new NotFoundError("Event not found");
       }
       const event = eventResult.rows[0];
       if (event.status !== "published") {
-        throw new Error("Event is not open for registration");
-      }
-      if (event.max_capacity !== null && event.registered_count >= event.max_capacity) {
-        throw new Error("Event is full");
+        throw new ValidationError("Event is not open for registration");
       }
 
       const existing = await client.query(
@@ -335,7 +333,18 @@ export class PostgresEventRepository implements IEventRepository {
         [eventId, userId],
       );
       if (existing.rows.length > 0) {
-        throw new Error("Ya estás inscrito a este evento");
+        throw new ConflictError("Ya estás inscrito a este evento");
+      }
+
+      const updateResult = await client.query(
+        `UPDATE events 
+         SET registered_count = registered_count + 1 
+         WHERE id = $1 AND status = 'published' AND (max_capacity IS NULL OR registered_count < max_capacity)`,
+        [eventId],
+      );
+
+      if (updateResult.rowCount === 0) {
+        throw new ConflictError("Cupo agotado");
       }
 
       await client.query(
@@ -343,8 +352,31 @@ export class PostgresEventRepository implements IEventRepository {
         [eventId, userId],
       );
 
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async unregisterFromEvent(eventId: string, userId: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const deleteResult = await client.query(
+        `DELETE FROM event_registrations WHERE event_id = $1 AND user_id = $2`,
+        [eventId, userId],
+      );
+
+      if (deleteResult.rowCount === 0) {
+        throw new ValidationError("No estás registrado en este evento");
+      }
+
       await client.query(
-        `UPDATE events SET registered_count = registered_count + 1 WHERE id = $1`,
+        `UPDATE events SET registered_count = registered_count - 1 WHERE id = $1`,
         [eventId],
       );
 

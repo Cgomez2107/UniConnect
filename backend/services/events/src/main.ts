@@ -11,6 +11,7 @@ import { PublishEvent } from "./application/use-cases/PublishEvent.js";
 import { CancelEvent } from "./application/use-cases/CancelEvent.js";
 import { FinishEvent } from "./application/use-cases/FinishEvent.js";
 import { RegisterForEvent } from "./application/use-cases/RegisterForEvent.js";
+import { UnregisterFromEvent } from "./application/use-cases/UnregisterFromEvent.js";
 import { loadEventsEnv } from "./config/env.js";
 import { PostgresEventRepository } from "./infrastructure/database/PostgresEventRepository.js";
 import { PostgresEventNotificationRepository } from "./infrastructure/database/PostgresEventNotificationRepository.js";
@@ -80,6 +81,7 @@ function bootstrap(): void {
   const cancelEvent = new CancelEvent(repository, subject);
   const finishEvent = new FinishEvent(repository);
   const registerForEvent = new RegisterForEvent(repository);
+  const unregisterFromEvent = new UnregisterFromEvent(repository);
 
   const controller = new EventsController(
     pool,
@@ -93,6 +95,7 @@ function bootstrap(): void {
     cancelEvent,
     finishEvent,
     registerForEvent,
+    unregisterFromEvent,
   );
 
   const subscriptionController = new SubscriptionController(subscriptionRepository);

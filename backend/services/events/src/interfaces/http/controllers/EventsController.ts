@@ -10,6 +10,7 @@ import type { PublishEvent } from "../../../application/use-cases/PublishEvent.j
 import type { CancelEvent } from "../../../application/use-cases/CancelEvent.js";
 import type { FinishEvent } from "../../../application/use-cases/FinishEvent.js";
 import type { RegisterForEvent } from "../../../application/use-cases/RegisterForEvent.js";
+import type { UnregisterFromEvent } from "../../../application/use-cases/UnregisterFromEvent.js";
 import type { EventStatus } from "../../../domain/state/EventStatus.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
@@ -31,6 +32,7 @@ export class EventsController {
     private readonly cancelEvent: CancelEvent,
     private readonly finishEvent: FinishEvent,
     private readonly registerForEvent: RegisterForEvent,
+    private readonly unregisterFromEvent: UnregisterFromEvent,
   ) {}
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -200,6 +202,25 @@ export class EventsController {
         userId: actorUserId,
       });
       sendData(res, 200, { message: "Inscripción exitosa" });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async unregister(req: IncomingMessage, res: ServerResponse, eventId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Authentication required");
+      return;
+    }
+
+    try {
+      await this.unregisterFromEvent.execute({
+        eventId,
+        userId: actorUserId,
+      });
+      sendData(res, 200, { message: "Cancelación exitosa" });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

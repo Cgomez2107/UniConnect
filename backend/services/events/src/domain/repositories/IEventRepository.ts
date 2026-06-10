@@ -39,4 +39,6 @@ export interface IEventRepository {
   getRegisteredUsers(eventId: string): Promise<string[]>;
 
   registerForEvent(eventId: string, userId: string): Promise<void>;
+  unregisterFromEvent(eventId: string, userId: string): Promise<void>;
 }
+

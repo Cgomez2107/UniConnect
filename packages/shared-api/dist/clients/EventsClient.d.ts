@@ -26,6 +26,7 @@ export declare class EventsClient extends BaseClient {
     update(id: string, payload: Partial<CreateEventPayload>): Promise<Event>;
     delete(id: string): Promise<void>;
     register(eventId: string): Promise<void>;
+    unregister(eventId: string): Promise<void>;
     publish(eventId: string): Promise<Event>;
     cancel(eventId: string): Promise<Event>;
 }
