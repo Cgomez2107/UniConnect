@@ -1,5 +1,6 @@
 import type { Event } from "../../domain/entities/Event.js";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
+import type { UniversityEventSubject } from "../../domain/events/UniversityEventSubject.js";
 import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 
 export interface CreateEventInput {
@@ -15,7 +16,10 @@ export interface CreateEventInput {
 }
 
 export class CreateEvent {
-  constructor(private readonly repository: IEventRepository) {}
+  constructor(
+    private readonly repository: IEventRepository,
+    private readonly eventSubject?: UniversityEventSubject,
+  ) {}
 
   async execute(input: CreateEventInput): Promise<Event> {
     const title = input.title.trim();
@@ -45,7 +49,7 @@ export class CreateEvent {
       throw new ValidationError("La categoría es obligatoria.");
     }
 
-    return this.repository.create({
+    const event = await this.repository.create({
       title,
       description,
       location,
@@ -56,5 +60,28 @@ export class CreateEvent {
       imageUrl: input.imageUrl,
       maxCapacity: input.maxCapacity ?? null,
     });
+
+    if (this.eventSubject) {
+      await this.eventSubject.emit({
+        type: "NUEVO_EVENTO",
+        version: "1.0",
+        timestamp: new Date(),
+        eventId: event.id,
+        title: event.title,
+        category: event.category,
+        message: `Nuevo evento: ${event.title}`,
+        payload: {
+          eventId: event.id,
+          title: event.title,
+          description: event.description,
+          category: event.category,
+          location: event.location,
+          startAt: event.startAt,
+          organizerId: input.actorUserId,
+        },
+      });
+    }
+
+    return event;
   }
 }
