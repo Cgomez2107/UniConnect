@@ -119,6 +119,10 @@ export class ApiEventRepository implements IEventRepository {
   async cancel(eventId: string): Promise<void> {
     await fetchApi(`/events/${eventId}/cancel`, { method: "POST" });
   }
+
+  async registerForEvent(eventId: string, _userId: string): Promise<void> {
+    await fetchApi(`/events/${eventId}/register`, { method: "POST" });
+  }
 }
 
 /**
@@ -145,6 +149,7 @@ function mapEventFromApi(raw: any): CampusEvent {
     updated_at: raw.updatedAt ?? raw.updated_at,
     status: raw.status ?? "published",
     capacity: raw.maxCapacity ?? raw.capacity ?? null,
+    isRegistered: raw.isRegistered ?? false,
     creator: raw.organizerName
       ? { full_name: raw.organizerName }
       : undefined,

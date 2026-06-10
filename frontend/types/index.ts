@@ -424,6 +424,7 @@ export interface CampusEvent {
   updated_at: string;
   status?: string;          // draft | published | cancelled | finished
   capacity?: number | null; // max capacity for the event
+  isRegistered?: boolean;   // true si el usuario autenticado ya se inscribió
   // join opcional
   creator?: { full_name: string } | null;
 }

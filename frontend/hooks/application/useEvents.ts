@@ -16,16 +16,15 @@ export function useEvents() {
     else setIsLoading(true)
 
     try {
-      let data: CampusEvent[] = [];
+      const useCase = container.getGetAllEvents()
+      const allEvents = await useCase.execute()
+      const now = new Date()
+      let data: CampusEvent[]
       if (filterToLoad === "pasados") {
-        const useCase = container.getGetAllEvents()
-        const allEvents = await useCase.execute()
-        // Filtrar solo los pasados localmente
-        const now = new Date()
         data = allEvents.filter((e: CampusEvent) => new Date(e.event_date) < now)
       } else {
-        const useCase = container.getGetUpcomingEvents()
-        data = await useCase.execute()
+        // "todos" y filtros de categoría: muestra eventos futuros (publicados + cancelados)
+        data = allEvents.filter((e: CampusEvent) => new Date(e.event_date) >= now)
       }
       setEvents(data)
     } catch (error) {

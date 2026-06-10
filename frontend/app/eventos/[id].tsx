@@ -7,7 +7,7 @@ import { useEventDetailScreen } from "@/hooks/application/useEventDetailScreen"
 import { Ionicons } from "@expo/vector-icons"
 import { router, useLocalSearchParams } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import {
   Alert,
   ScrollView,
@@ -72,6 +72,9 @@ export default function EventDetail() {
   const { loading, event, formattedDate } = useEventDetailScreen(id)
   const userId = useAuthStore((s) => s.user?.id)
 
+  const [justRegistered, setJustRegistered] = useState(false)
+  const isRegistered = justRegistered || event?.isRegistered === true
+
   const categorySlug = event?.category ?? "otro"
   const catColor = categoryColor(categorySlug)
   const status = event?.status ?? "published"
@@ -120,10 +123,17 @@ export default function EventDetail() {
     if (id) router.push(`/editar-evento/${id}` as any)
   }, [id])
 
-  const handleRegister = useCallback(() => {
-    if (!id) return
-    Alert.alert("Registro", "Próximamente podrás registrarte a este evento.")
-  }, [id])
+  const handleRegister = useCallback(async () => {
+    if (!id || !userId) return
+    try {
+      const repo = DIContainer.getInstance().getEventRepository()
+      await repo.registerForEvent(id, userId)
+      setJustRegistered(true)
+      Alert.alert("Inscripción exitosa", "Te has inscrito al evento.")
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo completar la inscripción")
+    }
+  }, [id, userId])
 
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
@@ -235,8 +245,8 @@ export default function EventDetail() {
             </TouchableOpacity>
           )}
 
-          {/* Register button for non-owners */}
-          {!isOwner && status === "published" && (
+          {/* Register / Already registered button for non-owners */}
+          {!isOwner && status === "published" && !isRegistered && (
             <TouchableOpacity
               style={[styles.registerBtn, { backgroundColor: C.primary }]}
               onPress={handleRegister}
@@ -245,6 +255,12 @@ export default function EventDetail() {
               <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
               <Text style={styles.registerBtnText}>Registrarse al evento</Text>
             </TouchableOpacity>
+          )}
+          {!isOwner && status === "published" && isRegistered && (
+            <View style={[styles.registerBtn, { backgroundColor: "#22c55e" }]}>
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={styles.registerBtnText}>Ya inscrito</Text>
+            </View>
           )}
         </ScrollView>
       )}

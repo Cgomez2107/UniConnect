@@ -9,7 +9,7 @@ export class GetAllEvents {
     page?: number,
     limit?: number,
     includeDeleted?: boolean,
-    status?: EventStatus,
+    status?: EventStatus | EventStatus[],
     createdBy?: string,
   ): Promise<PaginatedResult<Event>> {
     return this.repository.list(page, limit, includeDeleted, status, createdBy);

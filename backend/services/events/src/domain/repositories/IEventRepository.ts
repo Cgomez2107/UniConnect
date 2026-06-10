@@ -6,7 +6,7 @@ export interface IEventRepository {
     page?: number,
     limit?: number,
     includeDeleted?: boolean,
-    status?: EventStatus,
+    status?: EventStatus | EventStatus[],
     createdBy?: string,
   ): Promise<PaginatedResult<Event>>;
 

@@ -16,4 +16,5 @@ export interface IEventRepository {
   updateStatus(eventId: string, status: string): Promise<void>
   publish(eventId: string): Promise<void>
   cancel(eventId: string): Promise<void>
+  registerForEvent(eventId: string, userId: string): Promise<void>
 }

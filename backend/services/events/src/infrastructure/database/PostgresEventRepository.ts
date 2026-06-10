@@ -86,7 +86,7 @@ export class PostgresEventRepository implements IEventRepository {
     page: number = 1,
     limit: number = 20,
     includeDeleted: boolean = false,
-    status?: EventStatus,
+    status?: EventStatus | EventStatus[],
     createdBy?: string,
   ): Promise<PaginatedResult<Event>> {
     await this.finalizeExpiredEvents();
@@ -104,8 +104,14 @@ export class PostgresEventRepository implements IEventRepository {
       whereClauses.push("e.deleted_at IS NULL");
     }
     if (status) {
-      whereClauses.push(`e.status = $${paramIndex++}`);
-      params.push(status);
+      if (Array.isArray(status)) {
+        const placeholders = status.map(() => `$${paramIndex++}`);
+        whereClauses.push(`e.status IN (${placeholders.join(", ")})`);
+        params.push(...status);
+      } else {
+        whereClauses.push(`e.status = $${paramIndex++}`);
+        params.push(status);
+      }
     }
     if (createdBy) {
       whereClauses.push(`e.created_by = $${paramIndex++}`);
@@ -326,8 +332,16 @@ export class PostgresEventRepository implements IEventRepository {
         throw new Error("Event is full");
       }
 
+      const existing = await client.query(
+        `SELECT 1 FROM event_registrations WHERE event_id = $1 AND user_id = $2`,
+        [eventId, userId],
+      );
+      if (existing.rows.length > 0) {
+        throw new Error("Ya estás inscrito a este evento");
+      }
+
       await client.query(
-        `INSERT INTO event_registrations (event_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        `INSERT INTO event_registrations (event_id, user_id) VALUES ($1, $2)`,
         [eventId, userId],
       );
 

@@ -92,4 +92,11 @@ export class SupabaseEventRepository implements IEventRepository {
   async updateStatus(_eventId: string, _status: string): Promise<void> {
     throw new Error("Not implemented in Supabase fallback")
   }
+
+  async registerForEvent(eventId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from("event_registrations")
+      .insert({ event_id: eventId, user_id: userId })
+    if (error) throw new Error(error.message)
+  }
 }

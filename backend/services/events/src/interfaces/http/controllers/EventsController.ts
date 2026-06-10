@@ -48,10 +48,10 @@ export class EventsController {
         const result = await this.getUpcomingEvents.execute(limit);
         sendData(res, 200, result, { total: result.length });
       } else {
-        // Public feed (no createdBy, non-admin): only published events
+        // Public feed (no createdBy, non-admin): published + cancelled visible
         // Private feed (createdBy set): all statuses for that user
         // Admin feed (isAdmin): all statuses
-        let statusFilter: EventStatus | undefined;
+        let statusFilter: EventStatus | EventStatus[] | undefined;
         if (includeDeleted) {
           statusFilter = undefined;
         } else if (createdBy) {
@@ -59,7 +59,7 @@ export class EventsController {
         } else if (isAdmin) {
           statusFilter = undefined;
         } else {
-          statusFilter = "published";
+          statusFilter = ["published", "cancelled"];
         }
 
         const result = await this.getAllEvents.execute(page, limit, includeDeleted, statusFilter, createdBy);
