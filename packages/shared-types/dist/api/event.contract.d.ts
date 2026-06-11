@@ -3,7 +3,7 @@ import type { ApiContract } from "./_base.contract.js";
 export declare const CreateEventRequestSchema: z.ZodObject<{
     body: z.ZodObject<{
         title: z.ZodString;
-        description: z.ZodString;
+        description: z.ZodDefault<z.ZodOptional<z.ZodString>>;
         eventDate: z.ZodString;
         location: z.ZodOptional<z.ZodString>;
         category: z.ZodDefault<z.ZodString>;
@@ -22,9 +22,9 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         eventUrl?: string | undefined;
         tags?: string[] | undefined;
     }, {
-        description: string;
         title: string;
         eventDate: string;
+        description?: string | undefined;
         location?: string | undefined;
         category?: string | undefined;
         capacity?: number | undefined;
@@ -46,9 +46,9 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
     };
 }, {
     body: {
-        description: string;
         title: string;
         eventDate: string;
+        description?: string | undefined;
         location?: string | undefined;
         category?: string | undefined;
         capacity?: number | undefined;
