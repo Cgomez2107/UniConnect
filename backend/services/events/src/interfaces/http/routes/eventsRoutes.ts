@@ -2,6 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { EventsController } from "../controllers/EventsController.js";
 import type { SubscriptionController } from "../controllers/SubscriptionController.js";
 import type { ZodSchema } from "zod";
+import { requireRole } from "../../../../../../shared/middleware/adminGuard.js";
+import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   const body = JSON.stringify(payload);
@@ -50,6 +52,16 @@ async function validateBody<T extends ZodSchema>(
   return true;
 }
 
+function applyAdminGuard(req: IncomingMessage, res: ServerResponse): boolean {
+  try {
+    return requireRole("admin")(req, res);
+  } catch (error) {
+    const mapped = mapErrorToHttpStatus(error);
+    sendJson(res, mapped.statusCode, { error: mapped.message });
+    return false;
+  }
+}
+
 export async function handleEventsRoutes(
   req: IncomingMessage,
   res: ServerResponse,
@@ -66,6 +78,11 @@ export async function handleEventsRoutes(
   );
   const eventUnregisterMatch = requestUrl.pathname.match(
     /^\/api\/v1\/events\/([^/]+)\/unregister$/,
+  );
+
+  const adminEventDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/admin\/events\/([^/]+)$/);
+  const adminEventActionMatch = requestUrl.pathname.match(
+    /^\/api\/v1\/admin\/events\/([^/]+)\/(publish|cancel|finish)$/,
   );
 
   if (req.method === "GET" && requestUrl.pathname === "/health") {
@@ -103,6 +120,30 @@ export async function handleEventsRoutes(
   if (req.method === "PATCH" && eventDetailMatch) {
     await controller.update(req, res, eventDetailMatch[1]);
     return true;
+  }
+
+  // ── Admin routes (strict gate) ──────────────────────────────────────────
+
+  if (req.method === "DELETE" && adminEventDetailMatch) {
+    if (!applyAdminGuard(req, res)) return true;
+    await controller.delete(req, res, adminEventDetailMatch[1]);
+    return true;
+  }
+
+  if (req.method === "POST" && adminEventActionMatch) {
+    if (!applyAdminGuard(req, res)) return true;
+    const [, eventId, action] = adminEventActionMatch;
+    switch (action) {
+      case "publish":
+        await controller.publish(req, res, eventId);
+        return true;
+      case "cancel":
+        await controller.cancel(req, res, eventId);
+        return true;
+      case "finish":
+        await controller.finish(req, res, eventId);
+        return true;
+    }
   }
 
   if (req.method === "DELETE" && eventDetailMatch) {

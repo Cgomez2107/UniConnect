@@ -266,7 +266,7 @@ function handleWebSocketUpgrade(
   wss: WebSocketServer,
   jwtMiddleware: JWTMiddleware,
 ): void {
-  wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+  wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
     const requestUrl = new URL(req.url ?? "/", "http://localhost");
     const token = requestUrl.searchParams.get("token");
 
@@ -282,7 +282,7 @@ function handleWebSocketUpgrade(
       on: () => mockRes,
     } as unknown as NodeServerResponse;
 
-    const payload = jwtMiddleware.authenticate(
+    const payload = await jwtMiddleware.authenticate(
       { ...req, headers: { ...req.headers, authorization: `Bearer ${token}` } } as IncomingMessage,
       mockRes,
     );
@@ -831,7 +831,7 @@ async function handleRequest(
   // ──────────────────────────────────────────────────────────────────────────
   // 8. JWT authentication for all other API routes
   // ──────────────────────────────────────────────────────────────────────────
-  const payload = jwtMiddleware.authenticate(req, res);
+  const payload = await jwtMiddleware.authenticate(req, res);
   if (!payload) {
     return;
   }
@@ -931,7 +931,7 @@ function validateGatewayEnv(): void {
 
 export function createGatewayServer(env: GatewayEnv) {
   validateGatewayEnv();
-  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
+  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret, env.supabaseUrl);
 
   const server = createServer((req, res) => {
     void handleRequest(req, res, env, jwtMiddleware).catch((error: unknown) => {
