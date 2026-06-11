@@ -24,8 +24,24 @@ export function useEventCategories() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    // Load immediately
     load();
+
+    // Listen for session changes (e.g. after login/session recovery)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && !cancelled) {
+        load();
+      }
+    });
+
+    return () => {
+      cancelled = false;
+      subscription.unsubscribe();
+    };
   }, [load]);
 
   return { categories, isLoading, refresh: load };
 }
+

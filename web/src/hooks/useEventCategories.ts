@@ -7,18 +7,43 @@ export function useEventCategories() {
 
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from("event_categories")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
+
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("event_categories")
+          .select("*")
+          .order("created_at", { ascending: false });
+
         if (cancelled) return;
-        if (!error && data) {
+        if (error) {
+          console.warn("[useEventCategories] Error fetching categories:", error.message);
+          return;
+        }
+        if (data) {
           setCategories(data as EventCategoryRow[]);
         }
-      });
-    return () => { cancelled = true; };
+      } catch (err: any) {
+        console.warn("[useEventCategories] Exception fetching categories:", err.message);
+      }
+    };
+
+    // Try fetching immediately
+    fetchCategories();
+
+    // Subscribe to auth state changes to refetch once session is established
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && !cancelled) {
+        fetchCategories();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return categories;
 }
+

@@ -348,7 +348,7 @@ export class PostgresEventRepository implements IEventRepository {
       }
 
       await client.query(
-        `INSERT INTO event_registrations (event_id, user_id) VALUES ($1, $2)`,
+        `INSERT INTO event_registrations (event_id, user_id, created_at) VALUES ($1, $2, NOW())`,
         [eventId, userId],
       );
 
@@ -387,5 +387,16 @@ export class PostgresEventRepository implements IEventRepository {
     } finally {
       client.release();
     }
+  }
+
+  async getUserEmail(userId: string): Promise<string | null> {
+    const result = await this.pool.query<{ email: string }>(
+      `SELECT COALESCE(p.email, u.email) AS email
+       FROM profiles p
+       LEFT JOIN auth.users u ON u.id::text = p.id::text
+       WHERE p.id = $1`,
+      [userId],
+    );
+    return result.rows[0]?.email ?? null;
   }
 }

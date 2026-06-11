@@ -79,6 +79,10 @@ const eventsService = {
     await deps.apiClients.events.register(eventId);
   },
 
+  async unregisterForEvent(eventId: string) {
+    await deps.apiClients.events.unregister(eventId);
+  },
+
   async publishEvent(eventId: string) {
     const event = await deps.apiClients.events.publish(eventId);
     return mapEvent(event);

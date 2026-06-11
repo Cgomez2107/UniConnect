@@ -422,9 +422,10 @@ export interface CampusEvent {
   created_by: string | null;
   created_at: string;
   updated_at: string;
-  status?: string;          // draft | published | cancelled | finished
-  capacity?: number | null; // max capacity for the event
-  isRegistered?: boolean;   // true si el usuario autenticado ya se inscribió
+  status?: string;           // draft | published | cancelled | finished
+  capacity?: number | null;  // cupo máximo del evento
+  registered_count?: number; // usuarios ya inscritos (desnormalizado)
+  isRegistered?: boolean;    // true si el usuario autenticado ya se inscribió
   // join opcional
   creator?: { full_name: string } | null;
 }

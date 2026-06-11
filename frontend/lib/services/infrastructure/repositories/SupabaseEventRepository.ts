@@ -99,4 +99,8 @@ export class SupabaseEventRepository implements IEventRepository {
       .insert({ event_id: eventId, user_id: userId })
     if (error) throw new Error(error.message)
   }
+
+  async unregisterFromEvent(_eventId: string, _userId: string): Promise<void> {
+    throw new Error("Not implemented in direct Supabase adapter. Please use the ApiEventRepository (Gateway/Microservice).");
+  }
 }

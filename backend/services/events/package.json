@@ -14,6 +14,7 @@
     "test:integration": "vitest run tests/integration/events.integration.spec.ts --coverage"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.105.4",
     "@uniconnect/shared-types": "file:../../../packages/shared-types",
     "pg": "^8.13.1"

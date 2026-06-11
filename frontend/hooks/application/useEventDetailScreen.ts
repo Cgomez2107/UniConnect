@@ -1,39 +1,41 @@
 import { DIContainer } from "@/lib/services/di/container";
 import type { CampusEvent } from "@/types";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useEventDetailScreen(id?: string) {
   const container = useMemo(() => DIContainer.getInstance(), []);
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<CampusEvent | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     const eventId = typeof id === "string" ? id : "";
     if (!eventId) {
       setLoading(false);
       setEvent(null);
       return;
     }
+    setLoading(true);
+    try {
+      const useCase = container.getGetEventById();
+      const result = await useCase.execute(eventId);
+      setEvent(result);
+    } catch (error) {
+      console.warn(
+        "[useEventDetailScreen] Error loading event:",
+        error instanceof Error ? error.message : String(error),
+      );
+      setEvent(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [container, id]);
 
-    const load = async () => {
-      setLoading(true);
-      try {
-        const useCase = container.getGetEventById();
-        const result = await useCase.execute(eventId);
-        setEvent(result);
-      } catch (error) {
-        console.warn("[useEventDetailScreen] Error loading event:", error instanceof Error ? error.message : String(error))
-        setEvent(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     load().catch(() => {
       setLoading(false);
       setEvent(null);
     });
-  }, [container, id]);
+  }, [load]);
 
   const formattedDate = useMemo(
     () =>
@@ -53,5 +55,7 @@ export function useEventDetailScreen(id?: string) {
     loading,
     event,
     formattedDate,
+    /** Recarga el evento desde la API (útil tras inscripción/cancelación) */
+    refreshEvent: load,
   };
 }

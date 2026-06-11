@@ -69,11 +69,12 @@ export default function EventDetail() {
   const C = Colors[scheme]
   const insets = useSafeAreaInsets()
   const { id } = useLocalSearchParams<{ id?: string }>()
-  const { loading, event, formattedDate } = useEventDetailScreen(id)
+  const { loading, event, formattedDate, refreshEvent } = useEventDetailScreen(id)
   const userId = useAuthStore((s) => s.user?.id)
 
-  const [justRegistered, setJustRegistered] = useState(false)
-  const isRegistered = justRegistered || event?.isRegistered === true
+  const [justRegistered, setJustRegistered] = useState<boolean | null>(null)
+  const [isActionLoading, setIsActionLoading] = useState(false)
+  const isRegistered = justRegistered !== null ? justRegistered : (event?.isRegistered === true)
 
   const categorySlug = event?.category ?? "otro"
   const catColor = categoryColor(categorySlug)
@@ -124,16 +125,59 @@ export default function EventDetail() {
   }, [id])
 
   const handleRegister = useCallback(async () => {
-    if (!id || !userId) return
+    if (!id || !userId || isActionLoading) return
+    setIsActionLoading(true)
     try {
       const repo = DIContainer.getInstance().getEventRepository()
       await repo.registerForEvent(id, userId)
       setJustRegistered(true)
+      await refreshEvent()  // refresca capacity en pantalla
       Alert.alert("Inscripción exitosa", "Te has inscrito al evento.")
     } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "No se pudo completar la inscripción")
+      const isConcurrencyFull = e?.status === 409 || e?.response?.status === 409 || e?.message?.includes("Cupo agotado") || e?.message?.includes("Ya estás inscrito");
+      if (isConcurrencyFull) {
+        await refreshEvent()  // muestra cupo actualizado aunque fallara
+        Alert.alert("Cupo agotado", "Lo sentimos, el cupo para este evento se agotó justo antes de completar tu registro.")
+      } else {
+        Alert.alert("Error", e?.message ?? "No se pudo completar la inscripción")
+      }
+    } finally {
+      setIsActionLoading(false)
     }
-  }, [id, userId])
+  }, [id, userId, isActionLoading, refreshEvent])
+
+  const confirmUnregister = useCallback(async () => {
+    if (!id || !userId) return
+    setIsActionLoading(true)
+    try {
+      const repo = DIContainer.getInstance().getEventRepository()
+      await repo.unregisterFromEvent(id, userId)
+      setJustRegistered(false)
+      await refreshEvent()  // refresca capacity en pantalla
+      Alert.alert("Éxito", "Has cancelado tu inscripción exitosamente. Tu cupo ha sido liberado.")
+    } catch (e: any) {
+      const isPolicyViolation = e?.status === 400 || e?.response?.status === 400 || e?.message?.includes("Política de cancelación");
+      if (isPolicyViolation) {
+        Alert.alert("Política de cancelación", "No se permiten cancelaciones a menos de 24 horas del evento. Contacta al organizador.");
+      } else {
+        Alert.alert("Error", e?.message ?? "No se pudo cancelar la inscripción")
+      }
+    } finally {
+      setIsActionLoading(false)
+    }
+  }, [id, userId, refreshEvent])
+
+  const handleUnregister = useCallback(() => {
+    if (!id || !userId || isActionLoading) return
+    Alert.alert(
+      "Cancelar inscripción",
+      "¿Estás seguro de que deseas liberar tu cupo para este evento?",
+      [
+        { text: "No", style: "cancel" },
+        { text: "Sí, cancelar", style: "destructive", onPress: confirmUnregister },
+      ]
+    )
+  }, [id, userId, isActionLoading, confirmUnregister])
 
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
@@ -187,14 +231,14 @@ export default function EventDetail() {
             </View>
           ) : null}
 
-          {event.capacity ? (
-            <View style={styles.metaRow}>
-              <Ionicons name="people-outline" size={15} color={C.textSecondary} />
-              <Text style={[styles.metaText, { color: C.textSecondary }]}>
-                Capacidad: {event.capacity} personas
-              </Text>
-            </View>
-          ) : null}
+          <View style={styles.metaRow}>
+            <Ionicons name="people-outline" size={15} color={C.textSecondary} />
+            <Text style={[styles.metaText, { color: C.textSecondary }]}>
+              {event.capacity != null
+                ? `Cupos disponibles: ${Math.max(0, event.capacity - (event.registered_count ?? 0))} / ${event.capacity}`
+                : "Cupos: Ilimitados"}
+            </Text>
+          </View>
 
           {event.creator?.full_name ? (
             <View style={styles.metaRow}>
@@ -250,17 +294,27 @@ export default function EventDetail() {
             <TouchableOpacity
               style={[styles.registerBtn, { backgroundColor: C.primary }]}
               onPress={handleRegister}
+              disabled={isActionLoading}
               activeOpacity={0.85}
             >
               <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-              <Text style={styles.registerBtnText}>Registrarse al evento</Text>
+              <Text style={styles.registerBtnText}>
+                {isActionLoading ? "Registrando..." : "Registrarse al evento"}
+              </Text>
             </TouchableOpacity>
           )}
           {!isOwner && status === "published" && isRegistered && (
-            <View style={[styles.registerBtn, { backgroundColor: "#22c55e" }]}>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.registerBtnText}>Ya inscrito</Text>
-            </View>
+            <TouchableOpacity
+              style={[styles.registerBtn, { backgroundColor: "#ef4444" }]}
+              onPress={handleUnregister}
+              disabled={isActionLoading}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="close-circle-outline" size={20} color="#fff" />
+              <Text style={styles.registerBtnText}>
+                {isActionLoading ? "Cancelando..." : "Cancelar inscripción"}
+              </Text>
+            </TouchableOpacity>
           )}
         </ScrollView>
       )}

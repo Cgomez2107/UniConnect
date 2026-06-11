@@ -24,6 +24,7 @@ import { EventsController } from "./interfaces/http/controllers/EventsController
 import { SubscriptionController } from "./interfaces/http/controllers/SubscriptionController.js";
 import { handleEventsRoutes } from "./interfaces/http/routes/eventsRoutes.js";
 import { SupabaseRealtimeEventGateway } from "./infrastructure/realtime/SupabaseRealtimeEventGateway.js";
+import { SendGridEmailGateway } from "./infrastructure/gateways/SendGridEmailGateway.js";
 
 function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message });
@@ -80,7 +81,15 @@ function bootstrap(): void {
   const publishEvent = new PublishEvent(repository, subscriptionRepository, notificationRepository, socketGateway);
   const cancelEvent = new CancelEvent(repository, subject);
   const finishEvent = new FinishEvent(repository);
-  const registerForEvent = new RegisterForEvent(repository);
+
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
+  const emailFrom = process.env.EMAIL_FROM;
+  const emailFromName = process.env.EMAIL_FROM_NAME ?? "UniConnect";
+  const emailGateway = sendgridApiKey && emailFrom
+    ? new SendGridEmailGateway(sendgridApiKey, emailFrom, emailFromName)
+    : null;
+
+  const registerForEvent = new RegisterForEvent(repository, notificationRepository, socketGateway, emailGateway);
   const unregisterFromEvent = new UnregisterFromEvent(repository);
 
   const controller = new EventsController(
