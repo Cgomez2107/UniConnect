@@ -1,7 +1,7 @@
 import { SupabaseEventRepository } from "./SupabaseEventRepository";
 import { fetchApi } from "@/lib/api/httpClient";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository";
-import type { CampusEvent } from "@/types";
+import type { CampusEvent, EventListFilters, EventListResponse } from "@/types";
 
 /**
  * Repositorio de eventos que delega al microservicio events vía gateway.
@@ -127,6 +127,39 @@ export class ApiEventRepository implements IEventRepository {
   async unregisterFromEvent(eventId: string, _userId: string): Promise<void> {
     await fetchApi(`/events/${eventId}/unregister`, { method: "POST" });
   }
+
+  async listEvents(filters?: EventListFilters): Promise<EventListResponse> {
+    const params = new URLSearchParams();
+    if (filters?.page) params.set("page", String(filters.page));
+    if (filters?.limit) params.set("limit", String(filters.limit));
+    if (filters?.search) params.set("search", filters.search);
+    if (filters?.categories?.length) params.set("categories", filters.categories.join(","));
+    if (filters?.startDate) params.set("startDate", filters.startDate);
+    if (filters?.endDate) params.set("endDate", filters.endDate);
+    if (filters?.status) params.set("status", filters.status);
+
+    const qs = params.toString();
+    const endpoint = qs ? `/events?${qs}` : "/events";
+
+    try {
+      const raw: any = await fetchApi<any>(endpoint);
+      const data: CampusEvent[] = (raw.data ?? raw ?? []).map(mapEventFromApi);
+      const meta = raw.meta ?? { total: data.length, page: filters?.page ?? 1, limit: filters?.limit ?? 10, totalPages: 1 };
+      return { data, meta };
+    } catch (error) {
+      const fallback = this.fallback;
+      const all = await fallback.getAllEvents();
+      const total = all.length;
+      const page = filters?.page ?? 1;
+      const limit = filters?.limit ?? 10;
+      const start = (page - 1) * limit;
+      const sliced = all.slice(start, start + limit);
+      return {
+        data: sliced,
+        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      };
+    }
+  }
 }
 
 /**
@@ -155,6 +188,7 @@ function mapEventFromApi(raw: any): CampusEvent {
     capacity: raw.maxCapacity ?? raw.capacity ?? null,
     registered_count: raw.registeredCount ?? raw.registered_count ?? 0,
     isRegistered: raw.isRegistered ?? false,
+    isFull: raw.isFull ?? false,
     creator: raw.organizerName
       ? { full_name: raw.organizerName }
       : undefined,

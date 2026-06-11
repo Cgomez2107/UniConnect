@@ -13,7 +13,7 @@ type UseCaseStub = { execute: ReturnType<typeof vi.fn> };
 function buildEventsServer() {
   const mockPool = { query: vi.fn() } as never;
 
-  const sampleEvent = {
+  const baseEvent = {
     id: UUID,
     title: "Seminario de Redes",
     description: "Charla sobre redes",
@@ -30,27 +30,37 @@ function buildEventsServer() {
     maxCapacity: 100,
     registeredCount: 0,
     deletedAt: null,
+    isFull: false,
   };
 
   const getAllEvents: UseCaseStub = {
     execute: vi.fn().mockResolvedValue({
-      data: [sampleEvent],
+      data: [baseEvent],
       total: 1, page: 1, limit: 20, totalPages: 1,
     }),
   };
+  const listEvents: UseCaseStub = {
+    execute: vi.fn().mockResolvedValue({
+      data: [baseEvent],
+      total: 1, page: 1, limit: 10, totalPages: 1,
+    }),
+  };
   const getUpcomingEvents: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue([sampleEvent]),
+    execute: vi.fn().mockResolvedValue([baseEvent]),
   };
   const getEventById: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue(sampleEvent),
+    execute: vi.fn().mockResolvedValue(baseEvent),
   };
   const createEvent: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue(sampleEvent),
+    execute: vi.fn().mockResolvedValue(baseEvent),
   };
   const deleteEvent: UseCaseStub = {
     execute: vi.fn().mockResolvedValue(undefined),
   };
   const registerForEvent: UseCaseStub = {
+    execute: vi.fn().mockResolvedValue(undefined),
+  };
+  const unregisterFromEvent: UseCaseStub = {
     execute: vi.fn().mockResolvedValue(undefined),
   };
 
@@ -64,7 +74,7 @@ function buildEventsServer() {
       if (!authGuardStub(input)) {
         throw new AuthorizationError("Solo el organizador o un administrador pueden editar este evento.");
       }
-      return sampleEvent;
+      return baseEvent;
     }),
   };
   const publishEvent: UseCaseStub = {
@@ -72,7 +82,7 @@ function buildEventsServer() {
       if (!authGuardStub(input)) {
         throw new AuthorizationError("Solo el organizador o un administrador pueden publicar el evento.");
       }
-      return sampleEvent;
+      return baseEvent;
     }),
   };
   const cancelEvent: UseCaseStub = {
@@ -80,7 +90,7 @@ function buildEventsServer() {
       if (!authGuardStub(input)) {
         throw new AuthorizationError("Solo el organizador o un administrador pueden cancelar el evento.");
       }
-      return sampleEvent;
+      return baseEvent;
     }),
   };
   const finishEvent: UseCaseStub = {
@@ -88,13 +98,14 @@ function buildEventsServer() {
       if (!authGuardStub(input)) {
         throw new AuthorizationError("Solo el organizador o un administrador pueden finalizar el evento.");
       }
-      return sampleEvent;
+      return baseEvent;
     }),
   };
 
   const controller = new EventsController(
     mockPool,
     getAllEvents as never,
+    listEvents as never,
     getUpcomingEvents as never,
     getEventById as never,
     createEvent as never,
@@ -104,6 +115,7 @@ function buildEventsServer() {
     cancelEvent as never,
     finishEvent as never,
     registerForEvent as never,
+    unregisterFromEvent as never,
   );
 
   return { server: createEventsServer(controller), deleteEvent, updateEvent, publishEvent, cancelEvent, finishEvent };

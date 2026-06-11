@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { createHash } from "node:crypto";
 import type { Duplex } from "node:stream";
 import { GetAllEvents } from "./application/use-cases/GetAllEvents.js";
+import { ListEventsUseCase } from "./application/use-cases/ListEventsUseCase.js";
 import { GetUpcomingEvents } from "./application/use-cases/GetUpcomingEvents.js";
 import { GetEventById } from "./application/use-cases/GetEventById.js";
 import { CreateEvent } from "./application/use-cases/CreateEvent.js";
@@ -73,6 +74,7 @@ function bootstrap(): void {
   subject.subscribe(cancellationObserver);
 
   const getAllEvents = new GetAllEvents(repository);
+  const listEvents = new ListEventsUseCase(repository);
   const getUpcomingEvents = new GetUpcomingEvents(repository);
   const getEventById = new GetEventById(repository);
   const createEvent = new CreateEvent(repository);
@@ -95,6 +97,7 @@ function bootstrap(): void {
   const controller = new EventsController(
     pool,
     getAllEvents,
+    listEvents,
     getUpcomingEvents,
     getEventById,
     createEvent,

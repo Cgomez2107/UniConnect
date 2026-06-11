@@ -16,11 +16,25 @@ export interface ListEventsFilters {
     page?: number;
     perPage?: number;
     createdBy?: string;
+    search?: string;
+    categories?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
 }
 export declare class EventsClient extends BaseClient {
     private transport;
     constructor(transport: ITransport);
     list(filters?: ListEventsFilters): Promise<Event[]>;
+    listPaginated(filters?: ListEventsFilters): Promise<{
+        data: any[];
+        meta: {
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+        };
+    }>;
     getById(id: string): Promise<Event>;
     create(payload: CreateEventPayload): Promise<Event>;
     update(id: string, payload: Partial<CreateEventPayload>): Promise<Event>;

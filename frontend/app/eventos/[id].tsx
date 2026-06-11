@@ -292,14 +292,14 @@ export default function EventDetail() {
           {/* Register / Already registered button for non-owners */}
           {!isOwner && status === "published" && !isRegistered && (
             <TouchableOpacity
-              style={[styles.registerBtn, { backgroundColor: C.primary }]}
+              style={[styles.registerBtn, { backgroundColor: event.isFull ? "#9ca3af" : C.primary }]}
               onPress={handleRegister}
-              disabled={isActionLoading}
+              disabled={isActionLoading || event.isFull}
               activeOpacity={0.85}
             >
-              <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+              <Ionicons name={event.isFull ? "close-circle-outline" : "checkmark-circle-outline"} size={20} color="#fff" />
               <Text style={styles.registerBtnText}>
-                {isActionLoading ? "Registrando..." : "Registrarse al evento"}
+                {event.isFull ? "Cupo agotado" : isActionLoading ? "Registrando..." : "Registrarse al evento"}
               </Text>
             </TouchableOpacity>
           )}

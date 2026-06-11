@@ -215,7 +215,7 @@ export class FetchTransport extends BaseTransport {
                 }
                 throw error;
             }
-            const data = this.unwrapDataEnvelope(rawData);
+            const data = options.unwrapEnvelope === false ? rawData : this.unwrapDataEnvelope(rawData);
             if (options.responseSchema) {
                 this.validateResponse(options.method, options.url, data, options.responseSchema);
             }

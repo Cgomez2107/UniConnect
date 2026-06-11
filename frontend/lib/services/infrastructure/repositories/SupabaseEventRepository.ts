@@ -1,6 +1,6 @@
 import type { IEventRepository } from "../../domain/repositories/IEventRepository"
 import { supabase } from "@/lib/supabase"
-import type { CampusEvent } from "@/types"
+import type { CampusEvent, EventListFilters, EventListResponse } from "@/types"
 
 /**
  * Supabase implementation of IEventRepository.
@@ -102,5 +102,43 @@ export class SupabaseEventRepository implements IEventRepository {
 
   async unregisterFromEvent(_eventId: string, _userId: string): Promise<void> {
     throw new Error("Not implemented in direct Supabase adapter. Please use the ApiEventRepository (Gateway/Microservice).");
+  }
+
+  async listEvents(filters?: EventListFilters): Promise<EventListResponse> {
+    let query = supabase
+      .from("events")
+      .select("*, creator:created_by ( full_name )", { count: "exact" })
+      .order("event_date", { ascending: true });
+
+    if (filters?.categories?.length) {
+      query = query.in("category", filters.categories);
+    }
+    if (filters?.search) {
+      query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    }
+    if (filters?.startDate) {
+      query = query.gte("event_date", filters.startDate);
+    }
+    if (filters?.endDate) {
+      query = query.lte("event_date", filters.endDate);
+    }
+    if (filters?.status) {
+      query = query.eq("status", filters.status);
+    }
+
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 10;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+    if (error) throw new Error(error.message);
+
+    const total = count ?? data?.length ?? 0;
+    return {
+      data: (data ?? []) as CampusEvent[],
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 }

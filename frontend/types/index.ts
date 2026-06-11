@@ -426,8 +426,34 @@ export interface CampusEvent {
   capacity?: number | null;  // cupo máximo del evento
   registered_count?: number; // usuarios ya inscritos (desnormalizado)
   isRegistered?: boolean;    // true si el usuario autenticado ya se inscribió
+  isFull?: boolean;          // true si el cupo está agotado
   // join opcional
   creator?: { full_name: string } | null;
+}
+
+/** Metadatos de paginación devueltos por el backend */
+export interface EventListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/** Respuesta completa del endpoint de listado paginado */
+export interface EventListResponse {
+  data: CampusEvent[];
+  meta: EventListMeta;
+}
+
+/** Filtros para listar eventos paginados */
+export interface EventListFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categories?: string[];
+  startDate?: string;
+  endDate?: string;
+  status?: string;
 }
 
 /** Payload para crear/editar un evento */

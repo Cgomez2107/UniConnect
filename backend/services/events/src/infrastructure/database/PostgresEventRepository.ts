@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import type { Event, PaginatedResult } from "../../domain/entities/Event.js";
+import type { Event, PaginatedResult, ListEventsFilter } from "../../domain/entities/Event.js";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
 import type { EventStatus } from "../../domain/state/EventStatus.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../../../../shared/libs/errors/index.js";
@@ -42,6 +42,7 @@ function mapEvent(row: EventRow): Event {
     maxCapacity: row.max_capacity ?? null,
     registeredCount: row.registered_count,
     deletedAt: row.deleted_at ? new Date(row.deleted_at).toISOString() : null,
+    isFull: row.max_capacity !== null && row.registered_count >= row.max_capacity,
   };
 }
 
@@ -83,17 +84,28 @@ export class PostgresEventRepository implements IEventRepository {
     }
   }
 
-  async list(
-    page: number = 1,
-    limit: number = 20,
-    includeDeleted: boolean = false,
-    status?: EventStatus | EventStatus[],
-    createdBy?: string,
-  ): Promise<PaginatedResult<Event>> {
+  async list(filter?: ListEventsFilter): Promise<PaginatedResult<Event>> {
     await this.finalizeExpiredEvents();
+
+    const page = filter?.page ?? 1;
+    const limit = filter?.limit ?? 10;
+    const includeDeleted = filter?.includeDeleted ?? false;
+    const status = filter?.status;
+    const createdBy = filter?.createdBy;
+    const categories = filter?.categories;
+    const search = filter?.search;
+    const startDate = filter?.startDate;
+    const endDate = filter?.endDate;
+    const sortBy = filter?.sortBy ?? "event_date";
+    const order = filter?.order ?? "ASC";
+
     const safePage = Math.max(1, page);
     const safeLimit = Math.min(Math.max(1, limit), 100);
     const offset = (safePage - 1) * safeLimit;
+
+    const allowedSortColumns = ["event_date", "created_at", "title"];
+    const safeSortBy = allowedSortColumns.includes(sortBy) ? sortBy : "event_date";
+    const safeOrder = order === "DESC" ? "DESC" : "ASC";
 
     const whereClauses: string[] = [];
     const params: any[] = [];
@@ -104,6 +116,7 @@ export class PostgresEventRepository implements IEventRepository {
     } else {
       whereClauses.push("e.deleted_at IS NULL");
     }
+
     if (status) {
       if (Array.isArray(status)) {
         const placeholders = status.map(() => `$${paramIndex++}`);
@@ -114,9 +127,33 @@ export class PostgresEventRepository implements IEventRepository {
         params.push(status);
       }
     }
+
     if (createdBy) {
       whereClauses.push(`e.created_by = $${paramIndex++}`);
       params.push(createdBy);
+    }
+
+    if (categories && categories.length > 0) {
+      const placeholders = categories.map(() => `$${paramIndex++}`);
+      whereClauses.push(`e.category IN (${placeholders.join(", ")})`);
+      params.push(...categories);
+    }
+
+    if (search && search.trim().length > 0) {
+      const searchPattern = `%${search.trim()}%`;
+      whereClauses.push(`(e.title ILIKE $${paramIndex} OR e.description ILIKE $${paramIndex})`);
+      params.push(searchPattern);
+      paramIndex++;
+    }
+
+    if (startDate) {
+      whereClauses.push(`e.event_date >= $${paramIndex++}`);
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push(`e.event_date <= $${paramIndex++}`);
+      params.push(endDate);
     }
 
     const whereSQL =
@@ -135,7 +172,7 @@ export class PostgresEventRepository implements IEventRepository {
     const result = await this.pool.query<EventRow>(
       `${SELECT_EVENTS}
        ${whereSQL}
-       ORDER BY e.event_date DESC
+       ORDER BY e.${safeSortBy} ${safeOrder}
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
       params,
     );

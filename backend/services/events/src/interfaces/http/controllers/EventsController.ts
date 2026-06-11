@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
+import type { ListEventsFilter } from "../../../domain/entities/Event.js";
 import type { GetAllEvents } from "../../../application/use-cases/GetAllEvents.js";
+import type { ListEventsUseCase } from "../../../application/use-cases/ListEventsUseCase.js";
 import type { GetUpcomingEvents } from "../../../application/use-cases/GetUpcomingEvents.js";
 import type { GetEventById } from "../../../application/use-cases/GetEventById.js";
 import type { CreateEvent } from "../../../application/use-cases/CreateEvent.js";
@@ -24,6 +26,7 @@ export class EventsController {
   constructor(
     private readonly pool: Pool,
     private readonly getAllEvents: GetAllEvents,
+    private readonly listEvents: ListEventsUseCase,
     private readonly getUpcomingEvents: GetUpcomingEvents,
     private readonly getEventById: GetEventById,
     private readonly createEvent: CreateEvent,
@@ -39,10 +42,21 @@ export class EventsController {
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const requestUrl = new URL(req.url ?? "/", "http://localhost");
     const upcoming = requestUrl.searchParams.get("upcoming") === "true";
+
     const page = parseInt(requestUrl.searchParams.get("page") ?? "1", 10);
-    const limit = parseInt(requestUrl.searchParams.get("limit") ?? "20", 10);
+    const limit = parseInt(requestUrl.searchParams.get("limit") ?? "10", 10);
     const includeDeleted = requestUrl.searchParams.get("include_deleted") === "true";
     const createdBy = requestUrl.searchParams.get("created_by") ?? requestUrl.searchParams.get("createdBy") ?? undefined;
+
+    const categoriesRaw = requestUrl.searchParams.get("categories");
+    const categories = categoriesRaw
+      ? categoriesRaw.split(",").map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
+    const searchRaw = requestUrl.searchParams.get("search");
+    const search = searchRaw && searchRaw.trim().length > 0 ? searchRaw.trim() : undefined;
+    const startDate = requestUrl.searchParams.get("startDate") ?? undefined;
+    const endDate = requestUrl.searchParams.get("endDate") ?? undefined;
 
     const isAdmin = await isAdminUser(req, this.pool);
     const effectiveIncludeDeleted = isAdmin ? includeDeleted : false;
@@ -52,9 +66,6 @@ export class EventsController {
         const result = await this.getUpcomingEvents.execute(limit);
         sendData(res, 200, result, { total: result.length });
       } else {
-        // Public feed (no createdBy, non-admin): published + cancelled visible
-        // Private feed (createdBy set): all statuses for that user
-        // Admin feed (isAdmin): all statuses
         let statusFilter: EventStatus | EventStatus[] | undefined;
         if (effectiveIncludeDeleted) {
           statusFilter = undefined;
@@ -66,7 +77,19 @@ export class EventsController {
           statusFilter = ["published", "cancelled"];
         }
 
-        const result = await this.getAllEvents.execute(page, limit, effectiveIncludeDeleted, statusFilter, createdBy);
+        const filter: ListEventsFilter = {
+          page,
+          limit,
+          includeDeleted: effectiveIncludeDeleted,
+          status: statusFilter,
+          createdBy,
+          categories,
+          search,
+          startDate,
+          endDate,
+        };
+
+        const result = await this.listEvents.execute(filter);
         sendData(res, 200, result.data, {
           total: result.total,
           page: result.page,

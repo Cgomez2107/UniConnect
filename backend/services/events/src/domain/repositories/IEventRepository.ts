@@ -1,14 +1,8 @@
-import type { Event, PaginatedResult } from "../entities/Event.js";
+import type { Event, PaginatedResult, ListEventsFilter } from "../entities/Event.js";
 import type { EventStatus } from "../state/EventStatus.js";
 
 export interface IEventRepository {
-  list(
-    page?: number,
-    limit?: number,
-    includeDeleted?: boolean,
-    status?: EventStatus | EventStatus[],
-    createdBy?: string,
-  ): Promise<PaginatedResult<Event>>;
+  list(filter?: ListEventsFilter): Promise<PaginatedResult<Event>>;
 
   getUpcomingEvents(limit?: number): Promise<Event[]>;
 

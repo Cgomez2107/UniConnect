@@ -20,6 +20,7 @@ export interface Event {
   readonly maxCapacity: number | null;
   readonly registeredCount: number;
   readonly deletedAt: string | null;
+  readonly isFull: boolean;
 }
 
 export interface PaginatedResult<T> {
@@ -28,4 +29,18 @@ export interface PaginatedResult<T> {
   readonly page: number;
   readonly limit: number;
   readonly totalPages: number;
+}
+
+export interface ListEventsFilter {
+  page?: number;
+  limit?: number;
+  status?: LifecycleStatus | LifecycleStatus[];
+  createdBy?: string;
+  includeDeleted?: boolean;
+  categories?: string[];
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  order?: "ASC" | "DESC";
+  sortBy?: "event_date" | "created_at" | "title";
 }

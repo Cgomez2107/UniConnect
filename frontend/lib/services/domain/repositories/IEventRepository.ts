@@ -1,5 +1,5 @@
 import type { Event } from "../entities/Event"
-import type { CampusEvent } from "@/types"
+import type { CampusEvent, EventListFilters, EventListResponse } from "@/types"
 
 /**
  * Interface for Event repository.
@@ -18,4 +18,5 @@ export interface IEventRepository {
   cancel(eventId: string): Promise<void>
   registerForEvent(eventId: string, userId: string): Promise<void>
   unregisterFromEvent(eventId: string, userId: string): Promise<void>
+  listEvents(filters?: EventListFilters): Promise<EventListResponse>
 }
