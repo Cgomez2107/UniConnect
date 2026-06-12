@@ -385,7 +385,7 @@ export class PostgresEventRepository implements IEventRepository {
       }
 
       await client.query(
-        `INSERT INTO event_registrations (event_id, user_id, created_at) VALUES ($1, $2, NOW())`,
+        `INSERT INTO event_registrations (id, qr_token, event_id, user_id, created_at) VALUES (gen_random_uuid(), gen_random_uuid(), $1, $2, NOW())`,
         [eventId, userId],
       );
 

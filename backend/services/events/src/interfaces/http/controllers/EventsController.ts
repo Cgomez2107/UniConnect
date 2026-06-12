@@ -57,6 +57,7 @@ export class EventsController {
     const search = searchRaw && searchRaw.trim().length > 0 ? searchRaw.trim() : undefined;
     const startDate = requestUrl.searchParams.get("startDate") ?? undefined;
     const endDate = requestUrl.searchParams.get("endDate") ?? undefined;
+    const statusRaw = requestUrl.searchParams.get("status");
 
     const isAdmin = await isAdminUser(req, this.pool);
     const effectiveIncludeDeleted = isAdmin ? includeDeleted : false;
@@ -67,7 +68,12 @@ export class EventsController {
         sendData(res, 200, result, { total: result.length });
       } else {
         let statusFilter: EventStatus | EventStatus[] | undefined;
-        if (effectiveIncludeDeleted) {
+        if (statusRaw) {
+          const allowedStatuses: EventStatus[] = ["draft", "published", "cancelled", "finished"];
+          const parsed = statusRaw.split(",").map((s) => s.trim().toLowerCase())
+            .filter((s): s is EventStatus => (allowedStatuses as string[]).includes(s));
+          statusFilter = parsed.length > 0 ? parsed : undefined;
+        } else if (effectiveIncludeDeleted) {
           statusFilter = undefined;
         } else if (createdBy) {
           statusFilter = undefined;
