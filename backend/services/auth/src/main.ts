@@ -316,35 +316,33 @@ async function main() {
         sendOAuthUrl(res, redirectTo);
       }
     } else if (method === "POST" && path === "/oauth/callback") {
-      // Endpoint para intercambiar token de Supabase por JWT del backend
       let body = "";
       req.on("data", (chunk) => {
         body += chunk.toString();
       });
       req.on("end", async () => {
         try {
-          const { accessToken, email } = JSON.parse(body);
-          
-          if (!accessToken || !email) {
+          const { accessToken } = JSON.parse(body);
+
+          if (!accessToken) {
             res.writeHead(400);
-            res.end(JSON.stringify({ error: "Missing accessToken or email" }));
+            res.end(JSON.stringify({ error: "Missing accessToken" }));
             return;
           }
 
-          // Obtener el ID real del usuario en Supabase Auth
-          // Primero: decodificar el JWT localmente (más confiable, sin llamada HTTP)
           const decoded = decodeSupabaseToken(accessToken);
           let supabaseUserId: string | undefined = decoded?.sub;
+          let email = decoded?.email || "";
 
-          // Fallback: si el JWT no se pudo decodificar, intentar vía API
           if (!supabaseUserId) {
             try {
               const supabaseUserResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
                 headers: { Authorization: `Bearer ${accessToken}` },
               });
               if (supabaseUserResponse.ok) {
-                const supabaseUser = await supabaseUserResponse.json() as { id: string };
+                const supabaseUser = await supabaseUserResponse.json() as { id: string; email?: string };
                 supabaseUserId = supabaseUser.id;
+                email = supabaseUser.email || email;
               }
             } catch {
               console.warn("Supabase user fetch fallback also failed");
@@ -354,6 +352,12 @@ async function main() {
           if (!supabaseUserId) {
             res.writeHead(400);
             res.end(JSON.stringify({ error: "Could not resolve Supabase user ID from token" }));
+            return;
+          }
+
+          if (!email.endsWith("@ucaldas.edu.co")) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: "El correo electrónico debe pertenecer al dominio institucional (@ucaldas.edu.co)" }));
             return;
           }
 
@@ -371,10 +375,8 @@ async function main() {
             });
           }
 
-          // Generar JWT del backend
-          const { accessToken: jwtToken, refreshToken } = jwtService.generateTokens(user.id);
+          const { accessToken: jwtToken, refreshToken } = jwtService.generateTokens(user.id, user.role);
 
-          // Crear perfil si es usuario nuevo
           if (isNewUser) {
             try {
               await createProfile(user.id, user.fullName || email.split("@")[0]);
@@ -383,11 +385,10 @@ async function main() {
             }
           }
 
-          // Guardar refresh token
           await tokenRepository.create({
             userId: user.id,
             token: refreshToken,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           });
 
           res.writeHead(200);

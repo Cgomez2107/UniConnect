@@ -8,6 +8,7 @@ import type { GatewayEnv } from "../shared/config/env.js";
 import { proxyRequest, type ProxyResponse } from "../shared/http/proxyRequest.js";
 import { sendJson } from "../shared/http/sendJson.js";
 import { JWTMiddleware, type JWTPayload } from "../middleware/JWTMiddleware.js";
+import { RoleGuard } from "../middleware/RoleGuard.js";
 
 const PUBLIC_PATHS = new Set([
   "/docs",
@@ -174,6 +175,10 @@ function isAuthRoute(pathname: string): boolean {
   return pathname.startsWith("/api/v1/auth");
 }
 
+function isAdminRoute(pathname: string): boolean {
+  return pathname.startsWith("/api/v1/admin");
+}
+
 const setHeader = (res: NodeServerResponse, name: string, value: string) => {
   res.setHeader(name, value);
 };
@@ -266,7 +271,7 @@ function handleWebSocketUpgrade(
   wss: WebSocketServer,
   jwtMiddleware: JWTMiddleware,
 ): void {
-  wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+  wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
     const requestUrl = new URL(req.url ?? "/", "http://localhost");
     const token = requestUrl.searchParams.get("token");
 
@@ -282,7 +287,7 @@ function handleWebSocketUpgrade(
       on: () => mockRes,
     } as unknown as NodeServerResponse;
 
-    const payload = jwtMiddleware.authenticate(
+    const payload = await jwtMiddleware.authenticate(
       { ...req, headers: { ...req.headers, authorization: `Bearer ${token}` } } as IncomingMessage,
       mockRes,
     );
@@ -831,7 +836,7 @@ async function handleRequest(
   // ──────────────────────────────────────────────────────────────────────────
   // 8. JWT authentication for all other API routes
   // ──────────────────────────────────────────────────────────────────────────
-  const payload = jwtMiddleware.authenticate(req, res);
+  const payload = await jwtMiddleware.authenticate(req, res);
   if (!payload) {
     return;
   }
@@ -890,6 +895,15 @@ async function handleRequest(
     return;
   }
 
+  if (isAdminRoute(requestUrl.pathname)) {
+    const roleGuard = new RoleGuard();
+    if (!roleGuard.authorize(payload, res)) {
+      return;
+    }
+    await proxyRequest(req, res, env.eventsBaseUrl);
+    return;
+  }
+
   sendJson(res, 404, {
     error: "Route not found",
     path: requestUrl.pathname,
@@ -931,7 +945,7 @@ function validateGatewayEnv(): void {
 
 export function createGatewayServer(env: GatewayEnv) {
   validateGatewayEnv();
-  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
+  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret, env.supabaseUrl);
 
   const server = createServer((req, res) => {
     void handleRequest(req, res, env, jwtMiddleware).catch((error: unknown) => {

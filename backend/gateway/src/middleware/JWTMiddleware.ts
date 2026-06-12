@@ -1,45 +1,47 @@
 import { IncomingMessage, ServerResponse } from "node:http";
+import jwt from "jsonwebtoken";
+import type { SigningKey } from "jwks-rsa";
+import { JwksClient } from "jwks-rsa";
 import { sendJson } from "../shared/http/sendJson.js";
 
 export interface JWTPayload {
-  sub: string; // user id
+  sub: string;
   role?: string;
   iat: number;
   exp: number;
 }
 
-/**
- * JWT Middleware para validar tokens en el gateway
- * Este middleware es usado por rutas protegidas que lo requieren
- */
 export class JWTMiddleware {
   private readonly accessTokenSecret: string;
+  private readonly jwksClient: JwksClient | null;
 
-  constructor(accessTokenSecret: string) {
+  constructor(accessTokenSecret: string, supabaseUrl?: string) {
     if (!accessTokenSecret) {
       throw new Error("JWT_ACCESS_SECRET is required");
     }
 
     this.accessTokenSecret = accessTokenSecret;
+
+    if (supabaseUrl) {
+      const baseUrl = supabaseUrl.replace(/\/+$/, "");
+      this.jwksClient = new JwksClient({
+        jwksUri: `${baseUrl}/auth/v1/.well-known/jwks.json`,
+        cache: true,
+        cacheMaxAge: 600_000,
+      });
+    } else {
+      this.jwksClient = null;
+    }
   }
 
-  /**
-   * Valida el JWT token sin usar librerías externas (evita dependencias)
-   * En producción, importar 'jsonwebtoken' para validación segura
-   */
-  /**
-   * Extrae el token del header o de las cookies de forma silenciosa
-   */
   getToken(req: IncomingMessage): string | null {
-    // 1. Intentar obtener del header Authorization
     const auth = req.headers.authorization;
     const authString = Array.isArray(auth) ? auth[0] : auth;
-    
+
     if (authString?.startsWith("Bearer ")) {
       return authString.substring(7);
     }
 
-    // 2. Intentar obtener de las cookies (para web dashboard)
     const cookieHeader = Array.isArray(req.headers.cookie) ? req.headers.cookie[0] : req.headers.cookie;
     if (cookieHeader) {
       const cookies = cookieHeader.split(";").reduce((acc, c) => {
@@ -47,52 +49,53 @@ export class JWTMiddleware {
         if (key) acc[key] = val;
         return acc;
       }, {} as Record<string, string>);
-      
+
       return cookies["auth_token"] || null;
     }
 
     return null;
   }
 
-  /**
-   * Valida el JWT token sin usar librerías externas (evita dependencias)
-   * En producción, importar 'jsonwebtoken' para validación segura
-   */
-  authenticate(req: IncomingMessage, res: ServerResponse): JWTPayload | null {
+  async verify(token: string): Promise<JWTPayload | null> {
+    try {
+      return jwt.verify(token, this.accessTokenSecret, { algorithms: ["HS256"] }) as JWTPayload;
+    } catch {
+      // fall through
+    }
+
+    if (this.jwksClient) {
+      try {
+        const decoded = jwt.decode(token, { complete: true });
+        if (!decoded || typeof decoded !== "object" || !("header" in decoded) || !decoded.header?.kid) {
+          return null;
+        }
+
+        const key: SigningKey = await this.jwksClient.getSigningKey(decoded.header.kid);
+        const publicKey = key.getPublicKey();
+        return jwt.verify(token, publicKey, { algorithms: ["ES256"] }) as JWTPayload;
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  async authenticate(req: IncomingMessage, res: ServerResponse): Promise<JWTPayload | null> {
     const token = this.getToken(req);
 
     if (!token) {
       sendJson(res, 401, { error: "Missing or invalid authentication (Token or Cookie)" });
       return null;
     }
-    
-    // NOTA: Implementación simplificada sin librería JWT
-    // En producción, usar:
-    // const payload = jwt.verify(token, this.accessTokenSecret) as JWTPayload;
-    
-    try {
-      // Decodificar JWT sin verificar firma (para demostración)
-      // En producción, verificar la firma con la librería jwt
-      const parts = token.split(".");
-      if (parts.length !== 3) {
-        sendJson(res, 401, { error: "Invalid token format" });
-        return null;
-      }
 
-      const payload = JSON.parse(
-        Buffer.from(parts[1], "base64url").toString("utf-8")
-      ) as JWTPayload;
+    const payload = await this.verify(token);
 
-      // Validar expiración
-      if (payload.exp < Math.floor(Date.now() / 1000)) {
-        sendJson(res, 401, { error: "Token expired" });
-        return null;
-      }
-
-      return payload;
-    } catch {
-      sendJson(res, 401, { error: "Invalid or malformed token" });
+    if (!payload) {
+      sendJson(res, 401, { error: "Invalid token" });
       return null;
     }
+
+    return payload;
   }
 }

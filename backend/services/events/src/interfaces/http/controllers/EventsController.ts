@@ -14,6 +14,7 @@ import type { EventStatus } from "../../../domain/state/EventStatus.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { isAdminUser } from "../middlewares/isAdminUser.js";
+import { requireRole } from "../../../../../../shared/middleware/adminGuard.js";
 import { AuthorizationError } from "../../../../../../shared/libs/errors/AuthorizationError.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
@@ -176,9 +177,14 @@ export class EventsController {
     }
 
     try {
+      const isAdmin = await isAdminUser(req, this.pool);
+      if (!isAdmin) {
+        requireRole("admin")(req, res);
+        return;
+      }
       await this.deleteEvent.execute({
         eventId,
-        isAdmin: await isAdminUser(req, this.pool),
+        isAdmin: true,
       });
       sendData(res, 200, { message: "Event deleted successfully" });
     } catch (error) {

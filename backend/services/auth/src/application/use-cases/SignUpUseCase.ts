@@ -82,7 +82,7 @@ export class SignUpUseCase {
     });
 
     // Generar tokens
-    const { accessToken, refreshToken, accessTokenExpiry } = this.jwtService.generateTokens(user.id);
+    const { accessToken, refreshToken, accessTokenExpiry } = this.jwtService.generateTokens(user.id, user.role);
 
     // Guardar refresh token
     await this.tokenRepository.create({

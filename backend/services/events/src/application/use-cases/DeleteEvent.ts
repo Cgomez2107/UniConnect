@@ -1,5 +1,6 @@
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
 import { EventContext } from "../../domain/state/EventContext.js";
+import { AuthorizationError } from "../../../../../shared/libs/errors/AuthorizationError.js";
 import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
 
 export class DeleteEvent {
@@ -16,7 +17,7 @@ export class DeleteEvent {
     }
 
     if (!input.isAdmin) {
-      throw new Error("Solo un administrador puede eliminar un evento.");
+      throw new AuthorizationError("Solo un administrador puede eliminar un evento.");
     }
 
     const context = EventContext.fromStatus(event.status);
