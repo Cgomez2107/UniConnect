@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import type { Event, PaginatedResult, ListEventsFilter } from "../../domain/entities/Event.js";
-import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
+import type { IEventRepository, EventRegistration } from "../../domain/repositories/IEventRepository.js";
 import type { EventStatus } from "../../domain/state/EventStatus.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../../../../shared/libs/errors/index.js";
 
@@ -435,5 +435,141 @@ export class PostgresEventRepository implements IEventRepository {
       [userId],
     );
     return result.rows[0]?.email ?? null;
+  }
+
+  async getRegistration(eventId: string, userId: string): Promise<EventRegistration | null> {
+    const result = await this.pool.query<{
+      id: string;
+      event_id: string;
+      user_id: string;
+      qr_token: string | null;
+      qr_hmac: string | null;
+      scanned_at: string | null;
+      scanned_by: string | null;
+      is_used: boolean;
+      created_at: string;
+    }>(
+      `SELECT id, event_id, user_id, qr_token, qr_hmac, scanned_at, scanned_by, is_used, created_at
+       FROM event_registrations
+       WHERE event_id = $1 AND user_id = $2`,
+      [eventId, userId],
+    );
+    if (!result.rows[0]) return null;
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      qrToken: row.qr_token,
+      qrHmac: row.qr_hmac,
+      scannedAt: row.scanned_at ? new Date(row.scanned_at).toISOString() : null,
+      scannedBy: row.scanned_by,
+      isUsed: row.is_used,
+      createdAt: new Date(row.created_at).toISOString(),
+    };
+  }
+
+  async getRegistrationByQrToken(token: string): Promise<EventRegistration | null> {
+    const result = await this.pool.query<{
+      id: string;
+      event_id: string;
+      user_id: string;
+      qr_token: string | null;
+      qr_hmac: string | null;
+      scanned_at: string | null;
+      scanned_by: string | null;
+      is_used: boolean;
+      created_at: string;
+    }>(
+      `SELECT id, event_id, user_id, qr_token, qr_hmac, scanned_at, scanned_by, is_used, created_at
+       FROM event_registrations
+       WHERE qr_token = $1`,
+      [token],
+    );
+    if (!result.rows[0]) return null;
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      qrToken: row.qr_token,
+      qrHmac: row.qr_hmac,
+      scannedAt: row.scanned_at ? new Date(row.scanned_at).toISOString() : null,
+      scannedBy: row.scanned_by,
+      isUsed: row.is_used,
+      createdAt: new Date(row.created_at).toISOString(),
+    };
+  }
+
+  async setQrData(registrationId: string, qrToken: string, qrHmac: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE event_registrations SET qr_token = $2, qr_hmac = $3 WHERE id = $1`,
+      [registrationId, qrToken, qrHmac],
+    );
+  }
+
+  async markQrAsUsed(registrationId: string, scannedBy: string): Promise<void> {
+    const result = await this.pool.query(
+      `UPDATE event_registrations
+       SET is_used = true, scanned_at = NOW(), scanned_by = $2
+       WHERE id = $1 AND is_used = false`,
+      [registrationId, scannedBy],
+    );
+    if (result.rowCount === 0) {
+      throw new ConflictError("El QR ya fue escaneado previamente");
+    }
+  }
+
+  async getRegistrationsByUser(userId: string): Promise<EventRegistration[]> {
+    const result = await this.pool.query<{
+      id: string;
+      event_id: string;
+      user_id: string;
+      qr_token: string | null;
+      qr_hmac: string | null;
+      scanned_at: string | null;
+      scanned_by: string | null;
+      is_used: boolean;
+      created_at: string;
+    }>(
+      `SELECT id, event_id, user_id, qr_token, qr_hmac, scanned_at, scanned_by, is_used, created_at
+       FROM event_registrations
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      qrToken: row.qr_token,
+      qrHmac: row.qr_hmac,
+      scannedAt: row.scanned_at ? new Date(row.scanned_at).toISOString() : null,
+      scannedBy: row.scanned_by,
+      isUsed: row.is_used,
+      createdAt: new Date(row.created_at).toISOString(),
+    }));
+  }
+
+  async getEventByRegistration(registrationId: string): Promise<Event | null> {
+    const result = await this.pool.query<EventRow>(
+      `${SELECT_EVENTS}
+       INNER JOIN event_registrations er ON er.event_id = e.id
+       WHERE er.id = $1`,
+      [registrationId],
+    );
+    return result.rows[0] ? mapEvent(result.rows[0]) : null;
+  }
+
+  async getUserProfile(userId: string): Promise<{ fullName: string; avatarUrl: string | null } | null> {
+    const result = await this.pool.query<{ full_name: string; avatar_url: string | null }>(
+      `SELECT full_name, avatar_url FROM profiles WHERE id = $1`,
+      [userId],
+    );
+    if (!result.rows[0]) return null;
+    return {
+      fullName: result.rows[0].full_name,
+      avatarUrl: result.rows[0].avatar_url,
+    };
   }
 }

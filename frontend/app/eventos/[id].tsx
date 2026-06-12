@@ -1,3 +1,4 @@
+import { QrPassSheet } from "@/components/events/QrPassSheet"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
@@ -76,6 +77,22 @@ export default function EventDetail() {
   const [isActionLoading, setIsActionLoading] = useState(false)
   const isRegistered = justRegistered !== null ? justRegistered : (event?.isRegistered === true)
 
+  // ── QR Pass state ──
+  const [qrSheetOpen, setQrSheetOpen] = useState(false)
+  const [qrContent, setQrContent] = useState("")
+
+  const handleShowQrPass = useCallback(async () => {
+    if (!id) return
+    try {
+      const repo = DIContainer.getInstance().getEventRepository()
+      const result = await repo.getEventPass(id)
+      setQrContent(result.qrContent)
+      setQrSheetOpen(true)
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "No se pudo obtener el pase de acceso")
+    }
+  }, [id])
+
   const categorySlug = event?.category ?? "otro"
   const catColor = categoryColor(categorySlug)
   const status = event?.status ?? "published"
@@ -123,6 +140,10 @@ export default function EventDetail() {
   const handleEdit = useCallback(() => {
     if (id) router.push(`/editar-evento/${id}` as any)
   }, [id])
+
+  const handleOpenScanner = useCallback(() => {
+    router.push("/eventos/escanear" as any)
+  }, [])
 
   const handleRegister = useCallback(async () => {
     if (!id || !userId || isActionLoading) return
@@ -200,6 +221,7 @@ export default function EventDetail() {
           body="El evento no existe o fue eliminado."
         />
       ) : (
+        <>
         <ScrollView
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}
@@ -279,14 +301,24 @@ export default function EventDetail() {
           )}
 
           {isOwner && status === "published" && (
-            <TouchableOpacity
-              style={[styles.ownerBtn, { backgroundColor: "#ef4444" }]}
-              onPress={handleCancel}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="close-circle-outline" size={18} color="#fff" />
-              <Text style={styles.ownerBtnText}>Cancelar evento</Text>
-            </TouchableOpacity>
+            <View style={styles.ownerActions}>
+              <TouchableOpacity
+                style={[styles.ownerBtn, { backgroundColor: C.primary }]}
+                onPress={handleOpenScanner}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="qr-code-outline" size={18} color="#fff" />
+                <Text style={styles.ownerBtnText}>Control de Acceso</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ownerBtn, { backgroundColor: "#ef4444" }]}
+                onPress={handleCancel}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="close-circle-outline" size={18} color="#fff" />
+                <Text style={styles.ownerBtnText}>Cancelar evento</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Register / Already registered button for non-owners */}
@@ -304,19 +336,37 @@ export default function EventDetail() {
             </TouchableOpacity>
           )}
           {!isOwner && status === "published" && isRegistered && (
-            <TouchableOpacity
-              style={[styles.registerBtn, { backgroundColor: "#ef4444" }]}
-              onPress={handleUnregister}
-              disabled={isActionLoading}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="close-circle-outline" size={20} color="#fff" />
-              <Text style={styles.registerBtnText}>
-                {isActionLoading ? "Cancelando..." : "Cancelar inscripción"}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ gap: 8, marginTop: 16 }}>
+              <TouchableOpacity
+                style={[styles.registerBtn, { backgroundColor: "#4f46e5" }]}
+                onPress={handleShowQrPass}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="qr-code-outline" size={20} color="#fff" />
+                <Text style={styles.registerBtnText}>Ver Pase de Acceso QR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.registerBtn, { backgroundColor: "#ef4444" }]}
+                onPress={handleUnregister}
+                disabled={isActionLoading}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="close-circle-outline" size={20} color="#fff" />
+                <Text style={styles.registerBtnText}>
+                  {isActionLoading ? "Cancelando..." : "Cancelar inscripción"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </ScrollView>
+
+        <QrPassSheet
+          isOpen={qrSheetOpen}
+          onClose={() => setQrSheetOpen(false)}
+          qrContent={qrContent}
+          eventTitle={event?.title ?? ""}
+        />
+        </>
       )}
     </View>
   )

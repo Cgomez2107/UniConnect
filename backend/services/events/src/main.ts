@@ -13,6 +13,8 @@ import { CancelEvent } from "./application/use-cases/CancelEvent.js";
 import { FinishEvent } from "./application/use-cases/FinishEvent.js";
 import { RegisterForEvent } from "./application/use-cases/RegisterForEvent.js";
 import { UnregisterFromEvent } from "./application/use-cases/UnregisterFromEvent.js";
+import { GenerateQrPass } from "./application/use-cases/GenerateQrPass.js";
+import { VerifyQrPass } from "./application/use-cases/VerifyQrPass.js";
 import { loadEventsEnv } from "./config/env.js";
 import { PostgresEventRepository } from "./infrastructure/database/PostgresEventRepository.js";
 import { PostgresEventNotificationRepository } from "./infrastructure/database/PostgresEventNotificationRepository.js";
@@ -91,7 +93,10 @@ function bootstrap(): void {
     ? new SendGridEmailGateway(sendgridApiKey, emailFrom, emailFromName)
     : null;
 
-  const registerForEvent = new RegisterForEvent(repository, notificationRepository, socketGateway, emailGateway);
+  const generateQrPass = new GenerateQrPass(repository, env.qrHmacSecret);
+  const verifyQrPass = new VerifyQrPass(repository, env.qrHmacSecret);
+
+  const registerForEvent = new RegisterForEvent(repository, notificationRepository, socketGateway, emailGateway, generateQrPass);
   const unregisterFromEvent = new UnregisterFromEvent(repository);
 
   const controller = new EventsController(
@@ -108,6 +113,8 @@ function bootstrap(): void {
     finishEvent,
     registerForEvent,
     unregisterFromEvent,
+    generateQrPass,
+    verifyQrPass,
   );
 
   const subscriptionController = new SubscriptionController(subscriptionRepository);

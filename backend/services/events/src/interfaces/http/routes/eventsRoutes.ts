@@ -79,6 +79,9 @@ export async function handleEventsRoutes(
   const eventUnregisterMatch = requestUrl.pathname.match(
     /^\/api\/v1\/events\/([^/]+)\/unregister$/,
   );
+  const eventMyPassMatch = requestUrl.pathname.match(
+    /^\/api\/v1\/events\/([^/]+)\/my-pass$/,
+  );
 
   const adminEventDetailMatch = requestUrl.pathname.match(/^\/api\/v1\/admin\/events\/([^/]+)$/);
   const adminEventActionMatch = requestUrl.pathname.match(
@@ -191,6 +194,18 @@ export async function handleEventsRoutes(
   if (req.method === "DELETE" && requestUrl.pathname === "/api/v1/eventos/suscribir") {
     if (!subscriptionController) { sendJson(res, 500, { error: "Subscription not available" }); return true; }
     await subscriptionController.unsubscribe(req, res);
+    return true;
+  }
+
+  // ── QR verification ─────────────────────────────────────────────────
+  if (req.method === "POST" && requestUrl.pathname === "/api/v1/registration/verify") {
+    await controller.verifyQr(req, res);
+    return true;
+  }
+
+  // ── QR my-pass ──────────────────────────────────────────────────────
+  if (req.method === "GET" && eventMyPassMatch) {
+    await controller.getMyPass(req, res, eventMyPassMatch[1]);
     return true;
   }
 

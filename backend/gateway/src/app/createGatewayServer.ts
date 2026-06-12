@@ -156,6 +156,7 @@ function isEventsRoute(pathname: string): boolean {
   return (
     pathname === "/api/v1/events" ||
     pathname.startsWith("/api/v1/events/") ||
+    pathname.startsWith("/api/v1/registration/") ||
     pathname === "/api/v1/eventos/suscribir" ||
     pathname === "/api/v1/eventos/suscribir/" ||
     pathname === "/api/v1/eventos/suscripciones"

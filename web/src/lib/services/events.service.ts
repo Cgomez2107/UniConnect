@@ -121,6 +121,10 @@ const eventsService = {
     const event = await deps.apiClients.events.cancel(eventId);
     return mapEvent(event);
   },
+
+  async getEventPass(eventId: string): Promise<{ qrContent: string }> {
+    return deps.apiClients.events.getMyPass(eventId);
+  },
 };
 
 export default eventsService;

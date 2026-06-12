@@ -66,6 +66,7 @@ export default function RootLayout() {
         <Stack.Screen name="perfil-estudiante/[id]" />
         <Stack.Screen name="recurso/[id]" />
         <Stack.Screen name="estudio/sesiones" />
+        <Stack.Screen name="eventos/escanear" options={{ headerShown: false, presentation: "fullScreenModal" }} />
       </Stack>
     </ToastProvider>
   )

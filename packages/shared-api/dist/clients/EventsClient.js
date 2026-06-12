@@ -120,5 +120,27 @@ export class EventsClient extends BaseClient {
         });
         return mapEventDtoToDomain(response.data);
     }
+    async getMyPass(eventId) {
+        const response = await this.transport.request({
+            method: "GET",
+            url: `/events/${eventId}/my-pass`,
+        });
+        return response.data;
+    }
+    async listMyPasses() {
+        const response = await this.transport.request({
+            method: "GET",
+            url: `/registrations/my-passes`,
+        });
+        return response.data ?? [];
+    }
+    async verifyQr(qrData) {
+        const response = await this.transport.request({
+            method: "POST",
+            url: `/registration/verify`,
+            body: { qrData },
+        });
+        return response.data;
+    }
 }
 //# sourceMappingURL=EventsClient.js.map

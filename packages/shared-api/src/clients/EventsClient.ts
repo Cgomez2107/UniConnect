@@ -160,4 +160,34 @@ export class EventsClient extends BaseClient {
     });
     return mapEventDtoToDomain(response.data);
   }
+
+  async getMyPass(eventId: string): Promise<{ qrContent: string }> {
+    const response = await this.transport.request<{ qrContent: string }>({
+      method: "GET",
+      url: `/events/${eventId}/my-pass`,
+    });
+    return response.data;
+  }
+
+  async listMyPasses(): Promise<{ eventId: string; eventTitle: string; qrContent: string }[]> {
+    const response = await this.transport.request<any[]>({
+      method: "GET",
+      url: `/registrations/my-passes`,
+    });
+    return response.data ?? [];
+  }
+
+  async verifyQr(qrData: string): Promise<{
+    valid: boolean;
+    user?: { fullName: string; avatarUrl: string | null };
+    reason?: string;
+    scannedAt?: string | null;
+  }> {
+    const response = await this.transport.request<any>({
+      method: "POST",
+      url: `/registration/verify`,
+      body: { qrData },
+    });
+    return response.data;
+  }
 }

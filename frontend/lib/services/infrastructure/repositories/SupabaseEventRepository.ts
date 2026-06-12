@@ -62,15 +62,22 @@ export class SupabaseEventRepository implements IEventRepository {
     throw new Error("Not implemented in Supabase fallback")
   }
 
-  async getByAuthor(userId: string): Promise<CampusEvent[]> {
-    const { data, error } = await supabase
+  async getByAuthor(userId: string, page = 1, limit = 10): Promise<EventListResponse> {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    const { data, error, count } = await supabase
       .from("events")
-      .select("*, creator:created_by ( full_name )")
+      .select("*, creator:created_by ( full_name )", { count: "exact" })
       .eq("created_by", userId)
       .order("event_date", { ascending: false })
+      .range(from, to);
 
-    if (error) throw new Error(error.message)
-    return (data ?? []) as CampusEvent[]
+    if (error) throw new Error(error.message);
+    const total = count ?? data?.length ?? 0;
+    return {
+      data: (data ?? []) as CampusEvent[],
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 },
+    };
   }
 
   async publish(eventId: string): Promise<void> {
@@ -102,6 +109,10 @@ export class SupabaseEventRepository implements IEventRepository {
 
   async unregisterFromEvent(_eventId: string, _userId: string): Promise<void> {
     throw new Error("Not implemented in direct Supabase adapter. Please use the ApiEventRepository (Gateway/Microservice).");
+  }
+
+  async getEventPass(_eventId: string): Promise<{ qrContent: string }> {
+    throw new Error("getEventPass not implemented in Supabase fallback. Use ApiEventRepository.");
   }
 
   async listEvents(filters?: EventListFilters): Promise<EventListResponse> {

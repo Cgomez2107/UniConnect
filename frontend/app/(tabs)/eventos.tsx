@@ -1,3 +1,4 @@
+import { QrPassSheet } from "@/components/events/QrPassSheet"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
@@ -6,7 +7,7 @@ import { useEventObserver } from "@/hooks/application/useEventObserver"
 import { useEvents } from "@/hooks/application/useEvents"
 import { useAuthStore } from "@/store/useAuthStore"
 import { DIContainer } from "@/lib/services/di/container"
-import type { CampusEvent, EventCategoryRow } from "@/types"
+import type { CampusEvent, EventCategoryRow, EventListMeta } from "@/types"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { router } from "expo-router"
@@ -174,15 +175,19 @@ export default function EventosScreen() {
   const [myEvents, setMyEvents] = useState<CampusEvent[]>([])
   const [myEventsLoading, setMyEventsLoading] = useState(false)
   const [myEventsRefreshing, setMyEventsRefreshing] = useState(false)
+  const [myEventsPage, setMyEventsPage] = useState(1)
+  const [myEventsMeta, setMyEventsMeta] = useState<EventListMeta>({ total: 0, page: 1, limit: 10, totalPages: 1 })
 
-  const loadMyEvents = useCallback(async (isRefresh = false) => {
+  const loadMyEvents = useCallback(async (isRefresh = false, pageNum = 1) => {
     if (!userId) return
     if (isRefresh) setMyEventsRefreshing(true)
     else setMyEventsLoading(true)
     try {
       const repo = DIContainer.getInstance().getEventRepository()
-      const data = await repo.getByAuthor(userId)
-      setMyEvents(data ?? [])
+      const result = await repo.getByAuthor(userId, pageNum, 10)
+      setMyEvents(result.data ?? [])
+      setMyEventsMeta(result.meta)
+      setMyEventsPage(pageNum)
     } catch (e) {
       console.warn("[EventosScreen] Error loading my events:", e)
     } finally {
@@ -193,7 +198,7 @@ export default function EventosScreen() {
 
   useEffect(() => {
     if (tabMode === "mis-eventos" && userId) {
-      loadMyEvents()
+      loadMyEvents(false, 1)
     }
   }, [tabMode, userId, loadMyEvents])
 
@@ -257,6 +262,28 @@ export default function EventosScreen() {
     router.push("/crear-evento" as any)
   }, [])
 
+  // ── QR Pass state ──
+  const [qrSheetOpen, setQrSheetOpen] = useState(false)
+  const [qrContent, setQrContent] = useState("")
+  const [qrEventTitle, setQrEventTitle] = useState("")
+  const [qrLoading, setQrLoading] = useState<string | null>(null)
+
+  const handleShowQrPass = useCallback(async (eventId: string, eventTitle: string) => {
+    setQrLoading(eventId)
+    try {
+      const repo = DIContainer.getInstance().getEventRepository()
+      const result = await repo.getEventPass(eventId)
+      setQrContent(result.qrContent)
+      setQrEventTitle(eventTitle)
+      setQrSheetOpen(true)
+    } catch (e) {
+      console.warn("[EventosScreen] Error loading QR pass:", e)
+      Alert.alert("Error", "No se pudo obtener el pase de acceso")
+    } finally {
+      setQrLoading(null)
+    }
+  }, [])
+
   const renderEventItem = useCallback(
     ({ item }: { item: CampusEvent }) => (
       <EventCard item={item} C={C} onOpen={openEvent} highlight={debouncedSearch} />
@@ -266,9 +293,24 @@ export default function EventosScreen() {
 
   const renderMyEventItem = useCallback(
     ({ item }: { item: CampusEvent }) => (
-      <EventCard item={item} C={C} onOpen={openEvent} />
+      <View>
+        <EventCard item={item} C={C} onOpen={openEvent} />
+        {item.isRegistered && (
+          <TouchableOpacity
+            style={[styles.qrPassBtn, { backgroundColor: C.primary + "15", borderColor: C.primary + "40" }]}
+            onPress={() => handleShowQrPass(item.id, item.title)}
+            disabled={qrLoading === item.id}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="qr-code-outline" size={16} color={C.primary} />
+            <Text style={[styles.qrPassBtnText, { color: C.primary }]}>
+              {qrLoading === item.id ? "Cargando..." : "+ Pase de Acceso"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     ),
-    [C, openEvent],
+    [C, openEvent, handleShowQrPass, qrLoading],
   )
 
   const emptyTitle = "No hay eventos próximos"
@@ -513,6 +555,35 @@ export default function EventosScreen() {
               keyExtractor={keyExtractor}
               contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
               showsVerticalScrollIndicator={false}
+              ListFooterComponent={
+                myEventsMeta.totalPages > 1 ? (
+                  <View style={styles.paginationRow}>
+                    <TouchableOpacity
+                      style={[styles.pageBtn, { backgroundColor: C.surface, borderColor: C.border, opacity: myEventsPage <= 1 ? 0.4 : 1 }]}
+                      onPress={() => loadMyEvents(false, myEventsPage - 1)}
+                      disabled={myEventsPage <= 1}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="chevron-back" size={18} color={C.textPrimary} />
+                      <Text style={[styles.pageBtnText, { color: C.textPrimary }]}>Anterior</Text>
+                    </TouchableOpacity>
+
+                    <Text style={[styles.pageInfo, { color: C.textSecondary }]}>
+                      {myEventsPage} / {myEventsMeta.totalPages}
+                    </Text>
+
+                    <TouchableOpacity
+                      style={[styles.pageBtn, { backgroundColor: C.surface, borderColor: C.border, opacity: myEventsPage >= myEventsMeta.totalPages ? 0.4 : 1 }]}
+                      onPress={() => loadMyEvents(false, myEventsPage + 1)}
+                      disabled={myEventsPage >= myEventsMeta.totalPages}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={[styles.pageBtnText, { color: C.textPrimary }]}>Siguiente</Text>
+                      <Ionicons name="chevron-forward" size={18} color={C.textPrimary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : null
+              }
               refreshControl={
                 <RefreshControl
                   refreshing={myEventsRefreshing}
@@ -543,6 +614,24 @@ export default function EventosScreen() {
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
+
+      {/* Scanner button (admin only) */}
+      {isAdmin && (
+        <TouchableOpacity
+          style={[styles.scannerFab, { backgroundColor: "#7c3aed" }]}
+          onPress={() => router.push("/eventos/escanear" as any)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="qr-code-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      <QrPassSheet
+        isOpen={qrSheetOpen}
+        onClose={() => setQrSheetOpen(false)}
+        qrContent={qrContent}
+        eventTitle={qrEventTitle}
+      />
     </View>
   )
 }
@@ -673,6 +762,23 @@ const styles = StyleSheet.create({
   locationRow:  { flexDirection: "row", alignItems: "center" },
   cardMeta:     { fontSize: 12 },
 
+  qrPassBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: -6,
+    marginBottom: 8,
+    marginHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  qrPassBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
   paginationRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -695,6 +801,21 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  scannerFab: {
+    position: "absolute",
+    bottom: 92,
     right: 20,
     width: 56,
     height: 56,

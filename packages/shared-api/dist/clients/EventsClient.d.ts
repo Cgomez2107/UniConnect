@@ -43,5 +43,22 @@ export declare class EventsClient extends BaseClient {
     unregister(eventId: string): Promise<void>;
     publish(eventId: string): Promise<Event>;
     cancel(eventId: string): Promise<Event>;
+    getMyPass(eventId: string): Promise<{
+        qrContent: string;
+    }>;
+    listMyPasses(): Promise<{
+        eventId: string;
+        eventTitle: string;
+        qrContent: string;
+    }[]>;
+    verifyQr(qrData: string): Promise<{
+        valid: boolean;
+        user?: {
+            fullName: string;
+            avatarUrl: string | null;
+        };
+        reason?: string;
+        scannedAt?: string | null;
+    }>;
 }
 //# sourceMappingURL=EventsClient.d.ts.map
