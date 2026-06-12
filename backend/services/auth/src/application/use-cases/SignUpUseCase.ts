@@ -9,7 +9,7 @@ export class SignUpUseCase {
     private authRepository: IAuthRepository,
     private tokenRepository: ITokenRepository,
     private jwtService: any,
-    private onUserCreated?: (userId: string, fullName: string) => Promise<void>,
+    private onUserCreated?: (userId: string, fullName: string, email: string) => Promise<void>,
     private supabaseUrl?: string,
     private supabaseServiceRoleKey?: string,
   ) {}
@@ -93,7 +93,7 @@ export class SignUpUseCase {
 
     // Crear perfil en profiles-catalog
     if (this.onUserCreated) {
-      await this.onUserCreated(user.id, user.fullName);
+      await this.onUserCreated(user.id, user.fullName, user.email);
     }
 
     return {

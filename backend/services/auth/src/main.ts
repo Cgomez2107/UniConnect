@@ -118,7 +118,48 @@ async function main() {
   const supabaseUrl = process.env.SUPABASE_URL ?? "https://becitrklvpadvjwdbmck.supabase.co";
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-  const createProfile = async (userId: string, fullName: string): Promise<void> => {
+  const dispatchWelcomeWebhook = (email: string, fullName: string, userId: string): void => {
+    const webhookUrl = process.env.N8N_WEBHOOK_URL;
+    if (!webhookUrl) {
+      console.warn(JSON.stringify({ service: "auth", level: "warn", message: "N8N_WEBHOOK_URL is not set. Webhook dispatch skipped." }));
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        event: "usuario.verificado",
+        timestamp: new Date().toISOString(),
+        data: {
+          userId,
+          email,
+          fullName: fullName || email.split("@")[0],
+        },
+      }),
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (!res.ok) {
+          console.error(JSON.stringify({ service: "auth", level: "error", message: `Failed to dispatch welcome webhook: ${res.statusText}` }));
+        } else {
+          console.log(JSON.stringify({ service: "auth", level: "info", message: `Welcome webhook successfully dispatched for ${email}` }));
+        }
+      })
+      .catch((err) => {
+        console.error(JSON.stringify({ service: "auth", level: "error", message: "Welcome webhook dispatch failed", error: String(err) }));
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+      });
+  };
+
+  const createProfile = async (userId: string, fullName: string, email?: string): Promise<void> => {
     const token = jwtService.generateTokens(userId).accessToken;
     const response = await fetch(`${profilesCatalogBaseUrl}/api/v1/students/profile`, {
       method: "POST",
@@ -131,6 +172,10 @@ async function main() {
     if (!response.ok) {
       const err = await response.json().catch(() => ({ error: "Unknown error" }));
       throw new Error(`Failed to create profile: ${err.error}`);
+    }
+
+    if (email) {
+      dispatchWelcomeWebhook(email, fullName, userId);
     }
   };
 
@@ -378,10 +423,15 @@ async function main() {
           const { accessToken: jwtToken, refreshToken } = jwtService.generateTokens(user.id);
 
           if (isNewUser) {
+            let profileCreated = false;
             try {
-              await createProfile(user.id, user.fullName || email.split("@")[0]);
+              await createProfile(user.id, user.fullName || email.split("@")[0], email);
+              profileCreated = true;
             } catch (profileErr) {
               console.error("OAuth profile creation error:", profileErr);
+            }
+            if (!profileCreated) {
+              dispatchWelcomeWebhook(email, user.fullName || email.split("@")[0], user.id);
             }
           }
 
@@ -395,6 +445,7 @@ async function main() {
           res.end(JSON.stringify({
             accessToken: jwtToken,
             refreshToken,
+            isNewUser,
             user: {
               id: user.id,
               email: user.email,
