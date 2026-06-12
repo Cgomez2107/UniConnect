@@ -12,14 +12,17 @@
     "merge:openapi": "tsx scripts/merge-openapi.ts",
     "lint": "echo \"gateway lint config scaffold\"",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"gateway tests config scaffold\""
+    "test": "vitest run --reporter=verbose"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
+    "@types/supertest": "^6.0.3",
     "@types/swagger-ui-dist": "^3.30.6",
     "@types/ws": "^8.18.1",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@uniconnect/shared-types": "file:..\\..\\packages\\shared-types",

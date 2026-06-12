@@ -375,7 +375,7 @@ async function main() {
             });
           }
 
-          const { accessToken: jwtToken, refreshToken } = jwtService.generateTokens(user.id);
+          const { accessToken: jwtToken, refreshToken } = jwtService.generateTokens(user.id, user.role);
 
           if (isNewUser) {
             try {

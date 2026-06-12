@@ -8,6 +8,7 @@ import type { GatewayEnv } from "../shared/config/env.js";
 import { proxyRequest, type ProxyResponse } from "../shared/http/proxyRequest.js";
 import { sendJson } from "../shared/http/sendJson.js";
 import { JWTMiddleware, type JWTPayload } from "../middleware/JWTMiddleware.js";
+import { RoleGuard } from "../middleware/RoleGuard.js";
 
 const PUBLIC_PATHS = new Set([
   "/docs",
@@ -172,6 +173,10 @@ function isPollRoute(pathname: string): boolean {
 
 function isAuthRoute(pathname: string): boolean {
   return pathname.startsWith("/api/v1/auth");
+}
+
+function isAdminRoute(pathname: string): boolean {
+  return pathname.startsWith("/api/v1/admin");
 }
 
 const setHeader = (res: NodeServerResponse, name: string, value: string) => {
@@ -887,6 +892,15 @@ async function handleRequest(
     await proxyRequest(req, res, env.forumBaseUrl, undefined, (info) => {
       onForumResponse(info, requestUrl, payload);
     });
+    return;
+  }
+
+  if (isAdminRoute(requestUrl.pathname)) {
+    const roleGuard = new RoleGuard();
+    if (!roleGuard.authorize(payload, res)) {
+      return;
+    }
+    await proxyRequest(req, res, env.eventsBaseUrl);
     return;
   }
 
