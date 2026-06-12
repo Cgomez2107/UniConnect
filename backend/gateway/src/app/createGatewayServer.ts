@@ -174,6 +174,10 @@ function isAuthRoute(pathname: string): boolean {
   return pathname.startsWith("/api/v1/auth");
 }
 
+function isChatbotRoute(pathname: string): boolean {
+  return pathname === "/api/v1/chatbot" || pathname.startsWith("/api/v1/chatbot/");
+}
+
 const setHeader = (res: NodeServerResponse, name: string, value: string) => {
   res.setHeader(name, value);
 };
@@ -887,6 +891,11 @@ async function handleRequest(
     await proxyRequest(req, res, env.forumBaseUrl, undefined, (info) => {
       onForumResponse(info, requestUrl, payload);
     });
+    return;
+  }
+
+  if (isChatbotRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.chatbotBaseUrl);
     return;
   }
 

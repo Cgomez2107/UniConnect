@@ -1206,8 +1206,8 @@
                   },
                   "description": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2000
+                    "maxLength": 2000,
+                    "default": ""
                   },
                   "eventDate": {
                     "type": "string",
@@ -1244,7 +1244,6 @@
                 },
                 "required": [
                   "title",
-                  "description",
                   "eventDate"
                 ],
                 "additionalProperties": false

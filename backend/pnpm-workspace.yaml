@@ -7,5 +7,6 @@ packages:
   - "services/profiles-catalog"
   - "services/events"
   - "services/academic-qna"
+  - "services/chatbot"
   - "shared"
   - "../packages/*"
