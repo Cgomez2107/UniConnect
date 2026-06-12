@@ -18,23 +18,23 @@ export declare const EventSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }>>;
     capacity: z.ZodOptional<z.ZodNumber>;
@@ -45,55 +45,55 @@ export declare const EventSchema: z.ZodObject<{
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    id: string;
     createdAt: string;
     updatedAt: string;
-    title: string;
+    id: string;
     description: string;
-    eventDate: string;
-    isOnline: boolean;
+    title: string;
     tags: string[];
+    eventDate: string;
     creatorId: string;
     attendeeCount: number;
+    isOnline: boolean;
     location?: string | undefined;
-    capacity?: number | undefined;
-    eventUrl?: string | undefined;
     creator?: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     } | undefined;
+    capacity?: number | undefined;
+    eventUrl?: string | undefined;
 }, {
-    id: string;
     createdAt: string;
     updatedAt: string;
-    title: string;
+    id: string;
     description: string;
-    eventDate: string;
-    isOnline: boolean;
+    title: string;
     tags: string[];
+    eventDate: string;
     creatorId: string;
     attendeeCount: number;
+    isOnline: boolean;
     location?: string | undefined;
-    capacity?: number | undefined;
-    eventUrl?: string | undefined;
     creator?: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     } | undefined;
+    capacity?: number | undefined;
+    eventUrl?: string | undefined;
 }>;
 export declare const EventDTOSchema: z.ZodObject<{
     id: z.ZodString;
@@ -142,17 +142,16 @@ export declare const EventDTOSchema: z.ZodObject<{
     updated_at: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     id: string;
-    title: string;
-    description: string;
-    tags: string[];
     created_at: string;
     updated_at: string;
+    description: string;
+    title: string;
+    tags: string[];
     event_date: string;
     creator_id: string;
     attendee_count: number;
     is_online: boolean;
     location?: string | undefined;
-    capacity?: number | undefined;
     creator?: {
         email: string;
         id: string;
@@ -164,20 +163,20 @@ export declare const EventDTOSchema: z.ZodObject<{
         updated_at: string;
         profile_image_url?: string | undefined;
     } | undefined;
+    capacity?: number | undefined;
     event_url?: string | undefined;
 }, {
     id: string;
-    title: string;
-    description: string;
-    tags: string[];
     created_at: string;
     updated_at: string;
+    description: string;
+    title: string;
+    tags: string[];
     event_date: string;
     creator_id: string;
     attendee_count: number;
     is_online: boolean;
     location?: string | undefined;
-    capacity?: number | undefined;
     creator?: {
         email: string;
         id: string;
@@ -189,6 +188,7 @@ export declare const EventDTOSchema: z.ZodObject<{
         updated_at: string;
         profile_image_url?: string | undefined;
     } | undefined;
+    capacity?: number | undefined;
     event_url?: string | undefined;
 }>;
 //# sourceMappingURL=event.schema.d.ts.map

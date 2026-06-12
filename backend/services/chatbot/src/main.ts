@@ -3,6 +3,7 @@ import { loadChatbotEnv } from "./config/env.js";
 import { SendMessageUseCase } from "./application/use-cases/SendMessageUseCase.js";
 import { ChatbotController } from "./interfaces/http/controllers/ChatbotController.js";
 import { handleChatbotRoutes } from "./interfaces/http/routes/chatbotRoutes.js";
+import { Database } from "./infrastructure/database/Database.js";
 
 function sendJsonError(statusCode: number, message: string): string {
   return JSON.stringify({ error: message, statusCode });
@@ -10,6 +11,13 @@ function sendJsonError(statusCode: number, message: string): string {
 
 function bootstrap(): void {
   const env = loadChatbotEnv();
+
+  // Initialize Database Pool
+  try {
+    Database.getInstance(env);
+  } catch (err: any) {
+    console.error(`[Database Init Error] ${err.message}`);
+  }
 
   const sendMessageUseCase = new SendMessageUseCase();
   const controller = new ChatbotController(sendMessageUseCase);
@@ -42,6 +50,12 @@ function bootstrap(): void {
 
   const shutdown = async (signal: string) => {
     console.log(`\n[${signal}] Iniciando cierre controlado (Graceful Shutdown) del servicio chatbot...`);
+
+    try {
+      await Database.getInstance().close();
+    } catch {
+      // Ignore
+    }
 
     server.close(() => {
       console.log("[Shutdown] Servidor HTTP cerrado.");

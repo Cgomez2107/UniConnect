@@ -3,6 +3,7 @@ import { GlobalNotificationModals } from "@/components/notifications/GlobalNotif
 import { RealtimeNotificationHandler } from "@/components/notifications/RealtimeNotificationHandler"
 import { ToastProvider } from "@/context"
 import { useAuthStore } from "@/store/useAuthStore"
+import { ChatbotFAB } from "@/components/chatbot/ChatbotFAB"
 import { Stack } from "expo-router"
 import { useEffect, useState } from "react"
 
@@ -14,6 +15,7 @@ if (typeof document !== "undefined") {
 
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
@@ -67,6 +69,7 @@ export default function RootLayout() {
         <Stack.Screen name="recurso/[id]" />
         <Stack.Screen name="estudio/sesiones" />
       </Stack>
+      {isAuthenticated && <ChatbotFAB />}
     </ToastProvider>
   )
 }

@@ -844,8 +844,10 @@ async function handleRequest(
     req.headers["x-user-id"] = payload.sub;
   }
 
-  if (payload.role) {
-    req.headers["x-user-role"] = payload.role;
+  const rawPayload = payload as any;
+  const userRole = rawPayload.user_metadata?.role || rawPayload.app_metadata?.role || payload.role;
+  if (userRole) {
+    req.headers["x-user-role"] = userRole;
   }
 
   if (isStudyGroupsRoute(requestUrl.pathname)) {

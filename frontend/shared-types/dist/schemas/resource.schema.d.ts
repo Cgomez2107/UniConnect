@@ -19,23 +19,23 @@ export declare const StudyResourceSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }>>;
     subjectId: z.ZodString;
@@ -69,29 +69,18 @@ export declare const StudyResourceSchema: z.ZodObject<{
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     type: string;
-    id: string;
     createdAt: string;
     updatedAt: string;
+    id: string;
+    subjectId: string;
     url: string;
     title: string;
-    tags: string[];
-    subjectId: string;
-    isPublic: boolean;
     uploaderUserId: string;
+    tags: string[];
     viewCount: number;
     downloadCount: number;
+    isPublic: boolean;
     description?: string | undefined;
-    uploader?: {
-        email: string;
-        id: string;
-        firstName: string;
-        lastName: string;
-        role: "estudiante" | "admin";
-        isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
-        profileImageUrl?: string | undefined;
-    } | undefined;
     subject?: {
         code: string;
         id: string;
@@ -99,32 +88,32 @@ export declare const StudyResourceSchema: z.ZodObject<{
         programId: string;
         description?: string | undefined;
         credits?: number | undefined;
+    } | undefined;
+    uploader?: {
+        email: string;
+        createdAt: string;
+        updatedAt: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        profileImageUrl?: string | undefined;
     } | undefined;
 }, {
     type: string;
-    id: string;
     createdAt: string;
     updatedAt: string;
+    id: string;
+    subjectId: string;
     url: string;
     title: string;
-    tags: string[];
-    subjectId: string;
-    isPublic: boolean;
     uploaderUserId: string;
+    tags: string[];
     viewCount: number;
     downloadCount: number;
+    isPublic: boolean;
     description?: string | undefined;
-    uploader?: {
-        email: string;
-        id: string;
-        firstName: string;
-        lastName: string;
-        role: "estudiante" | "admin";
-        isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
-        profileImageUrl?: string | undefined;
-    } | undefined;
     subject?: {
         code: string;
         id: string;
@@ -132,6 +121,17 @@ export declare const StudyResourceSchema: z.ZodObject<{
         programId: string;
         description?: string | undefined;
         credits?: number | undefined;
+    } | undefined;
+    uploader?: {
+        email: string;
+        createdAt: string;
+        updatedAt: string;
+        id: string;
+        firstName: string;
+        lastName: string;
+        role: "estudiante" | "admin";
+        isVerified: boolean;
+        profileImageUrl?: string | undefined;
     } | undefined;
 }>;
 export declare const StudyResourceDTOSchema: z.ZodObject<{
@@ -204,17 +204,25 @@ export declare const StudyResourceDTOSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     type: string;
     id: string;
+    created_at: string;
+    updated_at: string;
+    subject_id: string;
     url: string;
     title: string;
     tags: string[];
-    subject_id: string;
-    created_at: string;
-    updated_at: string;
     uploader_user_id: string;
     view_count: number;
     download_count: number;
     is_public: boolean;
     description?: string | undefined;
+    subject?: {
+        code: string;
+        id: string;
+        name: string;
+        program_id: string;
+        description?: string | undefined;
+        credits?: number | undefined;
+    } | undefined;
     uploader?: {
         email: string;
         id: string;
@@ -225,29 +233,29 @@ export declare const StudyResourceDTOSchema: z.ZodObject<{
         created_at: string;
         updated_at: string;
         profile_image_url?: string | undefined;
-    } | undefined;
-    subject?: {
-        code: string;
-        id: string;
-        name: string;
-        program_id: string;
-        description?: string | undefined;
-        credits?: number | undefined;
     } | undefined;
 }, {
     type: string;
     id: string;
+    created_at: string;
+    updated_at: string;
+    subject_id: string;
     url: string;
     title: string;
     tags: string[];
-    subject_id: string;
-    created_at: string;
-    updated_at: string;
     uploader_user_id: string;
     view_count: number;
     download_count: number;
     is_public: boolean;
     description?: string | undefined;
+    subject?: {
+        code: string;
+        id: string;
+        name: string;
+        program_id: string;
+        description?: string | undefined;
+        credits?: number | undefined;
+    } | undefined;
     uploader?: {
         email: string;
         id: string;
@@ -258,14 +266,6 @@ export declare const StudyResourceDTOSchema: z.ZodObject<{
         created_at: string;
         updated_at: string;
         profile_image_url?: string | undefined;
-    } | undefined;
-    subject?: {
-        code: string;
-        id: string;
-        name: string;
-        program_id: string;
-        description?: string | undefined;
-        credits?: number | undefined;
     } | undefined;
 }>;
 //# sourceMappingURL=resource.schema.d.ts.map

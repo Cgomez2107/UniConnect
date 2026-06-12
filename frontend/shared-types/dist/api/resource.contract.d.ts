@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ApiContract } from "./_base.contract.js";
+import type { ApiContract } from "./_base.contract";
 export declare const CreateResourceRequestSchema: z.ZodObject<{
     body: z.ZodObject<{
         title: z.ZodString;
@@ -9,34 +9,34 @@ export declare const CreateResourceRequestSchema: z.ZodObject<{
         tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         isPublic: z.ZodDefault<z.ZodBoolean>;
     }, "strip", z.ZodTypeAny, {
+        subjectId: string;
         url: string;
         title: string;
-        subjectId: string;
         isPublic: boolean;
         description?: string | undefined;
         tags?: string[] | undefined;
     }, {
+        subjectId: string;
         url: string;
         title: string;
-        subjectId: string;
         description?: string | undefined;
         tags?: string[] | undefined;
         isPublic?: boolean | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
+        subjectId: string;
         url: string;
         title: string;
-        subjectId: string;
         isPublic: boolean;
         description?: string | undefined;
         tags?: string[] | undefined;
     };
 }, {
     body: {
+        subjectId: string;
         url: string;
         title: string;
-        subjectId: string;
         description?: string | undefined;
         tags?: string[] | undefined;
         isPublic?: boolean | undefined;
@@ -62,23 +62,23 @@ export declare const CreateResourceResponseSchema: z.ZodObject<{
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             profileImageUrl?: string | undefined;
         }, {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             profileImageUrl?: string | undefined;
         }>>;
         subjectId: z.ZodString;
@@ -112,29 +112,18 @@ export declare const CreateResourceResponseSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         type: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        subjectId: string;
         url: string;
         title: string;
-        tags: string[];
-        subjectId: string;
-        isPublic: boolean;
         uploaderUserId: string;
+        tags: string[];
         viewCount: number;
         downloadCount: number;
+        isPublic: boolean;
         description?: string | undefined;
-        uploader?: {
-            email: string;
-            id: string;
-            firstName: string;
-            lastName: string;
-            role: "estudiante" | "admin";
-            isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
-            profileImageUrl?: string | undefined;
-        } | undefined;
         subject?: {
             code: string;
             id: string;
@@ -142,32 +131,32 @@ export declare const CreateResourceResponseSchema: z.ZodObject<{
             programId: string;
             description?: string | undefined;
             credits?: number | undefined;
+        } | undefined;
+        uploader?: {
+            email: string;
+            createdAt: string;
+            updatedAt: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            profileImageUrl?: string | undefined;
         } | undefined;
     }, {
         type: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        subjectId: string;
         url: string;
         title: string;
-        tags: string[];
-        subjectId: string;
-        isPublic: boolean;
         uploaderUserId: string;
+        tags: string[];
         viewCount: number;
         downloadCount: number;
+        isPublic: boolean;
         description?: string | undefined;
-        uploader?: {
-            email: string;
-            id: string;
-            firstName: string;
-            lastName: string;
-            role: "estudiante" | "admin";
-            isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
-            profileImageUrl?: string | undefined;
-        } | undefined;
         subject?: {
             code: string;
             id: string;
@@ -175,34 +164,34 @@ export declare const CreateResourceResponseSchema: z.ZodObject<{
             programId: string;
             description?: string | undefined;
             credits?: number | undefined;
+        } | undefined;
+        uploader?: {
+            email: string;
+            createdAt: string;
+            updatedAt: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            profileImageUrl?: string | undefined;
         } | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     resource: {
         type: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        subjectId: string;
         url: string;
         title: string;
-        tags: string[];
-        subjectId: string;
-        isPublic: boolean;
         uploaderUserId: string;
+        tags: string[];
         viewCount: number;
         downloadCount: number;
+        isPublic: boolean;
         description?: string | undefined;
-        uploader?: {
-            email: string;
-            id: string;
-            firstName: string;
-            lastName: string;
-            role: "estudiante" | "admin";
-            isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
-            profileImageUrl?: string | undefined;
-        } | undefined;
         subject?: {
             code: string;
             id: string;
@@ -210,34 +199,34 @@ export declare const CreateResourceResponseSchema: z.ZodObject<{
             programId: string;
             description?: string | undefined;
             credits?: number | undefined;
+        } | undefined;
+        uploader?: {
+            email: string;
+            createdAt: string;
+            updatedAt: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            profileImageUrl?: string | undefined;
         } | undefined;
     };
 }, {
     resource: {
         type: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        subjectId: string;
         url: string;
         title: string;
-        tags: string[];
-        subjectId: string;
-        isPublic: boolean;
         uploaderUserId: string;
+        tags: string[];
         viewCount: number;
         downloadCount: number;
+        isPublic: boolean;
         description?: string | undefined;
-        uploader?: {
-            email: string;
-            id: string;
-            firstName: string;
-            lastName: string;
-            role: "estudiante" | "admin";
-            isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
-            profileImageUrl?: string | undefined;
-        } | undefined;
         subject?: {
             code: string;
             id: string;
@@ -245,6 +234,17 @@ export declare const CreateResourceResponseSchema: z.ZodObject<{
             programId: string;
             description?: string | undefined;
             credits?: number | undefined;
+        } | undefined;
+        uploader?: {
+            email: string;
+            createdAt: string;
+            updatedAt: string;
+            id: string;
+            firstName: string;
+            lastName: string;
+            role: "estudiante" | "admin";
+            isVerified: boolean;
+            profileImageUrl?: string | undefined;
         } | undefined;
     };
 }>;
