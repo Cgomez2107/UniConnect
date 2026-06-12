@@ -6,7 +6,8 @@
   "scripts": {
     "typecheck": "echo \"@uniconnect/shared: included by services\"",
     "lint": "echo \"@uniconnect/shared lint scaffold\"",
-    "test": "echo \"@uniconnect/shared tests scaffold\""
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@uniconnect/shared-types": "workspace:*",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
   }
 }
