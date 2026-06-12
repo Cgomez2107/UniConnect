@@ -9,6 +9,7 @@ import { JWTService } from "./infrastructure/jwt/JWTService.js";
 import { SignUpUseCase } from "./application/use-cases/SignUpUseCase.js";
 import { SignInUseCase } from "./application/use-cases/SignInUseCase.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshTokenUseCase.js";
+import { VerifyEmailUseCase } from "./application/use-cases/VerifyEmailUseCase.js";
 import { AuthController } from "./interfaces/http/AuthController.js";
 import { requireEnv } from "../../../shared/libs/config/requiredEnv.js";
 import { sendData, sendError } from "../../../shared/http/sendJson.js";
@@ -159,7 +160,7 @@ async function main() {
       });
   };
 
-  const createProfile = async (userId: string, fullName: string, email?: string): Promise<void> => {
+  const createProfile = async (userId: string, fullName: string, _email?: string): Promise<void> => {
     const token = jwtService.generateTokens(userId).accessToken;
     const response = await fetch(`${profilesCatalogBaseUrl}/api/v1/students/profile`, {
       method: "POST",
@@ -173,10 +174,8 @@ async function main() {
       const err = await response.json().catch(() => ({ error: "Unknown error" }));
       throw new Error(`Failed to create profile: ${err.error}`);
     }
-
-    if (email) {
-      dispatchWelcomeWebhook(email, fullName, userId);
-    }
+    // NOTA: el webhook 'usuario.verificado' se emite SOLO después de que
+    // el usuario verifica su correo vía VerifyEmailUseCase (no aquí)
   };
 
   const signUpUseCase = new SignUpUseCase(
@@ -190,7 +189,15 @@ async function main() {
   const signInUseCase = new SignInUseCase(authRepository, tokenRepository, jwtService, supabaseUrl, supabaseServiceRoleKey);
   const refreshTokenUseCase = new RefreshTokenUseCase(tokenRepository, authRepository, jwtService);
 
-  const authController = new AuthController(signUpUseCase, signInUseCase, refreshTokenUseCase);
+  const verifyEmailUseCase = new VerifyEmailUseCase(
+    authRepository,
+    jwtService,
+    dispatchWelcomeWebhook,
+    supabaseUrl,
+    supabaseServiceRoleKey,
+  );
+
+  const authController = new AuthController(signUpUseCase, signInUseCase, refreshTokenUseCase, verifyEmailUseCase);
 
   // Crear servidor
   const server = createServer(async (req, res) => {
@@ -245,6 +252,8 @@ async function main() {
       await authController.signin(req, res);
     } else if (method === "POST" && path === "/refresh") {
       await authController.refreshToken(req, res);
+    } else if (method === "POST" && path === "/verify-email") {
+      await authController.verifyEmail(req, res);
     } else if (method === "GET" && path === "/session") {
       const auth = req.headers.authorization;
       if (auth?.startsWith("Bearer ")) {
@@ -417,6 +426,7 @@ async function main() {
               passwordHash: "",
               role: "estudiante" as const,
               isActive: true,
+              isVerified: true,
             });
           }
 
@@ -484,6 +494,7 @@ async function main() {
             passwordHash: u.passwordHashOverride ?? devSeedPasswordHash,
             role: u.roleOverride ?? "estudiante",
             isActive: true,
+            isVerified: true,
           });
           console.log(JSON.stringify({ service: "auth", level: "info", message: `Dev seed: user created ${u.email} with fixed id ${u.id}` }));
         }

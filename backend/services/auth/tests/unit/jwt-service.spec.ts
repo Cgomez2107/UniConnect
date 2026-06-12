@@ -12,6 +12,7 @@ vi.mock("bcryptjs", () => ({
 }));
 
 const TEST_SECRET = "test-secret-for-unit-tests-at-least-32-chars!!";
+const TEST_VERIFICATION_SECRET = "test-verification-secret-min-32-char!";
 
 function decodeToken(token: string): Record<string, unknown> {
   const parts = token.split(".");
@@ -21,7 +22,7 @@ function decodeToken(token: string): Record<string, unknown> {
 
 describe("JWTService — T1.1: JWT payload con role", () => {
   it("incluye role en el payload del access token cuando se proporciona", () => {
-    const service = new JWTService(TEST_SECRET, TEST_SECRET);
+    const service = new JWTService(TEST_SECRET, TEST_SECRET, TEST_VERIFICATION_SECRET);
     const { accessToken } = service.generateTokens("user-123", "admin");
     const payload = decodeToken(accessToken);
     expect(payload.sub).toBe("user-123");
@@ -32,7 +33,7 @@ describe("JWTService — T1.1: JWT payload con role", () => {
   });
 
   it("incluye role en el payload del refresh token cuando se proporciona", () => {
-    const service = new JWTService(TEST_SECRET, TEST_SECRET);
+    const service = new JWTService(TEST_SECRET, TEST_SECRET, TEST_VERIFICATION_SECRET);
     const { refreshToken } = service.generateTokens("user-123", "admin");
     const payload = decodeToken(refreshToken);
     expect(payload.sub).toBe("user-123");
@@ -40,7 +41,7 @@ describe("JWTService — T1.1: JWT payload con role", () => {
   });
 
   it("NO incluye role en el payload cuando se omite el parámetro", () => {
-    const service = new JWTService(TEST_SECRET, TEST_SECRET);
+    const service = new JWTService(TEST_SECRET, TEST_SECRET, TEST_VERIFICATION_SECRET);
     const { accessToken } = service.generateTokens("user-123");
     const payload = decodeToken(accessToken);
     expect(payload.sub).toBe("user-123");
@@ -48,21 +49,21 @@ describe("JWTService — T1.1: JWT payload con role", () => {
   });
 
   it("NO incluye role en el payload cuando se pasa undefined", () => {
-    const service = new JWTService(TEST_SECRET, TEST_SECRET);
+    const service = new JWTService(TEST_SECRET, TEST_SECRET, TEST_VERIFICATION_SECRET);
     const { accessToken } = service.generateTokens("user-123", undefined);
     const payload = decodeToken(accessToken);
     expect(payload.role).toBeUndefined();
   });
 
   it("NO incluye role en el payload cuando se pasa string vacío", () => {
-    const service = new JWTService(TEST_SECRET, TEST_SECRET);
+    const service = new JWTService(TEST_SECRET, TEST_SECRET, TEST_VERIFICATION_SECRET);
     const { accessToken } = service.generateTokens("user-123", "");
     const payload = decodeToken(accessToken);
     expect(payload.role).toBeUndefined();
   });
 
   it("verifyAccessToken retorna el payload completo con role", () => {
-    const service = new JWTService(TEST_SECRET, TEST_SECRET);
+    const service = new JWTService(TEST_SECRET, TEST_SECRET, TEST_VERIFICATION_SECRET);
     const { accessToken } = service.generateTokens("user-456", "admin");
     const payload = service.verifyAccessToken(accessToken);
     expect(payload).not.toBeNull();
@@ -71,7 +72,7 @@ describe("JWTService — T1.1: JWT payload con role", () => {
   });
 
   it("verifyAccessToken retorna null para token inválido", () => {
-    const service = new JWTService(TEST_SECRET, TEST_SECRET);
+    const service = new JWTService(TEST_SECRET, TEST_SECRET, TEST_VERIFICATION_SECRET);
     const payload = service.verifyAccessToken("invalid-token");
     expect(payload).toBeNull();
   });
@@ -177,7 +178,7 @@ describe("SignUpUseCase — T1.3: Validación de dominio institucional", () => {
       return { SignUpUseCase: mod.SignUpUseCase, ValidationError: errMod.ValidationError };
     })();
 
-    const mockJWTService = { generateTokens: vi.fn() };
+    const mockJWTService = { generateTokens: vi.fn(), generateVerificationToken: vi.fn().mockReturnValue("mock-vt") };
     const mockAuthRepository = { findByEmail: vi.fn(), create: vi.fn() };
     const mockTokenRepository = { create: vi.fn() };
 
@@ -196,7 +197,7 @@ describe("SignUpUseCase — T1.3: Validación de dominio institucional", () => {
       return { SignUpUseCase: mod.SignUpUseCase, ValidationError: errMod.ValidationError };
     })();
 
-    const mockJWTService = { generateTokens: vi.fn() };
+    const mockJWTService = { generateTokens: vi.fn(), generateVerificationToken: vi.fn().mockReturnValue("mock-vt") };
     const mockAuthRepository = { findByEmail: vi.fn(), create: vi.fn() };
     const mockTokenRepository = { create: vi.fn() };
 
@@ -211,7 +212,7 @@ describe("SignUpUseCase — T1.3: Validación de dominio institucional", () => {
   it("acepta email @ucaldas.edu.co (happy path)", async () => {
     const { SignUpUseCase } = await import("../../src/application/use-cases/SignUpUseCase.js");
 
-    const mockJWTService = { generateTokens: vi.fn().mockReturnValue({ accessToken: "at", refreshToken: "rt", accessTokenExpiry: 3600 }) };
+    const mockJWTService = { generateTokens: vi.fn().mockReturnValue({ accessToken: "at", refreshToken: "rt", accessTokenExpiry: 3600 }), generateVerificationToken: vi.fn().mockReturnValue("mock-vt") };
     const mockAuthRepository = {
       findByEmail: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: "new-id", email: "valido@ucaldas.edu.co", fullName: "Valido", role: "estudiante" }),
@@ -229,7 +230,7 @@ describe("SignUpUseCase — T1.3: Validación de dominio institucional", () => {
 
 describe("SignUpUseCase — T1.3: Propaga role a generateTokens", () => {
   it("llama generateTokens con user.id y user.role después de crear usuario", async () => {
-    const mockJWTService = { generateTokens: vi.fn().mockReturnValue({ accessToken: "at", refreshToken: "rt", accessTokenExpiry: 3600 }) };
+    const mockJWTService = { generateTokens: vi.fn().mockReturnValue({ accessToken: "at", refreshToken: "rt", accessTokenExpiry: 3600 }), generateVerificationToken: vi.fn().mockReturnValue("mock-vt") };
     const mockAuthRepository = {
       findByEmail: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: "new-id", email: "new@ucaldas.edu.co", fullName: "New", role: "estudiante" }),
@@ -266,7 +267,7 @@ describe("RefreshTokenUseCase — T1.4: Propaga role a generateTokens", () => {
   });
 
   it("lanza AuthenticationError cuando el refresh token está expirado", async () => {
-    const mockJWTService = { generateTokens: vi.fn() };
+    const mockJWTService = { generateTokens: vi.fn(), generateVerificationToken: vi.fn().mockReturnValue("mock-vt") };
     const mockTokenRepository = {
       findByToken: vi.fn().mockResolvedValue({ userId: "user-id", expiresAt: new Date(Date.now() - 3600000), revokedAt: null }),
     };

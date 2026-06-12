@@ -69,6 +69,7 @@ export class SignInUseCase {
           passwordHash: "",
           role: role as "estudiante" | "moderador" | "admin",
           isActive: true,
+          isVerified: true,
         });
       }
     } catch {

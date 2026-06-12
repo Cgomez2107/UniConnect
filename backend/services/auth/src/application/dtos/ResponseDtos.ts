@@ -13,6 +13,7 @@ export interface UserResponse {
 
 export interface SignUpResponse extends TokenResponse {
   user: UserResponse;
+  verificationToken?: string;
 }
 
 export interface SignInResponse extends TokenResponse {
