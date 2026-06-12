@@ -147,6 +147,10 @@ export function OAuthCallbackPage() {
                 }
               }
 
+              if (data.isNewUser) {
+                sessionStorage.setItem("showWelcomeToast", "true");
+              }
+
               // Redirigir según el rol de Supabase
               if (role === "admin") {
                 navigate("/admin", { replace: true });

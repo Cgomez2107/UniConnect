@@ -9,5 +9,8 @@ export async function signIn(input: { email: string; password: string }) {
 export async function signUp(input: { email: string; password: string; fullName: string }) {
 	const container = DIContainer.getInstance()
 	const useCase = container.getSignUpWithPassword()
-	return useCase.execute(input)
+	const result = await useCase.execute(input)
+	const { useAuthStore } = require("@/store/useAuthStore");
+	useAuthStore.getState().setShowWelcomeToast(true);
+	return result;
 }

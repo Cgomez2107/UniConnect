@@ -152,7 +152,46 @@ export class ApiAuthRepository implements IAuthRepository {
 
   async resolveSessionFromOAuthUrl(url: string): Promise<OAuthSessionResolutionMode> {
     this.clearCache();
-    return this.fallback.resolveSessionFromOAuthUrl(url);
+    try {
+      const resolutionMode = await this.fallback.resolveSessionFromOAuthUrl(url);
+
+      if (resolutionMode !== "none") {
+        const session = await this.fallback.getSession();
+        if (session && session.access_token) {
+          // Intercambiar token de Supabase por el del backend
+          const data = await fetchApi<any>("/auth/oauth/callback", {
+            method: "POST",
+            body: JSON.stringify({
+              accessToken: session.access_token,
+            }),
+          });
+
+          if (data && data.accessToken) {
+            setManualToken(data.accessToken);
+
+            try {
+              const { supabase } = require("@/lib/supabase");
+              await supabase.auth.setSession({
+                access_token: data.accessToken,
+                refresh_token: data.refreshToken || session.refresh_token || "",
+              });
+            } catch (sessionErr) {
+              console.warn("[ApiAuthRepository] setSession sync failed:", sessionErr);
+            }
+
+            if (data.isNewUser) {
+              const { useAuthStore } = require("@/store/useAuthStore");
+              useAuthStore.getState().setShowWelcomeToast(true);
+            }
+          }
+        }
+      }
+
+      return resolutionMode;
+    } catch (error) {
+      console.warn("[ApiAuthRepository] Fallback en resolveSessionFromOAuthUrl por error:", error);
+      return this.fallback.resolveSessionFromOAuthUrl(url);
+    }
   }
 
   onAuthStateChange(callback: AuthStateChangeCallback) {

@@ -35,7 +35,8 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, password);
       const currentUser = useAuthStore.getState().user;
-      const destination = currentUser?.role === "admin" ? "/admin" : "/solicitudes";
+      const defaultDestination = currentUser?.role === "admin" ? "/admin" : "/solicitudes";
+      const destination = (location.state as any)?.from || defaultDestination;
       navigate(destination, { replace: true });
     } catch (err: any) {
       setError(err?.message || "Credenciales incorrectas");
@@ -54,7 +55,8 @@ export const LoginPage: React.FC = () => {
       });
 
       if (response.data?.url) {
-        sessionStorage.setItem("preOAuthLocation", "/solicitudes"); // Redirigir a solicitudes después de OAuth
+        const intendedPath = (location.state as any)?.from || "/solicitudes";
+        sessionStorage.setItem("preOAuthLocation", intendedPath);
         window.location.href = response.data.url;
       } else {
         setError("No se pudo iniciar la sesión con Google.");

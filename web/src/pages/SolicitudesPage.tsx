@@ -13,16 +13,26 @@ import { Button } from "@/components/ui/Button";
 import { StudyRequestUI } from "@/types/ui";
 import { deps } from "@/store/deps";
 import useCompanions from "@/hooks/useCompanions";
+import useNotifications from "@/hooks/useNotifications";
 
 type FeedTab = "solicitudes" | "companeros";
 
 export function SolicitudesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { success } = useNotifications();
   const [activeTab, setActiveTab] = useState<FeedTab>("solicitudes");
   const filter = useAcademicFilter("solicitudes");
   const [companionSubjectId, setCompanionSubjectId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const showWelcome = sessionStorage.getItem("showWelcomeToast");
+    if (showWelcome === "true") {
+      sessionStorage.removeItem("showWelcomeToast");
+      success("¡Bienvenido a UniConnect! 🎉 Tu correo de bienvenida llegará en los próximos 5 minutos a tu bandeja institucional.");
+    }
+  }, [success]);
   const fallbackSubjects = useMemo(
     () => ((user as any)?.studySubjects || []).map((s: any) => ({ id: s.id, name: s.name })),
     [user],

@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useParams,
+  useLocation,
 } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { LoginPage } from "./pages/LoginPage";
@@ -62,10 +63,11 @@ function PrivateRoute({
   isAuthenticated: boolean;
   requiredRole?: "admin" | "estudiante";
 }) {
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   if (requiredRole && user?.role !== requiredRole) {
@@ -194,6 +196,14 @@ function App() {
           <Route path="/forum/pregunta/:id" element={<ForumQuestionPage />} />
           <Route path="/calendario-estudio" element={<StudyCalendarPage />} />
         </Route>
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute isAuthenticated={isAuthenticated}>
+              <Navigate to={user?.role === "admin" ? "/admin" : "/solicitudes"} replace />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/"
           element={

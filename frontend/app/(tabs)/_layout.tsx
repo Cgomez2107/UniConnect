@@ -7,6 +7,7 @@ import { Colors } from "@/constants/Colors";
 import { SessionGuard } from "@/components/auth/SessionGuard";
 import { SplashLoader } from "@/components/ui/SplashLoader";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useToast } from "@/context";
 import { useUnreadCountStore } from "@/store/unreadCountStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { Ionicons } from "@expo/vector-icons";
@@ -50,6 +51,21 @@ export default function TabLayout() {
   const notifBadge = notificationUnread > 0
     ? (notificationUnread > 99 ? "99+" : notificationUnread)
     : undefined;
+
+  const showWelcomeToast = useAuthStore((s) => s.showWelcomeToast);
+  const setShowWelcomeToast = useAuthStore((s) => s.setShowWelcomeToast);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (showWelcomeToast) {
+      setShowWelcomeToast(false);
+      showToast(
+        "¡Bienvenido a UniConnect! 🎉 Tu correo de bienvenida llegará en los próximos 5 minutos a tu bandeja institucional.",
+        "success",
+        6000
+      );
+    }
+  }, [showWelcomeToast, showToast, setShowWelcomeToast]);
 
   useEffect(() => {
     if (role === "admin") {
