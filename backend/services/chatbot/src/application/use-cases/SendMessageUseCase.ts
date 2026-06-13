@@ -7,7 +7,7 @@ export class SendMessageUseCase {
     this.strategyContext = new PromptStrategyContext();
   }
 
-  async execute(role: string, message: string, history?: any[]): Promise<{ reply: string }> {
+  async execute(role: string, message: string, history?: any[], userId?: string): Promise<{ reply: string; referencias?: any[] }> {
     const systemPrompt = this.strategyContext.buildPromptForRole(role);
 
     const webhookUrl = process.env.CHATBOT_WEBHOOK_URL;
@@ -24,11 +24,13 @@ export class SendMessageUseCase {
       // Simulate chatbot response based on the role and prompt rules
       if (role === "admin") {
         return {
-          reply: `[Simulación Admin Bot] Hola Administrador. Analizando el sistema con las siguientes directivas:\n- Prompt de Sistema: "${systemPrompt.substring(0, 80)}..."\n- Tu mensaje: "${message}"\n- Respuesta: Todo el sistema está funcionando a niveles óptimos con 0 logs de error.`
+          reply: `[Simulación Admin Bot] Hola Administrador. Analizando el sistema con las siguientes directivas:\n- Prompt de Sistema: "${systemPrompt.substring(0, 80)}..."\n- Tu mensaje: "${message}"\n- Respuesta: Todo el sistema está funcionando a niveles óptimos con 0 logs de error.`,
+          referencias: [],
         };
       } else {
         return {
-          reply: `[Simulación Estudiante Bot] Hola Estudiante. Conectado bajo las directivas:\n- Prompt de Sistema: "${systemPrompt.substring(0, 80)}..."\n- Tu mensaje: "${message}"\n- Respuesta: Recuerda que solo puedo dar información sobre la plataforma UniConnect (foros, chats, grupos de estudio, recursos, etc.).`
+          reply: `[Simulación Estudiante Bot] Hola Estudiante. Conectado bajo las directivas:\n- Prompt de Sistema: "${systemPrompt.substring(0, 80)}..."\n- Tu mensaje: "${message}"\n- Respuesta: Recuerda que solo puedo dar información sobre la plataforma UniConnect (foros, chats, grupos de estudio, recursos, etc.).`,
+          referencias: [],
         };
       }
     }
@@ -40,9 +42,9 @@ export class SendMessageUseCase {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          systemPrompt,
-          message,
-          history: history || [],
+          pregunta: message,
+          rol: role,
+          userId: userId || "",
         }),
       });
 
@@ -52,11 +54,13 @@ export class SendMessageUseCase {
 
       const data = (await response.json()) as any;
       const reply = data.reply || data.response || JSON.stringify(data);
-      return { reply };
+      const referencias = data.referencias || [];
+      return { reply, referencias };
     } catch (error: any) {
       console.error(`[SendMessageUseCase Error] Failed to call webhook: ${error.message}`);
       return {
-        reply: `[Error de Conexión] No se pudo conectar con el servicio de Inteligencia Artificial. (Detalle: ${error.message})`
+        reply: `[Error de Conexión] No se pudo conectar con el servicio de Inteligencia Artificial. (Detalle: ${error.message})`,
+        referencias: [],
       };
     }
   }

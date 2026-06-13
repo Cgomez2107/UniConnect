@@ -52,7 +52,7 @@ export class ChatbotController {
     const { message, history } = body;
 
     try {
-      const result = await this.sendMessageUseCase.execute(role, message, history);
+      const result = await this.sendMessageUseCase.execute(role, message, history, userId || undefined);
       sendJson(res, 200, result);
     } catch (error: any) {
       console.error(`[ChatbotController Error] ${error.message}`);
