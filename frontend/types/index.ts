@@ -472,6 +472,7 @@ export interface CreateEventPayload {
 export interface AdminEvent {
   id: string;
   title: string;
+  description?: string | null;
   event_date: string;
   location: string | null;
   category: EventCategory;
@@ -481,6 +482,7 @@ export interface AdminEvent {
   status?: string;          // draft | published | cancelled | finished
   deleted_at?: string | null;
   max_capacity?: number | null;
+  registered_count?: number;
 }
 
 

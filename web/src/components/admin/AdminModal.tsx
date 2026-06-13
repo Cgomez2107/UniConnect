@@ -5,12 +5,13 @@ interface AdminModalProps {
   title: string;
   error: string;
   submitting: boolean;
+  readonly?: boolean;
   onClose: () => void;
   onSave: () => void;
   children: ReactNode;
 }
 
-export default function AdminModal({ visible, title, error, submitting, onClose, onSave, children }: AdminModalProps) {
+export default function AdminModal({ visible, title, error, submitting, readonly, onClose, onSave, children }: AdminModalProps) {
   if (!visible) return null;
 
   return (
@@ -34,21 +35,33 @@ export default function AdminModal({ visible, title, error, submitting, onClose,
 
         {children}
 
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onSave}
-            disabled={submitting}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors"
-          >
-            {submitting ? "Guardando..." : "Guardar"}
-          </button>
-        </div>
+        {!readonly && (
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onSave}
+              disabled={submitting}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors"
+            >
+              {submitting ? "Guardando..." : "Guardar"}
+            </button>
+          </div>
+        )}
+        {readonly && (
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

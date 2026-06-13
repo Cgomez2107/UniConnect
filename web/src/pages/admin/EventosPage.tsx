@@ -104,6 +104,10 @@ export function AdminEventosPage() {
   const [confirmError, setConfirmError] = useState("");
   const [confirmLoading, setConfirmLoading] = useState(false);
 
+  // Detail modal state
+  const [detailEvent, setDetailEvent] = useState<AdminEvent | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+
   const [categoryConfirmDelete, setCategoryConfirmDelete] = useState<{ id: string; title: string } | null>(null);
   const [catDeleteError, setCatDeleteError] = useState("");
   const [catDeleting, setCatDeleting] = useState(false);
@@ -156,6 +160,11 @@ export function AdminEventosPage() {
     setFormMaxCapacity("");
     setModalError("");
     setModalVisible(true);
+  };
+
+  const openDetail = (item: AdminEvent) => {
+    setDetailEvent(item);
+    setDetailModalVisible(true);
   };
 
   const openEdit = (item: { id?: string; title?: string; event_date?: string; description?: string | null; location?: string | null; category_id?: string | null; max_capacity?: number | null }) => {
@@ -563,7 +572,8 @@ export function AdminEventosPage() {
                   const eventDate = e.event_date ? new Date(e.event_date) : null;
                   const createdDate = e.created_at ? new Date(e.created_at) : null;
                   return (
-                  <tr key={e.id} className={`hover:bg-neutral-50 transition-colors ${e.deleted_at ? "opacity-60" : ""}`}>
+                  <tr key={e.id} className={`hover:bg-neutral-50 transition-colors cursor-pointer ${e.deleted_at ? "opacity-60" : ""}`}
+                    onClick={() => openDetail(e)}>
                     <td className="px-5 py-3 text-sm font-medium text-neutral-800">
                       {e.title ?? "—"}
                     </td>
@@ -595,7 +605,7 @@ export function AdminEventosPage() {
                         day: "numeric",
                       }) : "—"}
                     </td>
-                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                    <td className="px-5 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       {getActionButtons(e)}
                     </td>
                   </tr>
@@ -756,6 +766,61 @@ export function AdminEventosPage() {
         onConfirm={catDeleteError ? () => { setCategoryConfirmDelete(null); setCatDeleteError(""); } : handleCategoryDelete}
         onCancel={() => { setCategoryConfirmDelete(null); setCatDeleteError(""); }}
       />
+
+      {/* Event detail modal */}
+      <AdminModal
+        visible={detailModalVisible}
+        title={detailEvent?.title ?? "Detalle del evento"}
+        error=""
+        submitting={false}
+        readonly
+        onClose={() => setDetailModalVisible(false)}
+        onSave={() => {}}
+      >
+        {detailEvent && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              {getStatusBadge(detailEvent)}
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(eventCategories, detailEvent.category_id)}`}>
+                {getCategoryName(eventCategories, detailEvent.category_id, detailEvent.category)}
+              </span>
+            </div>
+
+            {detailEvent.description && (
+              <div>
+                <p className="text-sm text-neutral-600">{detailEvent.description}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-neutral-400 text-xs uppercase tracking-wide">Fecha</p>
+                <p className="font-medium text-neutral-800">{detailEvent.event_date ? new Date(detailEvent.event_date).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-neutral-400 text-xs uppercase tracking-wide">Lugar</p>
+                <p className="font-medium text-neutral-800">{detailEvent.location || "—"}</p>
+              </div>
+              <div>
+                <p className="text-neutral-400 text-xs uppercase tracking-wide">Cupo máximo</p>
+                <p className="font-medium text-neutral-800">{detailEvent.max_capacity ?? "Ilimitado"}</p>
+              </div>
+              <div>
+                <p className="text-neutral-400 text-xs uppercase tracking-wide">Registrados</p>
+                <p className="font-medium text-neutral-800">{detailEvent.registered_count ?? 0}</p>
+              </div>
+              <div>
+                <p className="text-neutral-400 text-xs uppercase tracking-wide">Creador</p>
+                <p className="font-medium text-neutral-800">{detailEvent.creator_name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-neutral-400 text-xs uppercase tracking-wide">Creado</p>
+                <p className="font-medium text-neutral-800">{detailEvent.created_at ? new Date(detailEvent.created_at).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" }) : "—"}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </AdminModal>
     </div>
   );
 }

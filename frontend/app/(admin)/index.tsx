@@ -41,6 +41,15 @@ export default function AdminPanelScreen() {
 
   const admin = useAdmin(search)
 
+  // Detail modal state
+  const [detailEvent, setDetailEvent] = useState<AdminEvent | null>(null)
+  const [detailModalVisible, setDetailModalVisible] = useState(false)
+
+  const openEventDetail = useCallback((item: AdminEvent) => {
+    setDetailEvent(item)
+    setDetailModalVisible(true)
+  }, [])
+
   const tabs = useMemo(
     () => [
       { key: "facultades" as ActiveTab, icon: "business-outline" as const, label: "Facultades", count: admin.faculties.length },
@@ -202,10 +211,11 @@ export default function AdminPanelScreen() {
         onDelete={() => admin.handleDeleteEvent(item)}
         onPublish={item.status === "draft" ? () => admin.handlePublishEvent(item) : undefined}
         onCancel={item.status === "published" ? () => admin.handleCancelEvent(item) : undefined}
+        onViewDetails={() => openEventDetail(item)}
         C={C}
       />
     ),
-    [admin, C],
+    [admin, C, openEventDetail],
   )
 
   // Render
@@ -519,6 +529,67 @@ export default function AdminPanelScreen() {
         C={C}
       >
         <CategoryModalFields C={C} modal={admin.categoryModal} setModal={admin.setCategoryModal} />
+      </CrudModal>
+
+      {/* Event detail modal */}
+      <CrudModal
+        visible={detailModalVisible}
+        title={detailEvent?.title ?? "Detalle del evento"}
+        error=""
+        isSubmitting={false}
+        readonly
+        onClose={() => setDetailModalVisible(false)}
+        onSave={() => {}}
+        C={C}
+      >
+        {detailEvent && (
+          <View style={{ gap: 16 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Text style={{ fontSize: 13, color: C.textSecondary }}>
+                {detailEvent.status === "draft" ? "Borrador" : detailEvent.status === "published" ? "Publicado" : detailEvent.status === "cancelled" ? "Cancelado" : "Finalizado"}
+              </Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary }}>•</Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary, textTransform: "capitalize" }}>{detailEvent.category}</Text>
+            </View>
+
+            {detailEvent.description && (
+              <Text style={{ fontSize: 14, color: C.textSecondary, lineHeight: 20 }}>
+                {detailEvent.description}
+              </Text>
+            )}
+
+            <View style={{ gap: 12 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Fecha</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>
+                  {detailEvent.event_date ? new Date(detailEvent.event_date).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Lugar</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>{detailEvent.location || "—"}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Cupo máximo</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>{detailEvent.max_capacity ?? "Ilimitado"}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Registrados</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>{detailEvent.registered_count ?? 0}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Creador</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>{detailEvent.creator_name || "—"}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Creado</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>
+                  {detailEvent.created_at ? new Date(detailEvent.created_at).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
       </CrudModal>
     </View>
   )

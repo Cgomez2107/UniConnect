@@ -686,6 +686,7 @@ export function useAdmin(search: string) {
           status: nuevo.status ?? "draft",
           deleted_at: null,
           max_capacity: (nuevo as any).max_capacity ?? (nuevo as any).maxCapacity ?? parsedCapacity ?? null,
+          registered_count: 0,
         }
         setEvents((p) => [...p, adminEvt].sort(
           (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
@@ -704,6 +705,7 @@ export function useAdmin(search: string) {
           status: (actualizado as any).status ?? eventModal.item?.status ?? "published",
           deleted_at: (actualizado as any).deleted_at ?? eventModal.item?.deleted_at ?? null,
           max_capacity: (actualizado as any).max_capacity ?? (actualizado as any).maxCapacity ?? eventModal.item?.max_capacity ?? null,
+          registered_count: (actualizado as any).registered_count ?? (actualizado as any).registeredCount ?? eventModal.item?.registered_count ?? 0,
         }
         setEvents((p) => p.map((e) => (e.id === adminEvt.id ? adminEvt : e)))
       }
