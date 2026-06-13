@@ -13,10 +13,10 @@ import { Colors } from "@/constants/Colors"
 import { useAdmin } from "@/hooks/application/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
 import type { AdminEvent, AdminRequest, AdminResource, AdminUser, EventCategoryRow, Faculty, Program, Subject } from "@/types"
-import { router } from "expo-router"
+import { router, useLocalSearchParams } from "expo-router"
 import * as Haptics from "expo-haptics"
 import { StatusBar } from "expo-status-bar"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Alert,
   FlatList,
@@ -29,6 +29,8 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { fetchApiEnvelope } from "@/lib/api/httpClient"
+
 export default function AdminPanelScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
@@ -36,14 +38,34 @@ export default function AdminPanelScreen() {
   const signOut = useAuthStore((s) => s.signOut)
   const insets  = useSafeAreaInsets()
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("facultades")
+  const params = useLocalSearchParams<{ tab?: string }>()
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    (params.tab as ActiveTab) ?? "facultades",
+  )
   const [search,    setSearch]    = useState("")
+  const [moderationCount, setModerationCount] = useState(0)
 
   const admin = useAdmin(search)
 
   // Detail modal state
   const [detailEvent, setDetailEvent] = useState<AdminEvent | null>(null)
   const [detailModalVisible, setDetailModalVisible] = useState(false)
+
+  // Fetch moderation case count for the tab badge
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data } = await fetchApiEnvelope<any[]>("/notifications?limit=50")
+        const raw = Array.isArray(data) ? data : []
+        const count = raw.filter((n: any) => n.type === "moderation_escalation").length
+        if (!cancelled) setModerationCount(count)
+      } catch {
+        // silently ignore – badge stays at 0
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const openEventDetail = useCallback((item: AdminEvent) => {
     setDetailEvent(item)
@@ -59,6 +81,7 @@ export default function AdminPanelScreen() {
       { key: "solicitudes" as ActiveTab, icon: "document-text-outline" as const, label: "Solicitudes", count: admin.requests.length },
       { key: "recursos" as ActiveTab, icon: "folder-open-outline" as const, label: "Recursos", count: admin.resources.length },
       { key: "eventos" as ActiveTab, icon: "calendar-outline" as const, label: "Eventos", count: admin.events.length },
+      { key: "moderacion" as ActiveTab, icon: "shield-checkmark-outline" as const, label: "Moderación", count: moderationCount },
       { key: "metricas" as ActiveTab, icon: "stats-chart-outline" as const, label: "Métricas", count: 0 },
     ],
     [
@@ -69,6 +92,7 @@ export default function AdminPanelScreen() {
       admin.requests.length,
       admin.resources.length,
       admin.events.length,
+      moderationCount,
     ],
   )
 
@@ -94,8 +118,11 @@ export default function AdminPanelScreen() {
   }, [activeTab])
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
+    if (tab === "moderacion") {
+      router.push("/(admin)/moderacion" as any)
+      return
+    }
     setActiveTab(tab)
-    setSearch("")
   }, [])
 
   const handleSignOut = useCallback(() => {
