@@ -6,6 +6,11 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: Date;
+  referencias?: {
+    id?: string;
+    source?: string;
+    similarity?: number | null;
+  }[];
 }
 
 const chatbotRepository = new ApiChatbotRepository();
@@ -44,6 +49,7 @@ export function useChatbotLogic() {
         role: "assistant",
         content: response.reply,
         createdAt: new Date(),
+        referencias: response.referencias,
       };
 
       setMessages((prev) => [botMsg, ...prev]);

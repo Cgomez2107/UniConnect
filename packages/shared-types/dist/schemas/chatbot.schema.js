@@ -8,5 +8,10 @@ export const ChatbotMessageRequestSchema = z.object({
 });
 export const ChatbotMessageResponseSchema = z.object({
     reply: z.string(),
+    referencias: z.array(z.object({
+        id: z.string().optional(),
+        source: z.string().optional(),
+        similarity: z.number().nullable().optional(),
+    })).optional(),
 });
 //# sourceMappingURL=chatbot.schema.js.map

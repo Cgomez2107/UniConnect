@@ -128,7 +128,28 @@ export function ChatbotWidget() {
                             : "bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-bl-none"
                         }`}
                       >
-                        {msg.content}
+                        <div>{msg.content}</div>
+                        {!isUser && msg.referencias && msg.referencias.length > 0 && (
+                          <div className="mt-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-700 space-y-1.5">
+                            <span className="text-[9px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider block">
+                              📚 Fuentes consultadas:
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {msg.referencias.map((ref, refIdx) => {
+                                const sourceName = ref.source === "blob" ? "Manual UniConnect" : (ref.source || "Manual UniConnect");
+                                return (
+                                  <span
+                                    key={refIdx}
+                                    title={ref.id ? `ID: ${ref.id} | Similitud: ${ref.similarity ? (ref.similarity * 100).toFixed(0) + '%' : 'N/A'}` : undefined}
+                                    className="inline-flex items-center text-[10px] bg-neutral-50 dark:bg-neutral-900/50 text-neutral-550 dark:text-neutral-400 px-2 py-0.5 rounded border border-neutral-200/50 dark:border-neutral-800/30 font-medium"
+                                  >
+                                    {sourceName} {ref.id ? `#${ref.id.replace('chunk-', '')}` : ''}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

@@ -14,6 +14,7 @@ import {
   StyleProp,
   ViewStyle,
   TextStyle,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -75,6 +76,33 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
           >
             {item.content}
           </Text>
+          {!isUser && item.referencias && item.referencias.length > 0 && (
+            <View style={styles.referencesContainer}>
+              <Text style={[styles.referencesTitle, { color: C.textSecondary }]}>
+                Fuentes consultadas:
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.referencesScrollContent}
+              >
+                {item.referencias.map((ref, idx) => {
+                  const sourceName = ref.source === "blob" ? "Manual UniConnect" : (ref.source || "Manual UniConnect");
+                  const label = `${sourceName} ${ref.id ? `#${ref.id.replace('chunk-', '')}` : ''}`;
+                  return (
+                    <View
+                      key={idx}
+                      style={[styles.referenceChip, { backgroundColor: C.background, borderColor: C.border }]}
+                    >
+                      <Text style={[styles.referenceChipText, { color: C.textSecondary }]}>
+                        {label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -365,5 +393,33 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  referencesContainer: {
+    marginTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(0,0,0,0.1)",
+    paddingTop: 6,
+    width: "100%",
+  },
+  referencesTitle: {
+    fontSize: 9,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  referencesScrollContent: {
+    gap: 6,
+    paddingRight: 10,
+  },
+  referenceChip: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  referenceChipText: {
+    fontSize: 10,
+    fontWeight: "500",
   },
 });

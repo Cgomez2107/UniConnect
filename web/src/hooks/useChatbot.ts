@@ -4,6 +4,11 @@ import chatbotService from "../lib/services/chatbot.service";
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  referencias?: {
+    id?: string;
+    source?: string;
+    similarity?: number | null;
+  }[];
 }
 
 export function useChatbot() {
@@ -46,6 +51,7 @@ export function useChatbot() {
       const assistantMessage: ChatMessage = {
         role: "assistant",
         content: response.reply,
+        referencias: response.referencias,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);

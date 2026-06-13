@@ -36,6 +36,9 @@ export class SendMessageUseCase {
     }
 
     try {
+      console.log(`[SendMessageUseCase] Calling webhook: ${webhookUrl}`);
+      console.log(`[SendMessageUseCase] Payload:`, { pregunta: message, rol: role, userId: userId || "" });
+      
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
@@ -48,11 +51,15 @@ export class SendMessageUseCase {
         }),
       });
 
+      console.log(`[SendMessageUseCase] Webhook response status: ${response.status}`);
+
       if (!response.ok) {
         throw new Error(`Webhook responded with status ${response.status}`);
       }
 
       const data = (await response.json()) as any;
+      console.log(`[SendMessageUseCase] Webhook response data:`, data);
+      
       const reply = data.reply || data.response || JSON.stringify(data);
       const referencias = data.referencias || [];
       return { reply, referencias };

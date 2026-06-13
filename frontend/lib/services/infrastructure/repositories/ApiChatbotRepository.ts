@@ -11,12 +11,21 @@ export class ApiChatbotRepository {
     message: string,
     history?: ChatMessageApi[]
   ): Promise<SendChatbotMessageResponse> {
-    return fetchApi<SendChatbotMessageResponse>("/chatbot/message", {
-      method: "POST",
-      body: JSON.stringify({
-        message,
-        history,
-      }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const response = await fetchApi<SendChatbotMessageResponse>("/chatbot/message", {
+        method: "POST",
+        body: JSON.stringify({
+          message,
+          history,
+        }),
+        signal: controller.signal,
+      });
+      return response;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 }

@@ -26,9 +26,32 @@ export declare const ChatbotMessageRequestSchema: z.ZodObject<{
 }>;
 export declare const ChatbotMessageResponseSchema: z.ZodObject<{
     reply: z.ZodString;
+    referencias: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodOptional<z.ZodString>;
+        source: z.ZodOptional<z.ZodString>;
+        similarity: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    }, "strip", z.ZodTypeAny, {
+        id?: string | undefined;
+        source?: string | undefined;
+        similarity?: number | null | undefined;
+    }, {
+        id?: string | undefined;
+        source?: string | undefined;
+        similarity?: number | null | undefined;
+    }>, "many">>;
 }, "strip", z.ZodTypeAny, {
     reply: string;
+    referencias?: {
+        id?: string | undefined;
+        source?: string | undefined;
+        similarity?: number | null | undefined;
+    }[] | undefined;
 }, {
     reply: string;
+    referencias?: {
+        id?: string | undefined;
+        source?: string | undefined;
+        similarity?: number | null | undefined;
+    }[] | undefined;
 }>;
 //# sourceMappingURL=chatbot.schema.d.ts.map
