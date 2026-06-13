@@ -273,6 +273,34 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@20.19.39)(tsx@4.21.0)
 
+  services/chatbot:
+    dependencies:
+      '@uniconnect/shared-types':
+        specifier: file:../../../packages/shared-types
+        version: link:../../../packages/shared-types
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.1
+        version: 22.19.17
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.20.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@22.19.17)(tsx@4.21.0)
+
   services/events:
     dependencies:
       '@sendgrid/mail':

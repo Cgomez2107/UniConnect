@@ -30,7 +30,7 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
     notifications: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         userId: z.ZodString;
-        type: z.ZodEnum<["message", "studyGroupApplication", "studyGroupAccepted", "studyGroupRejected", "mention", "friendRequest", "system"]>;
+        type: z.ZodEnum<["message", "studyGroupApplication", "studyGroupAccepted", "studyGroupRejected", "mention", "friendRequest", "system", "nuevo_evento"]>;
         title: z.ZodString;
         description: z.ZodOptional<z.ZodString>;
         actionUrl: z.ZodOptional<z.ZodString>;
@@ -49,11 +49,11 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
             endpoint: string;
         }>>;
     }, "strip", z.ZodTypeAny, {
-        type: "message" | "mention" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
-        id: string;
+        type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system" | "nuevo_evento";
         createdAt: string;
-        title: string;
+        id: string;
         userId: string;
+        title: string;
         read: boolean;
         description?: string | undefined;
         data?: Record<string, any> | undefined;
@@ -64,11 +64,11 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
             endpoint: string;
         } | undefined;
     }, {
-        type: "message" | "mention" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
-        id: string;
+        type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system" | "nuevo_evento";
         createdAt: string;
-        title: string;
+        id: string;
         userId: string;
+        title: string;
         read: boolean;
         description?: string | undefined;
         data?: Record<string, any> | undefined;
@@ -87,11 +87,11 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
     limit: number;
     total: number;
     notifications: {
-        type: "message" | "mention" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
-        id: string;
+        type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system" | "nuevo_evento";
         createdAt: string;
-        title: string;
+        id: string;
         userId: string;
+        title: string;
         read: boolean;
         description?: string | undefined;
         data?: Record<string, any> | undefined;
@@ -107,11 +107,11 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
     limit: number;
     total: number;
     notifications: {
-        type: "message" | "mention" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
-        id: string;
+        type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system" | "nuevo_evento";
         createdAt: string;
-        title: string;
+        id: string;
         userId: string;
+        title: string;
         read: boolean;
         description?: string | undefined;
         data?: Record<string, any> | undefined;
@@ -125,28 +125,28 @@ export declare const GetNotificationsResponseSchema: z.ZodObject<{
 }>;
 export declare const GetPreferencesResponseSchema: z.ZodObject<{
     preferences: z.ZodArray<z.ZodObject<{
-        eventType: z.ZodEnum<["solicitud_ingreso", "miembro_aceptado", "miembro_rechazado", "transferencia_admin_solicitada", "transferencia_admin_aceptada", "transferencia_admin_rechazada", "transferencia_admin_transferida", "admin_role_left"]>;
+        eventType: z.ZodEnum<["solicitud_ingreso", "miembro_aceptado", "miembro_rechazado", "transferencia_admin_solicitada", "transferencia_admin_aceptada", "transferencia_admin_rechazada", "transferencia_admin_transferida", "admin_role_left", "nuevo_evento"]>;
         label: z.ZodString;
         channels: z.ZodRecord<z.ZodEnum<["in_app_websocket", "email_institucional", "push_movil"]>, z.ZodBoolean>;
     }, "strip", z.ZodTypeAny, {
         label: string;
-        eventType: "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left";
+        eventType: "nuevo_evento" | "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left";
         channels: Partial<Record<"in_app_websocket" | "email_institucional" | "push_movil", boolean>>;
     }, {
         label: string;
-        eventType: "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left";
+        eventType: "nuevo_evento" | "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left";
         channels: Partial<Record<"in_app_websocket" | "email_institucional" | "push_movil", boolean>>;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     preferences: {
         label: string;
-        eventType: "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left";
+        eventType: "nuevo_evento" | "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left";
         channels: Partial<Record<"in_app_websocket" | "email_institucional" | "push_movil", boolean>>;
     }[];
 }, {
     preferences: {
         label: string;
-        eventType: "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left";
+        eventType: "nuevo_evento" | "solicitud_ingreso" | "miembro_aceptado" | "miembro_rechazado" | "transferencia_admin_solicitada" | "transferencia_admin_aceptada" | "transferencia_admin_rechazada" | "transferencia_admin_transferida" | "admin_role_left";
         channels: Partial<Record<"in_app_websocket" | "email_institucional" | "push_movil", boolean>>;
     }[];
 }>;

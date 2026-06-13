@@ -15,24 +15,24 @@ export declare const ForumQuestionSchema: z.ZodObject<{
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     status: "active" | "solved" | "closed";
-    body: string;
-    id: string;
     createdAt: string;
     updatedAt: string;
-    title: string;
+    id: string;
     subjectId: string;
+    title: string;
     authorId: string;
+    body: string;
     answerCount: number;
     voteCount: number;
 }, {
     status: "active" | "solved" | "closed";
-    body: string;
-    id: string;
     createdAt: string;
     updatedAt: string;
-    title: string;
+    id: string;
     subjectId: string;
+    title: string;
     authorId: string;
+    body: string;
     answerCount: number;
     voteCount: number;
 }>;
@@ -48,21 +48,21 @@ export declare const ForumQuestionSummarySchema: z.ZodObject<{
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     status: "active" | "solved" | "closed";
-    id: string;
     createdAt: string;
     updatedAt: string;
-    title: string;
+    id: string;
     subjectId: string;
+    title: string;
     authorId: string;
     answerCount: number;
     voteCount: number;
 }, {
     status: "active" | "solved" | "closed";
-    id: string;
     createdAt: string;
     updatedAt: string;
-    title: string;
+    id: string;
     subjectId: string;
+    title: string;
     authorId: string;
     answerCount: number;
     voteCount: number;
@@ -77,20 +77,20 @@ export declare const ForumAnswerSchema: z.ZodObject<{
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    body: string;
-    id: string;
     createdAt: string;
     updatedAt: string;
+    id: string;
     authorId: string;
+    body: string;
     voteCount: number;
     questionId: string;
     isSolution: boolean;
 }, {
-    body: string;
-    id: string;
     createdAt: string;
     updatedAt: string;
+    id: string;
     authorId: string;
+    body: string;
     voteCount: number;
     questionId: string;
     isSolution: boolean;
@@ -103,32 +103,32 @@ export declare const ForumVoteSchema: z.ZodObject<{
     voteType: z.ZodEnum<["upvote", "downvote"]>;
     createdAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    id: string;
     createdAt: string;
+    id: string;
     targetType: "question" | "answer";
     targetId: string;
-    voteType: "upvote" | "downvote";
     voterId: string;
+    voteType: "upvote" | "downvote";
 }, {
-    id: string;
     createdAt: string;
+    id: string;
     targetType: "question" | "answer";
     targetId: string;
-    voteType: "upvote" | "downvote";
     voterId: string;
+    voteType: "upvote" | "downvote";
 }>;
 export declare const CreateQuestionInputSchema: z.ZodObject<{
     subjectId: z.ZodString;
     title: z.ZodString;
     body: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    body: string;
-    title: string;
     subjectId: string;
+    title: string;
+    body: string;
 }, {
-    body: string;
-    title: string;
     subjectId: string;
+    title: string;
+    body: string;
 }>;
 export declare const CreateAnswerInputSchema: z.ZodObject<{
     questionId: z.ZodString;
@@ -167,24 +167,24 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         status: "active" | "solved" | "closed";
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
     }, {
         status: "active" | "solved" | "closed";
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
     }>;
@@ -198,20 +198,20 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
@@ -219,22 +219,22 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     question: {
         status: "active" | "solved" | "closed";
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
     };
     answers: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
@@ -242,22 +242,22 @@ export declare const ForumQuestionDetailSchema: z.ZodObject<{
 }, {
     question: {
         status: "active" | "solved" | "closed";
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
     };
     answers: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
@@ -284,23 +284,23 @@ export declare const ForumQuestionDTOSchema: z.ZodObject<{
     updated_at: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     status: "active" | "solved" | "closed";
-    body: string;
     id: string;
-    title: string;
-    subject_id: string;
     created_at: string;
     updated_at: string;
+    subject_id: string;
+    title: string;
+    body: string;
     author_id: string;
     answer_count: number;
     vote_count: number;
 }, {
     status: "active" | "solved" | "closed";
-    body: string;
     id: string;
-    title: string;
-    subject_id: string;
     created_at: string;
     updated_at: string;
+    subject_id: string;
+    title: string;
+    body: string;
     author_id: string;
     answer_count: number;
     vote_count: number;
@@ -318,20 +318,20 @@ export declare const ForumQuestionSummaryDTOSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     status: "active" | "solved" | "closed";
     id: string;
-    title: string;
-    subject_id: string;
     created_at: string;
     updated_at: string;
+    subject_id: string;
+    title: string;
     author_id: string;
     answer_count: number;
     vote_count: number;
 }, {
     status: "active" | "solved" | "closed";
     id: string;
-    title: string;
-    subject_id: string;
     created_at: string;
     updated_at: string;
+    subject_id: string;
+    title: string;
     author_id: string;
     answer_count: number;
     vote_count: number;
@@ -346,19 +346,19 @@ export declare const ForumAnswerDTOSchema: z.ZodObject<{
     created_at: z.ZodString;
     updated_at: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    body: string;
     id: string;
     created_at: string;
     updated_at: string;
+    body: string;
     author_id: string;
     vote_count: number;
     question_id: string;
     is_solution: boolean;
 }, {
-    body: string;
     id: string;
     created_at: string;
     updated_at: string;
+    body: string;
     author_id: string;
     vote_count: number;
     question_id: string;

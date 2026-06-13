@@ -37,12 +37,12 @@ export declare const StudyGroupSchema: z.ZodObject<{
     memberCount: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     status: "activa" | "inactiva" | "finalizada";
-    id: string;
     createdAt: string;
     updatedAt: string;
+    id: string;
+    name: string;
     description: string;
     subjectId: string;
-    name: string;
     subject: {
         code: string;
         id: string;
@@ -56,12 +56,12 @@ export declare const StudyGroupSchema: z.ZodObject<{
     memberCount?: number | undefined;
 }, {
     status: "activa" | "inactiva" | "finalizada";
-    id: string;
     createdAt: string;
     updatedAt: string;
+    id: string;
+    name: string;
     description: string;
     subjectId: string;
-    name: string;
     subject: {
         code: string;
         id: string;
@@ -110,11 +110,11 @@ export declare const StudyGroupDTOSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     status: "activa" | "inactiva" | "finalizada";
     id: string;
-    description: string;
-    name: string;
-    subject_id: string;
     created_at: string;
     updated_at: string;
+    name: string;
+    description: string;
+    subject_id: string;
     max_members: number;
     created_by: string;
     subject?: {
@@ -129,11 +129,11 @@ export declare const StudyGroupDTOSchema: z.ZodObject<{
 }, {
     status: "activa" | "inactiva" | "finalizada";
     id: string;
-    description: string;
-    name: string;
-    subject_id: string;
     created_at: string;
     updated_at: string;
+    name: string;
+    description: string;
+    subject_id: string;
     max_members: number;
     created_by: string;
     subject?: {
@@ -162,23 +162,23 @@ export declare const StudyGroupMemberSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }>;
     role: z.ZodEnum<["admin", "miembro"]>;
@@ -186,36 +186,36 @@ export declare const StudyGroupMemberSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     id: string;
     role: "admin" | "miembro";
+    userId: string;
+    groupId: string;
     user: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     };
-    userId: string;
-    groupId: string;
     joinedAt: string;
 }, {
     id: string;
     role: "admin" | "miembro";
+    userId: string;
+    groupId: string;
     user: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     };
-    userId: string;
-    groupId: string;
     joinedAt: string;
 }>;
 export declare const StudyGroupMemberDTOSchema: z.ZodObject<{
@@ -258,6 +258,7 @@ export declare const StudyGroupMemberDTOSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     id: string;
     role: "admin" | "miembro";
+    user_id: string;
     user: {
         email: string;
         id: string;
@@ -269,12 +270,12 @@ export declare const StudyGroupMemberDTOSchema: z.ZodObject<{
         updated_at: string;
         profile_image_url?: string | undefined;
     };
-    user_id: string;
     group_id: string;
     joined_at: string;
 }, {
     id: string;
     role: "admin" | "miembro";
+    user_id: string;
     user: {
         email: string;
         id: string;
@@ -286,7 +287,6 @@ export declare const StudyGroupMemberDTOSchema: z.ZodObject<{
         updated_at: string;
         profile_image_url?: string | undefined;
     };
-    user_id: string;
     group_id: string;
     joined_at: string;
 }>;
@@ -306,23 +306,23 @@ export declare const StudyRequestSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }>>;
     message: z.ZodOptional<z.ZodString>;
@@ -331,41 +331,41 @@ export declare const StudyRequestSchema: z.ZodObject<{
     reviewedAt: z.ZodOptional<z.ZodString>;
     reviewedBy: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    status: "pendiente" | "aprobada" | "rechazada";
-    id: string;
+    status: "pendiente" | "rechazada" | "aprobada";
     createdAt: string;
+    id: string;
     userId: string;
     groupId: string;
     message?: string | undefined;
     user?: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     } | undefined;
     reviewedAt?: string | undefined;
     reviewedBy?: string | undefined;
 }, {
-    status: "pendiente" | "aprobada" | "rechazada";
-    id: string;
+    status: "pendiente" | "rechazada" | "aprobada";
     createdAt: string;
+    id: string;
     userId: string;
     groupId: string;
     message?: string | undefined;
     user?: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     } | undefined;
     reviewedAt?: string | undefined;
@@ -387,23 +387,23 @@ export declare const StudyApplicationSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     }>;
     message: z.ZodString;
@@ -411,40 +411,40 @@ export declare const StudyApplicationSchema: z.ZodObject<{
     createdAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     message: string;
-    status: "pendiente" | "aprobada" | "rechazada";
-    id: string;
+    status: "pendiente" | "rechazada" | "aprobada";
     createdAt: string;
+    id: string;
+    userId: string;
+    groupId: string;
     user: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     };
-    userId: string;
-    groupId: string;
 }, {
     message: string;
-    status: "pendiente" | "aprobada" | "rechazada";
-    id: string;
+    status: "pendiente" | "rechazada" | "aprobada";
     createdAt: string;
+    id: string;
+    userId: string;
+    groupId: string;
     user: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         profileImageUrl?: string | undefined;
     };
-    userId: string;
-    groupId: string;
 }>;
 export declare const StudyApplicationDTOSchema: z.ZodObject<{
     id: z.ZodString;
@@ -488,8 +488,10 @@ export declare const StudyApplicationDTOSchema: z.ZodObject<{
     reviewed_by: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     message: string;
-    status: "pendiente" | "aprobada" | "rechazada";
+    status: "pendiente" | "rechazada" | "aprobada";
     id: string;
+    created_at: string;
+    user_id: string;
     user: {
         email: string;
         id: string;
@@ -501,15 +503,15 @@ export declare const StudyApplicationDTOSchema: z.ZodObject<{
         updated_at: string;
         profile_image_url?: string | undefined;
     };
-    user_id: string;
-    created_at: string;
     group_id: string;
     reviewed_at?: string | undefined;
     reviewed_by?: string | undefined;
 }, {
     message: string;
-    status: "pendiente" | "aprobada" | "rechazada";
+    status: "pendiente" | "rechazada" | "aprobada";
     id: string;
+    created_at: string;
+    user_id: string;
     user: {
         email: string;
         id: string;
@@ -521,8 +523,6 @@ export declare const StudyApplicationDTOSchema: z.ZodObject<{
         updated_at: string;
         profile_image_url?: string | undefined;
     };
-    user_id: string;
-    created_at: string;
     group_id: string;
     reviewed_at?: string | undefined;
     reviewed_by?: string | undefined;

@@ -4099,7 +4099,6 @@ export interface components {
         Post_events_RequestBody: {
             title: string;
             description?: string;
-            /** @enum {string} */
             category: string;
             /** Format: date-time */
             eventDate: string;
@@ -4198,7 +4197,6 @@ export interface components {
             };
         };
         Post_eventos_suscribir_RequestBody: {
-            /** @enum {string} */
             categoria: string;
         };
         Post_eventos_suscribir_201Response: {
@@ -4214,7 +4212,6 @@ export interface components {
             };
         };
         Delete_eventos_suscribir_RequestBody: {
-            /** @enum {string} */
             categoria: string;
         };
         Delete_eventos_suscribir_200Response: {

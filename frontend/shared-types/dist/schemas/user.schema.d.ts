@@ -18,13 +18,13 @@ export declare const ProfileSchema: z.ZodObject<{
     subjects: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
 }, "strip", z.ZodTypeAny, {
     email: string;
+    createdAt: string;
+    updatedAt: string;
     id: string;
     firstName: string;
     lastName: string;
     role: "estudiante" | "admin";
     isVerified: boolean;
-    createdAt: string;
-    updatedAt: string;
     profileImageUrl?: string | undefined;
     bio?: string | undefined;
     phone?: string | undefined;
@@ -34,13 +34,13 @@ export declare const ProfileSchema: z.ZodObject<{
     subjects?: string[] | undefined;
 }, {
     email: string;
+    createdAt: string;
+    updatedAt: string;
     id: string;
     firstName: string;
     lastName: string;
     role: "estudiante" | "admin";
     isVerified: boolean;
-    createdAt: string;
-    updatedAt: string;
     profileImageUrl?: string | undefined;
     bio?: string | undefined;
     phone?: string | undefined;
@@ -75,8 +75,8 @@ export declare const ProfileDTOSchema: z.ZodObject<{
     is_verified: boolean;
     created_at: string;
     updated_at: string;
-    bio?: string | undefined;
     profile_image_url?: string | undefined;
+    bio?: string | undefined;
     phone?: string | undefined;
     institution?: string | undefined;
     faculty?: string | undefined;
@@ -91,8 +91,8 @@ export declare const ProfileDTOSchema: z.ZodObject<{
     is_verified: boolean;
     created_at: string;
     updated_at: string;
-    bio?: string | undefined;
     profile_image_url?: string | undefined;
+    bio?: string | undefined;
     phone?: string | undefined;
     institution?: string | undefined;
     faculty?: string | undefined;
@@ -242,8 +242,8 @@ export declare const UserSubjectSchema: z.ZodObject<{
     enrolledAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     id: string;
-    subjectId: string;
     userId: string;
+    subjectId: string;
     subject: {
         code: string;
         id: string;
@@ -255,8 +255,8 @@ export declare const UserSubjectSchema: z.ZodObject<{
     enrolledAt: string;
 }, {
     id: string;
-    subjectId: string;
     userId: string;
+    subjectId: string;
     subject: {
         code: string;
         id: string;
@@ -304,8 +304,8 @@ export declare const UserSubjectDTOSchema: z.ZodObject<{
         description?: string | undefined;
         credits?: number | undefined;
     };
-    subject_id: string;
     user_id: string;
+    subject_id: string;
     enrolled_at: string;
 }, {
     id: string;
@@ -317,8 +317,8 @@ export declare const UserSubjectDTOSchema: z.ZodObject<{
         description?: string | undefined;
         credits?: number | undefined;
     };
-    subject_id: string;
     user_id: string;
+    subject_id: string;
     enrolled_at: string;
 }>;
 export declare const UserProgramSchema: z.ZodObject<{
@@ -347,8 +347,6 @@ export declare const UserProgramSchema: z.ZodObject<{
     enrolledAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     id: string;
-    userId: string;
-    programId: string;
     program: {
         code: string;
         id: string;
@@ -356,11 +354,11 @@ export declare const UserProgramSchema: z.ZodObject<{
         facultyId: string;
         description?: string | undefined;
     };
+    programId: string;
+    userId: string;
     enrolledAt: string;
 }, {
     id: string;
-    userId: string;
-    programId: string;
     program: {
         code: string;
         id: string;
@@ -368,6 +366,8 @@ export declare const UserProgramSchema: z.ZodObject<{
         facultyId: string;
         description?: string | undefined;
     };
+    programId: string;
+    userId: string;
     enrolledAt: string;
 }>;
 export declare const UserProgramDTOSchema: z.ZodObject<{
@@ -396,8 +396,6 @@ export declare const UserProgramDTOSchema: z.ZodObject<{
     enrolled_at: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     id: string;
-    program_id: string;
-    user_id: string;
     program: {
         code: string;
         id: string;
@@ -405,11 +403,11 @@ export declare const UserProgramDTOSchema: z.ZodObject<{
         faculty_id: string;
         description?: string | undefined;
     };
+    program_id: string;
+    user_id: string;
     enrolled_at: string;
 }, {
     id: string;
-    program_id: string;
-    user_id: string;
     program: {
         code: string;
         id: string;
@@ -417,6 +415,8 @@ export declare const UserProgramDTOSchema: z.ZodObject<{
         faculty_id: string;
         description?: string | undefined;
     };
+    program_id: string;
+    user_id: string;
     enrolled_at: string;
 }>;
 //# sourceMappingURL=user.schema.d.ts.map

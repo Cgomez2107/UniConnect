@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ApiContract } from "./_base.contract.js";
+import type { ApiContract } from "./_base.contract";
 export declare const CreateGroupRequestSchema: z.ZodObject<{
     body: z.ZodObject<{
         name: z.ZodString;
@@ -7,28 +7,28 @@ export declare const CreateGroupRequestSchema: z.ZodObject<{
         subjectId: z.ZodString;
         maxMembers: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         maxMembers: number;
     }, {
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         maxMembers: number;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         maxMembers: number;
     };
 }, {
     body: {
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         maxMembers: number;
     };
 }>;
@@ -68,12 +68,12 @@ export declare const CreateGroupResponseSchema: z.ZodObject<{
         memberCount: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -87,12 +87,12 @@ export declare const CreateGroupResponseSchema: z.ZodObject<{
         memberCount?: number | undefined;
     }, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -108,12 +108,12 @@ export declare const CreateGroupResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     group: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -129,12 +129,12 @@ export declare const CreateGroupResponseSchema: z.ZodObject<{
 }, {
     group: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -174,10 +174,10 @@ export declare const JoinGroupResponseSchema: z.ZodObject<{
     applicationId: z.ZodString;
     status: z.ZodEnum<["pendiente", "aprobada", "rechazada"]>;
 }, "strip", z.ZodTypeAny, {
-    status: "pendiente" | "aprobada" | "rechazada";
+    status: "pendiente" | "rechazada" | "aprobada";
     applicationId: string;
 }, {
-    status: "pendiente" | "aprobada" | "rechazada";
+    status: "pendiente" | "rechazada" | "aprobada";
     applicationId: string;
 }>;
 export declare const CreateGroupContract: ApiContract<typeof CreateGroupRequestSchema, typeof CreateGroupResponseSchema>;

@@ -49,6 +49,7 @@ import { ForumQuestionPage } from "./pages/ForumQuestionPage";
 import { StudyCalendarPage } from "./pages/StudyCalendarPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
+import { ChatbotWidget } from "./components/chatbot/ChatbotWidget";
 import { fetchNotifications } from "./lib/services/notifications.service";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import { useGlobalSync } from "./hooks/useGlobalSync";
@@ -216,6 +217,7 @@ function App() {
         />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      {isAuthenticated && <ChatbotWidget />}
     </Router>
   );
 }

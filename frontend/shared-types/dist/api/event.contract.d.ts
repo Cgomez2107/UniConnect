@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ApiContract } from "./_base.contract.js";
+import type { ApiContract } from "./_base.contract";
 export declare const CreateEventRequestSchema: z.ZodObject<{
     body: z.ZodObject<{
         title: z.ZodString;
@@ -11,45 +11,45 @@ export declare const CreateEventRequestSchema: z.ZodObject<{
         eventUrl: z.ZodOptional<z.ZodString>;
         tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     }, "strip", z.ZodTypeAny, {
-        title: string;
         description: string;
+        title: string;
         eventDate: string;
         isOnline: boolean;
+        tags?: string[] | undefined;
         location?: string | undefined;
         capacity?: number | undefined;
         eventUrl?: string | undefined;
-        tags?: string[] | undefined;
     }, {
-        title: string;
         description: string;
+        title: string;
         eventDate: string;
+        tags?: string[] | undefined;
         location?: string | undefined;
         capacity?: number | undefined;
         isOnline?: boolean | undefined;
         eventUrl?: string | undefined;
-        tags?: string[] | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
-        title: string;
         description: string;
+        title: string;
         eventDate: string;
         isOnline: boolean;
+        tags?: string[] | undefined;
         location?: string | undefined;
         capacity?: number | undefined;
         eventUrl?: string | undefined;
-        tags?: string[] | undefined;
     };
 }, {
     body: {
-        title: string;
         description: string;
+        title: string;
         eventDate: string;
+        tags?: string[] | undefined;
         location?: string | undefined;
         capacity?: number | undefined;
         isOnline?: boolean | undefined;
         eventUrl?: string | undefined;
-        tags?: string[] | undefined;
     };
 }>;
 export declare const CreateEventResponseSchema: z.ZodObject<{
@@ -72,23 +72,23 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             profileImageUrl?: string | undefined;
         }, {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             profileImageUrl?: string | undefined;
         }>>;
         capacity: z.ZodOptional<z.ZodNumber>;
@@ -99,109 +99,109 @@ export declare const CreateEventResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         description: string;
-        eventDate: string;
-        isOnline: boolean;
+        title: string;
         tags: string[];
+        eventDate: string;
         creatorId: string;
         attendeeCount: number;
+        isOnline: boolean;
         location?: string | undefined;
-        capacity?: number | undefined;
-        eventUrl?: string | undefined;
         creator?: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             profileImageUrl?: string | undefined;
         } | undefined;
+        capacity?: number | undefined;
+        eventUrl?: string | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         description: string;
-        eventDate: string;
-        isOnline: boolean;
+        title: string;
         tags: string[];
+        eventDate: string;
         creatorId: string;
         attendeeCount: number;
+        isOnline: boolean;
         location?: string | undefined;
-        capacity?: number | undefined;
-        eventUrl?: string | undefined;
         creator?: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             profileImageUrl?: string | undefined;
         } | undefined;
+        capacity?: number | undefined;
+        eventUrl?: string | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     event: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         description: string;
-        eventDate: string;
-        isOnline: boolean;
+        title: string;
         tags: string[];
+        eventDate: string;
         creatorId: string;
         attendeeCount: number;
+        isOnline: boolean;
         location?: string | undefined;
-        capacity?: number | undefined;
-        eventUrl?: string | undefined;
         creator?: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             profileImageUrl?: string | undefined;
         } | undefined;
+        capacity?: number | undefined;
+        eventUrl?: string | undefined;
     };
 }, {
     event: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         description: string;
-        eventDate: string;
-        isOnline: boolean;
+        title: string;
         tags: string[];
+        eventDate: string;
         creatorId: string;
         attendeeCount: number;
+        isOnline: boolean;
         location?: string | undefined;
-        capacity?: number | undefined;
-        eventUrl?: string | undefined;
         creator?: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             profileImageUrl?: string | undefined;
         } | undefined;
+        capacity?: number | undefined;
+        eventUrl?: string | undefined;
     };
 }>;
 export declare const CreateEventContract: ApiContract<typeof CreateEventRequestSchema, typeof CreateEventResponseSchema>;
