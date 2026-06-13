@@ -1,4 +1,4 @@
-import { ValidationErrorCode } from "@uniconnect/shared-types";
+import { ValidationErrorCode, ValidationErrorMessages } from "@uniconnect/shared-types";
 
 export class ValidationErrorMapper {
   private static readonly errorClassToCode: Record<string, ValidationErrorCode> = {
@@ -75,7 +75,6 @@ export class ValidationErrorMapper {
 
   static getErrorResponse(error: Error): { code: ValidationErrorCode; message: string } {
     const code = this.mapError(error);
-    const { ValidationErrorMessages } = require("@uniconnect/shared-types");
     return {
       code,
       message: ValidationErrorMessages[code] || error.message,

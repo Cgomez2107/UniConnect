@@ -22,7 +22,8 @@ import { ContentError } from "../../../../../../shared/libs/errors/ContentError.
 import { SizeError } from "../../../../../../shared/libs/errors/SizeError.js";
 import { MediaError } from "../../../../../../shared/libs/errors/MediaError.js";
 import { ModerationError } from "../../../../../../shared/libs/errors/ModerationError.js";
-import { sendJson, sendData, sendError } from "../../../../../../shared/http/sendJson.js";
+import { sendJson, sendData, sendError, sendApiError, type ApiErrorResponse } from "../../../../../../shared/http/sendJson.js";
+import { ValidationErrorMapper } from "../../../../../../shared/patterns/chain/message/ValidationErrorMapper.js";
 
 const CreateConversationBodySchema = z.object({
   participantB: z.string().min(1, "participantB es requerido"),
@@ -283,7 +284,14 @@ export class MessagingController {
         return;
       }
       if (error instanceof ContentError || error instanceof SizeError || error instanceof MediaError) {
-        sendJson(res, error.statusCode, { error: error.message, reason: error.reason, name: error.name });
+        const validationCode = ValidationErrorMapper.mapError(error);
+        sendApiError(res, error.statusCode, {
+          error: error.message,
+          code: error.name,
+          errorCode: validationCode,
+          name: error.name,
+          reason: error.reason,
+        });
         return;
       }
       if (error instanceof ModerationError) {
@@ -311,7 +319,7 @@ export class MessagingController {
         if (error.code === "MO_004" && this.notificationService && this.getAdminUserIds) {
           const userNamePromise = this.getUserName && actorUserId ? this.getUserName(actorUserId) : Promise.resolve(null);
           userNamePromise.then((name) => {
-            const displayName = name || actorUserId;
+            const displayName = name || (actorUserId ? `usuario ${actorUserId.substring(0, 8)}...` : "usuario desconocido");
             this.getAdminUserIds!().then((adminIds) => {
               for (const adminId of adminIds) {
                 this.notificationService!.notificar({
@@ -326,7 +334,14 @@ export class MessagingController {
             }).catch((e) => console.error("[MessagingController] Failed to resolve admin IDs:", e));
           }).catch((e) => console.error("[MessagingController] Failed to resolve user name:", e));
         }
-        sendJson(res, error.statusCode, { error: error.message, code: error.code, name: error.name });
+        const moderationResponse: ApiErrorResponse = {
+          error: error.message,
+          code: error.code,
+          errorCode: ValidationErrorMapper.mapError(error),
+          name: error.name,
+          ...(error.remainingMs !== undefined && { remainingMs: error.remainingMs }),
+        };
+        sendApiError(res, error.statusCode, moderationResponse);
         return;
       }
       const mapped = mapErrorToHttpStatus(error);

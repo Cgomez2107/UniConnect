@@ -50,9 +50,6 @@ export const ValidationErrorMessages = {
     [ValidationErrorCode.VALIDATION_FAILED]: "La validación del mensaje falló. Intenta de nuevo.",
     [ValidationErrorCode.UNKNOWN_ERROR]: "Ocurrió un error inesperado. Por favor, intenta de nuevo.",
 };
-/**
- * Validador: error que se lanza desde cada handler de la cadena
- */
 export class ValidatorError extends Error {
     code;
     message;

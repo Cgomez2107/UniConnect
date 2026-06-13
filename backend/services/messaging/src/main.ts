@@ -286,15 +286,23 @@ function bootstrap(): void {
         return [];
       }
     },
-    async (userId: string): Promise<string | null> => {
-      if (!pool) return null;
+async (userId: string): Promise<string | null> => {
+      if (!pool) {
+        console.warn("[MessagingController] getUserName: pool is null, cannot resolve name for userId:", userId);
+        return null;
+      }
       try {
         const result = await pool.query(
           "SELECT full_name FROM profiles WHERE id = $1",
-          [userId]
+          [userId],
         );
-        return result.rows[0]?.full_name as string | null;
-      } catch {
+        const name = result.rows[0]?.full_name as string | null;
+        if (!name) {
+          console.warn("[MessagingController] getUserName: no full_name found for userId:", userId);
+        }
+        return name;
+      } catch (err) {
+        console.error("[MessagingController] getUserName failed for userId:", userId, err);
         return null;
       }
     },

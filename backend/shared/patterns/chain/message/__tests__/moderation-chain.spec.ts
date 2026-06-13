@@ -120,6 +120,8 @@ describe("US-MO01 Criterio 4 — SpamHandler", () => {
       blockUser: mock.fn(() => Promise.resolve()),
       recordMessageTimestamp: mock.fn(() => Promise.resolve(0)),
       getUserBlockExpiration: mock.fn(() => Promise.resolve(null)),
+      recordBlockEvent: mock.fn(() => Promise.resolve()),
+      countBlocksInLastHour: mock.fn(() => Promise.resolve(0)),
     };
   }
 
@@ -154,6 +156,8 @@ describe("US-MO01 Criterio 4 — SpamHandler", () => {
       isUserBlocked: mock.fn(() => Promise.resolve(true)),
       blockUser: mock.fn(() => Promise.resolve()),
       recordMessageTimestamp: mock.fn(() => Promise.resolve(0)),
+      recordBlockEvent: mock.fn(() => Promise.resolve()),
+      countBlocksInLastHour: mock.fn(() => Promise.resolve(0)),
     };
     const handler = new SpamHandler(repo);
     const result = await handler.manejar("Otro mensaje", { senderId: "user-3" });
@@ -170,6 +174,8 @@ describe("US-MO01 Criterio 4 — SpamHandler", () => {
       blockUser: mock.fn(() => Promise.resolve()),
       recordMessageTimestamp: mock.fn(() => Promise.resolve(0)),
       getUserBlockExpiration: mock.fn(() => Promise.resolve(new Date(Date.now() + 120000))),
+      recordBlockEvent: mock.fn(() => Promise.resolve()),
+      countBlocksInLastHour: mock.fn(() => Promise.resolve(0)),
     };
     const handler = new SpamHandler(repo);
     const result = await handler.manejar("Otro mensaje", { senderId: "user-3" });
@@ -204,6 +210,8 @@ describe("US-MO01 Criterio 4 — SpamHandler", () => {
       blockUser: mock.fn(() => Promise.resolve()),
       recordMessageTimestamp: mock.fn(() => Promise.resolve(1)),
       getUserBlockExpiration: mock.fn(() => Promise.resolve(new Date(Date.now() + 60000))),
+      recordBlockEvent: mock.fn(() => Promise.resolve()),
+      countBlocksInLastHour: mock.fn(() => Promise.resolve(0)),
     };
     const handler = new SpamHandler(repo);
     const result = await handler.manejar("Mensaje normal", { senderId: "user-5" });
@@ -222,6 +230,8 @@ describe("US-MO01 Criterio 1 — Composición de cadena (Chain of Responsibility
       isUserBlocked: () => Promise.resolve(false),
       blockUser: () => Promise.resolve(),
       recordMessageTimestamp: () => Promise.resolve(0),
+      recordBlockEvent: () => Promise.resolve(),
+      countBlocksInLastHour: () => Promise.resolve(0),
     };
     const chain = ValidatorFactory.createChain(1000, ["spam"], undefined, undefined, repo);
 
@@ -272,6 +282,8 @@ describe("US-MO01 Criterio 1 — Composición de cadena (Chain of Responsibility
       isUserBlocked: () => Promise.resolve(false),
       blockUser: () => Promise.resolve(),
       recordMessageTimestamp: () => Promise.resolve(6),
+      recordBlockEvent: () => Promise.resolve(),
+      countBlocksInLastHour: () => Promise.resolve(0),
     };
 
     let enlacesReached = false;
@@ -298,6 +310,8 @@ describe("US-MO01 Criterio 1 — Composición de cadena (Chain of Responsibility
       isUserBlocked: () => Promise.resolve(false),
       blockUser: () => Promise.resolve(),
       recordMessageTimestamp: () => Promise.resolve(1),
+      recordBlockEvent: () => Promise.resolve(),
+      countBlocksInLastHour: () => Promise.resolve(0),
     };
     const chain = ValidatorFactory.createChain(1000, ["spam"], undefined, undefined, repo);
 
@@ -321,6 +335,8 @@ describe("US-MO01 — Integración ValidatorFactory", () => {
       isUserBlocked: () => Promise.resolve(false),
       blockUser: () => Promise.resolve(),
       recordMessageTimestamp: () => Promise.resolve(1),
+      recordBlockEvent: () => Promise.resolve(),
+      countBlocksInLastHour: () => Promise.resolve(0),
     };
     const chain = ValidatorFactory.createChain(1000, ["spam"], undefined, undefined, repo);
     const result = await chain.manejar("a".repeat(1001));
@@ -333,6 +349,8 @@ describe("US-MO01 — Integración ValidatorFactory", () => {
       isUserBlocked: () => Promise.resolve(false),
       blockUser: () => Promise.resolve(),
       recordMessageTimestamp: () => Promise.resolve(1),
+      recordBlockEvent: () => Promise.resolve(),
+      countBlocksInLastHour: () => Promise.resolve(0),
     };
     const chain = ValidatorFactory.createChain(1000, ["spam", "violencia"], undefined, undefined, repo);
     const result = await chain.manejar("mensaje con violencia");
@@ -345,6 +363,8 @@ describe("US-MO01 — Integración ValidatorFactory", () => {
       isUserBlocked: () => Promise.resolve(false),
       blockUser: () => Promise.resolve(),
       recordMessageTimestamp: () => Promise.resolve(6),
+      recordBlockEvent: () => Promise.resolve(),
+      countBlocksInLastHour: () => Promise.resolve(0),
     };
     const chain = ValidatorFactory.createChain(1000, ["spam"], undefined, undefined, repo);
     const result = await chain.manejar("mensaje", { senderId: "spammer" });

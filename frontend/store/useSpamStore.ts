@@ -1,13 +1,14 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { ModerationErrorCode } from "@uniconnect/shared-types";
 
 interface SpamState {
   isBlocked: boolean;
-  blockUntil: number | null; // Timestamp ms
-  remainingTime: number; // in seconds
-  blockReason: string | null;
-  setBlocked: (durationMs: number, errorCode?: string) => void;
+  blockUntil: number | null;
+  remainingTime: number;
+  blockReason: ModerationErrorCode | null;
+  setBlocked: (durationMs: number, errorCode?: ModerationErrorCode) => void;
   clearBlock: () => void;
   checkBlockStatus: () => void;
 }
@@ -19,7 +20,7 @@ export const useSpamStore = create<SpamState>()(
       blockUntil: null,
       remainingTime: 0,
       blockReason: null,
-      setBlocked: (durationMs: number, errorCode?: string) => {
+      setBlocked: (durationMs: number, errorCode?: ModerationErrorCode) => {
         const until = Date.now() + durationMs;
         set({
           isBlocked: true,

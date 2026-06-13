@@ -28,6 +28,7 @@ export declare const ValidationErrorMessages: Record<ValidationErrorCode, string
 /**
  * Validador: error que se lanza desde cada handler de la cadena
  */
+export type ModerationErrorCode = "MO_001" | "MO_002" | "MO_003" | "MO_004";
 export declare class ValidatorError extends Error {
     code: ValidationErrorCode;
     message: string;

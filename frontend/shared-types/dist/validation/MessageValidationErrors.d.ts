@@ -8,6 +8,7 @@ export declare enum ValidationErrorCode {
     FORBIDDEN_WORDS = "FORBIDDEN_WORDS",
     BANNED_CONTENT = "BANNED_CONTENT",
     SPAM_DETECTED = "SPAM_DETECTED",
+    ESCALATED_TO_ADMIN = "ESCALATED_TO_ADMIN",
     UNSUPPORTED_FILE_TYPE = "UNSUPPORTED_FILE_TYPE",
     FILE_TOO_LARGE = "FILE_TOO_LARGE",
     INVALID_FILENAME = "INVALID_FILENAME",
@@ -27,6 +28,7 @@ export declare const ValidationErrorMessages: Record<ValidationErrorCode, string
 /**
  * Validador: error que se lanza desde cada handler de la cadena
  */
+export type ModerationErrorCode = "MO_001" | "MO_002" | "MO_003" | "MO_004";
 export declare class ValidatorError extends Error {
     code: ValidationErrorCode;
     message: string;

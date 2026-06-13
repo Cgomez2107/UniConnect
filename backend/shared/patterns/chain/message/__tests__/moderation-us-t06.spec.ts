@@ -147,6 +147,7 @@ describe("US-T06 Criterio 1 — SpamHandler (MO_003 / MO_004)", () => {
     expect(result.codigoError).toBe("MO_003");
     expect(result.mensajeError).toContain("Spam detectado");
     expect(result.mensajeError).toContain("5 minutos");
+    expect(result.remainingMs).toBe(5 * 60 * 1000);
     expect(mockRepo.blockUser).toHaveBeenCalledWith("user-2", 5, expect.any(String));
     expect(mockRepo.recordBlockEvent).toHaveBeenCalledWith("user-2", expect.any(String));
   });
@@ -166,6 +167,7 @@ describe("US-T06 Criterio 1 — SpamHandler (MO_003 / MO_004)", () => {
     expect(result.valido).toBe(false);
     expect(result.codigoError).toBe("MO_003");
     expect(result.mensajeError).toContain("bloqueado temporalmente");
+    expect(result.remainingMs).toBe(5 * 60 * 1000);
     expect(localMock.blockUser).not.toHaveBeenCalled();
   });
 
@@ -180,6 +182,9 @@ describe("US-T06 Criterio 1 — SpamHandler (MO_003 / MO_004)", () => {
     expect(result.valido).toBe(false);
     expect(result.codigoError).toBe("MO_003");
     expect(result.mensajeError).toContain("bloqueado temporalmente");
+    expect(result.remainingMs).toBeDefined();
+    expect(result.remainingMs!).toBeGreaterThan(0);
+    expect(result.remainingMs!).toBeLessThanOrEqual(120000);
     expect(mockRepo.blockUser).not.toHaveBeenCalled();
   });
 
@@ -195,6 +200,7 @@ describe("US-T06 Criterio 1 — SpamHandler (MO_003 / MO_004)", () => {
     expect(result.valido).toBe(false);
     expect(result.codigoError).toBe("MO_004");
     expect(result.mensajeError).toContain("escalado a revisión humana");
+    expect(result.remainingMs).toBe(5 * 60 * 1000);
   });
 
   it("rechaza con MO_004 si usuario bloqueado y tiene >= 3 bloques en última hora", async () => {
@@ -206,6 +212,8 @@ describe("US-T06 Criterio 1 — SpamHandler (MO_003 / MO_004)", () => {
 
     expect(result.valido).toBe(false);
     expect(result.codigoError).toBe("MO_004");
+    expect(result.remainingMs).toBeDefined();
+    expect(result.remainingMs!).toBeGreaterThan(0);
   });
 
   it("aprueba mensaje si no tiene senderId (sin control de spam)", async () => {
@@ -217,10 +225,23 @@ describe("US-T06 Criterio 1 — SpamHandler (MO_003 / MO_004)", () => {
 });
 
 describe("US-T06 Criterio 1 — EnlacesExternosHandler", () => {
-  it("siempre aprueba (handler placeholder)", async () => {
+  it("siempre aprueba mensajes sin enlaces (handler placeholder)", async () => {
     const handler = new EnlacesExternosHandler();
-    const result = await handler.manejar("cualquier contenido");
+    const result = await handler.manejar("Hola, ¿cómo están?");
     expect(result.valido).toBe(true);
+  });
+
+  it("siempre aprueba mensajes con enlaces (handler placeholder sin validación)", async () => {
+    const handler = new EnlacesExternosHandler();
+    const result = await handler.manejar("Visita https://example.com para más info");
+    expect(result.valido).toBe(true);
+  });
+
+  it.skip("rechazará enlaces no permitidos cuando se implemente la validación", async () => {
+    const handler = new EnlacesExternosHandler();
+    const result = await handler.manejar("Visita https://malware-site.com");
+    expect(result.valido).toBe(false);
+    expect(result.codigoError).toBe("MO_005");
   });
 });
 
@@ -386,6 +407,46 @@ describe("US-T06 Criterio 3 — SpamHandler: 6 mensajes en 25s", () => {
     expect(mockRepo.blockUser).toHaveBeenCalledTimes(1);
     expect(mockRepo.isUserBlocked).toHaveBeenCalledTimes(6);
   });
+
+  it("simula 6 mensajes en 25s con control de reloj y rechaza el sexto con MO_003", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const now = Date.now();
+    vi.setSystemTime(now);
+
+    const timestamps: number[] = [];
+    let callCount = 0;
+
+    const mockRepo: IModerationRepository = {
+      isUserBlocked: vi.fn().mockResolvedValue(false),
+      blockUser: vi.fn().mockResolvedValue(undefined),
+      recordMessageTimestamp: vi.fn().mockImplementation(() => {
+        callCount++;
+        return Promise.resolve(callCount);
+      }),
+      getUserBlockExpiration: vi.fn().mockResolvedValue(null),
+      recordBlockEvent: vi.fn().mockResolvedValue(undefined),
+      countBlocksInLastHour: vi.fn().mockResolvedValue(0),
+    };
+
+    const handler = new SpamHandler(mockRepo);
+    const userId = "user-timer-test";
+
+    for (let i = 0; i < 5; i++) {
+      vi.setSystemTime(now + i * 5000);
+      const result = await handler.manejar(`Mensaje ${i + 1}`, { senderId: userId });
+      expect(result.valido).toBe(true);
+    }
+
+    vi.setSystemTime(now + 25000);
+    const sixthResult = await handler.manejar("Mensaje 6 en segundo 25", { senderId: userId });
+
+    expect(sixthResult.valido).toBe(false);
+    expect(sixthResult.codigoError).toBe("MO_003");
+    expect(sixthResult.remainingMs).toBe(5 * 60 * 1000);
+    expect(mockRepo.blockUser).toHaveBeenCalledWith(userId, 5, expect.any(String));
+
+    vi.useRealTimers();
+  });
 });
 
 // ============================================================================
@@ -476,6 +537,7 @@ describe("US-T06 — Integración ValidatorFactory con moderación completa", ()
     const result = await chain.manejar("mensaje", { senderId: "spammer" });
     expect(result.valido).toBe(false);
     expect(result.codigoError).toBe("MO_003");
+    expect(result.remainingMs).toBe(5 * 60 * 1000);
   });
 
   it("mensaje válido pasa toda la cadena desde la fábrica", async () => {
@@ -483,6 +545,8 @@ describe("US-T06 — Integración ValidatorFactory con moderación completa", ()
       isUserBlocked: vi.fn().mockResolvedValue(false),
       blockUser: vi.fn().mockResolvedValue(undefined),
       recordMessageTimestamp: vi.fn().mockResolvedValue(1),
+      recordBlockEvent: vi.fn().mockResolvedValue(undefined),
+      countBlocksInLastHour: vi.fn().mockResolvedValue(0),
     };
     const chain = ValidatorFactory.createChain(1000, ["spam"], undefined, undefined, mockRepo);
     const result = await chain.manejar("Hola, mensaje válido", { senderId: "user-ok" });

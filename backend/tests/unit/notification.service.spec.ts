@@ -14,19 +14,19 @@ import type { IPushGateway } from "../../shared/patterns/strategy/PushMovilStrat
 // ──────────────────────────────────────────────
 
 function createMockSMTPClient() {
-  const enviarEmail = vi.fn<[string, string, string], Promise<void>>();
+  const enviarEmail = vi.fn<(userId: string, title: string, body: string) => Promise<void>>();
   const instance: IEmailGateway = { enviarEmail };
   return { instance, enviarEmail };
 }
 
 function createMockWSClient() {
-  const emitToUser = vi.fn<[string, string, Record<string, unknown>], Promise<void>>();
+  const emitToUser = vi.fn<(userId: string, type: string, payload: Record<string, unknown>) => Promise<void>>();
   const instance: IStudyGroupSocketGateway = { emitToUser };
   return { instance, emitToUser };
 }
 
 function createMockExpoClient() {
-  const enviarPush = vi.fn<[string, string, string, Record<string, unknown>], Promise<void>>();
+  const enviarPush = vi.fn<(token: string, title: string, body: string, data: Record<string, unknown>) => Promise<void>>();
   const instance: IPushGateway = { enviarPush };
   return { instance, enviarPush };
 }
@@ -336,5 +336,176 @@ describe("NotificationService — Channel Delivery", () => {
       dummyNotification.userId,
       expect.stringContaining(dummyNotification.title),
     );
+  });
+});
+
+// ──────────────────────────────────────────────
+// Suite: US-MO02 CA1 — Notification latency < 500ms
+// ──────────────────────────────────────────────
+describe("US-MO02 CA1 — Notification delivery under 500ms", () => {
+  const moderationNotification: NotificacionDTO = {
+    userId: "user-spam-001",
+    type: "moderation_escalation",
+    title: "Escalación de Moderación Reincidente",
+    body: "El usuario ha alcanzado el límite de 3 bloqueos en 1 hora por spam.",
+    payload: { userId: "user-spam-001", reason: "Spam block limit reached" },
+    priority: "critica",
+  };
+
+  let smtp: ReturnType<typeof createMockSMTPClient>;
+  let ws: ReturnType<typeof createMockWSClient>;
+  let expo: ReturnType<typeof createMockExpoClient>;
+  let preferenceService: IPreferenceService;
+  let preferenceRepository: INotificationPreferenceRepository;
+
+  beforeEach(() => {
+    smtp = createMockSMTPClient();
+    ws = createMockWSClient();
+    expo = createMockExpoClient();
+
+    preferenceService = {
+      getCanalesActivos: vi.fn().mockResolvedValue(["smtp", "websocket", "expo"]),
+      setCanalActivo: vi.fn(),
+    };
+
+    preferenceRepository = {
+      isChannelEnabled: vi.fn().mockResolvedValue(true),
+    };
+  });
+
+  it("envía notificación de moderación a 3 canales en paralelo en menos de 500ms", async () => {
+    const CHANNEL_DELAY_MS = 120;
+
+    smtp.enviarEmail.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, CHANNEL_DELAY_MS)),
+    );
+    ws.emitToUser.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, CHANNEL_DELAY_MS)),
+    );
+    expo.enviarPush.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, CHANNEL_DELAY_MS)),
+    );
+
+    const strategies = [
+      createStrategy("smtp", () =>
+        smtp.enviarEmail(moderationNotification.userId, moderationNotification.title, moderationNotification.body),
+      ),
+      createStrategy("websocket", () =>
+        ws.emitToUser(moderationNotification.userId, moderationNotification.type, {}),
+      ),
+      createStrategy("expo", () =>
+        expo.enviarPush("expo-token-mo", moderationNotification.title, moderationNotification.body, {}),
+      ),
+    ];
+
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
+    const start = performance.now();
+    const resumen = await service.notificar(moderationNotification);
+    const elapsed = performance.now() - start;
+
+    expect(resumen.exitosos).toBe(3);
+    expect(resumen.fallidos).toBe(0);
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it("entrega notificación de moderación incluso si un canal es lento, total < 500ms", async () => {
+    smtp.enviarEmail.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, 400)),
+    );
+    ws.emitToUser.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, 50)),
+    );
+    expo.enviarPush.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, 80)),
+    );
+
+    const strategies = [
+      createStrategy("smtp", () =>
+        smtp.enviarEmail(moderationNotification.userId, moderationNotification.title, moderationNotification.body),
+      ),
+      createStrategy("websocket", () =>
+        ws.emitToUser(moderationNotification.userId, moderationNotification.type, {}),
+      ),
+      createStrategy("expo", () =>
+        expo.enviarPush("expo-token-mo", moderationNotification.title, moderationNotification.body, {}),
+      ),
+    ];
+
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
+    const start = performance.now();
+    const resumen = await service.notificar(moderationNotification);
+    const elapsed = performance.now() - start;
+
+    expect(resumen.exitosos).toBe(3);
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it("notificación rápida de bloqueo MO_003 con canal websocket < 500ms", async () => {
+    ws.emitToUser.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, 30)),
+    );
+    expo.enviarPush.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, 60)),
+    );
+
+    const blockNotification: NotificacionDTO = {
+      userId: "user-spam-001",
+      type: "moderation_block",
+      title: "Mensaje bloqueado",
+      body: "Tu mensaje fue bloqueado por spam detectado. Podrás enviar mensajes en 5 minutos.",
+      payload: { reason: "MO_003", remainingMs: 300000 },
+      priority: "urgente",
+    };
+
+    preferenceService.getCanalesActivos = vi.fn().mockResolvedValue(["websocket", "expo"]);
+
+    const strategies = [
+      createStrategy("websocket", () =>
+        ws.emitToUser(blockNotification.userId, blockNotification.type, {}),
+      ),
+      createStrategy("expo", () =>
+        expo.enviarPush("expo-token-mo", blockNotification.title, blockNotification.body, {}),
+      ),
+    ];
+
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
+    const start = performance.now();
+    const resumen = await service.notificar(blockNotification);
+    const elapsed = performance.now() - start;
+
+    expect(resumen.exitosos).toBe(2);
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it("canal fallido no bloquea la entrega — el canal más rápido responde < 500ms", async () => {
+    smtp.enviarEmail.mockRejectedValue(new Error("SMTP_TIMEOUT"));
+
+    ws.emitToUser.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, 40)),
+    );
+    expo.enviarPush.mockImplementation(
+      () => new Promise<void>((r) => setTimeout(r, 50)),
+    );
+
+    const strategies = [
+      createStrategy("smtp", () =>
+        smtp.enviarEmail(moderationNotification.userId, moderationNotification.title, moderationNotification.body),
+      ),
+      createStrategy("websocket", () =>
+        ws.emitToUser(moderationNotification.userId, moderationNotification.type, {}),
+      ),
+      createStrategy("expo", () =>
+        expo.enviarPush("expo-token-mo", moderationNotification.title, moderationNotification.body, {}),
+      ),
+    ];
+
+    const service = new NotificationService(strategies, preferenceService, preferenceRepository);
+    const start = performance.now();
+    const resumen = await service.notificar(moderationNotification);
+    const elapsed = performance.now() - start;
+
+    expect(resumen.exitosos).toBe(2);
+    expect(resumen.fallidos).toBe(1);
+    expect(elapsed).toBeLessThan(500);
   });
 });

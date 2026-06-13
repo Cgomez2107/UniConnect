@@ -92,21 +92,15 @@ transport.setOnError((error) => {
   console.log("[deps] Error callback invoked:", error);
   if (error.status === 429) {
     const data = error.data as any;
+    const errorCode = typeof data?.errorCode === "string" ? data.errorCode : null;
     const rawStr = JSON.stringify(data || "");
-    if (rawStr.includes("MO_003") || rawStr.includes("MO_004")) {
-      let remainingMs = 5 * 60 * 1000;
-      const errorMsg = typeof data?.error === "string" && data.error.includes("Restante") ? data.error :
-                       typeof data?.message === "string" && data.message.includes("Restante") ? data.message :
-                       typeof data?.details === "string" && data.details.includes("Restante") ? data.details :
-                       (typeof data?.error === "string" ? data.error : 
-                        typeof data?.message === "string" ? data.message : "");
-      const match = errorMsg.match(/Restante:\s*(\d+)/i);
-      if (match) {
-        remainingMs = parseInt(match[1], 10);
-      }
-      const errorCode = rawStr.includes("MO_004") ? "MO_004" : "MO_003";
-      console.log("[deps] Spam/Escalado detected (", errorCode, "), activating block for:", remainingMs, "ms");
-      useSpamStore.getState().setBlocked(remainingMs, errorCode);
+    if (errorCode === "SPAM_DETECTED" || errorCode === "ESCALATED_TO_ADMIN" || rawStr.includes("MO_003") || rawStr.includes("MO_004")) {
+      const remainingMs = typeof data?.remainingMs === "number"
+        ? data.remainingMs
+        : (5 * 60 * 1000);
+      const spamCode = errorCode === "ESCALATED_TO_ADMIN" ? "MO_004" : rawStr.includes("MO_004") ? "MO_004" : "MO_003";
+      console.log("[deps] Spam/Escalado detected (", spamCode, "), activating block for:", remainingMs, "ms");
+      useSpamStore.getState().setBlocked(remainingMs, spamCode);
     }
   }
 });

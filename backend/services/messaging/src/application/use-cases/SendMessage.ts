@@ -78,7 +78,7 @@ export class SendMessage {
     if (!validationResult.valido) {
       if (validationResult.codigoError && validationResult.codigoError.startsWith("MO_")) {
         console.warn(`[SendMessage] Moderación falló (${validationResult.codigoError}), lanzando ModerationError:`, validationResult.mensajeError);
-        throw new ModerationError(validationResult.mensajeError ?? "Moderación falló", validationResult.codigoError);
+        throw new ModerationError(validationResult.mensajeError ?? "Moderación falló", validationResult.codigoError, validationResult.remainingMs);
       }
       throw new Error(validationResult.mensajeError ?? "Error de validación");
     }

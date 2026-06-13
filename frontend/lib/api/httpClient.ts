@@ -117,19 +117,13 @@ export async function fetchApi<T>(
         if ([400, 403, 409, 422, 429].includes(status)) {
             const friendly = parseGroupError(parsed || rawMessage);
             const rawErrorStr = JSON.stringify(parsed || "");
-            const hasMo003 = rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004") || status === 429;
+            const errorCode = typeof parsed?.errorCode === "string" ? parsed.errorCode : null;
+            const hasMo003 = errorCode === "SPAM_DETECTED" || errorCode === "ESCALATED_TO_ADMIN" || rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004") || status === 429;
             if (hasMo003) {
-                let remainingMs = 5 * 60 * 1000;
-                const errorMsg = typeof parsed?.error === "string" && parsed.error.includes("Restante") ? parsed.error :
-                                 typeof parsed?.message === "string" && parsed.message.includes("Restante") ? parsed.message :
-                                 typeof parsed?.details === "string" && parsed.details.includes("Restante") ? parsed.details :
-                                 (typeof parsed?.error === "string" ? parsed.error : 
-                                  typeof parsed?.message === "string" ? parsed.message : "");
-                const match = errorMsg.match(/Restante:\s*(\d+)/i);
-                if (match) {
-                    remainingMs = parseInt(match[1], 10);
-                }
-                const code = rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
+                const remainingMs = typeof parsed?.remainingMs === "number"
+                    ? parsed.remainingMs
+                    : (5 * 60 * 1000);
+                const code = errorCode === "ESCALATED_TO_ADMIN" ? "MO_004" : rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
                 useSpamStore.getState().setBlocked(remainingMs, code);
 
                 // Add notification for spam block
@@ -156,6 +150,8 @@ export async function fetchApi<T>(
                 }
             }
             const isModerationError =
+                errorCode === "MESSAGE_TOO_LONG" || errorCode === "BANNED_CONTENT" ||
+                errorCode === "SPAM_DETECTED" || errorCode === "ESCALATED_TO_ADMIN" ||
                 rawErrorStr.includes("MO_001") ||
                 rawErrorStr.includes("MO_002") ||
                 rawErrorStr.includes("MO_003") ||
