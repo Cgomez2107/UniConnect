@@ -11,8 +11,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { Colors } from "@/constants/Colors"
-import { supabase } from "@/lib/supabase"
 import { fetchApiEnvelope } from "@/lib/api/httpClient"
+import { lookupUserNames } from "@/lib/lookupProfiles"
 import { useColorScheme } from "@/hooks/useColorScheme"
 
 interface ModerationAlert {
@@ -68,15 +68,7 @@ export default function ModeracionScreen() {
           .map((a) => a.userId)
           .filter((id): id is string => id !== "N/A" && !!id)
         if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, full_name")
-            .in("id", userIds)
-          const map: Record<string, string> = {}
-          for (const p of profiles ?? []) {
-            map[p.id] = p.full_name ?? "Usuario desconocido"
-          }
-          setUserNames(map)
+          setUserNames(await lookupUserNames(userIds))
         }
       } catch (e: any) {
         setError(e.message ?? "Error al cargar alertas de moderación")
