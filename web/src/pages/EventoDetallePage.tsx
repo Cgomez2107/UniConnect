@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import eventsService from "@/lib/services/events.service";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { QrPassModal } from "@/components/shared/QrPassModal";
 import { useEventCategories } from "@/hooks/useEventCategories";
 import { useAuthStore } from "@/store/useAuthStore";
 import useNotifications from "@/hooks/useNotifications";
@@ -21,6 +22,21 @@ export function EventoDetallePage() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [unregistering, setUnregistering] = useState(false);
+
+  // ── QR Pass state ──
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrContent, setQrContent] = useState("");
+
+  const handleShowQrPass = useCallback(async () => {
+    if (!id) return;
+    try {
+      const result = await eventsService.getEventPass(id);
+      setQrContent(result.qrContent);
+      setQrModalOpen(true);
+    } catch (err: any) {
+      showError(err?.message || "Error al obtener el pase de acceso");
+    }
+  }, [id, showError]);
 
   useEffect(() => {
     if (!id) return;
@@ -277,13 +293,21 @@ export function EventoDetallePage() {
             ) : (
               <>
                 {isRegistered && isPublished ? (
-                  <button
-                    onClick={handleUnregister}
-                    disabled={unregistering}
-                    className="w-full px-4 py-3 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-60"
-                  >
-                    {unregistering ? "Cancelando..." : "Cancelar inscripción"}
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleShowQrPass}
+                      className="w-full px-4 py-3 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
+                    >
+                      Ver Pase de Acceso QR
+                    </button>
+                    <button
+                      onClick={handleUnregister}
+                      disabled={unregistering}
+                      className="w-full px-4 py-3 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-60"
+                    >
+                      {unregistering ? "Cancelando..." : "Cancelar inscripción"}
+                    </button>
+                  </div>
                 ) : isRegistered ? (
                   <button
                     disabled
@@ -324,6 +348,13 @@ export function EventoDetallePage() {
           </div>
         </div>
       </div>
+
+      <QrPassModal
+        isOpen={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        qrContent={qrContent}
+        eventTitle={event?.title ?? ""}
+      />
     </div>
   );
 }

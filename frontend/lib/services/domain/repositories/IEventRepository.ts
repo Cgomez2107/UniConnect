@@ -12,11 +12,12 @@ export interface IEventRepository {
   create(userId: string, payload: any): Promise<CampusEvent>
   update(eventId: string, userId: string, payload: any): Promise<void>
   delete(eventId: string, userId: string): Promise<void>
-  getByAuthor(userId: string): Promise<CampusEvent[]>
+  getByAuthor(userId: string, page?: number, limit?: number): Promise<EventListResponse>
   updateStatus(eventId: string, status: string): Promise<void>
   publish(eventId: string): Promise<void>
   cancel(eventId: string): Promise<void>
   registerForEvent(eventId: string, userId: string): Promise<void>
   unregisterFromEvent(eventId: string, userId: string): Promise<void>
   listEvents(filters?: EventListFilters): Promise<EventListResponse>
+  getEventPass(eventId: string): Promise<{ qrContent: string }>
 }

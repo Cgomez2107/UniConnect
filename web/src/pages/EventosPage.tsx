@@ -5,6 +5,7 @@ import { useEventSubscriptionStore } from "@/store/useEventSubscriptionStore";
 import { useEventCategories } from "@/hooks/useEventCategories";
 import { useAuthStore } from "@/store/useAuthStore";
 import { EventCard } from "@/components/shared/EventCard";
+import { QrPassModal } from "@/components/shared/QrPassModal";
 import eventsService from "@/lib/services/events.service";
 import type { CampusEventUI } from "@/types/ui";
 import useNotifications from "@/hooks/useNotifications";
@@ -112,18 +113,33 @@ export function EventosPage() {
 
   // ── Mis Eventos tab state ──
   const [myEvents, setMyEvents] = useState<CampusEventUI[]>([]);
+  const [myEventsMeta, setMyEventsMeta] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
+  const [myEventsPage, setMyEventsPage] = useState(1);
   const [loadingMyEvents, setLoadingMyEvents] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (activeTab !== "mis-eventos" || !user?.id) return;
+  const loadMyEvents = useCallback(async () => {
+    if (!user?.id) return;
     setLoadingMyEvents(true);
-    eventsService.listEvents({ createdBy: user.id })
-      .then(setMyEvents)
-      .catch(() => {})
-      .finally(() => setLoadingMyEvents(false));
-  }, [activeTab, user?.id]);
+    try {
+      const result = await eventsService.listEventsPaginated({
+        createdBy: user.id,
+        page: myEventsPage,
+        perPage: 10,
+      });
+      setMyEvents(result.data);
+      setMyEventsMeta(result.meta);
+    } catch {
+      setMyEvents([]);
+    } finally {
+      setLoadingMyEvents(false);
+    }
+  }, [user?.id, myEventsPage]);
+
+  useEffect(() => {
+    if (activeTab === "mis-eventos") loadMyEvents();
+  }, [activeTab, loadMyEvents]);
 
   const handlePublish = useCallback(async (eventId: string) => {
     setPublishingId(eventId);
@@ -156,6 +172,32 @@ export function EventosPage() {
   }, [success, showError]);
 
   const handleViewDetails = (id: string) => navigate(`/eventos/${id}`);
+
+  // ── QR Pass modal state ──
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrContent, setQrContent] = useState("");
+  const [qrEventTitle, setQrEventTitle] = useState("");
+  const [qrLoading, setQrLoading] = useState<string | null>(null);
+
+  const handleShowQrPass = useCallback(async (eventId: string, eventTitle: string) => {
+    setQrLoading(eventId);
+    try {
+      const result = await eventsService.getEventPass(eventId);
+      setQrContent(result.qrContent);
+      setQrEventTitle(eventTitle);
+      setQrModalOpen(true);
+    } catch (err: any) {
+      showError(err?.message || "Error al obtener el pase de acceso");
+    } finally {
+      setQrLoading(null);
+    }
+  }, [showError]);
+
+  const handleCloseQrModal = useCallback(() => {
+    setQrModalOpen(false);
+    setQrContent("");
+    setQrEventTitle("");
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-50 animate-fade-in">
@@ -379,22 +421,79 @@ export function EventosPage() {
             )}
 
             {!loadingMyEvents && myEvents.length > 0 && (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {myEvents.map((event: any) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onViewDetails={handleViewDetails}
-                    onEdit={(id) => navigate(`/crear-evento?edit=${id}`)}
-                    onPublish={handlePublish}
-                    onCancel={handleCancel}
-                  />
-                ))}
-              </div>
+              <>
+                {/* Total count */}
+                {myEventsMeta.total > 0 && (
+                  <p className="text-sm text-neutral-500 font-medium mb-4">
+                    {myEventsMeta.total} {myEventsMeta.total === 1 ? "evento creado" : "eventos creados"}
+                  </p>
+                )}
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {myEvents.map((event: any) => (
+                    <div key={event.id}>
+                      <EventCard
+                        event={event}
+                        onViewDetails={handleViewDetails}
+                        onEdit={(id) => navigate(`/crear-evento?edit=${id}`)}
+                        onPublish={handlePublish}
+                        onCancel={handleCancel}
+                      />
+                      {event.isRegistered && (
+                        <button
+                          onClick={() => handleShowQrPass(event.id, event.title)}
+                          disabled={qrLoading === event.id}
+                          className="w-full mt-2 px-3 py-2 text-sm font-medium text-primary-600 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors disabled:opacity-50"
+                        >
+                          {qrLoading === event.id ? "Cargando..." : "+ Pase de Acceso"}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {myEventsMeta.totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 mt-8">
+                    <button
+                      onClick={() => setMyEventsPage((p) => Math.max(1, p - 1))}
+                      disabled={myEventsPage <= 1}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                        myEventsPage <= 1
+                          ? "bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed"
+                          : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+                      }`}
+                    >
+                      ← Anterior
+                    </button>
+                    <span className="text-sm text-neutral-600 font-medium">
+                      {myEventsPage} / {myEventsMeta.totalPages}
+                    </span>
+                    <button
+                      onClick={() => setMyEventsPage((p) => Math.min(myEventsMeta.totalPages, p + 1))}
+                      disabled={myEventsPage >= myEventsMeta.totalPages}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                        myEventsPage >= myEventsMeta.totalPages
+                          ? "bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed"
+                          : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+                      }`}
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
       </div>
+
+      <QrPassModal
+        isOpen={qrModalOpen}
+        onClose={handleCloseQrModal}
+        qrContent={qrContent}
+        eventTitle={qrEventTitle}
+      />
     </div>
   );
 }

@@ -13,6 +13,8 @@ import type { CancelEvent } from "../../../application/use-cases/CancelEvent.js"
 import type { FinishEvent } from "../../../application/use-cases/FinishEvent.js";
 import type { RegisterForEvent } from "../../../application/use-cases/RegisterForEvent.js";
 import type { UnregisterFromEvent } from "../../../application/use-cases/UnregisterFromEvent.js";
+import type { GenerateQrPass } from "../../../application/use-cases/GenerateQrPass.js";
+import type { VerifyQrPass } from "../../../application/use-cases/VerifyQrPass.js";
 import type { EventStatus } from "../../../domain/state/EventStatus.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
@@ -37,6 +39,8 @@ export class EventsController {
     private readonly finishEvent: FinishEvent,
     private readonly registerForEvent: RegisterForEvent,
     private readonly unregisterFromEvent: UnregisterFromEvent,
+    private readonly generateQrPass: GenerateQrPass | null = null,
+    private readonly verifyQrPass: VerifyQrPass | null = null,
   ) {}
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -316,6 +320,54 @@ export class EventsController {
         isAdmin: await isAdminUser(req, this.pool),
       });
       sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async verifyQr(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (!this.verifyQrPass) {
+      sendError(res, 500, "QR verification not available");
+      return;
+    }
+
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Authentication required");
+      return;
+    }
+
+    try {
+      const body = await readJsonBody<{ qrData: string }>(req);
+      const { qrData } = body;
+      if (!qrData || typeof qrData !== "string") {
+        sendError(res, 400, "qrData es requerido");
+        return;
+      }
+      const result = await this.verifyQrPass.execute(qrData, actorUserId);
+      sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async getMyPass(req: IncomingMessage, res: ServerResponse, eventId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Authentication required");
+      return;
+    }
+
+    try {
+      if (!this.generateQrPass) {
+        sendError(res, 500, "QR pass generation not available");
+        return;
+      }
+
+      const qrPass = await this.generateQrPass.execute(eventId, actorUserId);
+      sendData(res, 200, { qrContent: qrPass.qrContent });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

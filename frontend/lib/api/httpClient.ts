@@ -175,3 +175,52 @@ export async function fetchApi<T>(
 
     return result as T;
 }
+
+/**
+ * Like fetchApi but returns the full response envelope (including meta) instead of unwrapping data.
+ */
+export async function fetchApiEnvelope<T = any>(
+    path: string,
+    init?: RequestInit,
+): Promise<{ data: T; meta?: any }> {
+    const API_URL =
+        process.env.EXPO_PUBLIC_API_BASE_URL ||
+        process.env.VITE_API_URL ||
+        "http://localhost:3000/api/v1";
+
+    const token = await getAccessTokenFast();
+
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...((init?.headers as Record<string, string>) ?? {}),
+    };
+
+    try {
+        const url = `${API_URL}${path}`;
+        const response = await fetch(url, { ...init, headers });
+
+        const text = await response.text();
+        let parsed: any = null;
+        if (text) {
+            try { parsed = JSON.parse(text); } catch { parsed = text; }
+        }
+
+        if (!response.ok) {
+            const errMsg =
+                parsed?.error ||
+                parsed?.message ||
+                parsed?.details ||
+                `HTTP ${response.status}`;
+            const err = new Error(errMsg);
+            (err as any).status = response.status;
+            (err as any).data = parsed;
+            throw err;
+        }
+
+        return parsed ?? { data: null };
+    } catch (err: any) {
+        if (err.status) throw err;
+        throw new Error(err.message || "Network error");
+    }
+}

@@ -1,5 +1,5 @@
 import { SupabaseEventRepository } from "./SupabaseEventRepository";
-import { fetchApi } from "@/lib/api/httpClient";
+import { fetchApi, fetchApiEnvelope } from "@/lib/api/httpClient";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository";
 import type { CampusEvent, EventListFilters, EventListResponse } from "@/types";
 
@@ -99,12 +99,15 @@ export class ApiEventRepository implements IEventRepository {
     });
   }
 
-  async getByAuthor(userId: string): Promise<CampusEvent[]> {
+  async getByAuthor(userId: string, page = 1, limit = 10): Promise<EventListResponse> {
     try {
-      const data = await fetchApi<CampusEvent[]>(`/events?createdBy=${userId}`);
-      return (data ?? []).map(mapEventFromApi);
+      const envelope = await fetchApiEnvelope<any>(`/events?createdBy=${userId}&page=${page}&limit=${limit}`);
+      const raw = envelope.data;
+      const data: CampusEvent[] = (Array.isArray(raw) ? raw : []).map(mapEventFromApi);
+      const meta = (envelope.meta as EventListResponse["meta"]) ?? { total: data.length, page, limit, totalPages: Math.ceil(data.length / limit) || 1 };
+      return { data, meta };
     } catch {
-      return this.fallback.getByAuthor(userId);
+      return this.fallback.getByAuthor(userId, page, limit);
     }
   }
 
@@ -128,6 +131,10 @@ export class ApiEventRepository implements IEventRepository {
     await fetchApi(`/events/${eventId}/unregister`, { method: "POST" });
   }
 
+  async getEventPass(eventId: string): Promise<{ qrContent: string }> {
+    return fetchApi<{ qrContent: string }>(`/events/${eventId}/my-pass`);
+  }
+
   async listEvents(filters?: EventListFilters): Promise<EventListResponse> {
     const params = new URLSearchParams();
     if (filters?.page) params.set("page", String(filters.page));
@@ -142,9 +149,10 @@ export class ApiEventRepository implements IEventRepository {
     const endpoint = qs ? `/events?${qs}` : "/events";
 
     try {
-      const raw: any = await fetchApi<any>(endpoint);
-      const data: CampusEvent[] = (raw.data ?? raw ?? []).map(mapEventFromApi);
-      const meta = raw.meta ?? { total: data.length, page: filters?.page ?? 1, limit: filters?.limit ?? 10, totalPages: 1 };
+      const envelope = await fetchApiEnvelope<any>(endpoint);
+      const raw = envelope.data;
+      const data: CampusEvent[] = (Array.isArray(raw) ? raw : []).map(mapEventFromApi);
+      const meta = (envelope.meta as EventListResponse["meta"]) ?? { total: data.length, page: filters?.page ?? 1, limit: filters?.limit ?? 10, totalPages: 1 };
       return { data, meta };
     } catch (error) {
       const fallback = this.fallback;

@@ -1,6 +1,18 @@
 import type { Event, PaginatedResult, ListEventsFilter } from "../entities/Event.js";
 import type { EventStatus } from "../state/EventStatus.js";
 
+export interface EventRegistration {
+  id: string;
+  eventId: string;
+  userId: string;
+  qrToken: string | null;
+  qrHmac: string | null;
+  scannedAt: string | null;
+  scannedBy: string | null;
+  isUsed: boolean;
+  createdAt: string;
+}
+
 export interface IEventRepository {
   list(filter?: ListEventsFilter): Promise<PaginatedResult<Event>>;
 
@@ -35,5 +47,13 @@ export interface IEventRepository {
   registerForEvent(eventId: string, userId: string): Promise<void>;
   unregisterFromEvent(eventId: string, userId: string): Promise<void>;
   getUserEmail(userId: string): Promise<string | null>;
+
+  getRegistration(eventId: string, userId: string): Promise<EventRegistration | null>;
+  getRegistrationByQrToken(token: string): Promise<EventRegistration | null>;
+  setQrData(registrationId: string, qrToken: string, qrHmac: string): Promise<void>;
+  markQrAsUsed(registrationId: string, scannedBy: string): Promise<void>;
+  getRegistrationsByUser(userId: string): Promise<EventRegistration[]>;
+  getEventByRegistration(registrationId: string): Promise<Event | null>;
+  getUserProfile(userId: string): Promise<{ fullName: string; avatarUrl: string | null } | null>;
 }
 

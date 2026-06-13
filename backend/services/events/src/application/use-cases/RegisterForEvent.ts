@@ -2,6 +2,7 @@ import type { IEventRepository } from "../../domain/repositories/IEventRepositor
 import type { INotificationRepository } from "../../domain/repositories/INotificationRepository.js";
 import type { IEventSocketGateway } from "../../domain/events/UniversityEventObserver.js";
 import type { IEmailGateway } from "../../infrastructure/gateways/SendGridEmailGateway.js";
+import type { GenerateQrPass } from "./GenerateQrPass.js";
 import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
 
 interface RegisterForEventInput {
@@ -15,6 +16,7 @@ export class RegisterForEvent {
     private readonly notificationRepository: INotificationRepository | null = null,
     private readonly socketGateway: IEventSocketGateway | null = null,
     private readonly emailGateway: IEmailGateway | null = null,
+    private readonly generateQrPass: GenerateQrPass | null = null,
   ) {}
 
   async execute(input: RegisterForEventInput): Promise<void> {
@@ -28,6 +30,15 @@ export class RegisterForEvent {
 
     // 2. Perform the database registration and decrement cupos atomically
     await this.repository.registerForEvent(eventId, userId);
+
+    // 2b. Generate QR access pass
+    if (this.generateQrPass) {
+      try {
+        await this.generateQrPass.execute(eventId, userId);
+      } catch (err) {
+        console.error(`[RegisterForEvent] Failed to generate QR pass for user ${userId}:`, err);
+      }
+    }
 
     // 3. Persist notification in DB (for in-app UI list)
     const payload = {
