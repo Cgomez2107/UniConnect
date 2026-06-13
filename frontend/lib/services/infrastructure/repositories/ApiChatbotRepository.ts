@@ -1,4 +1,4 @@
-import { fetchApi } from "@/lib/api/httpClient";
+import { ChatbotClient } from "@/lib/api/ChatbotClient";
 import type { SendChatbotMessageResponse } from "@uniconnect/shared-types";
 
 export interface ChatMessageApi {
@@ -7,6 +7,8 @@ export interface ChatMessageApi {
 }
 
 export class ApiChatbotRepository {
+  private readonly chatbotClient = new ChatbotClient();
+
   async sendMessage(
     message: string,
     history?: ChatMessageApi[]
@@ -15,14 +17,17 @@ export class ApiChatbotRepository {
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const response = await fetchApi<SendChatbotMessageResponse>("/chatbot/message", {
-        method: "POST",
-        body: JSON.stringify({
-          message,
-          history,
-        }),
-        signal: controller.signal,
-      });
+      const response = await this.chatbotClient.sendMessage(
+        {
+          body: {
+            message,
+            history,
+          },
+        },
+        {
+          signal: controller.signal,
+        }
+      );
       return response;
     } finally {
       clearTimeout(timeoutId);

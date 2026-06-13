@@ -6,14 +6,20 @@ function parseDomainError(error) {
             return "NOT_FOUND";
         case "FORBIDDEN":
             return "GROUP_FULL";
+        case "CONFLICT":
+            return "INVALID_TRANSITION";
         case "SERVICE_UNAVAILABLE":
             return "SERVER_ERROR";
         case "NETWORK_ERROR":
             return "NETWORK_ERROR";
         case "TIMEOUT":
             return "NETWORK_ERROR";
+        case "BAD_REQUEST":
+            return "UNKNOWN";
         case "INTERNAL_SERVER_ERROR":
             return "SERVER_ERROR";
+        case "VALIDATION_ERROR":
+            return "UNKNOWN";
         default:
             return "UNKNOWN";
     }

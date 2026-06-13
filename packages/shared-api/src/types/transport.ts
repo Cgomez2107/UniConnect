@@ -14,6 +14,7 @@ export interface RequestOptions {
   timeout?: number;
   responseSchema?: z.ZodTypeAny;
   unwrapEnvelope?: boolean;
+  signal?: AbortSignal;
 }
 
 export interface ResponseData<T = any> {
