@@ -1,12 +1,14 @@
 import { useNotificationStore } from "@/store/useNotificationStore";
-import { useMemo, useEffect } from "react";
-import { ShieldAlert, UserX, Clock, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useMemo, useEffect, useState } from "react";
+import { ShieldAlert, Clock, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchNotifications } from "@/lib/services/notifications.service";
+import { supabase } from "@/lib/supabase";
 
 export function ModeracionPage() {
   const notifications = useNotificationStore((s) => s.notifications);
   const navigate = useNavigate();
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchNotifications();
@@ -23,6 +25,34 @@ export function ModeracionPage() {
       });
   }, [notifications]);
 
+  useEffect(() => {
+    const userIds = moderationAlerts
+      .map((a) => (a.data ?? (a as any).payload ?? {}).userId as string | undefined)
+      .filter((id): id is string => !!id && !userNames[id]);
+
+    if (userIds.length === 0) return;
+
+    const fetchNames = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+
+      if (error) {
+        console.error("Error fetching user names:", error);
+        return;
+      }
+
+      const map: Record<string, string> = {};
+      for (const row of data ?? []) {
+        map[row.id] = row.full_name ?? "Usuario desconocido";
+      }
+      setUserNames((prev) => ({ ...prev, ...map }));
+    };
+
+    fetchNames();
+  }, [moderationAlerts, userNames]);
+
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
@@ -36,6 +66,14 @@ export function ModeracionPage() {
     } catch {
       return dateStr;
     }
+  };
+
+  const formatBody = (alert: any): string => {
+    const data = alert.data ?? alert.payload ?? {};
+    const userId = data.userId || "N/A";
+    const userName = userId !== "N/A" ? (userNames[userId] ?? "Cargando...") : "N/A";
+    const body = alert.description || alert.body || "";
+    return body.replace(userId, userName);
   };
 
   return (
@@ -69,6 +107,7 @@ export function ModeracionPage() {
           {moderationAlerts.map((alert) => {
             const data = alert.data ?? (alert as any).payload ?? {};
             const userId = data.userId || "N/A";
+            const userName = userId !== "N/A" ? (userNames[userId] ?? "Cargando...") : "N/A";
 
             return (
               <div
@@ -89,7 +128,10 @@ export function ModeracionPage() {
                     {alert.title}
                   </h3>
                   <p className="text-sm text-neutral-600 mt-1">
-                    {alert.description || (alert as any).body}
+                    {formatBody(alert)}
+                  </p>
+                  <p className="text-xs text-neutral-400">
+                    Usuario: <span className="font-medium text-neutral-700">{userName}</span>
                   </p>
                 </div>
 

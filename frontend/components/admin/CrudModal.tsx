@@ -25,8 +25,9 @@ interface Props {
   title: string
   error: string
   isSubmitting: boolean
+  readonly?: boolean
   onClose: () => void
-  onSave: () => void
+  onSave?: () => void
   children: React.ReactNode
   C: typeof Colors["light"]
 }
@@ -44,7 +45,7 @@ interface Props {
  * @param C Paleta de colores activa de la aplicación.
  */
 export function CrudModal({
-  visible, title, error, isSubmitting, onClose, onSave, children, C,
+  visible, title, error, isSubmitting, readonly, onClose, onSave, children, C,
 }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -55,7 +56,14 @@ export function CrudModal({
             onStartShouldSetResponder={() => true}
           >
             <View style={[styles.handle, { backgroundColor: C.border }]} />
-            <Text style={[styles.title, { color: C.textPrimary }]}>{title}</Text>
+            <View style={styles.headerRow}>
+              <Text style={[styles.title, { color: C.textPrimary, flex: 1 }]}>{title}</Text>
+              {readonly && (
+                <TouchableOpacity onPress={onClose} style={styles.closeX} activeOpacity={0.7}>
+                  <Text style={{ fontSize: 22, color: C.textSecondary, lineHeight: 24 }}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {!!error && (
               <View
@@ -72,27 +80,29 @@ export function CrudModal({
               {children}
             </ScrollView>
 
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: C.border }]}
-                onPress={onClose}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.cancelText, { color: C.textSecondary }]}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveBtn, { backgroundColor: C.primary }]}
-                onPress={onSave}
-                disabled={isSubmitting}
-                activeOpacity={0.85}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.saveText}>Guardar</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            {!readonly && (
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { borderColor: C.border }]}
+                  onPress={onClose}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.cancelText, { color: C.textSecondary }]}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveBtn, { backgroundColor: C.primary }]}
+                  onPress={onSave ?? onClose}
+                  disabled={isSubmitting}
+                  activeOpacity={0.85}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.saveText}>Guardar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
       </KeyboardAvoidingView>
@@ -130,7 +140,9 @@ const styles = StyleSheet.create({
     maxHeight: "85%",
   },
   handle: { alignSelf: "center", width: 36, height: 4, borderRadius: 2, marginBottom: 16 },
-  title: { fontSize: 18, fontWeight: "700", marginBottom: 16 },
+  headerRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 16 },
+  title: { fontSize: 18, fontWeight: "700" },
+  closeX: { padding: 4, marginLeft: 8, marginTop: -2 },
   errorBox: {
     borderWidth: 1,
     borderRadius: 8,
