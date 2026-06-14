@@ -21,6 +21,7 @@ export function useChatbot() {
     }
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isThinkingLong, setIsThinkingLong] = useState(false);
 
   useEffect(() => {
     try {
@@ -38,6 +39,17 @@ export function useChatbot() {
     // Add user message to state
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
+    setIsThinkingLong(false);
+
+    const abortController = new AbortController();
+
+    const timeout10s = setTimeout(() => {
+      setIsThinkingLong(true);
+    }, 10000);
+
+    const timeout15s = setTimeout(() => {
+      abortController.abort();
+    }, 15000);
 
     try {
       // Build the history for the API (only include user and assistant messages)
@@ -46,7 +58,7 @@ export function useChatbot() {
         content: msg.content
       }));
 
-      const response = await chatbotService.sendMessageToChatbot(text, apiHistory);
+      const response = await chatbotService.sendMessageToChatbot(text, apiHistory, abortController.signal);
       
       const assistantMessage: ChatMessage = {
         role: "assistant",
@@ -55,15 +67,24 @@ export function useChatbot() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending message to chatbot:", error);
+      
+      const isAborted = error.name === "AbortError" || abortController.signal.aborted;
+      const content = isAborted
+        ? "El asistente está tomando más tiempo de lo esperado en conectar con la base de datos de UniConnect. Por favor intenta en unos minutos."
+        : "Lo siento, hubo un error de conexión con el asistente virtual. Por favor, intenta de nuevo más tarde.";
+
       const errorMessage: ChatMessage = {
         role: "assistant",
-        content: "Lo siento, hubo un error de conexión con el asistente virtual. Por favor, intenta de nuevo más tarde.",
+        content,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
+      clearTimeout(timeout10s);
+      clearTimeout(timeout15s);
       setIsLoading(false);
+      setIsThinkingLong(false);
     }
   };
 
@@ -75,6 +96,7 @@ export function useChatbot() {
   return {
     messages,
     isLoading,
+    isThinkingLong,
     sendMessage,
     clearHistory,
   };

@@ -20,6 +20,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/constants/Colors";
 import { useChatbotLogic, ChatMessage } from "@/hooks/application/useChatbotLogic";
+import Markdown from "react-native-markdown-display";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface ChatbotModalProps {
   visible: boolean;
@@ -29,7 +31,10 @@ interface ChatbotModalProps {
 export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
   const scheme = useColorScheme() ?? "light";
   const C = Colors[scheme];
-  const { messages, isTyping, sendMessage, clearHistory } = useChatbotLogic();
+  const { messages, isTyping, isThinkingLong, sendMessage, clearHistory } = useChatbotLogic();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
+  const adminColor = scheme === "light" ? "#d97706" : "#f59e0b";
   const [inputText, setInputText] = useState("");
 
   const handleSend = async () => {
@@ -44,11 +49,17 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
     await sendMessage(suggestion);
   };
 
-  const suggestions = [
-    "¿Cómo puedo crear un grupo de estudio?",
-    "¿Dónde veo mis próximos eventos?",
-    "¿Cómo subir un recurso de estudio?",
-  ];
+  const suggestions = isAdmin
+    ? [
+        "¿Cómo puedo gestionar grupos de estudio?",
+        "¿Cómo crear un evento institucional?",
+        "¿Cómo reportar o moderar contenido inapropiado?",
+      ]
+    : [
+        "¿Cómo puedo crear un grupo de estudio?",
+        "¿Dónde veo mis próximos eventos?",
+        "¿Cómo subir un recurso de estudio?",
+      ];
 
   const renderItem = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === "user";
@@ -63,19 +74,23 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
           style={[
             styles.bubble,
             isUser
-              ? { backgroundColor: C.primary }
-              : { backgroundColor: C.surfaceElevated, borderColor: C.border, borderWidth: 1 },
+              ? { backgroundColor: isAdmin ? adminColor : C.primary }
+              : { backgroundColor: C.surfaceElevated, borderColor: isAdmin ? adminColor : C.border, borderWidth: 1 },
             isUser ? styles.userBubble : styles.assistantBubble,
           ] as StyleProp<ViewStyle>}
         >
-          <Text
-            style={[
-              styles.messageText,
-              { color: isUser ? C.textOnPrimary : C.text },
-            ] as StyleProp<TextStyle>}
+          <Markdown
+            style={{
+              body: { color: isUser ? (isAdmin ? "#ffffff" : C.textOnPrimary) : C.text, fontSize: 14, lineHeight: 20 },
+              strong: { fontWeight: "bold", color: isUser ? (isAdmin ? "#ffffff" : C.textOnPrimary) : (isAdmin ? adminColor : C.primary) },
+              code_inline: { backgroundColor: isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.05)", borderRadius: 4, paddingHorizontal: 4, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+              fence: { backgroundColor: "#1e1e1e", color: "#d4d4d4", borderRadius: 8, padding: 10, marginVertical: 8, overflow: "hidden", fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+              bullet_list: { marginVertical: 4 },
+              ordered_list: { marginVertical: 4 },
+            }}
           >
             {item.content}
-          </Text>
+          </Markdown>
           {!isUser && item.referencias && item.referencias.length > 0 && (
             <View style={styles.referencesContainer}>
               <Text style={[styles.referencesTitle, { color: C.textSecondary }]}>
@@ -119,11 +134,11 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: C.border }] as StyleProp<ViewStyle>}>
           <View style={styles.headerLeft}>
-            <View style={[styles.botIcon, { backgroundColor: C.primary }] as StyleProp<ViewStyle>}>
-              <Ionicons name="hardware-chip-outline" size={20} color={C.textOnPrimary} />
+            <View style={[styles.botIcon, { backgroundColor: isAdmin ? adminColor : C.primary }] as StyleProp<ViewStyle>}>
+              <Ionicons name="hardware-chip-outline" size={20} color={isAdmin ? "#ffffff" : C.textOnPrimary} />
             </View>
             <View>
-              <Text style={[styles.headerTitle, { color: C.text }] as StyleProp<TextStyle>}>UniConnect AI</Text>
+              <Text style={[styles.headerTitle, { color: C.text }] as StyleProp<TextStyle>}>{isAdmin ? "UniConnect Admin AI" : "UniConnect AI"}</Text>
               <View style={styles.statusRow}>
                 <View style={styles.statusDot} />
                 <Text style={[styles.statusText, { color: C.textSecondary }] as StyleProp<TextStyle>}>En línea</Text>
@@ -158,8 +173,8 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
         >
           {messages.length === 0 ? (
             <View style={styles.welcomeContainer}>
-              <View style={[styles.welcomeBot, { backgroundColor: C.surfaceElevated }] as StyleProp<ViewStyle>}>
-                <Ionicons name="logo-android" size={48} color={C.primary} />
+              <View style={[styles.welcomeBot, { backgroundColor: C.surfaceElevated, borderColor: isAdmin ? adminColor : C.border, borderWidth: isAdmin ? 1 : 0 }] as StyleProp<ViewStyle>}>
+                <Ionicons name="logo-android" size={48} color={isAdmin ? adminColor : C.primary} />
               </View>
               <Text style={[styles.welcomeTitle, { color: C.text }] as StyleProp<TextStyle>}>
                 ¡Hola! Soy tu asistente virtual de UniConnect
@@ -172,11 +187,11 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
                 {suggestions.map((sug, i) => (
                   <TouchableOpacity
                     key={i}
-                    style={[styles.suggestionBtn, { backgroundColor: C.surfaceElevated, borderColor: C.border }] as StyleProp<ViewStyle>}
+                    style={[styles.suggestionBtn, { backgroundColor: C.surfaceElevated, borderColor: isAdmin ? adminColor : C.border }] as StyleProp<ViewStyle>}
                     onPress={() => handleSuggestion(sug)}
                   >
                     <Text style={[styles.suggestionText, { color: C.textSecondary }] as StyleProp<TextStyle>}>{sug}</Text>
-                    <Ionicons name="chevron-forward" size={14} color={C.textSecondary} />
+                    <Ionicons name="chevron-forward" size={14} color={isAdmin ? adminColor : C.textSecondary} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -191,16 +206,18 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
               ListHeaderComponent={
                 isTyping ? (
                   <View style={[styles.messageRow, styles.assistantRow] as StyleProp<ViewStyle>}>
-                    <View style={[styles.bubble, styles.assistantBubble, { backgroundColor: C.surfaceElevated, borderColor: C.border, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 6 }] as StyleProp<ViewStyle>}>
-                      <ActivityIndicator size="small" color={C.primary} />
-                      <Text style={{ color: C.textSecondary, fontSize: 13 }}>Escribiendo...</Text>
+                    <View style={[styles.bubble, styles.assistantBubble, { backgroundColor: C.surfaceElevated, borderColor: isAdmin ? adminColor : C.border, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 6 }] as StyleProp<ViewStyle>}>
+                      <ActivityIndicator size="small" color={isAdmin ? adminColor : C.primary} />
+                      <Text style={{ color: C.textSecondary, fontSize: 13 }}>
+                        {isThinkingLong ? "Pensando detenidamente..." : "Escribiendo..."}
+                      </Text>
                     </View>
                   </View>
                 ) : null
               }
             />
           )}
-
+ 
           {/* Footer Input */}
           <View style={[styles.footer, { borderTopColor: C.border, backgroundColor: C.surface }] as StyleProp<ViewStyle>}>
             <TextInput
@@ -208,7 +225,7 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
                 styles.input,
                 {
                   backgroundColor: C.background,
-                  borderColor: C.border,
+                  borderColor: isAdmin ? adminColor : C.border,
                   color: C.text,
                 },
               ] as StyleProp<TextStyle>}
@@ -223,11 +240,11 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
               onPress={handleSend}
               style={[
                 styles.sendButton,
-                { backgroundColor: inputText.trim() && !isTyping ? C.primary : C.border },
+                { backgroundColor: inputText.trim() && !isTyping ? (isAdmin ? adminColor : C.primary) : C.border },
               ] as StyleProp<ViewStyle>}
               disabled={!inputText.trim() || isTyping}
             >
-              <Ionicons name="send" size={18} color={inputText.trim() && !isTyping ? C.textOnPrimary : C.textSecondary} />
+              <Ionicons name="send" size={18} color={inputText.trim() && !isTyping ? (isAdmin ? "#ffffff" : C.textOnPrimary) : C.textSecondary} />
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

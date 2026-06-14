@@ -11,26 +11,20 @@ export class ApiChatbotRepository {
 
   async sendMessage(
     message: string,
-    history?: ChatMessageApi[]
+    history?: ChatMessageApi[],
+    signal?: AbortSignal
   ): Promise<SendChatbotMessageResponse> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    try {
-      const response = await this.chatbotClient.sendMessage(
-        {
-          body: {
-            message,
-            history,
-          },
+    const response = await this.chatbotClient.sendMessage(
+      {
+        body: {
+          message,
+          history,
         },
-        {
-          signal: controller.signal,
-        }
-      );
-      return response;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+      },
+      {
+        signal,
+      }
+    );
+    return response;
   }
 }
