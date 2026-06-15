@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { AuthorizationError } from "../libs/errors/AuthorizationError.js";
 
-export type AdminLevel = "admin" | "super_admin";
+export type AdminLevel = "admin";
 
 export function checkRole(requiredRole: AdminLevel, req: IncomingMessage): boolean {
   const userRole = req.headers["x-user-role"];
@@ -9,15 +9,7 @@ export function checkRole(requiredRole: AdminLevel, req: IncomingMessage): boole
 
   const normalizedRole = userRole.trim().toLowerCase();
 
-  if (requiredRole === "super_admin") {
-    return normalizedRole === "super_admin";
-  }
-
-  if (requiredRole === "admin") {
-    return normalizedRole === "admin" || normalizedRole === "super_admin";
-  }
-
-  return false;
+  return normalizedRole === "admin";
 }
 
 function getActorUserId(req: IncomingMessage): string | null {
@@ -61,7 +53,7 @@ export function requireRole(requiredRole: AdminLevel) {
     if (!checkRole(requiredRole, req)) {
       const userId = getActorUserId(req);
       logFailedAttempt(userId, req.url ?? "/");
-      throw new AuthorizationError("Acceso restringido a super_admin");
+      throw new AuthorizationError("Acceso restringido. Se requieren permisos de administrador.");
     }
     return true;
   };

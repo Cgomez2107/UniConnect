@@ -67,7 +67,7 @@ export function useAdminEvents() {
     setError(null);
     try {
       const token = getAuthToken();
-      const url = `${GATEWAY_URL}/events?limit=500&include_deleted=${includeDeleted}`;
+      const url = `${GATEWAY_URL}/events?limit=500&include_deleted=${includeDeleted}&status=draft,published,cancelled,finished`;
       const response = await fetch(url, {
         headers: {
           "Content-Type": "application/json",

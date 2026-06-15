@@ -6,7 +6,7 @@ export async function isAdminUser(req: IncomingMessage, pool?: Pool): Promise<bo
   const userRole = req.headers["x-user-role"];
   if (userRole && typeof userRole === "string") {
     const normalizedRole = userRole.trim().toLowerCase();
-    return normalizedRole === "admin" || normalizedRole === "super_admin";
+    if (normalizedRole === "admin") return true;
   }
 
   if (!pool) return false;
