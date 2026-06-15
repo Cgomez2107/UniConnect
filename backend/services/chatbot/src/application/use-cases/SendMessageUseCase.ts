@@ -8,20 +8,21 @@ export class SendMessageUseCase {
   }
 
   async execute(role: string, message: string, history?: any[], userId?: string): Promise<{ reply: string; referencias?: any[] }> {
+    const startTime = performance.now();
     const systemPrompt = this.strategyContext.buildPromptForRole(role);
 
     const webhookUrl = process.env.CHATBOT_WEBHOOK_URL;
 
-    // ⚠️ MOCK INTEGRATION WARNING COMMENT:
-    // ESTE MOCK SE UTILIZA ESTRICTAMENTE PARA PODER AISLAR LA HISTORIA Y CUMPLIR LOS CRITERIOS DE ACEPTACIÓN ACTUALES.
-    // UNA VEZ FINALIZADA LA HISTORIA, SE DEBE CAMBIAR EL DESTINO PARA LLAMAR AL FLUJO DE PRODUCCIÓN DE N8N REAL.
-    // SI CHATBOT_WEBHOOK_URL APUNTA A WEBHOOK.SITE O SI FALLA, DEVOLVEREMOS UN MENSAJE DE SIMULACIÓN PARA EVITAR QUE SE DETENGA EL FLUJO.
     if (!webhookUrl || webhookUrl.includes("webhook.site") || webhookUrl === "MOCK_URL") {
-      console.log(`[SendMessageUseCase Mock] Hitting mock Webhook URL: ${webhookUrl}`);
-      console.log(`[SendMessageUseCase Mock] Role: ${role}, Message: "${message}"`);
-      console.log(`[SendMessageUseCase Mock] Prompt applied:\n${systemPrompt}`);
-      
-      // Simulate chatbot response based on the role and prompt rules
+      const duration = performance.now() - startTime;
+      console.log(JSON.stringify({
+        event: "chatbot_mock",
+        service: "chatbot",
+        duration: `${duration.toFixed(2)}ms`,
+        role,
+        userId: userId || "",
+      }));
+
       if (role === "admin") {
         return {
           reply: `[Simulación Admin Bot] Hola Administrador. Analizando el sistema con las siguientes directivas:\n- Prompt de Sistema: "${systemPrompt.substring(0, 80)}..."\n- Tu mensaje: "${message}"\n- Respuesta: Todo el sistema está funcionando a niveles óptimos con 0 logs de error.`,
@@ -36,9 +37,15 @@ export class SendMessageUseCase {
     }
 
     try {
-      console.log(`[SendMessageUseCase] Calling webhook: ${webhookUrl}`);
-      console.log(`[SendMessageUseCase] Payload:`, { pregunta: message, rol: role, userId: userId || "" });
-      
+      console.log(JSON.stringify({
+        event: "rag_request",
+        service: "chatbot",
+        webhookUrl,
+        role,
+        userId: userId || "",
+        preguntaLength: message.length,
+      }));
+
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
@@ -51,20 +58,45 @@ export class SendMessageUseCase {
         }),
       });
 
-      console.log(`[SendMessageUseCase] Webhook response status: ${response.status}`);
+      const duration = performance.now() - startTime;
 
       if (!response.ok) {
+        console.error(JSON.stringify({
+          event: "rag_error",
+          service: "chatbot",
+          status: response.status,
+          duration: `${duration.toFixed(2)}ms`,
+          role,
+          userId: userId || "",
+        }));
         throw new Error(`Webhook responded with status ${response.status}`);
       }
 
       const data = (await response.json()) as any;
-      console.log(`[SendMessageUseCase] Webhook response data:`, data);
-      
       const reply = data.reply || data.response || JSON.stringify(data);
       const referencias = data.referencias || [];
+
+      console.log(JSON.stringify({
+        event: "rag_success",
+        service: "chatbot",
+        duration: `${duration.toFixed(2)}ms`,
+        chunksCount: referencias.length,
+        role,
+        userId: userId || "",
+      }));
+
       return { reply, referencias };
     } catch (error: any) {
-      console.error(`[SendMessageUseCase Error] Failed to call webhook: ${error.message}`);
+      const duration = performance.now() - startTime;
+      console.error(JSON.stringify({
+        event: "rag_error",
+        service: "chatbot",
+        error: error.message,
+        duration: `${duration.toFixed(2)}ms`,
+        role,
+        userId: userId || "",
+      }));
+
       return {
         reply: `[Error de Conexión] No se pudo conectar con el servicio de Inteligencia Artificial. (Detalle: ${error.message})`,
         referencias: [],
