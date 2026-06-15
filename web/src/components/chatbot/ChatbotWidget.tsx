@@ -42,22 +42,22 @@ export function ChatbotWidget() {
 
   const suggestions = isAdmin
     ? [
-        "¿Cómo puedo gestionar grupos de estudio?",
-        "¿Cómo crear un evento institucional?",
-        "¿Cómo reportar o moderar contenido inapropiado?",
-      ]
+      "¿Cómo puedo gestionar grupos de estudio?",
+      "¿Cómo puedo crear un evento institucional?",
+      "¿Cómo puedo reportar o moderar contenido inapropiado?",
+    ]
     : [
-        "¿Cómo puedo crear un grupo de estudio?",
-        "¿Dónde veo mis próximos eventos?",
-        "¿Cómo subir un recurso de estudio?",
-      ];
+      "¿Cómo puedo crear un grupo de estudio?",
+      "¿Dónde puedo ver mis próximos eventos?",
+      "¿Cómo puedo subir un recurso de estudio?",
+    ];
 
   return (
     <div className="fixed bottom-6 right-6 z-50 font-sans">
       {/* Chat Window */}
       {isOpen && (
         <div className="absolute bottom-16 right-0 w-[380px] h-[520px] max-w-[calc(100vw-2rem)] bg-white dark:bg-neutral-900 rounded-2xl shadow-elevated border border-neutral-200 dark:border-neutral-800 flex flex-col overflow-hidden animate-slide-up transition-all duration-300">
-          
+
           {/* Header */}
           <div className={`${isAdmin ? "bg-gradient-to-r from-amber-600 to-orange-600" : "bg-gradient-to-r from-primary-600 to-indigo-600"} px-4 py-3 flex items-center justify-between text-white shadow-sm`}>
             <div className="flex items-center gap-2.5">
@@ -108,18 +108,17 @@ export function ChatbotWidget() {
                     Puedo ayudarte a navegar por la plataforma, resolver dudas sobre grupos, eventos y recursos. ¿Con qué empezamos?
                   </p>
                 </div>
-                
+
                 {/* Suggestions */}
                 <div className="w-full space-y-2 pt-2">
                   {suggestions.map((suggestion, index) => (
                     <button
                       key={index}
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className={`w-full text-left p-2.5 bg-white dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-700 dark:text-neutral-300 font-medium transition-all duration-200 shadow-sm ${
-                        isAdmin
-                          ? "hover:bg-amber-50 dark:hover:bg-amber-950/20 hover:border-amber-200 dark:hover:border-amber-900"
-                          : "hover:bg-primary-50 dark:hover:bg-primary-950/20 hover:border-primary-200 dark:hover:border-primary-900"
-                      }`}
+                      className={`w-full text-left p-2.5 bg-white dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-700 dark:text-neutral-300 font-medium transition-all duration-200 shadow-sm ${isAdmin
+                        ? "hover:bg-amber-50 dark:hover:bg-amber-950/20 hover:border-amber-200 dark:hover:border-amber-900"
+                        : "hover:bg-primary-50 dark:hover:bg-primary-950/20 hover:border-primary-200 dark:hover:border-primary-900"
+                        }`}
                     >
                       {suggestion}
                     </button>
@@ -136,15 +135,14 @@ export function ChatbotWidget() {
                       className={`flex ${isUser ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm leading-relaxed ${
-                          isUser
-                            ? (isAdmin
-                              ? "bg-gradient-to-tr from-amber-600 to-orange-600 text-white rounded-br-none"
-                              : "bg-gradient-to-tr from-primary-600 to-indigo-600 text-white rounded-br-none")
-                            : (isAdmin
-                              ? "bg-white dark:bg-neutral-800 border border-amber-200 dark:border-amber-900/50 text-neutral-800 dark:text-neutral-200 rounded-bl-none"
-                              : "bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-bl-none")
-                        }`}
+                        className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm leading-relaxed ${isUser
+                          ? (isAdmin
+                            ? "bg-gradient-to-tr from-amber-600 to-orange-600 text-white rounded-br-none"
+                            : "bg-gradient-to-tr from-primary-600 to-indigo-600 text-white rounded-br-none")
+                          : (isAdmin
+                            ? "bg-white dark:bg-neutral-800 border border-amber-200 dark:border-amber-900/50 text-neutral-800 dark:text-neutral-200 rounded-bl-none"
+                            : "bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-bl-none")
+                          }`}
                       >
                         <div className="prose dark:prose-invert max-w-none text-sm break-words">
                           {isUser ? (
@@ -152,12 +150,12 @@ export function ChatbotWidget() {
                           ) : (
                             <ReactMarkdown
                               components={{
-                                p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                                strong: ({node, ...props}) => <strong className={`font-bold ${isAdmin ? "text-amber-700 dark:text-amber-400" : "text-indigo-700 dark:text-indigo-400"}`} {...props} />,
-                                ul: ({node, ...props}) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
-                                ol: ({node, ...props}) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
-                                code: ({node, ...props}) => <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-xs font-mono" {...props} />,
-                                pre: ({node, ...props}) => <pre className="bg-neutral-800 text-neutral-100 p-3 rounded-lg text-xs overflow-x-auto my-2 font-mono" {...props} />
+                                p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                                strong: ({ node, ...props }) => <strong className={`font-bold ${isAdmin ? "text-amber-700 dark:text-amber-400" : "text-indigo-700 dark:text-indigo-400"}`} {...props} />,
+                                ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+                                ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+                                code: ({ node, ...props }) => <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-xs font-mono" {...props} />,
+                                pre: ({ node, ...props }) => <pre className="bg-neutral-800 text-neutral-100 p-3 rounded-lg text-xs overflow-x-auto my-2 font-mono" {...props} />
                               }}
                             >
                               {msg.content}
@@ -218,20 +216,18 @@ export function ChatbotWidget() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Pregúntame algo..."
               disabled={isLoading}
-              className={`flex-1 px-4 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm bg-neutral-50 dark:bg-neutral-950 focus:outline-none focus:ring-2 ${
-                isAdmin
-                  ? "focus:ring-amber-500/20 focus:border-amber-500"
-                  : "focus:ring-primary-500/20 focus:border-primary-500"
-              } dark:text-white disabled:opacity-60 transition-all`}
+              className={`flex-1 px-4 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm bg-neutral-50 dark:bg-neutral-950 focus:outline-none focus:ring-2 ${isAdmin
+                ? "focus:ring-amber-500/20 focus:border-amber-500"
+                : "focus:ring-primary-500/20 focus:border-primary-500"
+                } dark:text-white disabled:opacity-60 transition-all`}
             />
             <button
               type="submit"
               disabled={isLoading || !inputValue.trim()}
-              className={`p-2.5 ${
-                isAdmin
-                  ? "bg-amber-600 hover:bg-amber-700"
-                  : "bg-primary-600 hover:bg-primary-700"
-              } text-white rounded-xl disabled:opacity-40 disabled:hover:opacity-40 transition-colors shadow-sm flex items-center justify-center`}
+              className={`p-2.5 ${isAdmin
+                ? "bg-amber-600 hover:bg-amber-700"
+                : "bg-primary-600 hover:bg-primary-700"
+                } text-white rounded-xl disabled:opacity-40 disabled:hover:opacity-40 transition-colors shadow-sm flex items-center justify-center`}
             >
               <Send className="w-4 h-4" />
             </button>
@@ -242,11 +238,10 @@ export function ChatbotWidget() {
       {/* Floating Action Button (FAB) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full bg-gradient-to-tr ${
-          isAdmin
-            ? "from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500"
-            : "from-primary-600 to-indigo-600 hover:from-primary-500 hover:to-indigo-500"
-        } text-white shadow-elevated flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 relative group`}
+        className={`w-14 h-14 rounded-full bg-gradient-to-tr ${isAdmin
+          ? "from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500"
+          : "from-primary-600 to-indigo-600 hover:from-primary-500 hover:to-indigo-500"
+          } text-white shadow-elevated flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 relative group`}
         title="UniConnect AI Assistant"
       >
         <div className="relative">
