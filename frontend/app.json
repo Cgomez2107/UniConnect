@@ -70,6 +70,9 @@
       "expo-web-browser",
       "expo-secure-store"
     ],
+    "autolinking": {
+      "exclude": ["expo-blur"]
+    },
     "experiments": {
       "typedRoutes": true
     },

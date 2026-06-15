@@ -38,6 +38,7 @@ primary_region = 'gru'
   PROFILES_CATALOG_BASE_URL = 'http://localhost:3105'
   EVENTS_BASE_URL = 'http://localhost:3106'
   FORUM_BASE_URL = 'http://localhost:3107'
+  CHATBOT_BASE_URL = 'http://localhost:3108'
 
 [http_service]
   internal_port = 3000

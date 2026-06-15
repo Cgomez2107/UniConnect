@@ -7,7 +7,7 @@ export class SendMessageUseCase {
     this.strategyContext = new PromptStrategyContext();
   }
 
-  async execute(role: string, message: string, history?: any[], userId?: string): Promise<{ reply: string; referencias?: any[] }> {
+  async execute(role: string, message: string, history?: any[], userId?: string): Promise<{ reply: string; referencias: any[] }> {
     const startTime = performance.now();
     const systemPrompt = this.strategyContext.buildPromptForRole(role);
 
