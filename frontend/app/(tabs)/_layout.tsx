@@ -12,7 +12,7 @@ import { useUnreadCountStore } from "@/store/unreadCountStore";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Tabs } from "expo-router";
 import { useRef, useEffect } from "react";
-import { Animated, Text, useColorScheme, View } from "react-native";
+import { Animated, useColorScheme, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function AnimatedTabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {

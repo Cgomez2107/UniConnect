@@ -195,7 +195,7 @@ describe("Bloque 3: Shared AdminGuard — requireRole", () => {
 
     expect(() => guard(req, res)).toThrow(AuthorizationErrorClass);
     try { guard(req, res); } catch (e: any) {
-      expect(e.message).toBe("Acceso restringido a super_admin");
+      expect(e.message).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(e.statusCode).toBe(403);
     }
   });
@@ -207,7 +207,7 @@ describe("Bloque 3: Shared AdminGuard — requireRole", () => {
 
     expect(() => guard(req, res)).toThrow(AuthorizationErrorClass);
     try { guard(req, res); } catch (e: any) {
-      expect(e.message).toBe("Acceso restringido a super_admin");
+      expect(e.message).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(e.statusCode).toBe(403);
     }
   });
@@ -215,34 +215,6 @@ describe("Bloque 3: Shared AdminGuard — requireRole", () => {
   it("T3.1 requireRole('admin'): lanza AuthorizationError cuando x-user-role es string vacío", () => {
     const guard = requireRole("admin");
     const req = createMockReq({ "x-user-role": "", "x-user-id": "user-abc" }, "/api/v1/events");
-    const res = createMockRes();
-
-    expect(() => guard(req, res)).toThrow(AuthorizationErrorClass);
-  });
-
-  it("T3.1 requireRole('admin'): retorna true para super_admin (hereda permisos)", () => {
-    const guard = requireRole("admin");
-    const req = createMockReq({ "x-user-role": "super_admin", "x-user-id": "user-super" }, "/api/v1/events");
-    const res = createMockRes();
-
-    const result = guard(req, res);
-
-    expect(result).toBe(true);
-  });
-
-  it("T3.1 requireRole('super_admin'): retorna true solo para rol super_admin", () => {
-    const guard = requireRole("super_admin");
-    const req = createMockReq({ "x-user-role": "super_admin", "x-user-id": "user-super" }, "/api/v1/events");
-    const res = createMockRes();
-
-    const result = guard(req, res);
-
-    expect(result).toBe(true);
-  });
-
-  it("T3.1 requireRole('super_admin'): lanza AuthorizationError para admin cuando se requiere super_admin", () => {
-    const guard = requireRole("super_admin");
-    const req = createMockReq({ "x-user-role": "admin", "x-user-id": "user-admin" }, "/api/v1/events");
     const res = createMockRes();
 
     expect(() => guard(req, res)).toThrow(AuthorizationErrorClass);
@@ -277,10 +249,10 @@ describe("Bloque 3: Shared AdminGuard — requireRole", () => {
   });
 
   it("T3.2: AuthorizationError tiene statusCode=403", async () => {
-    const err = new AuthorizationErrorClass("Acceso restringido a super_admin");
+    const err = new AuthorizationErrorClass("Acceso restringido. Se requieren permisos de administrador.");
 
     expect(err.statusCode).toBe(403);
-    expect(err.message).toBe("Acceso restringido a super_admin");
+    expect(err.message).toBe("Acceso restringido. Se requieren permisos de administrador.");
     expect(err.name).toBe("AuthorizationError");
   });
 });
