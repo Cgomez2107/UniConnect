@@ -26,7 +26,12 @@ export class QrPass {
   }
 
   static parse(content: string): { token: string; signature: string } | null {
-    const url = new URL(content);
+    let url: URL;
+    try {
+      url = new URL(content);
+    } catch {
+      return null;
+    }
     if (url.protocol !== "uniconnect:") return null;
     if (url.hostname !== "access") return null;
     const token = url.searchParams.get("rid");
