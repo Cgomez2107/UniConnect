@@ -74,7 +74,7 @@ export class ApiStudyRequestRepository implements IStudyRequestRepository {
             method: "POST",
             body: JSON.stringify({
                 subjectId: payload.subject_id,
-                title: payload.title,
+                name: payload.title,
                 description: payload.description,
                 maxMembers: payload.max_members,
             }),
