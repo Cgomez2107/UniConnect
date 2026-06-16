@@ -10,12 +10,34 @@ import {
 
 async function setupStudentSession(page: Page, chatbotPage: ChatbotPage) {
   await chatbotPage.injectAuthSession(studentAuthSession);
+
+  // Mock all non-chatbot API calls to prevent fake token from triggering 401 → session expiry
+  await page.route("**/api/v1/**", async (route) => {
+    const url = route.request().url();
+    if (url.includes("/chatbot/message")) {
+      await route.fallback();
+    } else {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    }
+  });
+
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await chatbotPage.open();
 }
 
 async function setupAdminSession(page: Page, chatbotPage: ChatbotPage) {
   await chatbotPage.injectAuthSession(adminAuthSession);
+
+  // Mock all non-chatbot API calls to prevent fake token from triggering 401 → session expiry
+  await page.route("**/api/v1/**", async (route) => {
+    const url = route.request().url();
+    if (url.includes("/chatbot/message")) {
+      await route.fallback();
+    } else {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    }
+  });
+
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await chatbotPage.open();
 }

@@ -46,7 +46,7 @@ export class ChatbotPage {
     this.assistantMessageBubbles = this.chatWindow.locator(
       ".justify-start .rounded-2xl"
     );
-    this.referenceTags = this.chatWindow.locator("text=Manual UniConnect");
+    this.referenceTags = this.chatWindow.locator("text=Fuentes consultadas");
     this.suggestionButtons = this.chatWindow.getByRole("button");
   }
 

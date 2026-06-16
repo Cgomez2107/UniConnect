@@ -27,7 +27,7 @@ test.describe("C2 - Create study group", () => {
     });
     expect(token).toBeTruthy();
 
-    const gatewayUrl = process.env.E2E_GATEWAY_URL || "http://localhost:3000";
+    const gatewayUrl = process.env.E2E_GATEWAY_URL || "https://uniconnect-backend-grupo-2.fly.dev";
 
     const existingResponse = await page.request.get(`${gatewayUrl}/api/v1/study-groups/me`, {
       headers: { Authorization: `Bearer ${token}` },
