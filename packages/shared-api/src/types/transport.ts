@@ -13,6 +13,8 @@ export interface RequestOptions {
   params?: Record<string, string | number | boolean>;
   timeout?: number;
   responseSchema?: z.ZodTypeAny;
+  unwrapEnvelope?: boolean;
+  signal?: AbortSignal;
 }
 
 export interface ResponseData<T = any> {

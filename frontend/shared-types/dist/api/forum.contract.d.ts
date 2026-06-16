@@ -1,30 +1,30 @@
 import { z } from "zod";
-import type { ApiContract } from "./_base.contract.js";
+import type { ApiContract } from "./_base.contract";
 export declare const CreateQuestionRequestSchema: z.ZodObject<{
     body: z.ZodObject<{
         subjectId: z.ZodString;
         title: z.ZodString;
         body: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        body: string;
-        title: string;
         subjectId: string;
+        title: string;
+        body: string;
     }, {
-        body: string;
-        title: string;
         subjectId: string;
+        title: string;
+        body: string;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
-        body: string;
-        title: string;
         subjectId: string;
+        title: string;
+        body: string;
     };
 }, {
     body: {
-        body: string;
-        title: string;
         subjectId: string;
+        title: string;
+        body: string;
     };
 }>;
 export declare const CreateQuestionResponseSchema: z.ZodObject<{
@@ -41,50 +41,50 @@ export declare const CreateQuestionResponseSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         status: "active" | "solved" | "closed";
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
     }, {
         status: "active" | "solved" | "closed";
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
         status: "active" | "solved" | "closed";
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
     };
 }, {
     data: {
         status: "active" | "solved" | "closed";
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
     };
@@ -100,9 +100,9 @@ export declare const ListQuestionsRequestSchema: z.ZodObject<{
         limit: number;
         subjectId?: string | undefined;
     }, {
-        subjectId?: string | undefined;
         page?: number | undefined;
         limit?: number | undefined;
+        subjectId?: string | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     query: {
@@ -112,9 +112,9 @@ export declare const ListQuestionsRequestSchema: z.ZodObject<{
     };
 }, {
     query: {
-        subjectId?: string | undefined;
         page?: number | undefined;
         limit?: number | undefined;
+        subjectId?: string | undefined;
     };
 }>;
 export declare const ListQuestionsResponseSchema: z.ZodObject<{
@@ -130,21 +130,21 @@ export declare const ListQuestionsResponseSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         status: "active" | "solved" | "closed";
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
         answerCount: number;
         voteCount: number;
     }, {
         status: "active" | "solved" | "closed";
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
         answerCount: number;
         voteCount: number;
@@ -165,11 +165,11 @@ export declare const ListQuestionsResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     data: {
         status: "active" | "solved" | "closed";
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
         answerCount: number;
         voteCount: number;
@@ -182,11 +182,11 @@ export declare const ListQuestionsResponseSchema: z.ZodObject<{
 }, {
     data: {
         status: "active" | "solved" | "closed";
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         subjectId: string;
+        title: string;
         authorId: string;
         answerCount: number;
         voteCount: number;
@@ -230,24 +230,24 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
             status: "active" | "solved" | "closed";
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
-            title: string;
+            id: string;
             subjectId: string;
+            title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
         }, {
             status: "active" | "solved" | "closed";
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
-            title: string;
+            id: string;
             subjectId: string;
+            title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
         }>;
@@ -261,20 +261,20 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
             createdAt: z.ZodString;
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
         }, {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -282,22 +282,22 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         question: {
             status: "active" | "solved" | "closed";
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
-            title: string;
+            id: string;
             subjectId: string;
+            title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
         };
         answers: {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -305,22 +305,22 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
     }, {
         question: {
             status: "active" | "solved" | "closed";
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
-            title: string;
+            id: string;
             subjectId: string;
+            title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
         };
         answers: {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -330,22 +330,22 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
     data: {
         question: {
             status: "active" | "solved" | "closed";
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
-            title: string;
+            id: string;
             subjectId: string;
+            title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
         };
         answers: {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -355,22 +355,22 @@ export declare const GetQuestionDetailResponseSchema: z.ZodObject<{
     data: {
         question: {
             status: "active" | "solved" | "closed";
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
-            title: string;
+            id: string;
             subjectId: string;
+            title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
         };
         answers: {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -419,42 +419,42 @@ export declare const CreateAnswerResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     };
 }, {
     data: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
@@ -489,42 +489,42 @@ export declare const ListAnswersResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     data: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }[];
 }, {
     data: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;

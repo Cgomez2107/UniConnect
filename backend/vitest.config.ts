@@ -7,7 +7,10 @@ export default defineConfig({
     globals: true,
     include: [
       "tests/integration/sprint4/**/*.spec.ts",
+      "tests/integration/us-*.spec.ts",
       "tests/unit/notification.service.spec.ts",
+      "shared/patterns/chain/message/__tests__/moderation-us-t06.spec.ts",
+      "shared/patterns/strategy/__tests__/*.spec.ts",
     ],
     coverage: {
       provider: "v8",

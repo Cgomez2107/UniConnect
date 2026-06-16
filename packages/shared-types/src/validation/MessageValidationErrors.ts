@@ -82,6 +82,8 @@ export const ValidationErrorMessages: Record<ValidationErrorCode, string> = {
 /**
  * Validador: error que se lanza desde cada handler de la cadena
  */
+export type ModerationErrorCode = "MO_001" | "MO_002" | "MO_003" | "MO_004";
+
 export class ValidatorError extends Error {
   constructor(
     public code: ValidationErrorCode,

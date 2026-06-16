@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ApiContract } from "./_base.contract.js";
+import type { ApiContract } from "./_base.contract";
 export declare const LoginRequestSchema: z.ZodObject<{
     body: z.ZodObject<{
         email: z.ZodString;
@@ -38,25 +38,25 @@ export declare const LoginResponseSchema: z.ZodObject<{
         lastLoginAt: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         isOnboarded: boolean;
         profileImageUrl?: string | undefined;
         lastLoginAt?: string | undefined;
     }, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         isOnboarded: boolean;
         profileImageUrl?: string | undefined;
         lastLoginAt?: string | undefined;
@@ -67,13 +67,13 @@ export declare const LoginResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     user: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         isOnboarded: boolean;
         profileImageUrl?: string | undefined;
         lastLoginAt?: string | undefined;
@@ -84,13 +84,13 @@ export declare const LoginResponseSchema: z.ZodObject<{
 }, {
     user: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         isOnboarded: boolean;
         profileImageUrl?: string | undefined;
         lastLoginAt?: string | undefined;
@@ -210,25 +210,25 @@ export declare const OAuthCallbackResponseSchema: z.ZodObject<{
         lastLoginAt: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         isOnboarded: boolean;
         profileImageUrl?: string | undefined;
         lastLoginAt?: string | undefined;
     }, {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         isOnboarded: boolean;
         profileImageUrl?: string | undefined;
         lastLoginAt?: string | undefined;
@@ -240,13 +240,13 @@ export declare const OAuthCallbackResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     user: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         isOnboarded: boolean;
         profileImageUrl?: string | undefined;
         lastLoginAt?: string | undefined;
@@ -258,13 +258,13 @@ export declare const OAuthCallbackResponseSchema: z.ZodObject<{
 }, {
     user: {
         email: string;
+        createdAt: string;
+        updatedAt: string;
         id: string;
         firstName: string;
         lastName: string;
         role: "estudiante" | "admin";
         isVerified: boolean;
-        createdAt: string;
-        updatedAt: string;
         isOnboarded: boolean;
         profileImageUrl?: string | undefined;
         lastLoginAt?: string | undefined;

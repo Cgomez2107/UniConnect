@@ -3,7 +3,8 @@ import { GlobalNotificationModals } from "@/components/notifications/GlobalNotif
 import { RealtimeNotificationHandler } from "@/components/notifications/RealtimeNotificationHandler"
 import { ToastProvider } from "@/context"
 import { useAuthStore } from "@/store/useAuthStore"
-import { Stack } from "expo-router"
+import { ChatbotFAB } from "@/components/chatbot/ChatbotFAB"
+import { Stack, usePathname } from "expo-router"
 import { useEffect, useState } from "react"
 
 SplashScreen.preventAutoHideAsync()
@@ -14,7 +15,9 @@ if (typeof document !== "undefined") {
 
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [isMounted, setIsMounted] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     setIsMounted(true)
@@ -43,6 +46,8 @@ export default function RootLayout() {
     return null
   }
 
+  const isChatRoute = pathname?.includes("/chat");
+
   return (
     <ToastProvider>
       <RealtimeNotificationHandler />
@@ -66,7 +71,9 @@ export default function RootLayout() {
         <Stack.Screen name="perfil-estudiante/[id]" />
         <Stack.Screen name="recurso/[id]" />
         <Stack.Screen name="estudio/sesiones" />
+        <Stack.Screen name="eventos/escanear" options={{ headerShown: false, presentation: "fullScreenModal" }} />
       </Stack>
+      {isAuthenticated && !isChatRoute && !pathname?.includes("/study-groups") && <ChatbotFAB />}
     </ToastProvider>
   )
 }

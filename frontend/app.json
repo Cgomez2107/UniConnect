@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.juanse108.uniconnet"
+      "bundleIdentifier": "com.juanse108.uniconnet",
+      "associatedDomains": ["applinks:uniconnect-dashboard-web.fly.dev"]
     },
     "android": {
       "adaptiveIcon": {
@@ -26,6 +27,21 @@
           "data": [
             {
               "scheme": "com.googleusercontent.apps.209072284981-gs8j4mgj9kb3tdsde2k5f4tg760dbqi7"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "uniconnect-dashboard-web.fly.dev",
+              "pathPrefix": "/dashboard"
             }
           ],
           "category": [
@@ -54,6 +70,9 @@
       "expo-web-browser",
       "expo-secure-store"
     ],
+    "autolinking": {
+      "exclude": ["expo-blur"]
+    },
     "experiments": {
       "typedRoutes": true
     },

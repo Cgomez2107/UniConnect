@@ -13,23 +13,23 @@ export declare const UserSchema: z.ZodObject<{
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     email: string;
+    createdAt: string;
+    updatedAt: string;
     id: string;
     firstName: string;
     lastName: string;
     role: "estudiante" | "admin";
     isVerified: boolean;
-    createdAt: string;
-    updatedAt: string;
     profileImageUrl?: string | undefined;
 }, {
     email: string;
+    createdAt: string;
+    updatedAt: string;
     id: string;
     firstName: string;
     lastName: string;
     role: "estudiante" | "admin";
     isVerified: boolean;
-    createdAt: string;
-    updatedAt: string;
     profileImageUrl?: string | undefined;
 }>;
 export declare const AuthProfileSchema: z.ZodObject<{
@@ -47,25 +47,25 @@ export declare const AuthProfileSchema: z.ZodObject<{
     lastLoginAt: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     email: string;
+    createdAt: string;
+    updatedAt: string;
     id: string;
     firstName: string;
     lastName: string;
     role: "estudiante" | "admin";
     isVerified: boolean;
-    createdAt: string;
-    updatedAt: string;
     isOnboarded: boolean;
     profileImageUrl?: string | undefined;
     lastLoginAt?: string | undefined;
 }, {
     email: string;
+    createdAt: string;
+    updatedAt: string;
     id: string;
     firstName: string;
     lastName: string;
     role: "estudiante" | "admin";
     isVerified: boolean;
-    createdAt: string;
-    updatedAt: string;
     isOnboarded: boolean;
     profileImageUrl?: string | undefined;
     lastLoginAt?: string | undefined;

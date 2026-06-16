@@ -23,6 +23,8 @@
   },
   "dependencies": {
     "@uniconnect/shared-types": "file:..\\..\\packages\\shared-types",
+    "jsonwebtoken": "^9.0.3",
+    "jwks-rsa": "^4.0.1",
     "swagger-ui-dist": "^5.32.6",
     "ws": "^8.20.1",
     "zod-to-json-schema": "^3.25.2"

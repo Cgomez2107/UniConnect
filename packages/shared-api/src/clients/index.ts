@@ -57,3 +57,6 @@ export { StudySessionsClient } from "./StudySessionsClient.js";
 export type {
   CreateSeriesPayload,
 } from "./StudySessionsClient.js";
+
+export { ChatbotClient } from "./ChatbotClient.js";
+export type { ChatbotClientOptions } from "./ChatbotClient.js";

@@ -20,7 +20,7 @@ export interface IMessage {
 
   getContent(): string;
   getMetadata(): Record<string, any>;
-  render(context?: { currentUserId?: string }): React.JSX.Element;
+  render(context?: { currentUserId?: string; textColor?: string }): React.JSX.Element;
 }
 
 // 2. Clase BaseMessage (Implementación Raíz)
@@ -44,9 +44,10 @@ export class BaseMessage implements IMessage {
     };
   }
 
-  render(context?: { currentUserId?: string }): React.JSX.Element {
+  render(context?: { currentUserId?: string; textColor?: string }): React.JSX.Element {
+    const color = context?.textColor || '#1A1A1A';
     return (
-      <Text key="text-base" style={styles.baseText}>
+      <Text key="text-base" style={[styles.baseText, { color }]}>
         {this.content}
       </Text>
     );
@@ -70,7 +71,7 @@ export abstract class MessageDecorator implements IMessage {
     return this.message.getMetadata();
   }
 
-  render(context?: { currentUserId?: string }): React.JSX.Element {
+  render(context?: { currentUserId?: string; textColor?: string }): React.JSX.Element {
     return this.message.render(context);
   }
 }
@@ -90,7 +91,7 @@ export class FileMessageDecorator extends MessageDecorator {
     return { ...this.message.getMetadata(), file: this.file };
   }
 
-  override render(context?: { currentUserId?: string }): React.JSX.Element {
+  override render(context?: { currentUserId?: string; textColor?: string }): React.JSX.Element {
     const isImage = this.file.mimeType.startsWith('image/');
     
     const handleOpen = () => {
@@ -118,10 +119,10 @@ export class FileMessageDecorator extends MessageDecorator {
             <View style={styles.fileIconContainer}>
               <MaterialIcons name="insert-drive-file" size={24} color="#0047AB" />
               <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.fileName} numberOfLines={1}>
+                <Text style={[styles.fileName, context?.textColor ? { color: context.textColor } : {}]} numberOfLines={1}>
                   {this.file.filename}
                 </Text>
-                <Text style={{ fontSize: 10, color: '#737373' }}>
+                <Text style={{ fontSize: 10, color: context?.textColor ? 'rgba(255,255,255,0.7)' : '#737373' }}>
                   Haga clic para abrir
                 </Text>
               </View>
@@ -144,7 +145,7 @@ export class MentionMessageDecorator extends MessageDecorator {
     return { ...this.message.getMetadata(), mentions: this.mentions };
   }
 
-  override render(context?: { currentUserId?: string }): React.JSX.Element {
+  override render(context?: { currentUserId?: string; textColor?: string }): React.JSX.Element {
     const isMentioned = context?.currentUserId && 
       this.mentions.some(m => m.userId === context.currentUserId || m.displayName === context.currentUserId);
 
@@ -152,7 +153,7 @@ export class MentionMessageDecorator extends MessageDecorator {
       <View key="decorator-mention" style={isMentioned ? styles.mentionHighlight : null}>
         <View style={styles.mentionContainer}>
           {this.mentions.map((m, idx) => (
-            <Text key={`mention-${idx}`} style={styles.mentionText}>
+            <Text key={`mention-${idx}`} style={[styles.mentionText, context?.textColor ? { color: '#60A5FA' } : {}]}>
               @{m.displayName}{' '}
             </Text>
           ))}
@@ -173,7 +174,7 @@ export class ReactionMessageDecorator extends MessageDecorator {
     return { ...this.message.getMetadata(), reactions: this.reactions };
   }
 
-  override render(context?: { currentUserId?: string }): React.JSX.Element {
+  override render(context?: { currentUserId?: string; textColor?: string }): React.JSX.Element {
     return (
       <View key="decorator-reaction">
         {this.message.render(context)}
@@ -203,7 +204,7 @@ export class PollMessageDecorator extends MessageDecorator {
     return { ...this.message.getMetadata(), poll: this.poll };
   }
 
-  override render(context?: { currentUserId?: string }): React.JSX.Element {
+  override render(context?: { currentUserId?: string; textColor?: string }): React.JSX.Element {
     return (
       <View key="decorator-poll">
         {this.message.render(context)}

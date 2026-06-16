@@ -6,6 +6,7 @@ export class ModerationError extends ApplicationError {
   constructor(
     message: string,
     public readonly code: string = "MO_003",
+    public readonly remainingMs?: number,
   ) {
     super(message, "ModerationError");
     Object.setPrototypeOf(this, ModerationError.prototype);
@@ -18,6 +19,7 @@ export class ModerationError extends ApplicationError {
       message: this.message,
       statusCode: this.statusCode,
       code: this.code,
+      ...(this.remainingMs !== undefined && { remainingMs: this.remainingMs }),
     };
   }
 }

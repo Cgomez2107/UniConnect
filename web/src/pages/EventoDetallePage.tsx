@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import eventsService from "@/lib/services/events.service";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { QrPassModal } from "@/components/shared/QrPassModal";
 import { useEventCategories } from "@/hooks/useEventCategories";
 import { useAuthStore } from "@/store/useAuthStore";
 import useNotifications from "@/hooks/useNotifications";
@@ -20,6 +21,22 @@ export function EventoDetallePage() {
   const [registerMsg, setRegisterMsg] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [unregistering, setUnregistering] = useState(false);
+
+  // ── QR Pass state ──
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrContent, setQrContent] = useState("");
+
+  const handleShowQrPass = useCallback(async () => {
+    if (!id) return;
+    try {
+      const result = await eventsService.getEventPass(id);
+      setQrContent(result.qrContent);
+      setQrModalOpen(true);
+    } catch (err: any) {
+      showError(err?.message || "Error al obtener el pase de acceso");
+    }
+  }, [id, showError]);
 
   useEffect(() => {
     if (!id) return;
@@ -45,9 +62,42 @@ export function EventoDetallePage() {
       const { event: updated } = await eventsService.getEventById(id);
       setEvent(updated);
     } catch (err: any) {
-      setRegisterMsg(err?.message || "Error al inscribirse");
+      const isConcurrencyFull = err?.status === 409 || err?.response?.status === 409 || err?.message?.includes("Cupo agotado") || err?.message?.includes("Ya estás inscrito");
+      if (isConcurrencyFull) {
+        setRegisterMsg("Lo sentimos, el cupo para este evento se agotó justo antes de completar tu registro.");
+        try {
+          const { event: updated } = await eventsService.getEventById(id);
+          setEvent(updated);
+        } catch (silentErr) {
+          console.error("Error doing silent refresh:", silentErr);
+        }
+      } else {
+        setRegisterMsg(err?.message || "Error al inscribirse");
+      }
     } finally {
       setRegistering(false);
+    }
+  };
+
+  const handleUnregister = async () => {
+    if (!id || unregistering) return;
+    setUnregistering(true);
+    setRegisterMsg(null);
+    try {
+      await eventsService.unregisterForEvent(id);
+      setIsRegistered(false);
+      success("Has cancelado tu inscripción exitosamente. Tu cupo ha sido liberado.");
+      const { event: updated } = await eventsService.getEventById(id);
+      setEvent(updated);
+    } catch (err: any) {
+      const isPolicyViolation = err?.status === 400 || err?.response?.status === 400 || err?.message?.includes("Política de cancelación");
+      if (isPolicyViolation) {
+        showError("Política de cancelación: No se permiten cancelaciones a menos de 24 horas del evento. Contacta al organizador directamente.");
+      } else {
+        showError(err?.message || "Error al cancelar la inscripción");
+      }
+    } finally {
+      setUnregistering(false);
     }
   };
 
@@ -190,14 +240,12 @@ export function EventoDetallePage() {
                 <span>Organizado por {event.creator.fullName}</span>
               </div>
             )}
-            {event.maxCapacity !== null && (
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🎟️</span>
-                <span>
-                  Cupo: {event.registeredCount ?? 0} / {event.maxCapacity}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎟️</span>
+              <span>
+                Cupos disponibles: {event.maxCapacity !== null ? `${Math.max(0, event.maxCapacity - (event.registeredCount ?? 0))} / ${event.maxCapacity}` : "Ilimitados"}
+              </span>
+            </div>
           </div>
 
           <div className="mt-6 border-t border-neutral-100 pt-4">
@@ -244,7 +292,23 @@ export function EventoDetallePage() {
               </div>
             ) : (
               <>
-                {isRegistered ? (
+                {isRegistered && isPublished ? (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleShowQrPass}
+                      className="w-full px-4 py-3 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
+                    >
+                      Ver Pase de Acceso QR
+                    </button>
+                    <button
+                      onClick={handleUnregister}
+                      disabled={unregistering}
+                      className="w-full px-4 py-3 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-60"
+                    >
+                      {unregistering ? "Cancelando..." : "Cancelar inscripción"}
+                    </button>
+                  </div>
+                ) : isRegistered ? (
                   <button
                     disabled
                     className="w-full px-4 py-3 bg-neutral-300 text-neutral-600 rounded-lg text-sm font-semibold cursor-not-allowed"
@@ -284,6 +348,13 @@ export function EventoDetallePage() {
           </div>
         </div>
       </div>
+
+      <QrPassModal
+        isOpen={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        qrContent={qrContent}
+        eventTitle={event?.title ?? ""}
+      />
     </div>
   );
 }

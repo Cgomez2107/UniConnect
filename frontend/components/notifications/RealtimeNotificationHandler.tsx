@@ -2,13 +2,13 @@ import React, { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { fetchApi } from "@/lib/api/httpClient";
 import { useStrategyNotifier } from "@/hooks/application/useStrategyNotifier";
 
 export function RealtimeNotificationHandler() {
   const { user } = useAuthStore();
   const userId = user?.id;
-  const pushNotification = useNotificationStore((s) => s.pushNotification);
-  const markTransferAccepted = useNotificationStore((s) => s.markTransferAccepted);
+  const { pushNotification, markTransferAccepted } = useNotificationStore();
   const { notificar } = useStrategyNotifier();
   const channelRef = React.useRef<any>(null);
 
@@ -17,6 +17,29 @@ export function RealtimeNotificationHandler() {
       console.log("[RealtimeNotificationHandler] No hay userId, saltando suscripción.");
       return;
     }
+
+    // Cargar notificaciones existentes al iniciar
+    (async () => {
+      try {
+        const existing = await fetchApi<any[]>("/notifications");
+        if (Array.isArray(existing)) {
+          for (const notif of existing) {
+            if (!notif.readAt) {
+              pushNotification({
+                id: notif.id,
+                type: (notif.type ?? "").toLowerCase(),
+                title: notif.title ?? "",
+                body: notif.body ?? "",
+                payload: notif.payload ?? null,
+                priority: notif.priority ?? "normal",
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[RealtimeNotificationHandler] Error cargando notificaciones existentes:", e);
+      }
+    })();
 
     let retryCount = 0;
     const MAX_RETRIES = 3;
@@ -58,8 +81,6 @@ export function RealtimeNotificationHandler() {
 
             if (type === "transferencia_admin_aceptada") {
               markTransferAccepted(notification.payload?.requestId);
-            } else {
-              pushNotification(notification as any);
             }
           }
         )

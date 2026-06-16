@@ -8,6 +8,7 @@ export interface EventsState {
         category?: string;
         page?: number;
         perPage?: number;
+        createdBy?: string;
     }): Promise<void>;
     setEvents(events: UniversityEvent[]): void;
     addEvent(event: UniversityEvent): void;

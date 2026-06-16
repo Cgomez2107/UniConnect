@@ -281,10 +281,13 @@ export function MentionInput({
     } catch (err: any) {
       console.error("Error al enviar mensaje:", err);
 
-      const rawErrorStr = JSON.stringify(err?.response?.data || err?.data || err || "");
-      const isMo001 = rawErrorStr.includes("MO_001") || rawErrorStr.toLowerCase().includes("límite");
-      const isMo002 = rawErrorStr.includes("MO_002") || rawErrorStr.toLowerCase().includes("palabra");
+      const responseData = err?.response?.data || err?.data || {};
+      const errorCode = typeof responseData?.errorCode === "string" ? responseData.errorCode : null;
+      const rawErrorStr = JSON.stringify(responseData || err || "");
+      const isMo001 = errorCode === "MESSAGE_TOO_LONG" || rawErrorStr.includes("MO_001") || rawErrorStr.toLowerCase().includes("límite");
+      const isMo002 = errorCode === "BANNED_CONTENT" || errorCode === "FORBIDDEN_WORDS" || rawErrorStr.includes("MO_002") || rawErrorStr.toLowerCase().includes("palabra");
       const isSpamBlock = err?.status === 429 || err?.response?.status === 429
+        || errorCode === "SPAM_DETECTED" || errorCode === "ESCALATED_TO_ADMIN"
         || rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004");
 
       if (isMo001) {
@@ -302,12 +305,11 @@ export function MentionInput({
       }
 
       if (isSpamBlock) {
-        let remainingMs = 5 * 60 * 1000;
-        const errorMsg = typeof err?.message === "string" ? err.message : rawErrorStr;
-        const match = errorMsg.match(/Restante:\s*(\d+)/i);
-        if (match) remainingMs = parseInt(match[1], 10);
-        const errorCode = rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
-        useSpamStore.getState().setBlocked(remainingMs, errorCode);
+        const remainingMs = typeof responseData?.remainingMs === "number"
+          ? responseData.remainingMs
+          : (5 * 60 * 1000);
+        const spamCode = errorCode === "ESCALATED_TO_ADMIN" ? "MO_004" : rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
+        useSpamStore.getState().setBlocked(remainingMs, spamCode);
         return;
       }
 

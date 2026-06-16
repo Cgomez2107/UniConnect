@@ -114,6 +114,8 @@ export interface CampusEventUI {
   status: EventStatus;
   maxCapacity: number | null;
   registeredCount: number;
+  isFull?: boolean;
+  isRegistered?: boolean;
   creator?: { fullName: string } | null;
 }
 

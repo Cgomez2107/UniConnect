@@ -20,14 +20,43 @@ export function mapEvent(e: any): CampusEventUI {
     status: e.status ?? e.state ?? "draft",
     maxCapacity: e.maxCapacity ?? e.max_capacity ?? null,
     registeredCount: e.registeredCount ?? e.registered_count ?? 0,
+    isFull: e.isFull ?? false,
+    isRegistered: e.isRegistered ?? false,
     creator: e.creator ? { fullName: e.creator.fullName ?? e.creator.full_name } : null,
   };
 }
 
+export interface EventListFilters {
+  category?: string;
+  page?: number;
+  perPage?: number;
+  createdBy?: string;
+  search?: string;
+  categories?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface EventListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 const eventsService = {
-  async listEvents(filters?: { category?: string; page?: number; perPage?: number; createdBy?: string }) {
+  async listEvents(filters?: EventListFilters) {
     const events = await deps.apiClients.events.list(filters);
     return events.map(mapEvent);
+  },
+
+  async listEventsPaginated(filters?: EventListFilters): Promise<{ data: CampusEventUI[]; meta: EventListMeta }> {
+    const result = await deps.apiClients.events.listPaginated(filters);
+    return {
+      data: result.data.map(mapEvent),
+      meta: result.meta,
+    };
   },
 
   async getEventById(id: string) {
@@ -79,6 +108,10 @@ const eventsService = {
     await deps.apiClients.events.register(eventId);
   },
 
+  async unregisterForEvent(eventId: string) {
+    await deps.apiClients.events.unregister(eventId);
+  },
+
   async publishEvent(eventId: string) {
     const event = await deps.apiClients.events.publish(eventId);
     return mapEvent(event);
@@ -87,6 +120,10 @@ const eventsService = {
   async cancelEvent(eventId: string) {
     const event = await deps.apiClients.events.cancel(eventId);
     return mapEvent(event);
+  },
+
+  async getEventPass(eventId: string): Promise<{ qrContent: string }> {
+    return deps.apiClients.events.getMyPass(eventId);
   },
 };
 

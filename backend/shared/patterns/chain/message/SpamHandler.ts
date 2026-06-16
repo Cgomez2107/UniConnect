@@ -40,12 +40,14 @@ export class SpamHandler extends MessageValidator {
           valido: false,
           codigoError: "MO_004",
           mensajeError: `Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana. Restante: ${Math.max(0, remainingMs)}`,
+          remainingMs: Math.max(0, remainingMs),
         };
       }
       return {
         valido: false,
         codigoError: "MO_003",
         mensajeError: `Usuario bloqueado temporalmente por spam. Restante: ${Math.max(0, remainingMs)}`,
+        remainingMs: Math.max(0, remainingMs),
       };
     }
 
@@ -56,18 +58,21 @@ export class SpamHandler extends MessageValidator {
     if (count > 5) {
       await this.repo.blockUser(senderId, 5, "Spam detectado: Envío masivo en 30s");
       await this.repo.recordBlockEvent(senderId, "Spam detectado: Envío masivo en 30s");
+      const blockDurationMs = 5 * 60 * 1000;
       const blockCount = await this.repo.countBlocksInLastHour(senderId);
       if (blockCount >= 3) {
         return {
           valido: false,
           codigoError: "MO_004",
-          mensajeError: `Spam detectado. Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana. Restante: ${5 * 60 * 1000}`,
+          mensajeError: `Spam detectado. Has acumulado múltiples infracciones. Tu caso ha sido escalado a revisión humana. Restante: ${blockDurationMs}`,
+          remainingMs: blockDurationMs,
         };
       }
       return {
         valido: false,
         codigoError: "MO_003",
-        mensajeError: `Spam detectado. Usuario bloqueado automáticamente por 5 minutos. Restante: ${5 * 60 * 1000}`,
+        mensajeError: `Spam detectado. Usuario bloqueado automáticamente por 5 minutos. Restante: ${blockDurationMs}`,
+        remainingMs: blockDurationMs,
       };
     }
 

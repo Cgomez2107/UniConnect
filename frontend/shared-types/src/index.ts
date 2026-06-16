@@ -8,6 +8,7 @@ export * from "./schemas/event.schema";
 export * from "./schemas/notification.schema";
 export * from "./schemas/notification-preference.schema";
 export * from "./schemas/forum.schema";
+export * from "./schemas/chatbot.schema";
 
 export * from "./api/_base.contract";
 export * from "./api/auth.contract";
@@ -17,6 +18,7 @@ export * from "./api/messaging.contract";
 export * from "./api/event.contract";
 export * from "./api/notification.contract";
 export * from "./api/forum.contract";
+export * from "./api/chatbot.contract";
 
 export * from "./types/domain";
 export * from "./types/dto";

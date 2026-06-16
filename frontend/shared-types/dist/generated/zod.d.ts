@@ -12,9 +12,9 @@ export declare const Get_forum_questions_200ResponseSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         status: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         authorId: string;
         answerCount: number;
@@ -22,9 +22,9 @@ export declare const Get_forum_questions_200ResponseSchema: z.ZodObject<{
         subjectId?: string | undefined;
     }, {
         status: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         authorId: string;
         answerCount: number;
@@ -41,9 +41,9 @@ export declare const Get_forum_questions_200ResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     data: {
         status: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         authorId: string;
         answerCount: number;
@@ -56,9 +56,9 @@ export declare const Get_forum_questions_200ResponseSchema: z.ZodObject<{
 }, {
     data: {
         status: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         authorId: string;
         answerCount: number;
@@ -74,12 +74,12 @@ export declare const Post_forum_questions_RequestBodySchema: z.ZodObject<{
     title: z.ZodString;
     body: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    body: string;
     title: string;
+    body: string;
     subjectId?: string | undefined;
 }, {
-    body: string;
     title: string;
+    body: string;
     subjectId?: string | undefined;
 }>;
 export declare const Post_forum_questions_201ResponseSchema: z.ZodObject<{
@@ -96,23 +96,23 @@ export declare const Post_forum_questions_201ResponseSchema: z.ZodObject<{
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         status: string;
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
         subjectId?: string | undefined;
     }, {
         status: string;
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
         subjectId?: string | undefined;
@@ -120,12 +120,12 @@ export declare const Post_forum_questions_201ResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     data: {
         status: string;
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
         subjectId?: string | undefined;
@@ -133,12 +133,12 @@ export declare const Post_forum_questions_201ResponseSchema: z.ZodObject<{
 }, {
     data: {
         status: string;
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         authorId: string;
+        body: string;
         answerCount: number;
         voteCount: number;
         subjectId?: string | undefined;
@@ -159,23 +159,23 @@ export declare const Get_forum_questions_questionId_200ResponseSchema: z.ZodObje
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
             status: string;
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
             subjectId?: string | undefined;
         }, {
             status: string;
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
             subjectId?: string | undefined;
@@ -190,20 +190,20 @@ export declare const Get_forum_questions_questionId_200ResponseSchema: z.ZodObje
             createdAt: z.ZodString;
             updatedAt: z.ZodString;
         }, "strip", z.ZodTypeAny, {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
         }, {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -211,22 +211,22 @@ export declare const Get_forum_questions_questionId_200ResponseSchema: z.ZodObje
     }, "strip", z.ZodTypeAny, {
         question: {
             status: string;
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
             subjectId?: string | undefined;
         };
         answers: {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -234,22 +234,22 @@ export declare const Get_forum_questions_questionId_200ResponseSchema: z.ZodObje
     }, {
         question: {
             status: string;
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
             subjectId?: string | undefined;
         };
         answers: {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -259,22 +259,22 @@ export declare const Get_forum_questions_questionId_200ResponseSchema: z.ZodObje
     data: {
         question: {
             status: string;
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
             subjectId?: string | undefined;
         };
         answers: {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -284,22 +284,22 @@ export declare const Get_forum_questions_questionId_200ResponseSchema: z.ZodObje
     data: {
         question: {
             status: string;
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             title: string;
             authorId: string;
+            body: string;
             answerCount: number;
             voteCount: number;
             subjectId?: string | undefined;
         };
         answers: {
-            body: string;
-            id: string;
             createdAt: string;
             updatedAt: string;
+            id: string;
             authorId: string;
+            body: string;
             voteCount: number;
             questionId: string;
             isSolution: boolean;
@@ -317,20 +317,20 @@ export declare const Get_forum_questions_questionId_answers_200ResponseSchema: z
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
@@ -344,11 +344,11 @@ export declare const Get_forum_questions_questionId_answers_200ResponseSchema: z
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
@@ -358,11 +358,11 @@ export declare const Get_forum_questions_questionId_answers_200ResponseSchema: z
     };
 }, {
     data: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
@@ -389,42 +389,42 @@ export declare const Post_forum_questions_questionId_answers_201ResponseSchema: 
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }, {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
     };
 }, {
     data: {
-        body: string;
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         authorId: string;
+        body: string;
         voteCount: number;
         questionId: string;
         isSolution: boolean;
@@ -493,25 +493,25 @@ export declare const Post_auth_signin_200ResponseSchema: z.ZodObject<{
             lastLoginAt: z.ZodOptional<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
         }, {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -522,13 +522,13 @@ export declare const Post_auth_signin_200ResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         user: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -539,13 +539,13 @@ export declare const Post_auth_signin_200ResponseSchema: z.ZodObject<{
     }, {
         user: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -558,13 +558,13 @@ export declare const Post_auth_signin_200ResponseSchema: z.ZodObject<{
     data: {
         user: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -577,13 +577,13 @@ export declare const Post_auth_signin_200ResponseSchema: z.ZodObject<{
     data: {
         user: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -891,25 +891,25 @@ export declare const Post_auth_oauth_callback_200ResponseSchema: z.ZodObject<{
             lastLoginAt: z.ZodOptional<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
         }, {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -917,13 +917,13 @@ export declare const Post_auth_oauth_callback_200ResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         user: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -933,13 +933,13 @@ export declare const Post_auth_oauth_callback_200ResponseSchema: z.ZodObject<{
     }, {
         user: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -951,13 +951,13 @@ export declare const Post_auth_oauth_callback_200ResponseSchema: z.ZodObject<{
     data: {
         user: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -969,13 +969,13 @@ export declare const Post_auth_oauth_callback_200ResponseSchema: z.ZodObject<{
     data: {
         user: {
             email: string;
+            createdAt: string;
+            updatedAt: string;
             id: string;
             firstName: string;
             lastName: string;
             role: "estudiante" | "admin";
             isVerified: boolean;
-            createdAt: string;
-            updatedAt: string;
             isOnboarded: boolean;
             profileImageUrl?: string | undefined;
             lastLoginAt?: string | undefined;
@@ -1002,9 +1002,9 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1018,9 +1018,9 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
         registeredCount?: number | undefined;
         imageUrl?: string | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1043,9 +1043,9 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1064,9 +1064,9 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1087,7 +1087,7 @@ export declare const Get_events_200ResponseSchema: z.ZodObject<{
 export declare const Post_events_RequestBodySchema: z.ZodObject<{
     title: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
-    category: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+    category: z.ZodString;
     eventDate: z.ZodString;
     endAt: z.ZodOptional<z.ZodString>;
     location: z.ZodOptional<z.ZodString>;
@@ -1096,7 +1096,7 @@ export declare const Post_events_RequestBodySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     title: string;
     eventDate: string;
-    category: "academico" | "cultural" | "deportivo" | "otro";
+    category: string;
     description?: string | undefined;
     location?: string | undefined;
     endAt?: string | undefined;
@@ -1105,7 +1105,7 @@ export declare const Post_events_RequestBodySchema: z.ZodObject<{
 }, {
     title: string;
     eventDate: string;
-    category: "academico" | "cultural" | "deportivo" | "otro";
+    category: string;
     description?: string | undefined;
     location?: string | undefined;
     endAt?: string | undefined;
@@ -1130,9 +1130,9 @@ export declare const Post_events_201ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1146,9 +1146,9 @@ export declare const Post_events_201ResponseSchema: z.ZodObject<{
         registeredCount?: number | undefined;
         imageUrl?: string | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1164,9 +1164,9 @@ export declare const Post_events_201ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1182,9 +1182,9 @@ export declare const Post_events_201ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1217,9 +1217,9 @@ export declare const Get_events_id_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1233,9 +1233,9 @@ export declare const Get_events_id_200ResponseSchema: z.ZodObject<{
         registeredCount?: number | undefined;
         imageUrl?: string | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1251,9 +1251,9 @@ export declare const Get_events_id_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1269,9 +1269,9 @@ export declare const Get_events_id_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1295,16 +1295,16 @@ export declare const Put_events_id_RequestBodySchema: z.ZodObject<{
     maxCapacity: z.ZodOptional<z.ZodNumber>;
     imageUrl: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    title?: string | undefined;
     description?: string | undefined;
+    title?: string | undefined;
     eventDate?: string | undefined;
     location?: string | undefined;
     endAt?: string | undefined;
     maxCapacity?: number | undefined;
     imageUrl?: string | undefined;
 }, {
-    title?: string | undefined;
     description?: string | undefined;
+    title?: string | undefined;
     eventDate?: string | undefined;
     location?: string | undefined;
     endAt?: string | undefined;
@@ -1329,9 +1329,9 @@ export declare const Put_events_id_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1345,9 +1345,9 @@ export declare const Put_events_id_200ResponseSchema: z.ZodObject<{
         registeredCount?: number | undefined;
         imageUrl?: string | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1363,9 +1363,9 @@ export declare const Put_events_id_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1381,9 +1381,9 @@ export declare const Put_events_id_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         title: string;
         startAt: string;
         organizerId: string;
@@ -1416,11 +1416,11 @@ export declare const Delete_events_id_200ResponseSchema: z.ZodObject<{
     };
 }>;
 export declare const Post_eventos_suscribir_RequestBodySchema: z.ZodObject<{
-    categoria: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+    categoria: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    categoria: "academico" | "cultural" | "deportivo" | "otro";
+    categoria: string;
 }, {
-    categoria: "academico" | "cultural" | "deportivo" | "otro";
+    categoria: string;
 }>;
 export declare const Post_eventos_suscribir_201ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -1467,11 +1467,11 @@ export declare const Get_eventos_suscripciones_200ResponseSchema: z.ZodObject<{
     };
 }>;
 export declare const Delete_eventos_suscribir_RequestBodySchema: z.ZodObject<{
-    categoria: z.ZodEnum<["academico", "cultural", "deportivo", "otro"]>;
+    categoria: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    categoria: "academico" | "cultural" | "deportivo" | "otro";
+    categoria: string;
 }, {
-    categoria: "academico" | "cultural" | "deportivo" | "otro";
+    categoria: string;
 }>;
 export declare const Delete_eventos_suscribir_200ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -1506,18 +1506,18 @@ export declare const Get_conversations_200ResponseSchema: z.ZodObject<{
         lastMessageAt: z.ZodNullable<z.ZodString>;
         unreadCount: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
         participantA: string;
         participantB: string;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1533,9 +1533,9 @@ export declare const Get_conversations_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1547,9 +1547,9 @@ export declare const Get_conversations_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1578,18 +1578,18 @@ export declare const Post_conversations_200ResponseSchema: z.ZodObject<{
         lastMessageAt: z.ZodNullable<z.ZodString>;
         unreadCount: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
         participantA: string;
         participantB: string;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1598,9 +1598,9 @@ export declare const Post_conversations_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1609,9 +1609,9 @@ export declare const Post_conversations_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1630,18 +1630,18 @@ export declare const Post_conversations_201ResponseSchema: z.ZodObject<{
         lastMessageAt: z.ZodNullable<z.ZodString>;
         unreadCount: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
         participantA: string;
         participantB: string;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1650,9 +1650,9 @@ export declare const Post_conversations_201ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1661,9 +1661,9 @@ export declare const Post_conversations_201ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1682,18 +1682,18 @@ export declare const Get_conversations_id_200ResponseSchema: z.ZodObject<{
         lastMessageAt: z.ZodNullable<z.ZodString>;
         unreadCount: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
         participantA: string;
         participantB: string;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1702,9 +1702,9 @@ export declare const Get_conversations_id_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1713,9 +1713,9 @@ export declare const Get_conversations_id_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
         lastMessage: string | null;
         lastMessageAt: string | null;
         unreadCount: number;
@@ -1776,8 +1776,8 @@ export declare const Get_messages_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         readAt: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1788,8 +1788,8 @@ export declare const Get_messages_200ResponseSchema: z.ZodObject<{
         replyToMessageId?: string | null | undefined;
         replyPreview?: string | null | undefined;
     }, {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1809,8 +1809,8 @@ export declare const Get_messages_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1826,8 +1826,8 @@ export declare const Get_messages_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1881,8 +1881,8 @@ export declare const Post_messages_201ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         readAt: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1893,8 +1893,8 @@ export declare const Post_messages_201ResponseSchema: z.ZodObject<{
         replyToMessageId?: string | null | undefined;
         replyPreview?: string | null | undefined;
     }, {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1907,8 +1907,8 @@ export declare const Post_messages_201ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1921,8 +1921,8 @@ export declare const Post_messages_201ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1948,8 +1948,8 @@ export declare const Get_messages_id_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         readAt: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1960,8 +1960,8 @@ export declare const Get_messages_id_200ResponseSchema: z.ZodObject<{
         replyToMessageId?: string | null | undefined;
         replyPreview?: string | null | undefined;
     }, {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1974,8 +1974,8 @@ export declare const Get_messages_id_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -1988,8 +1988,8 @@ export declare const Get_messages_id_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
         conversationId: string;
         senderId: string;
         content: string;
@@ -2016,24 +2016,24 @@ export declare const Post_messages_id_reactions_200ResponseSchema: z.ZodObject<{
             emoji: z.ZodString;
             userId: z.ZodString;
         }, "strip", z.ZodTypeAny, {
-            emoji: string;
             userId: string;
+            emoji: string;
         }, {
-            emoji: string;
             userId: string;
+            emoji: string;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
         conversationId: string;
         reactions: {
-            emoji: string;
             userId: string;
+            emoji: string;
         }[];
         messageId: string;
     }, {
         conversationId: string;
         reactions: {
-            emoji: string;
             userId: string;
+            emoji: string;
         }[];
         messageId: string;
     }>;
@@ -2041,8 +2041,8 @@ export declare const Post_messages_id_reactions_200ResponseSchema: z.ZodObject<{
     data: {
         conversationId: string;
         reactions: {
-            emoji: string;
             userId: string;
+            emoji: string;
         }[];
         messageId: string;
     };
@@ -2050,8 +2050,8 @@ export declare const Post_messages_id_reactions_200ResponseSchema: z.ZodObject<{
     data: {
         conversationId: string;
         reactions: {
-            emoji: string;
             userId: string;
+            emoji: string;
         }[];
         messageId: string;
     };
@@ -2064,14 +2064,14 @@ export declare const Post_polls_RequestBodySchema: z.ZodObject<{
     expiresAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     options: string[];
-    question: string;
     groupId: string;
+    question: string;
     messageId: string;
     expiresAt: string;
 }, {
     options: string[];
-    question: string;
     groupId: string;
+    question: string;
     messageId: string;
     expiresAt: string;
 }>;
@@ -2106,9 +2106,9 @@ export declare const Post_polls_201ResponseSchema: z.ZodObject<{
         status: "active" | "closed";
         createdAt: string;
         updatedAt: string;
-        question: string;
         createdBy: string;
         groupId: string;
+        question: string;
         messageId: string;
         expiresAt: string;
         pollId: string;
@@ -2123,9 +2123,9 @@ export declare const Post_polls_201ResponseSchema: z.ZodObject<{
         status: "active" | "closed";
         createdAt: string;
         updatedAt: string;
-        question: string;
         createdBy: string;
         groupId: string;
+        question: string;
         messageId: string;
         expiresAt: string;
         pollId: string;
@@ -2142,9 +2142,9 @@ export declare const Post_polls_201ResponseSchema: z.ZodObject<{
         status: "active" | "closed";
         createdAt: string;
         updatedAt: string;
-        question: string;
         createdBy: string;
         groupId: string;
+        question: string;
         messageId: string;
         expiresAt: string;
         pollId: string;
@@ -2161,9 +2161,9 @@ export declare const Post_polls_201ResponseSchema: z.ZodObject<{
         status: "active" | "closed";
         createdAt: string;
         updatedAt: string;
-        question: string;
         createdBy: string;
         groupId: string;
+        question: string;
         messageId: string;
         expiresAt: string;
         pollId: string;
@@ -2257,12 +2257,12 @@ export declare const Post_polls_pollId_votes_400ResponseSchema: z.ZodObject<{
     error: z.ZodString;
     code: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    code: string;
     error: string;
+    code: string;
     success: false;
 }, {
-    code: string;
     error: string;
+    code: string;
     success: false;
 }>;
 export declare const Get_polls_pollId_results_200ResponseSchema: z.ZodObject<{
@@ -2352,12 +2352,12 @@ export declare const Get_students_me_200ResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2370,12 +2370,12 @@ export declare const Get_students_me_200ResponseSchema: z.ZodObject<{
     }, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2390,12 +2390,12 @@ export declare const Get_students_me_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2410,12 +2410,12 @@ export declare const Get_students_me_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2435,16 +2435,16 @@ export declare const Patch_students_me_RequestBodySchema: z.ZodObject<{
     semester: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     bio?: string | undefined;
+    avatar_url?: string | undefined;
     semester?: number | undefined;
     full_name?: string | undefined;
     phone_number?: string | undefined;
-    avatar_url?: string | undefined;
 }, {
     bio?: string | undefined;
+    avatar_url?: string | undefined;
     semester?: number | undefined;
     full_name?: string | undefined;
     phone_number?: string | undefined;
-    avatar_url?: string | undefined;
 }>;
 export declare const Patch_students_me_200ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -2468,12 +2468,12 @@ export declare const Patch_students_me_200ResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2486,12 +2486,12 @@ export declare const Patch_students_me_200ResponseSchema: z.ZodObject<{
     }, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2506,12 +2506,12 @@ export declare const Patch_students_me_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2526,12 +2526,12 @@ export declare const Patch_students_me_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2572,12 +2572,12 @@ export declare const Post_students_profile_201ResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2590,12 +2590,12 @@ export declare const Post_students_profile_201ResponseSchema: z.ZodObject<{
     }, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2610,12 +2610,12 @@ export declare const Post_students_profile_201ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2630,12 +2630,12 @@ export declare const Post_students_profile_201ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2676,12 +2676,12 @@ export declare const Patch_students_me_primary_program_200ResponseSchema: z.ZodO
     }, "strip", z.ZodTypeAny, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2694,12 +2694,12 @@ export declare const Patch_students_me_primary_program_200ResponseSchema: z.ZodO
     }, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2714,12 +2714,12 @@ export declare const Patch_students_me_primary_program_200ResponseSchema: z.ZodO
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2734,12 +2734,12 @@ export declare const Patch_students_me_primary_program_200ResponseSchema: z.ZodO
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2766,18 +2766,18 @@ export declare const Get_students_me_programs_200ResponseSchema: z.ZodObject<{
         name: string;
         code?: string | null | undefined;
         createdAt?: string | undefined;
+        facultyId?: string | undefined;
         facultyName?: string | null | undefined;
         isActive?: boolean | undefined;
-        facultyId?: string | undefined;
         isPrimary?: boolean | undefined;
     }, {
         id: string;
         name: string;
         code?: string | null | undefined;
         createdAt?: string | undefined;
+        facultyId?: string | undefined;
         facultyName?: string | null | undefined;
         isActive?: boolean | undefined;
-        facultyId?: string | undefined;
         isPrimary?: boolean | undefined;
     }>, "many">;
     meta: z.ZodObject<{
@@ -2793,9 +2793,9 @@ export declare const Get_students_me_programs_200ResponseSchema: z.ZodObject<{
         name: string;
         code?: string | null | undefined;
         createdAt?: string | undefined;
+        facultyId?: string | undefined;
         facultyName?: string | null | undefined;
         isActive?: boolean | undefined;
-        facultyId?: string | undefined;
         isPrimary?: boolean | undefined;
     }[];
     meta: {
@@ -2807,9 +2807,9 @@ export declare const Get_students_me_programs_200ResponseSchema: z.ZodObject<{
         name: string;
         code?: string | null | undefined;
         createdAt?: string | undefined;
+        facultyId?: string | undefined;
         facultyName?: string | null | undefined;
         isActive?: boolean | undefined;
-        facultyId?: string | undefined;
         isPrimary?: boolean | undefined;
     }[];
     meta: {
@@ -2932,12 +2932,12 @@ export declare const Get_students_200ResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2950,12 +2950,12 @@ export declare const Get_students_200ResponseSchema: z.ZodObject<{
     }, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -2977,12 +2977,12 @@ export declare const Get_students_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3000,12 +3000,12 @@ export declare const Get_students_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3042,12 +3042,12 @@ export declare const Get_students_id_200ResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3060,12 +3060,12 @@ export declare const Get_students_id_200ResponseSchema: z.ZodObject<{
     }, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3080,12 +3080,12 @@ export declare const Get_students_id_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3100,12 +3100,12 @@ export declare const Get_students_id_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3192,18 +3192,18 @@ export declare const Get_catalog_programs_200ResponseSchema: z.ZodObject<{
         name: string;
         code?: string | null | undefined;
         createdAt?: string | undefined;
+        facultyId?: string | undefined;
         facultyName?: string | null | undefined;
         isActive?: boolean | undefined;
-        facultyId?: string | undefined;
         isPrimary?: boolean | undefined;
     }, {
         id: string;
         name: string;
         code?: string | null | undefined;
         createdAt?: string | undefined;
+        facultyId?: string | undefined;
         facultyName?: string | null | undefined;
         isActive?: boolean | undefined;
-        facultyId?: string | undefined;
         isPrimary?: boolean | undefined;
     }>, "many">;
     meta: z.ZodObject<{
@@ -3219,9 +3219,9 @@ export declare const Get_catalog_programs_200ResponseSchema: z.ZodObject<{
         name: string;
         code?: string | null | undefined;
         createdAt?: string | undefined;
+        facultyId?: string | undefined;
         facultyName?: string | null | undefined;
         isActive?: boolean | undefined;
-        facultyId?: string | undefined;
         isPrimary?: boolean | undefined;
     }[];
     meta: {
@@ -3233,9 +3233,9 @@ export declare const Get_catalog_programs_200ResponseSchema: z.ZodObject<{
         name: string;
         code?: string | null | undefined;
         createdAt?: string | undefined;
+        facultyId?: string | undefined;
         facultyName?: string | null | undefined;
         isActive?: boolean | undefined;
-        facultyId?: string | undefined;
         isPrimary?: boolean | undefined;
     }[];
     meta: {
@@ -3324,12 +3324,12 @@ export declare const Get_perfil_id_200ResponseSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3342,12 +3342,12 @@ export declare const Get_perfil_id_200ResponseSchema: z.ZodObject<{
     }, {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3362,12 +3362,12 @@ export declare const Get_perfil_id_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3382,12 +3382,12 @@ export declare const Get_perfil_id_200ResponseSchema: z.ZodObject<{
     data: {
         id: string;
         fullName: string;
-        role?: string | undefined;
         createdAt?: string | undefined;
         updatedAt?: string | undefined;
-        avatarUrl?: string | null | undefined;
-        programId?: string | null | undefined;
+        role?: string | undefined;
         bio?: string | null | undefined;
+        programId?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
         phoneNumber?: string | null | undefined;
         semester?: number | null | undefined;
         programName?: string | null | undefined;
@@ -3416,30 +3416,30 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3455,15 +3455,15 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3475,15 +3475,15 @@ export declare const Get_resources_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3507,10 +3507,10 @@ export declare const Post_resources_RequestBodySchema: z.ZodObject<{
     fileSizeKb: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     title: string;
-    url?: string | undefined;
     description?: string | undefined;
-    subjectId?: string | undefined;
     programId?: string | undefined;
+    subjectId?: string | undefined;
+    url?: string | undefined;
     resourceType?: "file" | "link" | undefined;
     fileUrl?: string | undefined;
     fileName?: string | undefined;
@@ -3518,10 +3518,10 @@ export declare const Post_resources_RequestBodySchema: z.ZodObject<{
     fileSizeKb?: number | undefined;
 }, {
     title: string;
-    url?: string | undefined;
     description?: string | undefined;
-    subjectId?: string | undefined;
     programId?: string | undefined;
+    subjectId?: string | undefined;
+    url?: string | undefined;
     resourceType?: "file" | "link" | undefined;
     fileUrl?: string | undefined;
     fileName?: string | undefined;
@@ -3545,30 +3545,30 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3577,15 +3577,15 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3594,15 +3594,15 @@ export declare const Post_resources_201ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3627,30 +3627,30 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3659,15 +3659,15 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3676,15 +3676,15 @@ export declare const Get_resources_id_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3696,11 +3696,11 @@ export declare const Put_resources_id_RequestBodySchema: z.ZodObject<{
     title: z.ZodOptional<z.ZodString>;
     description: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
-    title?: string | undefined;
     description?: string | null | undefined;
+    title?: string | undefined;
 }, {
-    title?: string | undefined;
     description?: string | null | undefined;
+    title?: string | undefined;
 }>;
 export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -3719,30 +3719,30 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
         updatedAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
         fileType?: string | undefined;
         fileSizeKb?: number | undefined;
     }, {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3751,15 +3751,15 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3768,15 +3768,15 @@ export declare const Put_resources_id_200ResponseSchema: z.ZodObject<{
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
         updatedAt: string;
-        title: string;
+        id: string;
         userId: string;
-        url?: string | undefined;
+        title: string;
         description?: string | null | undefined;
-        subjectId?: string | undefined;
         programId?: string | undefined;
+        subjectId?: string | undefined;
+        url?: string | undefined;
         resourceType?: "file" | "link" | undefined;
         fileUrl?: string | undefined;
         fileName?: string | undefined;
@@ -3820,12 +3820,12 @@ export declare const Get_study_groups_200ResponseSchema: z.ZodObject<{
         memberCount: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -3839,12 +3839,12 @@ export declare const Get_study_groups_200ResponseSchema: z.ZodObject<{
         memberCount?: number | undefined;
     }, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -3867,12 +3867,12 @@ export declare const Get_study_groups_200ResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     data: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -3891,12 +3891,12 @@ export declare const Get_study_groups_200ResponseSchema: z.ZodObject<{
 }, {
     data: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -3919,14 +3919,14 @@ export declare const Post_study_groups_RequestBodySchema: z.ZodObject<{
     subjectId: z.ZodString;
     maxMembers: z.ZodNumber;
 }, "strip", z.ZodTypeAny, {
+    name: string;
     description: string;
     subjectId: string;
-    name: string;
     maxMembers: number;
 }, {
+    name: string;
     description: string;
     subjectId: string;
-    name: string;
     maxMembers: number;
 }>;
 export declare const Post_study_groups_201ResponseSchema: z.ZodObject<{
@@ -3965,12 +3965,12 @@ export declare const Post_study_groups_201ResponseSchema: z.ZodObject<{
         memberCount: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -3984,12 +3984,12 @@ export declare const Post_study_groups_201ResponseSchema: z.ZodObject<{
         memberCount?: number | undefined;
     }, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4005,12 +4005,12 @@ export declare const Post_study_groups_201ResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     data: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4026,12 +4026,12 @@ export declare const Post_study_groups_201ResponseSchema: z.ZodObject<{
 }, {
     data: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4081,12 +4081,12 @@ export declare const Get_study_groups_me_200ResponseSchema: z.ZodObject<{
         memberCount: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4100,12 +4100,12 @@ export declare const Get_study_groups_me_200ResponseSchema: z.ZodObject<{
         memberCount?: number | undefined;
     }, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4128,12 +4128,12 @@ export declare const Get_study_groups_me_200ResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     data: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4152,12 +4152,12 @@ export declare const Get_study_groups_me_200ResponseSchema: z.ZodObject<{
 }, {
     data: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4184,15 +4184,15 @@ export declare const Get_study_groups_applications_200ResponseSchema: z.ZodObjec
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         status: "pending" | "approved" | "rejected";
-        id: string;
         createdAt: string;
+        id: string;
         userId: string;
         groupId: string;
         message?: string | undefined;
     }, {
         status: "pending" | "approved" | "rejected";
-        id: string;
         createdAt: string;
+        id: string;
         userId: string;
         groupId: string;
         message?: string | undefined;
@@ -4207,8 +4207,8 @@ export declare const Get_study_groups_applications_200ResponseSchema: z.ZodObjec
 }, "strip", z.ZodTypeAny, {
     data: {
         status: "pending" | "approved" | "rejected";
-        id: string;
         createdAt: string;
+        id: string;
         userId: string;
         groupId: string;
         message?: string | undefined;
@@ -4219,8 +4219,8 @@ export declare const Get_study_groups_applications_200ResponseSchema: z.ZodObjec
 }, {
     data: {
         status: "pending" | "approved" | "rejected";
-        id: string;
         createdAt: string;
+        id: string;
         userId: string;
         groupId: string;
         message?: string | undefined;
@@ -4265,12 +4265,12 @@ export declare const Get_study_groups_id_200ResponseSchema: z.ZodObject<{
         memberCount: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4284,12 +4284,12 @@ export declare const Get_study_groups_id_200ResponseSchema: z.ZodObject<{
         memberCount?: number | undefined;
     }, {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4305,12 +4305,12 @@ export declare const Get_study_groups_id_200ResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     data: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4326,12 +4326,12 @@ export declare const Get_study_groups_id_200ResponseSchema: z.ZodObject<{
 }, {
     data: {
         status: "activa" | "inactiva" | "finalizada";
-        id: string;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
         description: string;
         subjectId: string;
-        name: string;
         subject: {
             code: string;
             id: string;
@@ -4356,11 +4356,11 @@ export declare const Get_study_groups_id_members_200ResponseSchema: z.ZodObject<
             fullName: z.ZodString;
             avatarUrl: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            fullName: string;
             avatarUrl: string | null;
+            fullName: string;
         }, {
-            fullName: string;
             avatarUrl: string | null;
+            fullName: string;
         }>>;
     }, "strip", z.ZodTypeAny, {
         id: string;
@@ -4369,8 +4369,8 @@ export declare const Get_study_groups_id_members_200ResponseSchema: z.ZodObject<
         groupId: string;
         joinedAt: string;
         profile?: {
-            fullName: string;
             avatarUrl: string | null;
+            fullName: string;
         } | undefined;
     }, {
         id: string;
@@ -4379,8 +4379,8 @@ export declare const Get_study_groups_id_members_200ResponseSchema: z.ZodObject<
         groupId: string;
         joinedAt: string;
         profile?: {
-            fullName: string;
             avatarUrl: string | null;
+            fullName: string;
         } | undefined;
     }>, "many">;
     meta: z.ZodObject<{
@@ -4398,8 +4398,8 @@ export declare const Get_study_groups_id_members_200ResponseSchema: z.ZodObject<
         groupId: string;
         joinedAt: string;
         profile?: {
-            fullName: string;
             avatarUrl: string | null;
+            fullName: string;
         } | undefined;
     }[];
     meta: {
@@ -4413,8 +4413,8 @@ export declare const Get_study_groups_id_members_200ResponseSchema: z.ZodObject<
         groupId: string;
         joinedAt: string;
         profile?: {
-            fullName: string;
             avatarUrl: string | null;
+            fullName: string;
         } | undefined;
     }[];
     meta: {
@@ -4431,15 +4431,15 @@ export declare const Get_study_groups_id_applications_200ResponseSchema: z.ZodOb
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         status: "pending" | "approved" | "rejected";
-        id: string;
         createdAt: string;
+        id: string;
         userId: string;
         groupId: string;
         message?: string | undefined;
     }, {
         status: "pending" | "approved" | "rejected";
-        id: string;
         createdAt: string;
+        id: string;
         userId: string;
         groupId: string;
         message?: string | undefined;
@@ -4454,8 +4454,8 @@ export declare const Get_study_groups_id_applications_200ResponseSchema: z.ZodOb
 }, "strip", z.ZodTypeAny, {
     data: {
         status: "pending" | "approved" | "rejected";
-        id: string;
         createdAt: string;
+        id: string;
         userId: string;
         groupId: string;
         message?: string | undefined;
@@ -4466,8 +4466,8 @@ export declare const Get_study_groups_id_applications_200ResponseSchema: z.ZodOb
 }, {
     data: {
         status: "pending" | "approved" | "rejected";
-        id: string;
         createdAt: string;
+        id: string;
         userId: string;
         groupId: string;
         message?: string | undefined;
@@ -4484,17 +4484,17 @@ export declare const Get_study_groups_id_messages_200ResponseSchema: z.ZodObject
         content: z.ZodString;
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
+        id: string;
+        groupId: string;
         senderId: string;
         content: string;
-        groupId: string;
     }, {
-        id: string;
         createdAt: string;
+        id: string;
+        groupId: string;
         senderId: string;
         content: string;
-        groupId: string;
     }>, "many">;
     meta: z.ZodObject<{
         total: z.ZodNumber;
@@ -4505,22 +4505,22 @@ export declare const Get_study_groups_id_messages_200ResponseSchema: z.ZodObject
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
+        groupId: string;
         senderId: string;
         content: string;
-        groupId: string;
     }[];
     meta: {
         total: number;
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
+        groupId: string;
         senderId: string;
         content: string;
-        groupId: string;
     }[];
     meta: {
         total: number;
@@ -4534,16 +4534,16 @@ export declare const Post_study_groups_id_messages_RequestBodySchema: z.ZodObjec
     mentions: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
 }, "strip", z.ZodTypeAny, {
     content: string;
+    mentions?: string[] | undefined;
     mediaUrl?: string | undefined;
     mediaType?: string | undefined;
     mediaFilename?: string | undefined;
-    mentions?: string[] | undefined;
 }, {
     content: string;
+    mentions?: string[] | undefined;
     mediaUrl?: string | undefined;
     mediaType?: string | undefined;
     mediaFilename?: string | undefined;
-    mentions?: string[] | undefined;
 }>;
 export declare const Post_study_groups_id_messages_201ResponseSchema: z.ZodObject<{
     data: z.ZodObject<{
@@ -4553,33 +4553,33 @@ export declare const Post_study_groups_id_messages_201ResponseSchema: z.ZodObjec
         content: z.ZodString;
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
+        id: string;
+        groupId: string;
         senderId: string;
         content: string;
-        groupId: string;
     }, {
-        id: string;
         createdAt: string;
+        id: string;
+        groupId: string;
         senderId: string;
         content: string;
-        groupId: string;
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
+        groupId: string;
         senderId: string;
         content: string;
-        groupId: string;
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
+        id: string;
+        groupId: string;
         senderId: string;
         content: string;
-        groupId: string;
     };
 }>;
 export declare const Post_study_groups_id_apply_RequestBodySchema: z.ZodObject<{
@@ -4599,9 +4599,9 @@ export declare const Post_study_groups_id_transfer_RequestBodySchema: z.ZodObjec
 export declare const Put_study_groups_applications_applicationId_review_RequestBodySchema: z.ZodObject<{
     status: z.ZodEnum<["aceptada", "rechazada"]>;
 }, "strip", z.ZodTypeAny, {
-    status: "rechazada" | "aceptada";
+    status: "aceptada" | "rechazada";
 }, {
-    status: "rechazada" | "aceptada";
+    status: "aceptada" | "rechazada";
 }>;
 export declare const Post_study_groups_id_messages_messageId_reactions_RequestBodySchema: z.ZodObject<{
     emoji: z.ZodString;
@@ -4622,21 +4622,21 @@ export declare const Get_study_groups_id_sessions_200ResponseSchema: z.ZodObject
         createdBy: z.ZodString;
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         createdBy: string;
         groupId: string;
+        title: string;
         dateTime: string;
         durationMinutes: number;
         description?: string | undefined;
         location?: string | undefined;
     }, {
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         createdBy: string;
         groupId: string;
+        title: string;
         dateTime: string;
         durationMinutes: number;
         description?: string | undefined;
@@ -4651,11 +4651,11 @@ export declare const Get_study_groups_id_sessions_200ResponseSchema: z.ZodObject
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         createdBy: string;
         groupId: string;
+        title: string;
         dateTime: string;
         durationMinutes: number;
         description?: string | undefined;
@@ -4666,11 +4666,11 @@ export declare const Get_study_groups_id_sessions_200ResponseSchema: z.ZodObject
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         createdBy: string;
         groupId: string;
+        title: string;
         dateTime: string;
         durationMinutes: number;
         description?: string | undefined;
@@ -4711,21 +4711,21 @@ export declare const Post_study_groups_id_sessions_201ResponseSchema: z.ZodObjec
         createdBy: z.ZodString;
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         createdBy: string;
         groupId: string;
+        title: string;
         dateTime: string;
         durationMinutes: number;
         description?: string | undefined;
         location?: string | undefined;
     }, {
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         createdBy: string;
         groupId: string;
+        title: string;
         dateTime: string;
         durationMinutes: number;
         description?: string | undefined;
@@ -4733,11 +4733,11 @@ export declare const Post_study_groups_id_sessions_201ResponseSchema: z.ZodObjec
     }>;
 }, "strip", z.ZodTypeAny, {
     data: {
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         createdBy: string;
         groupId: string;
+        title: string;
         dateTime: string;
         durationMinutes: number;
         description?: string | undefined;
@@ -4745,11 +4745,11 @@ export declare const Post_study_groups_id_sessions_201ResponseSchema: z.ZodObjec
     };
 }, {
     data: {
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         createdBy: string;
         groupId: string;
+        title: string;
         dateTime: string;
         durationMinutes: number;
         description?: string | undefined;
@@ -4814,20 +4814,20 @@ export declare const Get_notifications_200ResponseSchema: z.ZodObject<{
         createdAt: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         type: string;
-        body: string;
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         userId: string;
+        title: string;
         read: boolean;
+        body: string;
     }, {
         type: string;
-        body: string;
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         userId: string;
+        title: string;
         read: boolean;
+        body: string;
     }>, "many">;
     meta: z.ZodObject<{
         total: z.ZodNumber;
@@ -4839,12 +4839,12 @@ export declare const Get_notifications_200ResponseSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     data: {
         type: string;
-        body: string;
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         userId: string;
+        title: string;
         read: boolean;
+        body: string;
     }[];
     meta: {
         total: number;
@@ -4852,12 +4852,12 @@ export declare const Get_notifications_200ResponseSchema: z.ZodObject<{
 }, {
     data: {
         type: string;
-        body: string;
-        id: string;
         createdAt: string;
-        title: string;
+        id: string;
         userId: string;
+        title: string;
         read: boolean;
+        body: string;
     }[];
     meta: {
         total: number;

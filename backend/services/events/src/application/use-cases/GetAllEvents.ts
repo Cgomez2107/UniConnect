@@ -1,4 +1,4 @@
-import type { Event, PaginatedResult } from "../../domain/entities/Event.js";
+import type { Event, PaginatedResult, ListEventsFilter } from "../../domain/entities/Event.js";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
 import type { EventStatus } from "../../domain/state/EventStatus.js";
 
@@ -12,6 +12,13 @@ export class GetAllEvents {
     status?: EventStatus | EventStatus[],
     createdBy?: string,
   ): Promise<PaginatedResult<Event>> {
-    return this.repository.list(page, limit, includeDeleted, status, createdBy);
+    const filter: ListEventsFilter = {
+      page,
+      limit,
+      includeDeleted,
+      status,
+      createdBy,
+    };
+    return this.repository.list(filter);
   }
 }

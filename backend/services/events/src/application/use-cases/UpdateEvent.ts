@@ -2,6 +2,7 @@ import type { Event } from "../../domain/entities/Event.js";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
 import { EventContext } from "../../domain/state/EventContext.js";
 import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
+import { AuthorizationError } from "../../../../../shared/libs/errors/AuthorizationError.js";
 import { ValidationError } from "../../../../../shared/libs/errors/ValidationError.js";
 
 export interface UpdateEventInput {
@@ -32,7 +33,7 @@ export class UpdateEvent {
     }
 
     if (existing.organizerId !== input.actorUserId && !input.isAdmin) {
-      throw new Error("Solo el organizador o un administrador pueden editar este evento.");
+      throw new AuthorizationError("Solo el organizador o un administrador pueden editar este evento.");
     }
 
     const context = EventContext.fromStatus(existing.status);

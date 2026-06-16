@@ -148,6 +148,12 @@ export class FetchTransport extends BaseTransport {
         const controller = new AbortController();
         const timeoutMs = timeout || this.defaultTimeout;
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        if (options.signal?.aborted) {
+            controller.abort();
+        }
+        else if (options.signal) {
+            options.signal.addEventListener("abort", () => controller.abort());
+        }
         try {
             const response = await fetch(fullUrl, {
                 method,
@@ -215,7 +221,7 @@ export class FetchTransport extends BaseTransport {
                 }
                 throw error;
             }
-            const data = this.unwrapDataEnvelope(rawData);
+            const data = options.unwrapEnvelope === false ? rawData : this.unwrapDataEnvelope(rawData);
             if (options.responseSchema) {
                 this.validateResponse(options.method, options.url, data, options.responseSchema);
             }

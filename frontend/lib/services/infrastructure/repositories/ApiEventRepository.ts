@@ -1,7 +1,7 @@
 import { SupabaseEventRepository } from "./SupabaseEventRepository";
-import { fetchApi } from "@/lib/api/httpClient";
+import { fetchApi, fetchApiEnvelope } from "@/lib/api/httpClient";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository";
-import type { CampusEvent } from "@/types";
+import type { CampusEvent, EventListFilters, EventListResponse } from "@/types";
 
 /**
  * Repositorio de eventos que delega al microservicio events vía gateway.
@@ -99,12 +99,15 @@ export class ApiEventRepository implements IEventRepository {
     });
   }
 
-  async getByAuthor(userId: string): Promise<CampusEvent[]> {
+  async getByAuthor(userId: string, page = 1, limit = 10): Promise<EventListResponse> {
     try {
-      const data = await fetchApi<CampusEvent[]>(`/events?createdBy=${userId}`);
-      return (data ?? []).map(mapEventFromApi);
+      const envelope = await fetchApiEnvelope<any>(`/events?createdBy=${userId}&page=${page}&limit=${limit}`);
+      const raw = envelope.data;
+      const data: CampusEvent[] = (Array.isArray(raw) ? raw : []).map(mapEventFromApi);
+      const meta = (envelope.meta as EventListResponse["meta"]) ?? { total: data.length, page, limit, totalPages: Math.ceil(data.length / limit) || 1 };
+      return { data, meta };
     } catch {
-      return this.fallback.getByAuthor(userId);
+      return this.fallback.getByAuthor(userId, page, limit);
     }
   }
 
@@ -122,6 +125,48 @@ export class ApiEventRepository implements IEventRepository {
 
   async registerForEvent(eventId: string, _userId: string): Promise<void> {
     await fetchApi(`/events/${eventId}/register`, { method: "POST" });
+  }
+
+  async unregisterFromEvent(eventId: string, _userId: string): Promise<void> {
+    await fetchApi(`/events/${eventId}/unregister`, { method: "POST" });
+  }
+
+  async getEventPass(eventId: string): Promise<{ qrContent: string }> {
+    return fetchApi<{ qrContent: string }>(`/events/${eventId}/my-pass`);
+  }
+
+  async listEvents(filters?: EventListFilters): Promise<EventListResponse> {
+    const params = new URLSearchParams();
+    if (filters?.page) params.set("page", String(filters.page));
+    if (filters?.limit) params.set("limit", String(filters.limit));
+    if (filters?.search) params.set("search", filters.search);
+    if (filters?.categories?.length) params.set("categories", filters.categories.join(","));
+    if (filters?.startDate) params.set("startDate", filters.startDate);
+    if (filters?.endDate) params.set("endDate", filters.endDate);
+    if (filters?.status) params.set("status", filters.status);
+
+    const qs = params.toString();
+    const endpoint = qs ? `/events?${qs}` : "/events";
+
+    try {
+      const envelope = await fetchApiEnvelope<any>(endpoint);
+      const raw = envelope.data;
+      const data: CampusEvent[] = (Array.isArray(raw) ? raw : []).map(mapEventFromApi);
+      const meta = (envelope.meta as EventListResponse["meta"]) ?? { total: data.length, page: filters?.page ?? 1, limit: filters?.limit ?? 10, totalPages: 1 };
+      return { data, meta };
+    } catch (error) {
+      const fallback = this.fallback;
+      const all = await fallback.getAllEvents();
+      const total = all.length;
+      const page = filters?.page ?? 1;
+      const limit = filters?.limit ?? 10;
+      const start = (page - 1) * limit;
+      const sliced = all.slice(start, start + limit);
+      return {
+        data: sliced,
+        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      };
+    }
   }
 }
 
@@ -149,7 +194,9 @@ function mapEventFromApi(raw: any): CampusEvent {
     updated_at: raw.updatedAt ?? raw.updated_at,
     status: raw.status ?? "published",
     capacity: raw.maxCapacity ?? raw.capacity ?? null,
+    registered_count: raw.registeredCount ?? raw.registered_count ?? 0,
     isRegistered: raw.isRegistered ?? false,
+    isFull: raw.isFull ?? false,
     creator: raw.organizerName
       ? { full_name: raw.organizerName }
       : undefined,

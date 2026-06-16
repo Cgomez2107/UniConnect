@@ -48,7 +48,8 @@ RUN rm -rf /app/packages/shared-types/node_modules /app/packages/shared-types/ts
     pnpm --filter @uniconnect/messaging build && \
     pnpm --filter @uniconnect/profiles-catalog build && \
     pnpm --filter @uniconnect/events build && \
-    pnpm --filter @uniconnect/academic-qna build
+    pnpm --filter @uniconnect/academic-qna build && \
+    pnpm --filter @uniconnect/chatbot build
 
 # ── FASE RUNNER — MONOLITO MODULAR ──────────────────────────────────────────
 FROM node:22-alpine AS runner

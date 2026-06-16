@@ -117,19 +117,13 @@ export async function fetchApi<T>(
         if ([400, 403, 409, 422, 429].includes(status)) {
             const friendly = parseGroupError(parsed || rawMessage);
             const rawErrorStr = JSON.stringify(parsed || "");
-            const hasMo003 = rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004") || status === 429;
+            const errorCode = typeof parsed?.errorCode === "string" ? parsed.errorCode : null;
+            const hasMo003 = errorCode === "SPAM_DETECTED" || errorCode === "ESCALATED_TO_ADMIN" || rawErrorStr.includes("MO_003") || rawErrorStr.includes("MO_004") || status === 429;
             if (hasMo003) {
-                let remainingMs = 5 * 60 * 1000;
-                const errorMsg = typeof parsed?.error === "string" && parsed.error.includes("Restante") ? parsed.error :
-                                 typeof parsed?.message === "string" && parsed.message.includes("Restante") ? parsed.message :
-                                 typeof parsed?.details === "string" && parsed.details.includes("Restante") ? parsed.details :
-                                 (typeof parsed?.error === "string" ? parsed.error : 
-                                  typeof parsed?.message === "string" ? parsed.message : "");
-                const match = errorMsg.match(/Restante:\s*(\d+)/i);
-                if (match) {
-                    remainingMs = parseInt(match[1], 10);
-                }
-                const code = rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
+                const remainingMs = typeof parsed?.remainingMs === "number"
+                    ? parsed.remainingMs
+                    : (5 * 60 * 1000);
+                const code = errorCode === "ESCALATED_TO_ADMIN" ? "MO_004" : rawErrorStr.includes("MO_004") ? "MO_004" : "MO_003";
                 useSpamStore.getState().setBlocked(remainingMs, code);
 
                 // Add notification for spam block
@@ -156,6 +150,8 @@ export async function fetchApi<T>(
                 }
             }
             const isModerationError =
+                errorCode === "MESSAGE_TOO_LONG" || errorCode === "BANNED_CONTENT" ||
+                errorCode === "SPAM_DETECTED" || errorCode === "ESCALATED_TO_ADMIN" ||
                 rawErrorStr.includes("MO_001") ||
                 rawErrorStr.includes("MO_002") ||
                 rawErrorStr.includes("MO_003") ||
@@ -178,4 +174,53 @@ export async function fetchApi<T>(
     }
 
     return result as T;
+}
+
+/**
+ * Like fetchApi but returns the full response envelope (including meta) instead of unwrapping data.
+ */
+export async function fetchApiEnvelope<T = any>(
+    path: string,
+    init?: RequestInit,
+): Promise<{ data: T; meta?: any }> {
+    const API_URL =
+        process.env.EXPO_PUBLIC_API_BASE_URL ||
+        process.env.VITE_API_URL ||
+        "http://localhost:3000/api/v1";
+
+    const token = await getAccessTokenFast();
+
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...((init?.headers as Record<string, string>) ?? {}),
+    };
+
+    try {
+        const url = `${API_URL}${path}`;
+        const response = await fetch(url, { ...init, headers });
+
+        const text = await response.text();
+        let parsed: any = null;
+        if (text) {
+            try { parsed = JSON.parse(text); } catch { parsed = text; }
+        }
+
+        if (!response.ok) {
+            const errMsg =
+                parsed?.error ||
+                parsed?.message ||
+                parsed?.details ||
+                `HTTP ${response.status}`;
+            const err = new Error(errMsg);
+            (err as any).status = response.status;
+            (err as any).data = parsed;
+            throw err;
+        }
+
+        return parsed ?? { data: null };
+    } catch (err: any) {
+        if (err.status) throw err;
+        throw new Error(err.message || "Network error");
+    }
 }

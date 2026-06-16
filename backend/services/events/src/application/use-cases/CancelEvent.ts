@@ -2,6 +2,7 @@ import type { Event } from "../../domain/entities/Event.js";
 import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
 import type { ISubject } from "../../domain/events/ISubject.js";
 import { EventContext } from "../../domain/state/EventContext.js";
+import { AuthorizationError } from "../../../../../shared/libs/errors/AuthorizationError.js";
 import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
 
 export interface CancelEventInput {
@@ -24,7 +25,7 @@ export class CancelEvent {
 
     const isOwner = event.organizerId === input.actorUserId;
     if (!isOwner && !input.isAdmin) {
-      throw new Error(
+      throw new AuthorizationError(
         "Solo el organizador o un administrador pueden cancelar el evento.",
       );
     }

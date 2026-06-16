@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useParams,
+  useLocation,
 } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { LoginPage } from "./pages/LoginPage";
@@ -48,6 +49,7 @@ import { ForumQuestionPage } from "./pages/ForumQuestionPage";
 import { StudyCalendarPage } from "./pages/StudyCalendarPage";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ToastContainer } from "./components/notifications/ToastContainer";
+import { ChatbotWidget } from "./components/chatbot/ChatbotWidget";
 import { fetchNotifications } from "./lib/services/notifications.service";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import { useGlobalSync } from "./hooks/useGlobalSync";
@@ -62,10 +64,11 @@ function PrivateRoute({
   isAuthenticated: boolean;
   requiredRole?: "admin" | "estudiante";
 }) {
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   if (requiredRole && user?.role !== requiredRole) {
@@ -195,6 +198,14 @@ function App() {
           <Route path="/calendario-estudio" element={<StudyCalendarPage />} />
         </Route>
         <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute isAuthenticated={isAuthenticated}>
+              <Navigate to={user?.role === "admin" ? "/admin" : "/solicitudes"} replace />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/"
           element={
             isAuthenticated ? (
@@ -206,6 +217,7 @@ function App() {
         />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      {isAuthenticated && <ChatbotWidget />}
     </Router>
   );
 }

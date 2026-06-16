@@ -1,17 +1,16 @@
 import type { ServerResponse } from "node:http";
 
-/**
- * Serializa y envía una respuesta JSON con headers correctos.
- *
- * Garantiza:
- * - Content-Type correcto
- * - Content-Length preciso
- * - Charset UTF-8
- *
- * @param res - ServerResponse
- * @param statusCode - HTTP status code (200, 400, 401, etc.)
- * @param payload - Objeto a serializar como JSON
- */
+export interface ApiErrorResponse {
+  error: string;
+  message?: string;
+  code?: string;
+  errorCode?: string;
+  name?: string;
+  reason?: string;
+  remainingMs?: number;
+  details?: Record<string, unknown>;
+}
+
 export function sendJson(
   res: ServerResponse,
   statusCode: number,
@@ -28,12 +27,6 @@ export function sendJson(
   res.end(body);
 }
 
-/**
- * Envía error JSON estándar
- * @param res - ServerResponse
- * @param statusCode - HTTP status code
- * @param message - Mensaje de error
- */
 export function sendError(
   res: ServerResponse,
   statusCode: number,
@@ -42,13 +35,6 @@ export function sendError(
   sendJson(res, statusCode, { error: message });
 }
 
-/**
- * Envía datos JSON estándar
- * @param res - ServerResponse
- * @param statusCode - HTTP status code
- * @param data - Datos a enviar
- * @param meta - Metadatos opcionales (total, page, etc.)
- */
 export function sendData<T>(
   res: ServerResponse,
   statusCode: number,
@@ -57,4 +43,12 @@ export function sendData<T>(
 ): void {
   const payload = meta ? { data, meta } : { data };
   sendJson(res, statusCode, payload);
+}
+
+export function sendApiError(
+  res: ServerResponse,
+  statusCode: number,
+  response: ApiErrorResponse,
+): void {
+  sendJson(res, statusCode, response);
 }

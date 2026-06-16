@@ -18,4 +18,6 @@ export { AdminClient } from "./AdminClient.js";
 export type { AdminUser, AdminRequest, AdminResource, AdminEvent, AdminMetrics, } from "./AdminClient.js";
 export { StudySessionsClient } from "./StudySessionsClient.js";
 export type { CreateSeriesPayload, } from "./StudySessionsClient.js";
+export { ChatbotClient } from "./ChatbotClient.js";
+export type { ChatbotClientOptions } from "./ChatbotClient.js";
 //# sourceMappingURL=index.d.ts.map

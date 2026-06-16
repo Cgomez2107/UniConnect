@@ -13,12 +13,8 @@ import { isAdminUser } from "../../src/interfaces/http/middlewares/isAdminUser.j
 const UUID = "550e8400-e29b-41d4-a716-446655440000";
 const USER_ID = "550e8400-e29b-41d4-a716-446655440001";
 
-type UseCaseStub = { execute: ReturnType<typeof vi.fn> };
-
-function buildEventsServer() {
-  const mockPool = { query: vi.fn() } as never;
-
-  const sampleEvent = {
+function sampleEvent(overrides: Record<string, unknown> = {}) {
+  return {
     id: UUID,
     title: "Seminario de Redes",
     description: "Charla sobre redes neuronales",
@@ -35,48 +31,71 @@ function buildEventsServer() {
     maxCapacity: 100,
     registeredCount: 0,
     deletedAt: null,
+    isFull: false,
+    ...overrides,
   };
+}
+
+type UseCaseStub = { execute: ReturnType<typeof vi.fn> };
+
+function buildEventsServer() {
+  const mockPool = { query: vi.fn() } as never;
+
+  const baseEvent = sampleEvent();
 
   const getAllEvents: UseCaseStub = {
     execute: vi.fn().mockResolvedValue({
-      data: [sampleEvent],
+      data: [baseEvent],
       total: 1,
       page: 1,
       limit: 20,
       totalPages: 1,
     }),
   };
+  const listEvents: UseCaseStub = {
+    execute: vi.fn().mockResolvedValue({
+      data: [baseEvent],
+      total: 1,
+      page: 1,
+      limit: 10,
+      totalPages: 1,
+    }),
+  };
   const getUpcomingEvents: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue([sampleEvent]),
+    execute: vi.fn().mockResolvedValue([baseEvent]),
   };
   const getEventById: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue(sampleEvent),
+    execute: vi.fn().mockResolvedValue(baseEvent),
   };
   const createEvent: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue(sampleEvent),
+    execute: vi.fn().mockResolvedValue(baseEvent),
   };
   const updateEvent: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue(sampleEvent),
+    execute: vi.fn().mockResolvedValue(baseEvent),
   };
   const deleteEvent: UseCaseStub = {
     execute: vi.fn().mockResolvedValue(undefined),
   };
   const publishEvent: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue(sampleEvent),
+    execute: vi.fn().mockResolvedValue(baseEvent),
   };
   const cancelEvent: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue(sampleEvent),
+    execute: vi.fn().mockResolvedValue(baseEvent),
   };
   const finishEvent: UseCaseStub = {
-    execute: vi.fn().mockResolvedValue(sampleEvent),
+    execute: vi.fn().mockResolvedValue(baseEvent),
   };
   const registerForEvent: UseCaseStub = {
+    execute: vi.fn().mockResolvedValue(undefined),
+  };
+  const unregisterFromEvent: UseCaseStub = {
     execute: vi.fn().mockResolvedValue(undefined),
   };
 
   const controller = new EventsController(
     mockPool,
     getAllEvents as never,
+    listEvents as never,
     getUpcomingEvents as never,
     getEventById as never,
     createEvent as never,
@@ -86,11 +105,13 @@ function buildEventsServer() {
     cancelEvent as never,
     finishEvent as never,
     registerForEvent as never,
+    unregisterFromEvent as never,
   );
 
   return {
     server: createEventsServer(controller),
     getAllEvents,
+    listEvents,
     getUpcomingEvents,
     getEventById,
     createEvent,
@@ -171,15 +192,19 @@ describe("Events integration /api/v1/events", () => {
 
   describe("GET /api/v1/events", () => {
     it("lista eventos y response tiene data array", async () => {
-      const { server, getAllEvents } = buildEventsServer();
+      const { server, listEvents } = buildEventsServer();
 
       const response = await request(server as any)
         .get("/api/v1/events")
         .expect(200);
 
-      expect(getAllEvents.execute).toHaveBeenCalledTimes(1);
+      expect(listEvents.execute).toHaveBeenCalledTimes(1);
       expect(Array.isArray(response.body.data)).toBe(true);
       expect(response.body.data[0].id).toBe(UUID);
+      expect(response.body.meta.total).toBe(1);
+      expect(response.body.meta.page).toBe(1);
+      expect(response.body.meta.limit).toBe(10);
+      expect(response.body.meta.totalPages).toBe(1);
     });
 
     it("filtra por upcoming cuando query param esta presente", async () => {

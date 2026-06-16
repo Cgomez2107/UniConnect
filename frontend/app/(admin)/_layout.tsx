@@ -21,6 +21,7 @@ export default function AdminLayout() {
     <SessionGuard allowedRoles={["admin"]}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="moderacion" />
       </Stack>
     </SessionGuard>
   );

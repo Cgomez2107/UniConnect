@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import { useAuthStore } from "../store/useAuthStore";
 import { apiClient } from "../lib/api/client";
@@ -12,7 +12,16 @@ export const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const location = useLocation();
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    const stateError = (location.state as { error?: string } | null)?.error;
+    if (stateError) {
+      setError(stateError);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +35,8 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, password);
       const currentUser = useAuthStore.getState().user;
-      const destination = currentUser?.role === "admin" ? "/admin" : "/solicitudes";
+      const defaultDestination = currentUser?.role === "admin" ? "/admin" : "/solicitudes";
+      const destination = (location.state as any)?.from || defaultDestination;
       navigate(destination, { replace: true });
     } catch (err: any) {
       setError(err?.message || "Credenciales incorrectas");
@@ -45,7 +55,8 @@ export const LoginPage: React.FC = () => {
       });
 
       if (response.data?.url) {
-        sessionStorage.setItem("preOAuthLocation", "/solicitudes"); // Redirigir a solicitudes después de OAuth
+        const intendedPath = (location.state as any)?.from || "/solicitudes";
+        sessionStorage.setItem("preOAuthLocation", intendedPath);
         window.location.href = response.data.url;
       } else {
         setError("No se pudo iniciar la sesión con Google.");

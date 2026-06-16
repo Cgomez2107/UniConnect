@@ -13,10 +13,10 @@ import { Colors } from "@/constants/Colors"
 import { useAdmin } from "@/hooks/application/useAdmin"
 import { useAuthStore } from "@/store/useAuthStore"
 import type { AdminEvent, AdminRequest, AdminResource, AdminUser, EventCategoryRow, Faculty, Program, Subject } from "@/types"
-import { router } from "expo-router"
+import { router, useLocalSearchParams } from "expo-router"
 import * as Haptics from "expo-haptics"
 import { StatusBar } from "expo-status-bar"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Alert,
   FlatList,
@@ -29,6 +29,8 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { fetchApiEnvelope } from "@/lib/api/httpClient"
+
 export default function AdminPanelScreen() {
   const scheme = useColorScheme() ?? "light"
   const C = Colors[scheme]
@@ -36,10 +38,39 @@ export default function AdminPanelScreen() {
   const signOut = useAuthStore((s) => s.signOut)
   const insets  = useSafeAreaInsets()
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("facultades")
+  const params = useLocalSearchParams<{ tab?: string }>()
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    (params.tab as ActiveTab) ?? "facultades",
+  )
   const [search,    setSearch]    = useState("")
+  const [moderationCount, setModerationCount] = useState(0)
 
   const admin = useAdmin(search)
+
+  // Detail modal state
+  const [detailEvent, setDetailEvent] = useState<AdminEvent | null>(null)
+  const [detailModalVisible, setDetailModalVisible] = useState(false)
+
+  // Fetch moderation case count for the tab badge
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data } = await fetchApiEnvelope<any[]>("/notifications?limit=50")
+        const raw = Array.isArray(data) ? data : []
+        const count = raw.filter((n: any) => n.type === "moderation_escalation").length
+        if (!cancelled) setModerationCount(count)
+      } catch {
+        // silently ignore – badge stays at 0
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const openEventDetail = useCallback((item: AdminEvent) => {
+    setDetailEvent(item)
+    setDetailModalVisible(true)
+  }, [])
 
   const tabs = useMemo(
     () => [
@@ -50,6 +81,7 @@ export default function AdminPanelScreen() {
       { key: "solicitudes" as ActiveTab, icon: "document-text-outline" as const, label: "Solicitudes", count: admin.requests.length },
       { key: "recursos" as ActiveTab, icon: "folder-open-outline" as const, label: "Recursos", count: admin.resources.length },
       { key: "eventos" as ActiveTab, icon: "calendar-outline" as const, label: "Eventos", count: admin.events.length },
+      { key: "moderacion" as ActiveTab, icon: "shield-checkmark-outline" as const, label: "Moderación", count: moderationCount },
       { key: "metricas" as ActiveTab, icon: "stats-chart-outline" as const, label: "Métricas", count: 0 },
     ],
     [
@@ -60,6 +92,7 @@ export default function AdminPanelScreen() {
       admin.requests.length,
       admin.resources.length,
       admin.events.length,
+      moderationCount,
     ],
   )
 
@@ -85,8 +118,11 @@ export default function AdminPanelScreen() {
   }, [activeTab])
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
+    if (tab === "moderacion") {
+      router.push("/(admin)/moderacion" as any)
+      return
+    }
     setActiveTab(tab)
-    setSearch("")
   }, [])
 
   const handleSignOut = useCallback(() => {
@@ -202,10 +238,11 @@ export default function AdminPanelScreen() {
         onDelete={() => admin.handleDeleteEvent(item)}
         onPublish={item.status === "draft" ? () => admin.handlePublishEvent(item) : undefined}
         onCancel={item.status === "published" ? () => admin.handleCancelEvent(item) : undefined}
+        onViewDetails={() => openEventDetail(item)}
         C={C}
       />
     ),
-    [admin, C],
+    [admin, C, openEventDetail],
   )
 
   // Render
@@ -519,6 +556,67 @@ export default function AdminPanelScreen() {
         C={C}
       >
         <CategoryModalFields C={C} modal={admin.categoryModal} setModal={admin.setCategoryModal} />
+      </CrudModal>
+
+      {/* Event detail modal */}
+      <CrudModal
+        visible={detailModalVisible}
+        title={detailEvent?.title ?? "Detalle del evento"}
+        error=""
+        isSubmitting={false}
+        readonly
+        onClose={() => setDetailModalVisible(false)}
+        onSave={() => {}}
+        C={C}
+      >
+        {detailEvent && (
+          <View style={{ gap: 16 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Text style={{ fontSize: 13, color: C.textSecondary }}>
+                {detailEvent.status === "draft" ? "Borrador" : detailEvent.status === "published" ? "Publicado" : detailEvent.status === "cancelled" ? "Cancelado" : "Finalizado"}
+              </Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary }}>•</Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary, textTransform: "capitalize" }}>{detailEvent.category}</Text>
+            </View>
+
+            {detailEvent.description && (
+              <Text style={{ fontSize: 14, color: C.textSecondary, lineHeight: 20 }}>
+                {detailEvent.description}
+              </Text>
+            )}
+
+            <View style={{ gap: 12 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Fecha</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>
+                  {detailEvent.event_date ? new Date(detailEvent.event_date).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Lugar</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>{detailEvent.location || "—"}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Cupo máximo</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>{detailEvent.max_capacity ?? "Ilimitado"}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Registrados</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>{detailEvent.registered_count ?? 0}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Creador</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>{detailEvent.creator_name || "—"}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 12, color: C.textSecondary, textTransform: "uppercase" }}>Creado</Text>
+                <Text style={{ fontSize: 14, fontWeight: "500", color: C.textPrimary }}>
+                  {detailEvent.created_at ? new Date(detailEvent.created_at).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
       </CrudModal>
     </View>
   )

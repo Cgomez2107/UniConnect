@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
+import type { ListEventsFilter } from "../../../domain/entities/Event.js";
 import type { GetAllEvents } from "../../../application/use-cases/GetAllEvents.js";
+import type { ListEventsUseCase } from "../../../application/use-cases/ListEventsUseCase.js";
 import type { GetUpcomingEvents } from "../../../application/use-cases/GetUpcomingEvents.js";
 import type { GetEventById } from "../../../application/use-cases/GetEventById.js";
 import type { CreateEvent } from "../../../application/use-cases/CreateEvent.js";
@@ -10,10 +12,14 @@ import type { PublishEvent } from "../../../application/use-cases/PublishEvent.j
 import type { CancelEvent } from "../../../application/use-cases/CancelEvent.js";
 import type { FinishEvent } from "../../../application/use-cases/FinishEvent.js";
 import type { RegisterForEvent } from "../../../application/use-cases/RegisterForEvent.js";
+import type { UnregisterFromEvent } from "../../../application/use-cases/UnregisterFromEvent.js";
+import type { GenerateQrPass } from "../../../application/use-cases/GenerateQrPass.js";
+import type { VerifyQrPass } from "../../../application/use-cases/VerifyQrPass.js";
 import type { EventStatus } from "../../../domain/state/EventStatus.js";
 import { getActorUserId } from "../middlewares/getActorUserId.js";
 import { readJsonBody } from "../middlewares/readJsonBody.js";
 import { isAdminUser } from "../middlewares/isAdminUser.js";
+import { requireRole } from "../../../../../../shared/middleware/adminGuard.js";
 import { AuthorizationError } from "../../../../../../shared/libs/errors/AuthorizationError.js";
 import { mapErrorToHttpStatus } from "../../../../../../shared/libs/errors/mapHttpStatus.js";
 import { sendData, sendError } from "../../../../../../shared/http/sendJson.js";
@@ -22,6 +28,7 @@ export class EventsController {
   constructor(
     private readonly pool: Pool,
     private readonly getAllEvents: GetAllEvents,
+    private readonly listEvents: ListEventsUseCase,
     private readonly getUpcomingEvents: GetUpcomingEvents,
     private readonly getEventById: GetEventById,
     private readonly createEvent: CreateEvent,
@@ -31,15 +38,30 @@ export class EventsController {
     private readonly cancelEvent: CancelEvent,
     private readonly finishEvent: FinishEvent,
     private readonly registerForEvent: RegisterForEvent,
+    private readonly unregisterFromEvent: UnregisterFromEvent,
+    private readonly generateQrPass: GenerateQrPass | null = null,
+    private readonly verifyQrPass: VerifyQrPass | null = null,
   ) {}
 
   async list(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const requestUrl = new URL(req.url ?? "/", "http://localhost");
     const upcoming = requestUrl.searchParams.get("upcoming") === "true";
+
     const page = parseInt(requestUrl.searchParams.get("page") ?? "1", 10);
-    const limit = parseInt(requestUrl.searchParams.get("limit") ?? "20", 10);
+    const limit = parseInt(requestUrl.searchParams.get("limit") ?? "10", 10);
     const includeDeleted = requestUrl.searchParams.get("include_deleted") === "true";
     const createdBy = requestUrl.searchParams.get("created_by") ?? requestUrl.searchParams.get("createdBy") ?? undefined;
+
+    const categoriesRaw = requestUrl.searchParams.get("categories");
+    const categories = categoriesRaw
+      ? categoriesRaw.split(",").map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
+    const searchRaw = requestUrl.searchParams.get("search");
+    const search = searchRaw && searchRaw.trim().length > 0 ? searchRaw.trim() : undefined;
+    const startDate = requestUrl.searchParams.get("startDate") ?? undefined;
+    const endDate = requestUrl.searchParams.get("endDate") ?? undefined;
+    const statusRaw = requestUrl.searchParams.get("status");
 
     const isAdmin = await isAdminUser(req, this.pool);
     const effectiveIncludeDeleted = isAdmin ? includeDeleted : false;
@@ -49,11 +71,13 @@ export class EventsController {
         const result = await this.getUpcomingEvents.execute(limit);
         sendData(res, 200, result, { total: result.length });
       } else {
-        // Public feed (no createdBy, non-admin): published + cancelled visible
-        // Private feed (createdBy set): all statuses for that user
-        // Admin feed (isAdmin): all statuses
         let statusFilter: EventStatus | EventStatus[] | undefined;
-        if (effectiveIncludeDeleted) {
+        if (statusRaw) {
+          const allowedStatuses: EventStatus[] = ["draft", "published", "cancelled", "finished"];
+          const parsed = statusRaw.split(",").map((s) => s.trim().toLowerCase())
+            .filter((s): s is EventStatus => (allowedStatuses as string[]).includes(s));
+          statusFilter = parsed.length > 0 ? parsed : undefined;
+        } else if (effectiveIncludeDeleted) {
           statusFilter = undefined;
         } else if (createdBy) {
           statusFilter = undefined;
@@ -63,7 +87,19 @@ export class EventsController {
           statusFilter = ["published", "cancelled"];
         }
 
-        const result = await this.getAllEvents.execute(page, limit, effectiveIncludeDeleted, statusFilter, createdBy);
+        const filter: ListEventsFilter = {
+          page,
+          limit,
+          includeDeleted: effectiveIncludeDeleted,
+          status: statusFilter,
+          createdBy,
+          categories,
+          search,
+          startDate,
+          endDate,
+        };
+
+        const result = await this.listEvents.execute(filter);
         sendData(res, 200, result.data, {
           total: result.total,
           page: result.page,
@@ -176,9 +212,14 @@ export class EventsController {
     }
 
     try {
+      const isAdmin = await isAdminUser(req, this.pool);
+      if (!isAdmin) {
+        requireRole("admin")(req, res);
+        return;
+      }
       await this.deleteEvent.execute({
         eventId,
-        isAdmin: await isAdminUser(req, this.pool),
+        isAdmin: true,
       });
       sendData(res, 200, { message: "Event deleted successfully" });
     } catch (error) {
@@ -200,6 +241,25 @@ export class EventsController {
         userId: actorUserId,
       });
       sendData(res, 200, { message: "Inscripción exitosa" });
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async unregister(req: IncomingMessage, res: ServerResponse, eventId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Authentication required");
+      return;
+    }
+
+    try {
+      await this.unregisterFromEvent.execute({
+        eventId,
+        userId: actorUserId,
+      });
+      sendData(res, 200, { message: "Cancelación exitosa" });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);
@@ -260,6 +320,54 @@ export class EventsController {
         isAdmin: await isAdminUser(req, this.pool),
       });
       sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async verifyQr(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (!this.verifyQrPass) {
+      sendError(res, 500, "QR verification not available");
+      return;
+    }
+
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Authentication required");
+      return;
+    }
+
+    try {
+      const body = await readJsonBody<{ qrData: string }>(req);
+      const { qrData } = body;
+      if (!qrData || typeof qrData !== "string") {
+        sendError(res, 400, "qrData es requerido");
+        return;
+      }
+      const result = await this.verifyQrPass.execute(qrData, actorUserId);
+      sendData(res, 200, result);
+    } catch (error) {
+      const mapped = mapErrorToHttpStatus(error);
+      sendError(res, mapped.statusCode, mapped.message);
+    }
+  }
+
+  async getMyPass(req: IncomingMessage, res: ServerResponse, eventId: string): Promise<void> {
+    const actorUserId = getActorUserId(req);
+    if (!actorUserId) {
+      sendError(res, 401, "Authentication required");
+      return;
+    }
+
+    try {
+      if (!this.generateQrPass) {
+        sendError(res, 500, "QR pass generation not available");
+        return;
+      }
+
+      const qrPass = await this.generateQrPass.execute(eventId, actorUserId);
+      sendData(res, 200, { qrContent: qrPass.qrContent });
     } catch (error) {
       const mapped = mapErrorToHttpStatus(error);
       sendError(res, mapped.statusCode, mapped.message);

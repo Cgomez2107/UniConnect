@@ -4,6 +4,7 @@ import type { INotificationRepository } from "../../domain/repositories/INotific
 import type { ISubscriptionRepository } from "../../domain/events/subscriptions/ISubscriptionRepository.js";
 import type { IEventSocketGateway } from "../../domain/events/UniversityEventObserver.js";
 import { EventContext } from "../../domain/state/EventContext.js";
+import { AuthorizationError } from "../../../../../shared/libs/errors/AuthorizationError.js";
 import { NotFoundError } from "../../../../../shared/libs/errors/NotFoundError.js";
 
 export interface PublishEventInput {
@@ -28,7 +29,7 @@ export class PublishEvent {
 
     const isOwner = event.organizerId === input.actorUserId;
     if (!isOwner && !input.isAdmin) {
-      throw new Error("Solo el organizador o un administrador pueden publicar el evento.");
+      throw new AuthorizationError("Solo el organizador o un administrador pueden publicar el evento.");
     }
 
     const context = EventContext.fromStatus(event.status);

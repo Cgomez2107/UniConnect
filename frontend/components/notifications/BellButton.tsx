@@ -135,7 +135,7 @@ export default function BellButton() {
               style={[styles.ajustesBtn, { borderTopColor: C.border }]}
               onPress={() => {
                 setOpen(false);
-                router.back();
+                router.push("/ajustes/notificaciones");
               }}
             >
               <Text style={[styles.ajustesText, { color: C.primary }]}>

@@ -32,7 +32,10 @@ export interface GatewayEnv {
   readonly eventsBaseUrl: string;
   readonly authBaseUrl: string;
   readonly forumBaseUrl: string;
+  readonly chatbotBaseUrl: string;
   readonly jwtAccessSecret: string;
+  readonly supabaseUrl?: string;
+  readonly supabaseJwtSecret?: string;
 }
 
 /**
@@ -64,8 +67,11 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
   const profilesCatalogBaseUrl = requireEnv(source, "PROFILES_CATALOG_BASE_URL");
   const eventsBaseUrl = requireEnv(source, "EVENTS_BASE_URL");
   const forumBaseUrl = requireEnv(source, "FORUM_BASE_URL");
+  const chatbotBaseUrl = requireEnv(source, "CHATBOT_BASE_URL");
   const authBaseUrl = requireEnv(source, "AUTH_BASE_URL");
   const jwtAccessSecret = requireEnv(source, "JWT_ACCESS_SECRET");
+  const supabaseUrl = source["SUPABASE_URL"]?.trim() || undefined;
+  const supabaseJwtSecret = source["SUPABASE_JWT_SECRET"]?.trim() || undefined;
 
   return {
     port,
@@ -76,7 +82,10 @@ export function loadGatewayEnv(source: NodeJS.ProcessEnv = process.env): Gateway
     profilesCatalogBaseUrl,
     eventsBaseUrl,
     forumBaseUrl,
+    chatbotBaseUrl,
     authBaseUrl,
     jwtAccessSecret,
+    supabaseUrl,
+    supabaseJwtSecret,
   };
 }

@@ -98,8 +98,9 @@ export const MessageBubble = memo(function MessageBubble({
   const decoratorContext = useMemo(
     () => ({
       currentUserId: message.sender_id,
+      textColor: isOwn ? "#ffffff" : C.textPrimary,
     }),
-    [message.sender_id],
+    [message.sender_id, isOwn, C.textPrimary],
   )
 
   const hasAudio = isAudioMessage(message);

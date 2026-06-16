@@ -3,7 +3,7 @@ import { EventSchema } from "../schemas/event.schema.js";
 export const CreateEventRequestSchema = z.object({
     body: z.object({
         title: z.string().min(1).max(200),
-        description: z.string().min(1).max(2000),
+        description: z.string().max(2000).optional().default(""),
         eventDate: z.string().datetime(),
         location: z.string().max(200).optional(),
         category: z.string().default("academico"),

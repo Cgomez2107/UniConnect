@@ -9,13 +9,12 @@ export class SignUpUseCase {
     private authRepository: IAuthRepository,
     private tokenRepository: ITokenRepository,
     private jwtService: any,
-    private onUserCreated?: (userId: string, fullName: string) => Promise<void>,
+    private onUserCreated?: (userId: string, fullName: string, email: string) => Promise<void>,
     private supabaseUrl?: string,
     private supabaseServiceRoleKey?: string,
   ) {}
 
   async execute(request: SignUpRequest): Promise<SignUpResponse> {
-    // Validaciones
     if (!request.email || !request.password || !request.fullName) {
       throw new ValidationError("Email, password, and fullName are required");
     }
@@ -28,13 +27,13 @@ export class SignUpUseCase {
       throw new ValidationError("Password must be at least 8 characters");
     }
 
-    // Verificar que no existe localmente
     const existing = await this.authRepository.findByEmail(request.email);
     if (existing) {
       throw new ConflictError("Email already registered");
     }
 
-    // Crear usuario en Supabase Auth vía Admin API (opcional)
+    // Crear usuario en Supabase Auth vía Admin API con email_confirm: false
+    // para que el usuario deba verificar su correo antes de recibir el welcome
     let supabaseUserId: string = crypto.randomUUID();
     if (this.supabaseUrl && this.supabaseServiceRoleKey) {
       try {
@@ -47,7 +46,7 @@ export class SignUpUseCase {
           body: JSON.stringify({
             email: request.email,
             password: request.password,
-            email_confirm: true,
+            email_confirm: false,
             user_metadata: { full_name: request.fullName },
           }),
         });
@@ -68,10 +67,8 @@ export class SignUpUseCase {
       }
     }
 
-    // Hash password para almacenamiento local
     const passwordHash = await bcryptjs.hash(request.password, 10);
 
-    // Crear usuario en repositorio local con el ID de Supabase
     const user = await this.authRepository.create({
       id: supabaseUserId,
       email: request.email,
@@ -79,21 +76,23 @@ export class SignUpUseCase {
       passwordHash,
       role: "estudiante",
       isActive: true,
+      isVerified: false,
     });
 
-    // Generar tokens
-    const { accessToken, refreshToken, accessTokenExpiry } = this.jwtService.generateTokens(user.id);
+    const { accessToken, refreshToken, accessTokenExpiry } = this.jwtService.generateTokens(user.id, user.role);
 
-    // Guardar refresh token
     await this.tokenRepository.create({
       userId: user.id,
       token: refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
-    // Crear perfil en profiles-catalog
+    // Generar token de verificación de email
+    const verificationToken = this.jwtService.generateVerificationToken(user.id, user.email);
+
+    // Crear perfil en profiles-catalog (sin emitir webhook aún)
     if (this.onUserCreated) {
-      await this.onUserCreated(user.id, user.fullName);
+      await this.onUserCreated(user.id, user.fullName, user.email);
     }
 
     return {
@@ -105,7 +104,8 @@ export class SignUpUseCase {
       },
       accessToken,
       refreshToken,
-      expiresIn: 3600, // 1 hora
+      expiresIn: 3600,
+      verificationToken,
     };
   }
 }

@@ -1,7 +1,8 @@
 import type { Pool } from "pg";
-import type { Event, PaginatedResult } from "../../domain/entities/Event.js";
-import type { IEventRepository } from "../../domain/repositories/IEventRepository.js";
+import type { Event, PaginatedResult, ListEventsFilter } from "../../domain/entities/Event.js";
+import type { IEventRepository, EventRegistration } from "../../domain/repositories/IEventRepository.js";
 import type { EventStatus } from "../../domain/state/EventStatus.js";
+import { ConflictError, NotFoundError, ValidationError } from "../../../../../shared/libs/errors/index.js";
 
 interface EventRow {
   id: string;
@@ -41,6 +42,7 @@ function mapEvent(row: EventRow): Event {
     maxCapacity: row.max_capacity ?? null,
     registeredCount: row.registered_count,
     deletedAt: row.deleted_at ? new Date(row.deleted_at).toISOString() : null,
+    isFull: row.max_capacity !== null && row.registered_count >= row.max_capacity,
   };
 }
 
@@ -82,17 +84,28 @@ export class PostgresEventRepository implements IEventRepository {
     }
   }
 
-  async list(
-    page: number = 1,
-    limit: number = 20,
-    includeDeleted: boolean = false,
-    status?: EventStatus | EventStatus[],
-    createdBy?: string,
-  ): Promise<PaginatedResult<Event>> {
+  async list(filter?: ListEventsFilter): Promise<PaginatedResult<Event>> {
     await this.finalizeExpiredEvents();
+
+    const page = filter?.page ?? 1;
+    const limit = filter?.limit ?? 10;
+    const includeDeleted = filter?.includeDeleted ?? false;
+    const status = filter?.status;
+    const createdBy = filter?.createdBy;
+    const categories = filter?.categories;
+    const search = filter?.search;
+    const startDate = filter?.startDate;
+    const endDate = filter?.endDate;
+    const sortBy = filter?.sortBy ?? "event_date";
+    const order = filter?.order ?? "ASC";
+
     const safePage = Math.max(1, page);
     const safeLimit = Math.min(Math.max(1, limit), 100);
     const offset = (safePage - 1) * safeLimit;
+
+    const allowedSortColumns = ["event_date", "created_at", "title"];
+    const safeSortBy = allowedSortColumns.includes(sortBy) ? sortBy : "event_date";
+    const safeOrder = order === "DESC" ? "DESC" : "ASC";
 
     const whereClauses: string[] = [];
     const params: any[] = [];
@@ -103,6 +116,7 @@ export class PostgresEventRepository implements IEventRepository {
     } else {
       whereClauses.push("e.deleted_at IS NULL");
     }
+
     if (status) {
       if (Array.isArray(status)) {
         const placeholders = status.map(() => `$${paramIndex++}`);
@@ -113,9 +127,33 @@ export class PostgresEventRepository implements IEventRepository {
         params.push(status);
       }
     }
+
     if (createdBy) {
       whereClauses.push(`e.created_by = $${paramIndex++}`);
       params.push(createdBy);
+    }
+
+    if (categories && categories.length > 0) {
+      const placeholders = categories.map(() => `$${paramIndex++}`);
+      whereClauses.push(`e.category IN (${placeholders.join(", ")})`);
+      params.push(...categories);
+    }
+
+    if (search && search.trim().length > 0) {
+      const searchPattern = `%${search.trim()}%`;
+      whereClauses.push(`(e.title ILIKE $${paramIndex} OR e.description ILIKE $${paramIndex})`);
+      params.push(searchPattern);
+      paramIndex++;
+    }
+
+    if (startDate) {
+      whereClauses.push(`e.event_date >= $${paramIndex++}`);
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push(`e.event_date <= $${paramIndex++}`);
+      params.push(endDate);
     }
 
     const whereSQL =
@@ -134,7 +172,7 @@ export class PostgresEventRepository implements IEventRepository {
     const result = await this.pool.query<EventRow>(
       `${SELECT_EVENTS}
        ${whereSQL}
-       ORDER BY e.event_date DESC
+       ORDER BY e.${safeSortBy} ${safeOrder}
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
       params,
     );
@@ -316,18 +354,15 @@ export class PostgresEventRepository implements IEventRepository {
       await client.query("BEGIN");
 
       const eventResult = await client.query<EventRow>(
-        `SELECT status, max_capacity, registered_count FROM events WHERE id = $1 FOR UPDATE`,
+        `SELECT status, max_capacity, registered_count FROM events WHERE id = $1 AND deleted_at IS NULL`,
         [eventId],
       );
       if (eventResult.rows.length === 0) {
-        throw new Error("Event not found");
+        throw new NotFoundError("Event not found");
       }
       const event = eventResult.rows[0];
       if (event.status !== "published") {
-        throw new Error("Event is not open for registration");
-      }
-      if (event.max_capacity !== null && event.registered_count >= event.max_capacity) {
-        throw new Error("Event is full");
+        throw new ValidationError("Event is not open for registration");
       }
 
       const existing = await client.query(
@@ -335,16 +370,50 @@ export class PostgresEventRepository implements IEventRepository {
         [eventId, userId],
       );
       if (existing.rows.length > 0) {
-        throw new Error("Ya estás inscrito a este evento");
+        throw new ConflictError("Ya estás inscrito a este evento");
+      }
+
+      const updateResult = await client.query(
+        `UPDATE events 
+         SET registered_count = registered_count + 1 
+         WHERE id = $1 AND status = 'published' AND (max_capacity IS NULL OR registered_count < max_capacity)`,
+        [eventId],
+      );
+
+      if (updateResult.rowCount === 0) {
+        throw new ConflictError("Cupo agotado");
       }
 
       await client.query(
-        `INSERT INTO event_registrations (event_id, user_id) VALUES ($1, $2)`,
+        `INSERT INTO event_registrations (id, qr_token, event_id, user_id, created_at) VALUES (gen_random_uuid(), gen_random_uuid(), $1, $2, NOW())`,
         [eventId, userId],
       );
 
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async unregisterFromEvent(eventId: string, userId: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const deleteResult = await client.query(
+        `DELETE FROM event_registrations WHERE event_id = $1 AND user_id = $2`,
+        [eventId, userId],
+      );
+
+      if (deleteResult.rowCount === 0) {
+        throw new ValidationError("No estás registrado en este evento");
+      }
+
       await client.query(
-        `UPDATE events SET registered_count = registered_count + 1 WHERE id = $1`,
+        `UPDATE events SET registered_count = registered_count - 1 WHERE id = $1`,
         [eventId],
       );
 
@@ -355,5 +424,152 @@ export class PostgresEventRepository implements IEventRepository {
     } finally {
       client.release();
     }
+  }
+
+  async getUserEmail(userId: string): Promise<string | null> {
+    const result = await this.pool.query<{ email: string }>(
+      `SELECT COALESCE(p.email, u.email) AS email
+       FROM profiles p
+       LEFT JOIN auth.users u ON u.id::text = p.id::text
+       WHERE p.id = $1`,
+      [userId],
+    );
+    return result.rows[0]?.email ?? null;
+  }
+
+  async getRegistration(eventId: string, userId: string): Promise<EventRegistration | null> {
+    const result = await this.pool.query<{
+      id: string;
+      event_id: string;
+      user_id: string;
+      qr_token: string | null;
+      qr_hmac: string | null;
+      scanned_at: string | null;
+      scanned_by: string | null;
+      is_used: boolean;
+      created_at: string;
+    }>(
+      `SELECT id, event_id, user_id, qr_token, qr_hmac, scanned_at, scanned_by, is_used, created_at
+       FROM event_registrations
+       WHERE event_id = $1 AND user_id = $2`,
+      [eventId, userId],
+    );
+    if (!result.rows[0]) return null;
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      qrToken: row.qr_token,
+      qrHmac: row.qr_hmac,
+      scannedAt: row.scanned_at ? new Date(row.scanned_at).toISOString() : null,
+      scannedBy: row.scanned_by,
+      isUsed: row.is_used,
+      createdAt: new Date(row.created_at).toISOString(),
+    };
+  }
+
+  async getRegistrationByQrToken(token: string): Promise<EventRegistration | null> {
+    const result = await this.pool.query<{
+      id: string;
+      event_id: string;
+      user_id: string;
+      qr_token: string | null;
+      qr_hmac: string | null;
+      scanned_at: string | null;
+      scanned_by: string | null;
+      is_used: boolean;
+      created_at: string;
+    }>(
+      `SELECT id, event_id, user_id, qr_token, qr_hmac, scanned_at, scanned_by, is_used, created_at
+       FROM event_registrations
+       WHERE qr_token = $1`,
+      [token],
+    );
+    if (!result.rows[0]) return null;
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      qrToken: row.qr_token,
+      qrHmac: row.qr_hmac,
+      scannedAt: row.scanned_at ? new Date(row.scanned_at).toISOString() : null,
+      scannedBy: row.scanned_by,
+      isUsed: row.is_used,
+      createdAt: new Date(row.created_at).toISOString(),
+    };
+  }
+
+  async setQrData(registrationId: string, qrToken: string, qrHmac: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE event_registrations SET qr_token = $2, qr_hmac = $3 WHERE id = $1`,
+      [registrationId, qrToken, qrHmac],
+    );
+  }
+
+  async markQrAsUsed(registrationId: string, scannedBy: string): Promise<void> {
+    const result = await this.pool.query(
+      `UPDATE event_registrations
+       SET is_used = true, scanned_at = NOW(), scanned_by = $2
+       WHERE id = $1 AND is_used = false`,
+      [registrationId, scannedBy],
+    );
+    if (result.rowCount === 0) {
+      throw new ConflictError("El QR ya fue escaneado previamente");
+    }
+  }
+
+  async getRegistrationsByUser(userId: string): Promise<EventRegistration[]> {
+    const result = await this.pool.query<{
+      id: string;
+      event_id: string;
+      user_id: string;
+      qr_token: string | null;
+      qr_hmac: string | null;
+      scanned_at: string | null;
+      scanned_by: string | null;
+      is_used: boolean;
+      created_at: string;
+    }>(
+      `SELECT id, event_id, user_id, qr_token, qr_hmac, scanned_at, scanned_by, is_used, created_at
+       FROM event_registrations
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      qrToken: row.qr_token,
+      qrHmac: row.qr_hmac,
+      scannedAt: row.scanned_at ? new Date(row.scanned_at).toISOString() : null,
+      scannedBy: row.scanned_by,
+      isUsed: row.is_used,
+      createdAt: new Date(row.created_at).toISOString(),
+    }));
+  }
+
+  async getEventByRegistration(registrationId: string): Promise<Event | null> {
+    const result = await this.pool.query<EventRow>(
+      `${SELECT_EVENTS}
+       INNER JOIN event_registrations er ON er.event_id = e.id
+       WHERE er.id = $1`,
+      [registrationId],
+    );
+    return result.rows[0] ? mapEvent(result.rows[0]) : null;
+  }
+
+  async getUserProfile(userId: string): Promise<{ fullName: string; avatarUrl: string | null } | null> {
+    const result = await this.pool.query<{ full_name: string; avatar_url: string | null }>(
+      `SELECT full_name, avatar_url FROM profiles WHERE id = $1`,
+      [userId],
+    );
+    if (!result.rows[0]) return null;
+    return {
+      fullName: result.rows[0].full_name,
+      avatarUrl: result.rows[0].avatar_url,
+    };
   }
 }

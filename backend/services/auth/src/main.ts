@@ -9,6 +9,7 @@ import { JWTService } from "./infrastructure/jwt/JWTService.js";
 import { SignUpUseCase } from "./application/use-cases/SignUpUseCase.js";
 import { SignInUseCase } from "./application/use-cases/SignInUseCase.js";
 import { RefreshTokenUseCase } from "./application/use-cases/RefreshTokenUseCase.js";
+import { VerifyEmailUseCase } from "./application/use-cases/VerifyEmailUseCase.js";
 import { AuthController } from "./interfaces/http/AuthController.js";
 import { requireEnv } from "../../../shared/libs/config/requiredEnv.js";
 import { sendData, sendError } from "../../../shared/http/sendJson.js";
@@ -118,7 +119,48 @@ async function main() {
   const supabaseUrl = process.env.SUPABASE_URL ?? "https://becitrklvpadvjwdbmck.supabase.co";
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-  const createProfile = async (userId: string, fullName: string): Promise<void> => {
+  const dispatchWelcomeWebhook = (email: string, fullName: string, userId: string): void => {
+    const webhookUrl = process.env.N8N_WEBHOOK_URL;
+    if (!webhookUrl) {
+      console.warn(JSON.stringify({ service: "auth", level: "warn", message: "N8N_WEBHOOK_URL is not set. Webhook dispatch skipped." }));
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        event: "usuario.verificado",
+        timestamp: new Date().toISOString(),
+        data: {
+          userId,
+          email,
+          fullName: fullName || email.split("@")[0],
+        },
+      }),
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (!res.ok) {
+          console.error(JSON.stringify({ service: "auth", level: "error", message: `Failed to dispatch welcome webhook: ${res.statusText}` }));
+        } else {
+          console.log(JSON.stringify({ service: "auth", level: "info", message: `Welcome webhook successfully dispatched for ${email}` }));
+        }
+      })
+      .catch((err) => {
+        console.error(JSON.stringify({ service: "auth", level: "error", message: "Welcome webhook dispatch failed", error: String(err) }));
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+      });
+  };
+
+  const createProfile = async (userId: string, fullName: string, _email?: string): Promise<void> => {
     const token = jwtService.generateTokens(userId).accessToken;
     const response = await fetch(`${profilesCatalogBaseUrl}/api/v1/students/profile`, {
       method: "POST",
@@ -132,6 +174,8 @@ async function main() {
       const err = await response.json().catch(() => ({ error: "Unknown error" }));
       throw new Error(`Failed to create profile: ${err.error}`);
     }
+    // NOTA: el webhook 'usuario.verificado' se emite SOLO después de que
+    // el usuario verifica su correo vía VerifyEmailUseCase (no aquí)
   };
 
   const signUpUseCase = new SignUpUseCase(
@@ -145,7 +189,15 @@ async function main() {
   const signInUseCase = new SignInUseCase(authRepository, tokenRepository, jwtService, supabaseUrl, supabaseServiceRoleKey);
   const refreshTokenUseCase = new RefreshTokenUseCase(tokenRepository, authRepository, jwtService);
 
-  const authController = new AuthController(signUpUseCase, signInUseCase, refreshTokenUseCase);
+  const verifyEmailUseCase = new VerifyEmailUseCase(
+    authRepository,
+    jwtService,
+    dispatchWelcomeWebhook,
+    supabaseUrl,
+    supabaseServiceRoleKey,
+  );
+
+  const authController = new AuthController(signUpUseCase, signInUseCase, refreshTokenUseCase, verifyEmailUseCase);
 
   // Crear servidor
   const server = createServer(async (req, res) => {
@@ -200,6 +252,8 @@ async function main() {
       await authController.signin(req, res);
     } else if (method === "POST" && path === "/refresh") {
       await authController.refreshToken(req, res);
+    } else if (method === "POST" && path === "/verify-email") {
+      await authController.verifyEmail(req, res);
     } else if (method === "GET" && path === "/session") {
       const auth = req.headers.authorization;
       if (auth?.startsWith("Bearer ")) {
@@ -316,35 +370,33 @@ async function main() {
         sendOAuthUrl(res, redirectTo);
       }
     } else if (method === "POST" && path === "/oauth/callback") {
-      // Endpoint para intercambiar token de Supabase por JWT del backend
       let body = "";
       req.on("data", (chunk) => {
         body += chunk.toString();
       });
       req.on("end", async () => {
         try {
-          const { accessToken, email } = JSON.parse(body);
-          
-          if (!accessToken || !email) {
+          const { accessToken } = JSON.parse(body);
+
+          if (!accessToken) {
             res.writeHead(400);
-            res.end(JSON.stringify({ error: "Missing accessToken or email" }));
+            res.end(JSON.stringify({ error: "Missing accessToken" }));
             return;
           }
 
-          // Obtener el ID real del usuario en Supabase Auth
-          // Primero: decodificar el JWT localmente (más confiable, sin llamada HTTP)
           const decoded = decodeSupabaseToken(accessToken);
           let supabaseUserId: string | undefined = decoded?.sub;
+          let email = decoded?.email || "";
 
-          // Fallback: si el JWT no se pudo decodificar, intentar vía API
           if (!supabaseUserId) {
             try {
               const supabaseUserResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
                 headers: { Authorization: `Bearer ${accessToken}` },
               });
               if (supabaseUserResponse.ok) {
-                const supabaseUser = await supabaseUserResponse.json() as { id: string };
+                const supabaseUser = await supabaseUserResponse.json() as { id: string; email?: string };
                 supabaseUserId = supabaseUser.id;
+                email = supabaseUser.email || email;
               }
             } catch {
               console.warn("Supabase user fetch fallback also failed");
@@ -354,6 +406,12 @@ async function main() {
           if (!supabaseUserId) {
             res.writeHead(400);
             res.end(JSON.stringify({ error: "Could not resolve Supabase user ID from token" }));
+            return;
+          }
+
+          if (!email.endsWith("@ucaldas.edu.co")) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: "El correo electrónico debe pertenecer al dominio institucional (@ucaldas.edu.co)" }));
             return;
           }
 
@@ -368,32 +426,36 @@ async function main() {
               passwordHash: "",
               role: "estudiante" as const,
               isActive: true,
+              isVerified: true,
             });
           }
 
-          // Generar JWT del backend
-          const { accessToken: jwtToken, refreshToken } = jwtService.generateTokens(user.id);
+          const { accessToken: jwtToken, refreshToken } = jwtService.generateTokens(user.id, user.role);
 
-          // Crear perfil si es usuario nuevo
           if (isNewUser) {
+            let profileCreated = false;
             try {
-              await createProfile(user.id, user.fullName || email.split("@")[0]);
+              await createProfile(user.id, user.fullName || email.split("@")[0], email);
+              profileCreated = true;
             } catch (profileErr) {
               console.error("OAuth profile creation error:", profileErr);
             }
+            if (!profileCreated) {
+              dispatchWelcomeWebhook(email, user.fullName || email.split("@")[0], user.id);
+            }
           }
 
-          // Guardar refresh token
           await tokenRepository.create({
             userId: user.id,
             token: refreshToken,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           });
 
           res.writeHead(200);
           res.end(JSON.stringify({
             accessToken: jwtToken,
             refreshToken,
+            isNewUser,
             user: {
               id: user.id,
               email: user.email,
@@ -432,6 +494,7 @@ async function main() {
             passwordHash: u.passwordHashOverride ?? devSeedPasswordHash,
             role: u.roleOverride ?? "estudiante",
             isActive: true,
+            isVerified: true,
           });
           console.log(JSON.stringify({ service: "auth", level: "info", message: `Dev seed: user created ${u.email} with fixed id ${u.id}` }));
         }

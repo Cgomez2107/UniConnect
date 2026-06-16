@@ -16,11 +16,12 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "format": "echo \"format config pending\"",
-    "start:all": "concurrently --kill-others --names \"gwy,auth,sgr,res,msg,prf,evt,qna\" --prefix-colors \"blue,green,yellow,cyan,magenta,red,white,gray\" \"cross-env PORT=3000 node gateway/dist/gateway/src/main.js\" \"cross-env PORT=3102 node services/auth/dist/services/auth/src/main.js\" \"cross-env PORT=3101 node services/study-groups/dist/services/study-groups/src/main.js\" \"cross-env PORT=3103 node services/resources/dist/services/resources/src/main.js\" \"cross-env PORT=3104 node services/messaging/dist/services/messaging/src/main.js\" \"cross-env PORT=3105 node services/profiles-catalog/dist/services/profiles-catalog/src/main.js\" \"cross-env PORT=3106 node services/events/dist/services/events/src/main.js\" \"cross-env PORT=3107 node services/academic-qna/dist/services/academic-qna/src/main.js\"",
+     "start:all": "concurrently --kill-others --names \"gwy,auth,sgr,res,msg,prf,evt,qna,cht\" --prefix-colors \"blue,green,yellow,cyan,magenta,red,white,gray,black\" \"cross-env PORT=3000 node gateway/dist/gateway/src/main.js\" \"cross-env PORT=3102 node services/auth/dist/services/auth/src/main.js\" \"cross-env PORT=3101 node services/study-groups/dist/services/study-groups/src/main.js\" \"cross-env PORT=3103 node services/resources/dist/services/resources/src/main.js\" \"cross-env PORT=3104 node services/messaging/dist/services/messaging/src/main.js\" \"cross-env PORT=3105 node services/profiles-catalog/dist/services/profiles-catalog/src/main.js\" \"cross-env PORT=3106 node services/events/dist/services/events/src/main.js\" \"cross-env PORT=3107 node services/academic-qna/dist/services/academic-qna/src/main.js\" \"cross-env PORT=3108 node services/chatbot/dist/services/chatbot/src/main.js\"",
     "gateway:dev": "pnpm --filter @uniconnect/gateway dev",
     "study-groups:dev": "pnpm --filter @uniconnect/study-groups dev",
     "resources:dev": "pnpm --filter @uniconnect/resources dev",
     "messaging:dev": "pnpm --filter @uniconnect/messaging dev",
+    "chatbot:dev": "pnpm --filter @uniconnect/chatbot dev",
     "openapi:pipeline": "turbo run generate:openapi merge:openapi generate:api-types",
     "test:coverage": "npx c8 --reporter=lcov --reporter=html --reporter=json-summary --exclude=\"node_modules/**\" --exclude=\"**/*.spec.ts\" --exclude=\"**/*.test.ts\" node --import tsx --test tests/unit/decorators/*.spec.ts tests/feat/us-d01-decorator-pattern.spec.ts tests/feat/us-d03-notification-decorators.spec.ts tests/feat/us-o03-event-observer.spec.ts && bash scripts/check-coverage.sh"
   },

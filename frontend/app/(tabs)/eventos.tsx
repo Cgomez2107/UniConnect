@@ -1,12 +1,13 @@
+import { QrPassSheet } from "@/components/events/QrPassSheet"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LoadingState } from "@/components/shared/LoadingState"
 import { Colors } from "@/constants/Colors"
 import { useEventCategories } from "@/hooks/useEventCategories"
 import { useEventObserver } from "@/hooks/application/useEventObserver"
-import { useEvents, type EventFilter } from "@/hooks/application/useEvents"
+import { useEvents } from "@/hooks/application/useEvents"
 import { useAuthStore } from "@/store/useAuthStore"
 import { DIContainer } from "@/lib/services/di/container"
-import type { CampusEvent, EventCategoryRow } from "@/types"
+import type { CampusEvent, EventCategoryRow, EventListMeta } from "@/types"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { router } from "expo-router"
@@ -19,6 +20,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   useColorScheme,
   View,
@@ -60,12 +62,21 @@ function categoryLabel(slug: string): string {
   return CATEGORY_LABELS[slug] ?? (slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "))
 }
 
+function renderHighlighted(text: string | null | undefined, term: string | undefined, baseStyle: any, highlightStyle: any): React.ReactNode {
+  if (!text || !term) return text
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"))
+  return parts.map((part, i) =>
+    part.toLowerCase() === term.toLowerCase()
+      ? <Text key={i} style={[baseStyle, highlightStyle]}>{part}</Text>
+      : <Text key={i} style={baseStyle}>{part}</Text>,
+  )
+}
+
 const EventCard = memo(function EventCard({
-  item, C, onOpen, showActions, onEdit, onPublish, onCancel
+  item, C, onOpen, highlight
 }: {
-  item: CampusEvent; C: typeof Colors["light"]; onOpen: (eventId: string) => void;
-  showActions?: boolean; onEdit?: (id: string) => void; onPublish?: (id: string) => void;
-  onCancel?: (id: string) => void;
+  item: CampusEvent; C: typeof Colors["light"]; onOpen: (eventId: string) => void; highlight?: string;
 }) {
   const fadeAnim  = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(14)).current
@@ -84,11 +95,9 @@ const EventCard = memo(function EventCard({
   const catColor  = categoryColor(item.category)
   const status    = item.status ?? "published"
   const statusBg  = STATUS_COLORS[status] ?? "#6b7280"
+  const full      = item.isFull === true
 
   const handleOpen = useCallback(() => { onOpen(item.id) }, [onOpen, item.id])
-  const handleEdit = useCallback(() => { onEdit?.(item.id) }, [onEdit, item.id])
-  const handlePublish = useCallback(() => { onPublish?.(item.id) }, [onPublish, item.id])
-  const handleCancel = useCallback(() => { onCancel?.(item.id) }, [onCancel, item.id])
 
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
@@ -118,15 +127,20 @@ const EventCard = memo(function EventCard({
                 {STATUS_LABELS[status] ?? status}
               </Text>
             </View>
+            {full && (
+              <View style={styles.fullBadge}>
+                <Text style={styles.fullBadgeText}>Cupo agotado</Text>
+              </View>
+            )}
           </View>
 
           <Text style={[styles.cardTitle, { color: C.textPrimary }]} numberOfLines={2}>
-            {item.title}
+            {renderHighlighted(item.title, highlight, {}, { backgroundColor: "#fef08a", color: "#1a1a1a" })}
           </Text>
 
           {item.description ? (
             <Text style={[styles.cardDesc, { color: C.textSecondary }]} numberOfLines={2}>
-              {item.description}
+              {renderHighlighted(item.description, highlight, {}, { backgroundColor: "#fef08a", color: C.textSecondary })}
             </Text>
           ) : null}
 
@@ -138,40 +152,6 @@ const EventCard = memo(function EventCard({
               </Text>
             </View>
           ) : null}
-
-          {showActions && status === "draft" && (
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: C.primary + "20" }]}
-                onPress={handleEdit}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="create-outline" size={14} color={C.primary} />
-                <Text style={[styles.actionBtnText, { color: C.primary }]}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: "#22c55e20" }]}
-                onPress={handlePublish}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="paper-plane-outline" size={14} color="#22c55e" />
-                <Text style={[styles.actionBtnText, { color: "#22c55e" }]}>Publicar</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {showActions && status === "published" && (
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: "#ef444420" }]}
-                onPress={handleCancel}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="close-circle-outline" size={14} color="#ef4444" />
-                <Text style={[styles.actionBtnText, { color: "#ef4444" }]}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -185,22 +165,29 @@ export default function EventosScreen() {
   const C      = Colors[scheme]
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.user?.id)
+  const userRole = useAuthStore((s) => s.user?.role)
 
   const [tabMode, setTabMode] = useState<TabMode>("campus")
-  const { filteredEvents, isLoading, isRefreshing, activeFilter, setActiveFilter, refresh } = useEvents()
+  const { events, meta, isLoading, isRefreshing, page, search, debouncedSearch, selectedCategories, selectedStatus, setSearch, goToPage, toggleCategory, clearCategories, setStatus, refresh } = useEvents()
+
+  const isAdmin = userRole === "admin"
   const { categories: dbCategories } = useEventCategories()
   const [myEvents, setMyEvents] = useState<CampusEvent[]>([])
   const [myEventsLoading, setMyEventsLoading] = useState(false)
   const [myEventsRefreshing, setMyEventsRefreshing] = useState(false)
+  const [myEventsPage, setMyEventsPage] = useState(1)
+  const [myEventsMeta, setMyEventsMeta] = useState<EventListMeta>({ total: 0, page: 1, limit: 10, totalPages: 1 })
 
-  const loadMyEvents = useCallback(async (isRefresh = false) => {
+  const loadMyEvents = useCallback(async (isRefresh = false, pageNum = 1) => {
     if (!userId) return
     if (isRefresh) setMyEventsRefreshing(true)
     else setMyEventsLoading(true)
     try {
       const repo = DIContainer.getInstance().getEventRepository()
-      const data = await repo.getByAuthor(userId)
-      setMyEvents(data ?? [])
+      const result = await repo.getByAuthor(userId, pageNum, 10)
+      setMyEvents(result.data ?? [])
+      setMyEventsMeta(result.meta)
+      setMyEventsPage(pageNum)
     } catch (e) {
       console.warn("[EventosScreen] Error loading my events:", e)
     } finally {
@@ -211,58 +198,27 @@ export default function EventosScreen() {
 
   useEffect(() => {
     if (tabMode === "mis-eventos" && userId) {
-      loadMyEvents()
+      loadMyEvents(false, 1)
     }
   }, [tabMode, userId, loadMyEvents])
 
-  const handlePublishMyEvent = useCallback(async (eventId: string) => {
-    if (!userId) return
-    try {
-      const repo = DIContainer.getInstance().getEventRepository()
-      await repo.publish(eventId)
-      setMyEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, status: "published" } : e))
-    } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "No se pudo publicar el evento")
+  // Reset status filter if student somehow had "finished" selected
+  useEffect(() => {
+    if (!isAdmin && selectedStatus === "finished") {
+      setStatus("published")
     }
-  }, [userId])
+  }, [isAdmin, selectedStatus, setStatus])
 
-  const handleCancelMyEvent = useCallback(async (eventId: string) => {
-    if (!userId) return
-    Alert.alert(
-      "Cancelar evento",
-      "¿Seguro que quieres cancelar este evento?",
-      [
-        { text: "No", style: "cancel" },
-        {
-          text: "Sí, cancelar", style: "destructive",
-          onPress: async () => {
-            try {
-              const repo = DIContainer.getInstance().getEventRepository()
-              await repo.cancel(eventId)
-              setMyEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, status: "cancelled" } : e))
-            } catch (e: any) {
-              Alert.alert("Error", e?.message ?? "No se pudo cancelar el evento")
-            }
-          },
-        },
-      ]
-    )
-  }, [userId])
-
-  // Build dynamic filters from DB categories + "todos"
-  const filters = useMemo(() => {
-    const staticFilters: { key: EventFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-      { key: "todos", label: "Todos", icon: "apps-outline" },
-    ]
-    for (const cat of dbCategories) {
-      staticFilters.push({
-        key: cat.id as EventFilter,
-        label: cat.name,
-        icon: categoryIcon(cat.slug),
-      })
-    }
-    return staticFilters
+  // Build dynamic filter slugs from DB categories
+  const categorySlugs = useMemo(() => {
+    return dbCategories.map((c) => c.slug)
   }, [dbCategories])
+
+  const toggleCategoryFilter = useCallback((slug: string) => {
+    toggleCategory(slug)
+  }, [toggleCategory])
+
+  const hasActiveCategoryFilter = selectedCategories.length > 0
 
   // ── Suscripciones a categorías ──────────
   const [subscribedCategories, setSubscribedCategories] = useState<string[]>([])
@@ -306,46 +262,219 @@ export default function EventosScreen() {
     router.push("/crear-evento" as any)
   }, [])
 
-  const openEditEvent = useCallback((eventId: string) => {
-    router.push(`/editar-evento/${eventId}` as any)
+  // ── QR Pass state ──
+  const [qrSheetOpen, setQrSheetOpen] = useState(false)
+  const [qrContent, setQrContent] = useState("")
+  const [qrEventTitle, setQrEventTitle] = useState("")
+  const [qrLoading, setQrLoading] = useState<string | null>(null)
+
+  const handleShowQrPass = useCallback(async (eventId: string, eventTitle: string) => {
+    setQrLoading(eventId)
+    try {
+      const repo = DIContainer.getInstance().getEventRepository()
+      const result = await repo.getEventPass(eventId)
+      setQrContent(result.qrContent)
+      setQrEventTitle(eventTitle)
+      setQrSheetOpen(true)
+    } catch (e) {
+      console.warn("[EventosScreen] Error loading QR pass:", e)
+      Alert.alert("Error", "No se pudo obtener el pase de acceso")
+    } finally {
+      setQrLoading(null)
+    }
   }, [])
 
   const renderEventItem = useCallback(
     ({ item }: { item: CampusEvent }) => (
-      <EventCard item={item} C={C} onOpen={openEvent} />
+      <EventCard item={item} C={C} onOpen={openEvent} highlight={debouncedSearch} />
     ),
-    [C, openEvent],
+    [C, openEvent, debouncedSearch],
   )
 
   const renderMyEventItem = useCallback(
     ({ item }: { item: CampusEvent }) => (
-      <EventCard
-        item={item}
-        C={C}
-        onOpen={openEvent}
-        showActions
-        onEdit={openEditEvent}
-        onPublish={handlePublishMyEvent}
-        onCancel={handleCancelMyEvent}
-      />
+      <View>
+        <EventCard item={item} C={C} onOpen={openEvent} />
+        {item.isRegistered && (
+          <TouchableOpacity
+            style={[styles.qrPassBtn, { backgroundColor: C.primary + "15", borderColor: C.primary + "40" }]}
+            onPress={() => handleShowQrPass(item.id, item.title)}
+            disabled={qrLoading === item.id}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="qr-code-outline" size={16} color={C.primary} />
+            <Text style={[styles.qrPassBtnText, { color: C.primary }]}>
+              {qrLoading === item.id ? "Cargando..." : "+ Pase de Acceso"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     ),
-    [C, openEvent, openEditEvent, handlePublishMyEvent, handleCancelMyEvent],
-  )
-
-  const handleSetFilter = useCallback(
-    (filter: EventFilter) => { setActiveFilter(filter) },
-    [setActiveFilter],
+    [C, openEvent, handleShowQrPass, qrLoading],
   )
 
   const emptyTitle = "No hay eventos próximos"
-
   const emptyBody = useMemo(() => {
-    if (activeFilter === "todos") {
+    if (!hasActiveCategoryFilter && !search) {
       return "El administrador aún no ha publicado eventos del campus."
     }
-    const catName = dbCategories.find((c) => c.id === activeFilter)?.name ?? categoryLabel(activeFilter)
-    return `No hay eventos de tipo "${catName}".`
-  }, [activeFilter, dbCategories])
+    return "No se encontraron eventos con los filtros seleccionados."
+  }, [hasActiveCategoryFilter, search])
+
+  const ListHeaderComponent = useMemo(() => (
+    <View>
+      {/* Search input */}
+      <View style={[styles.searchContainer, { backgroundColor: C.surface, borderColor: C.border }]}>
+        <Ionicons name="search-outline" size={18} color={C.textSecondary} />
+        <TextInput
+          style={[styles.searchInput, { color: C.textPrimary }]}
+          placeholder="Buscar eventos..."
+          placeholderTextColor={C.textSecondary}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch("")} activeOpacity={0.7}>
+            <Ionicons name="close-circle" size={18} color={C.textSecondary} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Status filter pills */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersRow}
+        bounces={false}
+      >
+        {(isAdmin ? (["published", "cancelled", "finished"] as const) : (["published", "cancelled"] as const)).map((s) => {
+          const active = selectedStatus === s
+          const color = STATUS_COLORS[s]
+          const label = STATUS_LABELS[s]
+          return (
+            <TouchableOpacity
+              key={s}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: active ? color : C.surface,
+                  borderColor: active ? color : C.border,
+                },
+              ]}
+              onPress={() => setStatus(s)}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.filterText, { color: active ? "#fff" : C.textSecondary }]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </ScrollView>
+
+      {/* Category filter pills — multi-select */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersRow}
+        bounces={false}
+      >
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            {
+              backgroundColor: !hasActiveCategoryFilter ? C.primary : C.surface,
+              borderColor: !hasActiveCategoryFilter ? C.primary : C.border,
+            },
+          ]}
+          onPress={clearCategories}
+          activeOpacity={0.85}
+        >
+          <View style={styles.filterInline}>
+            <Ionicons name="apps-outline" size={14} color={!hasActiveCategoryFilter ? "#fff" : C.textSecondary} />
+            <Text style={[styles.filterText, { color: !hasActiveCategoryFilter ? "#fff" : C.textSecondary }]}>
+              Todas
+            </Text>
+          </View>
+        </TouchableOpacity>
+        {dbCategories.map((cat) => {
+          const active = selectedCategories.includes(cat.slug)
+          return (
+            <TouchableOpacity
+              key={cat.slug}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: active ? C.primary : C.surface,
+                  borderColor: active ? C.primary : C.border,
+                },
+              ]}
+              onPress={() => toggleCategoryFilter(cat.slug)}
+              onLongPress={() => toggleSubscription(cat.id)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.filterInline}>
+                <Ionicons
+                  name={categoryIcon(cat.slug)}
+                  size={14}
+                  color={active ? "#fff" : C.textSecondary}
+                />
+                <Text style={[styles.filterText, { color: active ? "#fff" : C.textSecondary }]}>
+                  {cat.name}
+                </Text>
+                <Ionicons
+                  name={subscribedCategories.includes(cat.id) ? "notifications" : "notifications-off-outline"}
+                  size={12}
+                  color={active ? "rgba(255,255,255,0.7)" : C.textSecondary}
+                  style={{ marginLeft: 4 }}
+                />
+              </View>
+            </TouchableOpacity>
+          )
+        })}
+      </ScrollView>
+
+      {/* Total count */}
+      <View style={styles.totalRow}>
+        <Text style={[styles.totalText, { color: C.textSecondary }]}>
+          {meta.total} {meta.total === 1 ? "evento encontrado" : "eventos encontrados"}
+        </Text>
+      </View>
+    </View>
+  ), [C, search, setSearch, dbCategories, selectedCategories, hasActiveCategoryFilter, clearCategories, toggleCategoryFilter, toggleSubscription, subscribedCategories, meta.total, selectedStatus, setStatus, isAdmin])
+
+  const ListFooterComponent = useMemo(() => {
+    if (meta.totalPages <= 1) return null
+    return (
+      <View style={styles.paginationRow}>
+        <TouchableOpacity
+          style={[styles.pageBtn, { backgroundColor: C.surface, borderColor: C.border, opacity: page <= 1 ? 0.4 : 1 }]}
+          onPress={() => goToPage(page - 1)}
+          disabled={page <= 1}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="chevron-back" size={18} color={C.textPrimary} />
+          <Text style={[styles.pageBtnText, { color: C.textPrimary }]}>Anterior</Text>
+        </TouchableOpacity>
+
+        <Text style={[styles.pageInfo, { color: C.textSecondary }]}>
+          {page} / {meta.totalPages}
+        </Text>
+
+        <TouchableOpacity
+          style={[styles.pageBtn, { backgroundColor: C.surface, borderColor: C.border, opacity: page >= meta.totalPages ? 0.4 : 1 }]}
+          onPress={() => goToPage(page + 1)}
+          disabled={page >= meta.totalPages}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.pageBtnText, { color: C.textPrimary }]}>Siguiente</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.textPrimary} />
+        </TouchableOpacity>
+      </View>
+    )
+  }, [C, page, meta.totalPages, goToPage])
 
   return (
     <View style={[styles.safe, { backgroundColor: C.background, paddingTop: insets.top }]}>
@@ -384,64 +513,16 @@ export default function EventosScreen() {
 
       {tabMode === "campus" && (
         <>
-          <View style={[styles.filtersContainer, { borderBottomColor: C.border }]}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filtersRow}
-              bounces={false}
-            >
-              {filters.map((f) => {
-                const active = activeFilter === f.key
-                return (
-                  <TouchableOpacity
-                    key={f.key}
-                    style={[
-                      styles.filterChip,
-                      {
-                        backgroundColor: active ? C.primary : C.surface,
-                        borderColor:     active ? C.primary : C.border,
-                      },
-                    ]}
-                    onPress={() => handleSetFilter(f.key)}
-                    onLongPress={() => {
-                      if (f.key !== "todos" && f.key !== "pasados") {
-                        toggleSubscription(f.key)
-                      }
-                    }}
-                    activeOpacity={0.85}
-                  >
-                    <View style={styles.filterInline}>
-                      <Ionicons name={f.icon} size={14} color={active ? "#fff" : C.textSecondary} />
-                      <Text style={[styles.filterText, { color: active ? "#fff" : C.textSecondary }]}>
-                        {f.label}
-                      </Text>
-                      {f.key !== "todos" && f.key !== "pasados" && (
-                        <Ionicons
-                          name={subscribedCategories.includes(f.key) ? "notifications" : "notifications-off-outline"}
-                          size={12}
-                          color={active ? "rgba(255,255,255,0.7)" : C.textSecondary}
-                          style={{ marginLeft: 4 }}
-                        />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                )
-              })}
-            </ScrollView>
-            <Text style={[styles.subHint, { color: C.textSecondary }]}>
-              Mantén presionada una categoría para suscribirte
-            </Text>
-          </View>
-
           {isLoading ? (
             <LoadingState message="Cargando eventos..." />
           ) : (
             <FlatList
-              data={filteredEvents}
+              data={events}
               keyExtractor={keyExtractor}
               contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
               showsVerticalScrollIndicator={false}
+              ListHeaderComponent={ListHeaderComponent}
+              ListFooterComponent={ListFooterComponent}
               refreshControl={
                 <RefreshControl
                   refreshing={isRefreshing}
@@ -474,6 +555,35 @@ export default function EventosScreen() {
               keyExtractor={keyExtractor}
               contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
               showsVerticalScrollIndicator={false}
+              ListFooterComponent={
+                myEventsMeta.totalPages > 1 ? (
+                  <View style={styles.paginationRow}>
+                    <TouchableOpacity
+                      style={[styles.pageBtn, { backgroundColor: C.surface, borderColor: C.border, opacity: myEventsPage <= 1 ? 0.4 : 1 }]}
+                      onPress={() => loadMyEvents(false, myEventsPage - 1)}
+                      disabled={myEventsPage <= 1}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="chevron-back" size={18} color={C.textPrimary} />
+                      <Text style={[styles.pageBtnText, { color: C.textPrimary }]}>Anterior</Text>
+                    </TouchableOpacity>
+
+                    <Text style={[styles.pageInfo, { color: C.textSecondary }]}>
+                      {myEventsPage} / {myEventsMeta.totalPages}
+                    </Text>
+
+                    <TouchableOpacity
+                      style={[styles.pageBtn, { backgroundColor: C.surface, borderColor: C.border, opacity: myEventsPage >= myEventsMeta.totalPages ? 0.4 : 1 }]}
+                      onPress={() => loadMyEvents(false, myEventsPage + 1)}
+                      disabled={myEventsPage >= myEventsMeta.totalPages}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={[styles.pageBtnText, { color: C.textPrimary }]}>Siguiente</Text>
+                      <Ionicons name="chevron-forward" size={18} color={C.textPrimary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : null
+              }
               refreshControl={
                 <RefreshControl
                   refreshing={myEventsRefreshing}
@@ -504,6 +614,24 @@ export default function EventosScreen() {
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
+
+      {/* Scanner button (admin only) */}
+      {isAdmin && (
+        <TouchableOpacity
+          style={[styles.scannerFab, { backgroundColor: "#7c3aed" }]}
+          onPress={() => router.push("/eventos/escanear" as any)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="qr-code-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      <QrPassSheet
+        isOpen={qrSheetOpen}
+        onClose={() => setQrSheetOpen(false)}
+        qrContent={qrContent}
+        eventTitle={qrEventTitle}
+      />
     </View>
   )
 }
@@ -534,18 +662,28 @@ const styles = StyleSheet.create({
   },
   tabText: { fontSize: 14, fontWeight: "600" },
 
-  filtersContainer: { borderBottomWidth: 1 },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 0,
+  },
+
   filtersRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 8,
-  },
-  subHint: {
-    fontSize: 10,
-    textAlign: "center",
-    paddingBottom: 6,
-    paddingHorizontal: 16,
   },
   filterChip: {
     borderRadius: 20,
@@ -555,6 +693,12 @@ const styles = StyleSheet.create({
   },
   filterText: { fontSize: 13, fontWeight: "600" },
   filterInline: { flexDirection: "row", alignItems: "center", gap: 6 },
+
+  totalRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 6,
+  },
+  totalText: { fontSize: 13, fontWeight: "600" },
 
   list: { padding: 16, gap: 12 },
 
@@ -594,35 +738,84 @@ const styles = StyleSheet.create({
   },
   categoryText: { fontSize: 11, fontWeight: "700" },
   categoryInline: { flexDirection: "row", alignItems: "center", gap: 4 },
+
   statusBadge: {
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   statusText: { fontSize: 10, fontWeight: "700" },
+  fullBadge: {
+    backgroundColor: "#ef4444",
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  fullBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
   cardTitle:    { fontSize: 15, fontWeight: "700", lineHeight: 20 },
   cardDesc:     { fontSize: 13, lineHeight: 18 },
   locationRow:  { flexDirection: "row", alignItems: "center" },
   cardMeta:     { fontSize: 12 },
 
-  actionRow: {
+  qrPassBtn: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: -6,
+    marginBottom: 8,
+    marginHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  actionBtn: {
+  qrPassBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  paginationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    paddingVertical: 16,
+  },
+  pageBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  actionBtnText: { fontSize: 12, fontWeight: "700" },
+  pageBtnText: { fontSize: 14, fontWeight: "600" },
+  pageInfo: { fontSize: 14, fontWeight: "700" },
 
   fab: {
     position: "absolute",
     bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  scannerFab: {
+    position: "absolute",
+    bottom: 92,
     right: 20,
     width: 56,
     height: 56,

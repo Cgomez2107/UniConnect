@@ -6,7 +6,7 @@ import * as Haptics from "expo-haptics"
 import { memo } from "react"
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
-export type ActiveTab = "facultades" | "programas" | "materias" | "usuarios" | "solicitudes" | "recursos" | "metricas" | "eventos"
+export type ActiveTab = "facultades" | "programas" | "materias" | "usuarios" | "solicitudes" | "recursos" | "metricas" | "eventos" | "moderacion"
 
 export interface AdminTabItem {
   key: ActiveTab

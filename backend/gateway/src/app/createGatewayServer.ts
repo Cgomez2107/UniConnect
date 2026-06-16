@@ -156,6 +156,7 @@ function isEventsRoute(pathname: string): boolean {
   return (
     pathname === "/api/v1/events" ||
     pathname.startsWith("/api/v1/events/") ||
+    pathname.startsWith("/api/v1/registration/") ||
     pathname === "/api/v1/eventos/suscribir" ||
     pathname === "/api/v1/eventos/suscribir/" ||
     pathname === "/api/v1/eventos/suscripciones"
@@ -172,6 +173,10 @@ function isPollRoute(pathname: string): boolean {
 
 function isAuthRoute(pathname: string): boolean {
   return pathname.startsWith("/api/v1/auth");
+}
+
+function isChatbotRoute(pathname: string): boolean {
+  return pathname === "/api/v1/chatbot" || pathname.startsWith("/api/v1/chatbot/");
 }
 
 const setHeader = (res: NodeServerResponse, name: string, value: string) => {
@@ -266,7 +271,7 @@ function handleWebSocketUpgrade(
   wss: WebSocketServer,
   jwtMiddleware: JWTMiddleware,
 ): void {
-  wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+  wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
     const requestUrl = new URL(req.url ?? "/", "http://localhost");
     const token = requestUrl.searchParams.get("token");
 
@@ -282,7 +287,7 @@ function handleWebSocketUpgrade(
       on: () => mockRes,
     } as unknown as NodeServerResponse;
 
-    const payload = jwtMiddleware.authenticate(
+    const payload = await jwtMiddleware.authenticate(
       { ...req, headers: { ...req.headers, authorization: `Bearer ${token}` } } as IncomingMessage,
       mockRes,
     );
@@ -831,7 +836,7 @@ async function handleRequest(
   // ──────────────────────────────────────────────────────────────────────────
   // 8. JWT authentication for all other API routes
   // ──────────────────────────────────────────────────────────────────────────
-  const payload = jwtMiddleware.authenticate(req, res);
+  const payload = await jwtMiddleware.authenticate(req, res);
   if (!payload) {
     return;
   }
@@ -840,8 +845,10 @@ async function handleRequest(
     req.headers["x-user-id"] = payload.sub;
   }
 
-  if (payload.role) {
-    req.headers["x-user-role"] = payload.role;
+  const rawPayload = payload as any;
+  const userRole = rawPayload.user_metadata?.role || rawPayload.app_metadata?.role || payload.role;
+  if (userRole) {
+    req.headers["x-user-role"] = userRole;
   }
 
   if (isStudyGroupsRoute(requestUrl.pathname)) {
@@ -890,6 +897,11 @@ async function handleRequest(
     return;
   }
 
+  if (isChatbotRoute(requestUrl.pathname)) {
+    await proxyRequest(req, res, env.chatbotBaseUrl);
+    return;
+  }
+
   sendJson(res, 404, {
     error: "Route not found",
     path: requestUrl.pathname,
@@ -931,7 +943,7 @@ function validateGatewayEnv(): void {
 
 export function createGatewayServer(env: GatewayEnv) {
   validateGatewayEnv();
-  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret);
+  const jwtMiddleware = new JWTMiddleware(env.jwtAccessSecret, env.supabaseUrl);
 
   const server = createServer((req, res) => {
     void handleRequest(req, res, env, jwtMiddleware).catch((error: unknown) => {

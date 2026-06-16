@@ -39,6 +39,7 @@ describe("SpamHandler Escalation Rules", () => {
 
     expect(result.valido).toBe(false);
     expect(result.codigoError).toBe("MO_003");
+    expect(result.remainingMs).toBe(5 * 60 * 1000);
     expect(mockRepo.blockUser).toHaveBeenCalledWith("user-1", 5, expect.any(String));
     expect(mockRepo.recordBlockEvent).toHaveBeenCalledWith("user-1", expect.any(String));
   });
@@ -55,6 +56,7 @@ describe("SpamHandler Escalation Rules", () => {
     expect(result.valido).toBe(false);
     expect(result.codigoError).toBe("MO_004");
     expect(result.mensajeError).toContain("escalado a revisión humana");
+    expect(result.remainingMs).toBe(5 * 60 * 1000);
   });
 
   it("should return MO_004 directly if the user is already blocked and has >= 3 blocks in the last hour", async () => {
@@ -67,5 +69,7 @@ describe("SpamHandler Escalation Rules", () => {
 
     expect(result.valido).toBe(false);
     expect(result.codigoError).toBe("MO_004");
+    expect(result.remainingMs).toBeDefined();
+    expect(result.remainingMs!).toBeGreaterThan(0);
   });
 });

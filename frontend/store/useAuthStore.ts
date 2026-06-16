@@ -34,6 +34,8 @@ interface AuthState {
   isAuthenticated: boolean;
   isHydrating: boolean;
 
+  showWelcomeToast: boolean;
+  setShowWelcomeToast: (show: boolean) => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -77,6 +79,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   isAuthenticated: false,
   isHydrating: true,
+  showWelcomeToast: false,
+  setShowWelcomeToast: (show) => set({ showWelcomeToast: show }),
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
 
@@ -209,6 +213,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     try {
       await signUpWithPassword.execute({ email, password, fullName })
+      set({ showWelcomeToast: true });
     } finally {
       set({ isLoading: false });
     }

@@ -33,6 +33,7 @@ export interface EventsEnv {
   readonly dbSsl: boolean;
   readonly supabaseUrl?: string;
   readonly supabaseServiceRoleKey?: string;
+  readonly qrHmacSecret: string;
 }
 
 export function loadEventsEnv(source: NodeJS.ProcessEnv = process.env): EventsEnv {
@@ -78,5 +79,6 @@ export function loadEventsEnv(source: NodeJS.ProcessEnv = process.env): EventsEn
     dbSsl,
     supabaseUrl: source.SUPABASE_URL,
     supabaseServiceRoleKey: source.SUPABASE_SERVICE_ROLE_KEY,
+    qrHmacSecret: requireEnv(source, "QR_HMAC_SECRET"),
   };
 }

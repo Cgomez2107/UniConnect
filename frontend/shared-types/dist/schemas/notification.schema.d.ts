@@ -1,5 +1,5 @@
 import { z } from "zod";
-export declare const NotificationTypeEnum: z.ZodEnum<["message", "studyGroupApplication", "studyGroupAccepted", "studyGroupRejected", "mention", "friendRequest", "system"]>;
+export declare const NotificationTypeEnum: z.ZodEnum<["message", "studyGroupApplication", "studyGroupAccepted", "studyGroupRejected", "mention", "friendRequest", "system", "nuevo_evento"]>;
 export declare const PrioridadEnum: z.ZodEnum<["normal", "urgente", "critica"]>;
 export declare const AccionSchema: z.ZodObject<{
     label: z.ZodString;
@@ -14,7 +14,7 @@ export declare const AccionSchema: z.ZodObject<{
 export declare const NotificationSchema: z.ZodObject<{
     id: z.ZodString;
     userId: z.ZodString;
-    type: z.ZodEnum<["message", "studyGroupApplication", "studyGroupAccepted", "studyGroupRejected", "mention", "friendRequest", "system"]>;
+    type: z.ZodEnum<["message", "studyGroupApplication", "studyGroupAccepted", "studyGroupRejected", "mention", "friendRequest", "system", "nuevo_evento"]>;
     title: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
     actionUrl: z.ZodOptional<z.ZodString>;
@@ -33,11 +33,11 @@ export declare const NotificationSchema: z.ZodObject<{
         endpoint: string;
     }>>;
 }, "strip", z.ZodTypeAny, {
-    type: "message" | "mention" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
-    id: string;
+    type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system" | "nuevo_evento";
     createdAt: string;
-    title: string;
+    id: string;
     userId: string;
+    title: string;
     read: boolean;
     description?: string | undefined;
     data?: Record<string, any> | undefined;
@@ -48,11 +48,11 @@ export declare const NotificationSchema: z.ZodObject<{
         endpoint: string;
     } | undefined;
 }, {
-    type: "message" | "mention" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system";
-    id: string;
+    type: "mention" | "message" | "studyGroupApplication" | "studyGroupAccepted" | "studyGroupRejected" | "friendRequest" | "system" | "nuevo_evento";
     createdAt: string;
-    title: string;
+    id: string;
     userId: string;
+    title: string;
     read: boolean;
     description?: string | undefined;
     data?: Record<string, any> | undefined;
@@ -66,7 +66,7 @@ export declare const NotificationSchema: z.ZodObject<{
 export declare const NotificationDTOSchema: z.ZodObject<{
     id: z.ZodString;
     user_id: z.ZodString;
-    type: z.ZodEnum<["message", "study_group_application", "study_group_accepted", "study_group_rejected", "mention", "friend_request", "system"]>;
+    type: z.ZodEnum<["message", "study_group_application", "study_group_accepted", "study_group_rejected", "mention", "friend_request", "system", "nuevo_evento"]>;
     title: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
     action_url: z.ZodOptional<z.ZodString>;
@@ -85,12 +85,12 @@ export declare const NotificationDTOSchema: z.ZodObject<{
         endpoint: string;
     }>>;
 }, "strip", z.ZodTypeAny, {
-    type: "message" | "mention" | "system" | "study_group_application" | "study_group_accepted" | "study_group_rejected" | "friend_request";
+    type: "mention" | "message" | "system" | "study_group_application" | "study_group_accepted" | "study_group_rejected" | "friend_request" | "nuevo_evento";
     id: string;
+    created_at: string;
+    user_id: string;
     title: string;
     read: boolean;
-    user_id: string;
-    created_at: string;
     description?: string | undefined;
     data?: Record<string, any> | undefined;
     priority?: "normal" | "urgente" | "critica" | undefined;
@@ -100,12 +100,12 @@ export declare const NotificationDTOSchema: z.ZodObject<{
     } | undefined;
     action_url?: string | undefined;
 }, {
-    type: "message" | "mention" | "system" | "study_group_application" | "study_group_accepted" | "study_group_rejected" | "friend_request";
+    type: "mention" | "message" | "system" | "study_group_application" | "study_group_accepted" | "study_group_rejected" | "friend_request" | "nuevo_evento";
     id: string;
+    created_at: string;
+    user_id: string;
     title: string;
     read: boolean;
-    user_id: string;
-    created_at: string;
     description?: string | undefined;
     data?: Record<string, any> | undefined;
     priority?: "normal" | "urgente" | "critica" | undefined;

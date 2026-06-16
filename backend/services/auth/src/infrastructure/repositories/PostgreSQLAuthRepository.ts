@@ -47,17 +47,18 @@ export class PostgreSQLAuthRepository implements IAuthRepository {
     const updatedAt = new Date();
 
     const result = await this.pool.query(
-      `INSERT INTO public.auth_users (id, email, full_name, password_hash, role, is_active, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO public.auth_users (id, email, full_name, password_hash, role, is_active, is_verified, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (id) DO UPDATE SET
          email = EXCLUDED.email,
          full_name = EXCLUDED.full_name,
          password_hash = EXCLUDED.password_hash,
          role = EXCLUDED.role,
          is_active = EXCLUDED.is_active,
+         is_verified = EXCLUDED.is_verified,
          updated_at = EXCLUDED.updated_at
        RETURNING *`,
-      [id, user.email, user.fullName, user.passwordHash, user.role, user.isActive, createdAt, updatedAt]
+      [id, user.email, user.fullName, user.passwordHash, user.role, user.isActive, user.isVerified ?? false, createdAt, updatedAt]
     );
 
     return this.mapRowToUser(result.rows[0]);
@@ -75,6 +76,7 @@ export class PostgreSQLAuthRepository implements IAuthRepository {
       passwordHash: "password_hash",
       role: "role",
       isActive: "is_active",
+      isVerified: "is_verified",
     };
 
     for (const [key, value] of Object.entries(data)) {
@@ -118,6 +120,7 @@ export class PostgreSQLAuthRepository implements IAuthRepository {
       passwordHash: row.password_hash,
       role: row.role as "estudiante" | "moderador" | "admin",
       isActive: row.is_active,
+      isVerified: row.is_verified ?? false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

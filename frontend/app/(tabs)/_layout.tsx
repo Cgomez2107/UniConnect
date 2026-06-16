@@ -7,12 +7,12 @@ import { Colors } from "@/constants/Colors";
 import { SessionGuard } from "@/components/auth/SessionGuard";
 import { SplashLoader } from "@/components/ui/SplashLoader";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useToast } from "@/context";
 import { useUnreadCountStore } from "@/store/unreadCountStore";
-import { useNotificationStore } from "@/store/useNotificationStore";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Tabs } from "expo-router";
 import { useRef, useEffect } from "react";
-import { Animated, Text, useColorScheme, View } from "react-native";
+import { Animated, useColorScheme, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function AnimatedTabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
@@ -46,10 +46,20 @@ export default function TabLayout() {
   const messagesBadge = totalUnreadCount > 0
     ? (totalUnreadCount > 99 ? "99+" : totalUnreadCount)
     : undefined;
-  const notificationUnread = useNotificationStore((s) => s.unreadCount);
-  const notifBadge = notificationUnread > 0
-    ? (notificationUnread > 99 ? "99+" : notificationUnread)
-    : undefined;
+  const showWelcomeToast = useAuthStore((s) => s.showWelcomeToast);
+  const setShowWelcomeToast = useAuthStore((s) => s.setShowWelcomeToast);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (showWelcomeToast) {
+      setShowWelcomeToast(false);
+      showToast(
+        "¡Bienvenido a UniConnect! 🎉 Tu correo de bienvenida llegará en los próximos 5 minutos a tu bandeja institucional.",
+        "success",
+        6000
+      );
+    }
+  }, [showWelcomeToast, showToast, setShowWelcomeToast]);
 
   useEffect(() => {
     if (role === "admin") {
@@ -98,29 +108,7 @@ export default function TabLayout() {
           options={{
             title: "Solicitudes",
             tabBarIcon: ({ color, focused }) => (
-              <View>
-                <AnimatedTabIcon name={focused ? "notifications" : "notifications-outline"} color={color} focused={focused} />
-                {notifBadge ? (
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: -4,
-                      right: -8,
-                      backgroundColor: "#EF4444",
-                      borderRadius: 10,
-                      minWidth: 18,
-                      height: 18,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      paddingHorizontal: 4,
-                    }}
-                  >
-                    <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800" }}>
-                      {notifBadge}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
+              <AnimatedTabIcon name={focused ? "notifications" : "notifications-outline"} color={color} focused={focused} />
             ),
           }}
         />
