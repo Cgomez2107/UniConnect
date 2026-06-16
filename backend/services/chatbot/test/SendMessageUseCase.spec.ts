@@ -78,7 +78,8 @@ describe("SendMessageUseCase", () => {
       const result = await useCase.execute("estudiante", "¿Cómo crear un grupo?");
       expect(result.reply).toBe("Para crear un grupo ve a la sección Grupos de Estudio.");
       expect(result.referencias).toHaveLength(1);
-      expect(result.referencias[0].similarity).toBe(0.92);
+      const refs: any[] = result.referencias;
+      expect(refs[0].similarity).toBe(0.92);
     });
 
     it("should handle response with reply field in alternate format", async () => {
