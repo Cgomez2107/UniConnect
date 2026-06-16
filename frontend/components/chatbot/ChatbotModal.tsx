@@ -51,15 +51,15 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
 
   const suggestions = isAdmin
     ? [
-        "¿Cómo puedo gestionar grupos de estudio?",
-        "¿Cómo crear un evento institucional?",
-        "¿Cómo reportar o moderar contenido inapropiado?",
-      ]
+      "¿Cómo puedo gestionar grupos de estudio?",
+      "¿Cómo puedo crear un evento institucional?",
+      "¿Cómo puedo reportar o moderar contenido inapropiado?",
+    ]
     : [
-        "¿Cómo puedo crear un grupo de estudio?",
-        "¿Dónde veo mis próximos eventos?",
-        "¿Cómo subir un recurso de estudio?",
-      ];
+      "¿Cómo puedo crear un grupo de estudio?",
+      "¿Dónde puedo ver mis próximos eventos?",
+      "¿Cómo puedo subir un recurso de estudio?",
+    ];
 
   const renderItem = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === "user";
@@ -182,7 +182,7 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
               <Text style={[styles.welcomeSubtitle, { color: C.textSecondary }] as StyleProp<TextStyle>}>
                 ¿Tienes dudas sobre grupos de estudio, eventos o material académico? Pregúntame lo que quieras.
               </Text>
-              
+
               <View style={styles.suggestionsContainer}>
                 {suggestions.map((sug, i) => (
                   <TouchableOpacity
@@ -217,7 +217,7 @@ export function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
               }
             />
           )}
- 
+
           {/* Footer Input */}
           <View style={[styles.footer, { borderTopColor: C.border, backgroundColor: C.surface }] as StyleProp<ViewStyle>}>
             <TextInput

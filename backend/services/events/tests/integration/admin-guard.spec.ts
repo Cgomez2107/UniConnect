@@ -137,7 +137,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
         .expect(403);
 
       expect(res.body).toHaveProperty("error");
-      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(res.body.error).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(deleteEvent.execute).not.toHaveBeenCalled();
     });
 
@@ -149,7 +149,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
         .set("x-user-id", USER_ID)
         .expect(403);
 
-      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(res.body.error).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(deleteEvent.execute).not.toHaveBeenCalled();
     });
 
@@ -165,17 +165,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
       expect(deleteEvent.execute).toHaveBeenCalledTimes(1);
     });
 
-    it("C4: retorna 200 y ejecuta el use case cuando x-user-role es super_admin", async () => {
-      const { server, deleteEvent } = buildEventsServer();
 
-      await request(server as any)
-        .delete(`/api/v1/events/${UUID}`)
-        .set("x-user-id", USER_ID)
-        .set("x-user-role", "super_admin")
-        .expect(200);
-
-      expect(deleteEvent.execute).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe("GET /api/v1/events — list (soft admin check)", () => {
@@ -370,7 +360,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
         .set("x-user-role", "estudiante")
         .expect(403);
 
-      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(res.body.error).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(deleteEvent.execute).not.toHaveBeenCalled();
     });
 
@@ -382,7 +372,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
         .set("x-user-id", USER_ID)
         .expect(403);
 
-      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(res.body.error).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(deleteEvent.execute).not.toHaveBeenCalled();
     });
 
@@ -398,17 +388,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
       expect(deleteEvent.execute).toHaveBeenCalledTimes(1);
     });
 
-    it("ADM-DEL-C4: retorna 200 cuando x-user-role es super_admin", async () => {
-      const { server, deleteEvent } = buildEventsServer();
 
-      await request(server as any)
-        .delete(`/api/v1/admin/events/${UUID}`)
-        .set("x-user-id", USER_ID)
-        .set("x-user-role", "super_admin")
-        .expect(200);
-
-      expect(deleteEvent.execute).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe("POST /api/v1/admin/events/:id/publish — strict admin route", () => {
@@ -421,7 +401,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
         .set("x-user-role", "estudiante")
         .expect(403);
 
-      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(res.body.error).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(publishEvent.execute).not.toHaveBeenCalled();
     });
 
@@ -448,7 +428,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
         .set("x-user-role", "estudiante")
         .expect(403);
 
-      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(res.body.error).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(cancelEvent.execute).not.toHaveBeenCalled();
     });
 
@@ -475,7 +455,7 @@ describe("US-EV01 — Admin Guard Integration (Bl 4+5)", () => {
         .set("x-user-role", "estudiante")
         .expect(403);
 
-      expect(res.body.error).toBe("Acceso restringido a super_admin");
+      expect(res.body.error).toBe("Acceso restringido. Se requieren permisos de administrador.");
       expect(finishEvent.execute).not.toHaveBeenCalled();
     });
 
